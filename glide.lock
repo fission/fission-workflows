@@ -1,0 +1,12 @@
+hash: 6ae02bd6f9d34e1484e9d0498dc5a41a8fb839d8bd6d7dff573a802c894d9ddf
+updated: 2017-07-14T17:24:19.544144705-07:00
+imports:
+- name: github.com/gorilla/handlers
+  version: a4043c62cc2329bacda331d33fc908ab11ef0ec3
+- name: github.com/gorilla/mux
+  version: bcd8bc72b08df0f70df986b97f95590779502d31
+- name: github.com/sirupsen/logrus
+  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
+- name: github.com/urfave/cli
+  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+testImports: []
