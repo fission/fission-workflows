@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+import "github.com/fission/fission-workflow/pkg/types/types.proto";
+import "github.com/fission/fission-workflow/pkg/eventstore/eventstore.proto";
+import "google/api/annotations.proto";
+
+package apiserver;
+
+service WorkflowAPI {
+    rpc Create (Workflow) returns (Workflow) {
+        option (google.api.http) = {
+           post: "/workflow"
+           body: "*"
+        };
+    }
+
+    rpc Get (WorkflowIdentifier) returns (Workflow) {
+        option (google.api.http) = {
+            get: "/workflow/{id}"
+        };
+    }
+
+    rpc Search (SearchWorkflowRequest) returns (SearchWorkflowResponse) {
+        option (google.api.http) = {
+            get: "/workflow"
+        };
+    }
+}
+
+message WorkflowIdentifier {
+    string id = 1;
+}
+
+message SearchWorkflowRequest {
+}
+
+message SearchWorkflowResponse {
+    repeated Workflow data = 1;
+}
+
+// The WorkflowInvocationAPI specifies the the externally exposed actions available for workflow invocations.
+service WorkflowInvocationAPI {
+
+    // Create a new workflow invocation
+    //
+    // In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
+    rpc Invoke (WorkflowInvocationSpec) returns (WorkflowInvocationIdentifier) {
+        option (google.api.http) = {
+            post: "/invocation"
+            body: "*"
+        };
+    }
+
+    // Cancel a workflow invocation
+    //
+    // This action is irreverisble. A canceled invocation cannot be resumed or restarted.
+    // In case that an invocation already is canceled, has failed or has completed, nothing happens.
+    // In case that an invocation does not exist a HTTP 404 error status is returned.
+    rpc Cancel (WorkflowInvocationIdentifier) returns (Empty) {
+        option (google.api.http) = {
+            delete: "/invocation/{id}"
+        };
+    }
+
+    // Get the specification and status of a workflow invocation
+    //
+    // Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
+    // To lighten the request load, consider using a more specific request.
+    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocationGetReponse) {
+        option (google.api.http) = {
+            get: "/invocation/{id}"
+        };
+    }
+
+    // Search for workflow invocations based on a query
+    //
+    // By default the search returns at most 10 workflow invocations in no specific order.
+    rpc Search (Empty) returns (WorkflowInvocationList) {
+        option (google.api.http) = {
+            get: "/invocation"
+        };
+    }
+}
+
+message WorkflowInvocationIdentifier {
+    string id = 1;
+}
+
+message WorkflowInvocationQuery {
+    string subject = 1;
+}
+
+message WorkflowInvocationList {
+    repeated string invocations = 1;
+}
+
+message WorkflowInvocationGetReponse {
+    repeated Event events = 1;
+}
+
+
+service AdminAPI {
+    rpc Status (Empty) returns (Health) {
+        option (google.api.http) = {
+            get: "/status"
+        };
+    }
+}
+
+message Health {
+    string status = 1;
+}
+
+service FissionEnvironmentProxy {
+    rpc Specialize (Empty) returns (Empty) {
+        option (google.api.http) = {
+            get: "/specialize"
+        };
+    }
+
+    rpc Invoke (Empty) returns (Empty) {
+        option (google.api.http) = {
+            get: ""
+        };
+    }
+}
