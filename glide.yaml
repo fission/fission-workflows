@@ -8,3 +8,19 @@ import:
   version: ^1.1.0
 - package: github.com/gorilla/mux
   version: ^1.1.0
+- package: google.golang.org/grpc
+- package: github.com/golang/protobuf
+  version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
+- package: google.golang.org/genproto
+- package: github.com/satori/go.uuid
+  version: ^1.1.0
+- package: github.com/nats-io/go-nats
+  version: ^1.2.2
+- package: github.com/nats-io/nuid
+  version: ^1.0.0
+- package: github.com/nats-io/go-nats-streaming
+  version: ^0.3.4
+- package: github.com/gogo/protobuf
+  version: ^0.4.0
+  subpackages:
+  - gogoproto
