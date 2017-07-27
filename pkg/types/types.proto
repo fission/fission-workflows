@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message Workflow {
+    string id = 1;
+    string name = 2;
+    string version = 3;
+    // TODO add internals
+}
+
+message WorkflowInvocation { // TODO move to SPEC and STATUS
+    string id = 1;
+    string workflowId = 2;
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1;
+        IN_PROGRESS = 2;
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+    }
+    Status status = 3;
+//    repeated Log logs = 4;
+    // TODO more about status
+}
+
+enum WorkflowEvents {
+    WORKFLOW_CREATED = 0;
+    WORKFLOW_UPDATED = 1;
+    WORKFLOW_DELETED = 2;
+}
+
+enum InvocationEvent {
+    TASK_STARTED = 0; // origin: Engine
+    TASK_SKIPPED = 1; // origin: Feedback
+    TASK_HEARTBEAT = 2; // origin: Engine
+    TASK_SUCCEEDED = 3; // origin: Feedback
+    TASK_FAILED = 4; // origin: Feedback
+    TASK_ABORTED = 5; // origin: Engine
+    INVOCATION_CREATED = 6; // origin: User/Engine
+    INVOCATION_COMPLETED = 7; // origin: Engine
+    INVOCATION_CANCELED = 8; // origin: User/Engine
+}
+
+// Util
+message Empty {}
+
+message WorkflowInvocationSpec {
+    string workflowId = 2;
+}
+
+message WorkflowInvocationStatus {
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1;
+        IN_PROGRESS = 2;
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    google.protobuf.Timestamp createdAt = 3;
+    // TODO status nodes
+}
+
+message WorkflowInvocationContainer {
+    string id = 1;
+    WorkflowInvocationSpec spec = 2;
+    WorkflowInvocationStatus status = 3;
+}
