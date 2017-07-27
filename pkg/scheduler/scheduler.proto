@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+import "github.com/fission/fission-workflow/pkg/types/types.proto";
+import "google/protobuf/timestamp.proto";
+
+service Scheduler {
+
+
+    rpc evaluate (ScheduleRequest) returns (Schedule) {}
+}
+
+message Schedule {
+    string invocationId = 1;
+    google.protobuf.Timestamp createdAt = 2;
+    repeated ScheduledNode nodes = 3;
+    // TODo Expected next evaluation
+}
+
+message ScheduledNode {
+    string id = 1; // Of the task in(!) the workflow
+    string taskId = 2; // Name
+    // TODO uint32 priority = 4; // Compared to others
+    // TODO google.protobuf.Timestamp startAfter = 3; // Needed?
+    // TODO map<string,string> env = 5;
+    // TODO placement constraints / function scheduler instructions
+    // TODO communication / routing
+}
+
+message ScheduleRequest {
+    Workflow workflow = 1;
+    WorkflowInvocation invocation = 2; // TODO with spec and status
+}
