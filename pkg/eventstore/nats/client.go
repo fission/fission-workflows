@@ -61,7 +61,12 @@ func (nc *Client) Subscribe(config *eventstore.SubscriptionConfig) (eventstore.S
 		subjectEvent := &eventstore.SubjectEvent{}
 		err := proto.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
-			logrus.Errorf("Failed to retrieve event from msg '%v'", msg)
+			logrus.WithFields(logrus.Fields{
+				"msg":             subjectEvent,
+				"query":           query,
+				"activitySubject": activitySubject,
+			}).Warnf("Failed to parse subjectEvent.")
+			return
 		}
 		logrus.WithFields(logrus.Fields{
 			"subject": activitySubject,
@@ -70,7 +75,11 @@ func (nc *Client) Subscribe(config *eventstore.SubscriptionConfig) (eventstore.S
 
 		// Although the activity channel should be specific to one query, recheck if subject falls in range of query.
 		if !queryMatches(subjectEvent.GetSubject(), query) {
-			logrus.Warnf("Received invalid subjectEvent '%v' on activity subject '%s'", subjectEvent, activitySubject)
+			logrus.WithFields(logrus.Fields{
+				"activitySubject":  activitySubject,
+				"subscribeSubject": query,
+				"subjectEvent":     subjectEvent,
+			}).Debug("Ignoring activity event, because it does not match subscription subject.")
 			return
 		}
 
@@ -132,6 +141,8 @@ func (nc *Client) Get(subject string) ([]*eventstore.Event, error) {
 		logrus.Panicf("subscribeSingle does not support wildcards in subject '%s'", subject)
 	}
 
+	logrus.WithField("subject", subject).Debug("GET events from event store")
+
 	msgs, err := nc.conn.MsgSeqRange(subject, FIRST_MSG, MOST_RECENT_MSG)
 	if err != nil {
 		return nil, err
@@ -143,6 +154,37 @@ func (nc *Client) Get(subject string) ([]*eventstore.Event, error) {
 			return nil, err
 		}
 		results = append(results, event)
+	}
+
+	return results, nil
+}
+
+func (nc *Client) Subjects(query string) ([]string, error) {
+
+	logrus.WithField("query", query).Debug("LIST subjects from event store")
+
+	activitySubject := toActivitySubject(query)
+
+	msgs, err := nc.conn.MsgSeqRange(activitySubject, FIRST_MSG, MOST_RECENT_MSG)
+	if err != nil {
+		return nil, err
+	}
+	results := []string{}
+	for _, msg := range msgs {
+		subjectEvent := &eventstore.SubjectEvent{}
+		err := proto.Unmarshal(msg.Data, subjectEvent)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"msg":             subjectEvent,
+				"query":           query,
+				"activitySubject": activitySubject,
+			}).Warnf("Failed to parse subjectEvent.")
+			continue
+		}
+
+		if queryMatches(subjectEvent.GetSubject(), query) {
+			results = append(results, subjectEvent.GetSubject())
+		}
 	}
 
 	return results, nil
@@ -162,18 +204,22 @@ func (nc *Client) Append(event *eventstore.Event) error {
 	}
 
 	// Announce subject activity on notification thread, because of missing wildcards in NATS streaming
-	err = nc.publishActivity(&eventstore.SubjectEvent{
+	activitySubject := toActivitySubject(invokeSubject)
+	activityEvent := &eventstore.SubjectEvent{
 		Subject: invokeSubject,
 		Type:    eventstore.SubjectEvent_CREATED, // TODO infer from context if created or closed
-	})
+	}
+	err = nc.publishActivity(activityEvent)
 	if err != nil {
 		logrus.Warnf("Failed to publish subject '%s' to activity subject '%s': %v", invokeSubject,
-			toActivitySubject(invokeSubject), err)
+			activitySubject, err)
 	}
 	logrus.WithFields(logrus.Fields{
-		"subject": invokeSubject,
-		"event":   event,
-	}).Info("Published event to event store.")
+		"subject":         invokeSubject,
+		"event":           event,
+		"activitySubject": activitySubject,
+		"activityEvent":   activityEvent,
+	}).Info("PUBLISH event to event store.")
 
 	return nil
 }

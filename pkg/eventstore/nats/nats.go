@@ -66,6 +66,7 @@ func (cn *Conn) Msg(subject string, seqId uint64) (*stan.Msg, error) {
 	return msgRange[0], nil
 }
 
+// TODO use channel as output to enable backpressure
 // 0 == 1
 func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*stan.Msg, error) {
 	// Find boundary if 0

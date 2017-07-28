@@ -16,6 +16,9 @@ type Client interface {
 
 	// To replay existing: subscription.close() -> subscribe(subscription.Config())
 	Replay(subject string, subscription Subscription) error
+
+	// Lists subjects matching the query
+	Subjects(query string) ([]string, error)
 }
 
 type Subscription interface {
