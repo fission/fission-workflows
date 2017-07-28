@@ -20,11 +20,11 @@ service WorkflowAPI {
         };
     }
 
-    rpc Search (SearchWorkflowRequest) returns (SearchWorkflowResponse) {
-        option (google.api.http) = {
-            get: "/workflow"
-        };
-    }
+//    rpc Search (SearchWorkflowRequest) returns (SearchWorkflowResponse) {
+//        option (google.api.http) = {
+//            get: "/workflow"
+//        };
+//    }
 }
 
 message WorkflowIdentifier {
@@ -66,7 +66,7 @@ service WorkflowInvocationAPI {
     //
     // Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
     // To lighten the request load, consider using a more specific request.
-    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocationGetReponse) {
+    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocationContainer) {
         option (google.api.http) = {
             get: "/invocation/{id}"
         };
@@ -75,11 +75,11 @@ service WorkflowInvocationAPI {
     // Search for workflow invocations based on a query
     //
     // By default the search returns at most 10 workflow invocations in no specific order.
-    rpc Search (Empty) returns (WorkflowInvocationList) {
-        option (google.api.http) = {
-            get: "/invocation"
-        };
-    }
+//    rpc Search (Empty) returns (WorkflowInvocationList) {
+//        option (google.api.http) = {
+//            get: "/invocation"
+//        };
+//    }
 }
 
 message WorkflowInvocationIdentifier {
@@ -111,7 +111,7 @@ message Health {
     string status = 1;
 }
 
-service FissionEnvironmentProxy {
+service FunctionApi {
     rpc Specialize (Empty) returns (Empty) {
         option (google.api.http) = {
             get: "/specialize"

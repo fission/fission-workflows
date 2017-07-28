@@ -34,8 +34,8 @@ func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *Wor
 	return &types.Empty{}, nil
 }
 
-func (gi *grpcInvocationApiServer) Get(context.Context, *WorkflowInvocationIdentifier) (*WorkflowInvocationGetReponse, error) {
-	panic("implement me")
+func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocationContainer, error) {
+	return gi.api.Get(invocationId.GetId())
 }
 
 func (gi *grpcInvocationApiServer) Search(context.Context, *types.Empty) (*WorkflowInvocationList, error) {

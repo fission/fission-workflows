@@ -40,7 +40,7 @@ func (cr *InvocationController) Run() {
 
 	// Subscribe to invocation creations
 	cr.notifyChan = make(chan *project.InvocationNotification, NOTIFICATION_BUFFER)
-	err := cr.invocationProjector.Fetch(fmt.Sprintf("%s.>", INVOCATION_SUBJECT))
+	err := cr.invocationProjector.Watch(fmt.Sprintf("%s.>", INVOCATION_SUBJECT))
 	if err != nil {
 		panic(err)
 	}

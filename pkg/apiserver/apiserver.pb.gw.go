@@ -69,15 +69,6 @@ func request_WorkflowAPI_Get_0(ctx context.Context, marshaler runtime.Marshaler,
 
 }
 
-func request_WorkflowAPI_Search_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq SearchWorkflowRequest
-	var metadata runtime.ServerMetadata
-
-	msg, err := client.Search(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
 func request_WorkflowInvocationAPI_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowInvocationAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq types.WorkflowInvocationSpec
 	var metadata runtime.ServerMetadata
@@ -145,15 +136,6 @@ func request_WorkflowInvocationAPI_Get_0(ctx context.Context, marshaler runtime.
 
 }
 
-func request_WorkflowInvocationAPI_Search_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowInvocationAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Empty
-	var metadata runtime.ServerMetadata
-
-	msg, err := client.Search(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
 func request_AdminAPI_Status_0(ctx context.Context, marshaler runtime.Marshaler, client AdminAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq types.Empty
 	var metadata runtime.ServerMetadata
@@ -163,7 +145,7 @@ func request_AdminAPI_Status_0(ctx context.Context, marshaler runtime.Marshaler,
 
 }
 
-func request_FissionEnvironmentProxy_Specialize_0(ctx context.Context, marshaler runtime.Marshaler, client FissionEnvironmentProxyClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_FunctionApi_Specialize_0(ctx context.Context, marshaler runtime.Marshaler, client FunctionApiClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq types.Empty
 	var metadata runtime.ServerMetadata
 
@@ -260,35 +242,6 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 
 	})
 
-	mux.Handle("GET", pattern_WorkflowAPI_Search_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		if cn, ok := w.(http.CloseNotifier); ok {
-			go func(done <-chan struct{}, closed <-chan bool) {
-				select {
-				case <-done:
-				case <-closed:
-					cancel()
-				}
-			}(ctx.Done(), cn.CloseNotify())
-		}
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_WorkflowAPI_Search_0(rctx, inboundMarshaler, client, req, pathParams)
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_WorkflowAPI_Search_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	return nil
 }
 
@@ -296,16 +249,12 @@ var (
 	pattern_WorkflowAPI_Create_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"workflow"}, ""))
 
 	pattern_WorkflowAPI_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"workflow", "id"}, ""))
-
-	pattern_WorkflowAPI_Search_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"workflow"}, ""))
 )
 
 var (
 	forward_WorkflowAPI_Create_0 = runtime.ForwardResponseMessage
 
 	forward_WorkflowAPI_Get_0 = runtime.ForwardResponseMessage
-
-	forward_WorkflowAPI_Search_0 = runtime.ForwardResponseMessage
 )
 
 // RegisterWorkflowInvocationAPIHandlerFromEndpoint is same as RegisterWorkflowInvocationAPIHandler but
@@ -425,35 +374,6 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 
 	})
 
-	mux.Handle("GET", pattern_WorkflowInvocationAPI_Search_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		if cn, ok := w.(http.CloseNotifier); ok {
-			go func(done <-chan struct{}, closed <-chan bool) {
-				select {
-				case <-done:
-				case <-closed:
-					cancel()
-				}
-			}(ctx.Done(), cn.CloseNotify())
-		}
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_WorkflowInvocationAPI_Search_0(rctx, inboundMarshaler, client, req, pathParams)
-		ctx = runtime.NewServerMetadataContext(ctx, md)
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_WorkflowInvocationAPI_Search_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	return nil
 }
 
@@ -463,8 +383,6 @@ var (
 	pattern_WorkflowInvocationAPI_Cancel_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"invocation", "id"}, ""))
 
 	pattern_WorkflowInvocationAPI_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"invocation", "id"}, ""))
-
-	pattern_WorkflowInvocationAPI_Search_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"invocation"}, ""))
 )
 
 var (
@@ -473,8 +391,6 @@ var (
 	forward_WorkflowInvocationAPI_Cancel_0 = runtime.ForwardResponseMessage
 
 	forward_WorkflowInvocationAPI_Get_0 = runtime.ForwardResponseMessage
-
-	forward_WorkflowInvocationAPI_Search_0 = runtime.ForwardResponseMessage
 )
 
 // RegisterAdminAPIHandlerFromEndpoint is same as RegisterAdminAPIHandler but
@@ -547,9 +463,9 @@ var (
 	forward_AdminAPI_Status_0 = runtime.ForwardResponseMessage
 )
 
-// RegisterFissionEnvironmentProxyHandlerFromEndpoint is same as RegisterFissionEnvironmentProxyHandler but
+// RegisterFunctionApiHandlerFromEndpoint is same as RegisterFunctionApiHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterFissionEnvironmentProxyHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterFunctionApiHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -569,15 +485,15 @@ func RegisterFissionEnvironmentProxyHandlerFromEndpoint(ctx context.Context, mux
 		}()
 	}()
 
-	return RegisterFissionEnvironmentProxyHandler(ctx, mux, conn)
+	return RegisterFunctionApiHandler(ctx, mux, conn)
 }
 
-// RegisterFissionEnvironmentProxyHandler registers the http handlers for service FissionEnvironmentProxy to "mux".
+// RegisterFunctionApiHandler registers the http handlers for service FunctionApi to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterFissionEnvironmentProxyHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	client := NewFissionEnvironmentProxyClient(conn)
+func RegisterFunctionApiHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	client := NewFunctionApiClient(conn)
 
-	mux.Handle("GET", pattern_FissionEnvironmentProxy_Specialize_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_FunctionApi_Specialize_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
@@ -595,14 +511,14 @@ func RegisterFissionEnvironmentProxyHandler(ctx context.Context, mux *runtime.Se
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_FissionEnvironmentProxy_Specialize_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_FunctionApi_Specialize_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_FissionEnvironmentProxy_Specialize_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_FunctionApi_Specialize_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -610,9 +526,9 @@ func RegisterFissionEnvironmentProxyHandler(ctx context.Context, mux *runtime.Se
 }
 
 var (
-	pattern_FissionEnvironmentProxy_Specialize_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"specialize"}, ""))
+	pattern_FunctionApi_Specialize_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"specialize"}, ""))
 )
 
 var (
-	forward_FissionEnvironmentProxy_Specialize_0 = runtime.ForwardResponseMessage
+	forward_FunctionApi_Specialize_0 = runtime.ForwardResponseMessage
 )

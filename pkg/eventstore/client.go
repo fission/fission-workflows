@@ -10,7 +10,7 @@ type Client interface {
 	// Replays all events for subject, and continues to watch afterwards.
 	Subscribe(config *SubscriptionConfig) (Subscription, error)
 
-	Get(subject string, id string) (*Event, error) // Stan.StartAtSequence // Convenience function, uses subscribe in the background
+	Get(subject string) ([]*Event, error) // Stan.StartAtSequence // Convenience function, uses subscribe in the background
 
 	Append(event *Event) error
 

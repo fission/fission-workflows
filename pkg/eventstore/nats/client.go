@@ -127,8 +127,25 @@ func (nc *Client) subscribeSingle(config *eventstore.SubscriptionConfig) (stan.S
 	}, stan.DeliverAllAvailable())
 }
 
-func (nc *Client) Get(subject string, id string) (*eventstore.Event, error) {
-	panic("implement me")
+func (nc *Client) Get(subject string) ([]*eventstore.Event, error) {
+	if hasWildcard(subject) {
+		logrus.Panicf("subscribeSingle does not support wildcards in subject '%s'", subject)
+	}
+
+	msgs, err := nc.conn.MsgSeqRange(subject, FIRST_MSG, MOST_RECENT_MSG)
+	if err != nil {
+		return nil, err
+	}
+	results := []*eventstore.Event{}
+	for _, msg := range msgs {
+		event, err := unmarshalMsg(msg)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, event)
+	}
+
+	return results, nil
 }
 
 func (nc *Client) Append(event *eventstore.Event) error {

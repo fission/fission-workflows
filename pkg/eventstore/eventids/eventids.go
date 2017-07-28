@@ -32,10 +32,11 @@ func ParseString(stringifiedEventId string) (*eventstore.EventID, error) {
 }
 
 func ToString(eventId *eventstore.EventID) string {
-	return fmt.Sprintf("%s%s%s",
-		strings.Join(eventId.GetSubjects(), SUBJECT_SEPARATOR),
-		ID_SEPARATOR,
-		eventId.GetId())
+	s := strings.Join(eventId.GetSubjects(), SUBJECT_SEPARATOR)
+	if len(eventId.GetId()) > 0 {
+		s = s + ID_SEPARATOR + eventId.GetId()
+	}
+	return s
 }
 
 func New(subjects []string, id string) *eventstore.EventID {

@@ -1,9 +1,11 @@
 package api
 
 import (
+	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
 	"github.com/fission/fission-workflow/pkg/eventstore/events"
+	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/satori/go.uuid"
@@ -14,11 +16,12 @@ const (
 )
 
 type InvocationApi struct {
-	esClient eventstore.Client
+	esClient  eventstore.Client
+	Projector project.InvocationProjector
 }
 
 func NewInvocationApi(esClient eventstore.Client) *InvocationApi {
-	return &InvocationApi{esClient}
+	return &InvocationApi{esClient, project.NewInvocationProjector(esClient, cache.NewMapCache())}
 }
 
 // Commands
@@ -56,3 +59,11 @@ func (ia *InvocationApi) Cancel(invocationId string) error {
 func (ia *InvocationApi) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(INVOCATION_SUBJECT, invocationId)
 }
+
+func (ia *InvocationApi) Get(invocationId string) (*types.WorkflowInvocationContainer, error) {
+	return ia.Projector.Get(invocationId)
+}
+
+// Get(invocationID)
+
+// Future: Search/List (time-based, workflow-based, status-based)

@@ -5,9 +5,11 @@ go_library(
     srcs = ["invocation.go"],
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cache:go_default_library",
         "//pkg/eventstore:go_default_library",
         "//pkg/eventstore/eventids:go_default_library",
         "//pkg/eventstore/events:go_default_library",
+        "//pkg/projector/project:go_default_library",
         "//pkg/types:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/satori/go.uuid:go_default_library",

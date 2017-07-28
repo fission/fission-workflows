@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["bootstrap.go"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api:go_default_library",
+        "//pkg/apiserver:go_default_library",
+        "//pkg/cache:go_default_library",
+        "//pkg/controller:go_default_library",
+        "//pkg/eventstore/nats:go_default_library",
+        "//pkg/projector/project:go_default_library",
+        "//pkg/scheduler:go_default_library",
+        "//vendor/github.com/grpc-ecosystem/grpc-gateway/runtime:go_default_library",
+        "//vendor/github.com/nats-io/go-nats-streaming:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+    ],
+)
