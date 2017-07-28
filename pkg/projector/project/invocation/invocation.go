@@ -2,6 +2,7 @@ package invocation
 
 import (
 	"errors"
+
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/invocationevent"
@@ -54,16 +55,17 @@ func created(currentState types.WorkflowInvocationContainer, event *eventstore.E
 	spec := &types.WorkflowInvocationSpec{}
 	err = ptypes.UnmarshalAny(event.Data, spec)
 
-	currentState.Id = event.GetEventId().GetSubjects()[1] // TODO remove this hardcoding
-	currentState.Spec = spec
-	currentState.Status = &types.WorkflowInvocationStatus{
-		Status:    types.WorkflowInvocationStatus_UNKNOWN,
-		CreatedAt: event.GetTime(),
-		UpdatedAt: event.GetTime(),
-	}
-
-	// TODO only allow spec to be added
-	return &currentState, nil
+	return &types.WorkflowInvocationContainer{
+		Metadata: &types.ObjectMetadata{
+			Id:        event.GetEventId().GetSubjects()[1], // TODO remove this hardcoding,
+			CreatedAt: event.GetTime(),
+		},
+		Spec: spec,
+		Status: &types.WorkflowInvocationStatus{
+			Status:    types.WorkflowInvocationStatus_UNKNOWN,
+			UpdatedAt: ptypes.TimestampNow(),
+		},
+	}, nil
 }
 
 func canceled(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {

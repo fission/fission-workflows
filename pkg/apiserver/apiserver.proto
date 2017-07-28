@@ -7,10 +7,16 @@ import "google/api/annotations.proto";
 package apiserver;
 
 service WorkflowAPI {
-    rpc Create (Workflow) returns (Workflow) {
+    rpc Create (WorkflowSpec) returns (WorkflowIdentifier) {
         option (google.api.http) = {
            post: "/workflow"
            body: "*"
+        };
+    }
+
+    rpc List (Empty) returns (SearchWorkflowResponse) {
+        option (google.api.http) = {
+            get: "/workflow"
         };
     }
 
@@ -19,12 +25,6 @@ service WorkflowAPI {
             get: "/workflow/{id}"
         };
     }
-
-//    rpc Search (SearchWorkflowRequest) returns (SearchWorkflowResponse) {
-//        option (google.api.http) = {
-//            get: "/workflow"
-//        };
-//    }
 }
 
 message WorkflowIdentifier {
@@ -35,7 +35,7 @@ message SearchWorkflowRequest {
 }
 
 message SearchWorkflowResponse {
-    repeated Workflow data = 1;
+    repeated string workflows = 1;
 }
 
 // The WorkflowInvocationAPI specifies the the externally exposed actions available for workflow invocations.

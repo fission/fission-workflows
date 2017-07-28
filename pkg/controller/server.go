@@ -99,9 +99,8 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 }
 
 func (cr *InvocationController) handleControlLoopTick() {
-	logrus.Debug("Running controller control loop tick")
+	logrus.Debug("Controller tick...")
 	// Options: refresh projection, send ping, cancel invocation
-	logrus.Debug("cache: %v", cr.invocationProjector.Cache().List())
 }
 
 func (cr *InvocationController) Close() {

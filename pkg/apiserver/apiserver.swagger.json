@@ -126,13 +126,27 @@
       }
     },
     "/workflow": {
+      "get": {
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverSearchWorkflowResponse"
+            }
+          }
+        },
+        "tags": [
+          "WorkflowAPI"
+        ]
+      },
       "post": {
         "operationId": "Create",
         "responses": {
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Workflow"
+              "$ref": "#/definitions/apiserverWorkflowIdentifier"
             }
           }
         },
@@ -142,7 +156,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Workflow"
+              "$ref": "#/definitions/WorkflowSpec"
             }
           }
         ],
@@ -181,25 +195,36 @@
       "type": "object",
       "title": "Util"
     },
-    "Workflow": {
+    "ObjectMetadata": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string"
         },
-        "name": {
-          "type": "string"
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "string namespace = 2;\n   string name = 3;"
+        }
+      },
+      "title": "TODO decide on these \u003e"
+    },
+    "Workflow": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
         },
-        "version": {
-          "type": "string"
+        "spec": {
+          "$ref": "#/definitions/WorkflowSpec"
         }
       }
     },
     "WorkflowInvocationContainer": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string"
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
         },
         "spec": {
           "$ref": "#/definitions/WorkflowInvocationSpec"
@@ -226,10 +251,6 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
         }
       }
     },
@@ -245,10 +266,40 @@
       ],
       "default": "UNKNOWN"
     },
+    "WorkflowSpec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
     "apiserverHealth": {
       "type": "object",
       "properties": {
         "status": {
+          "type": "string"
+        }
+      }
+    },
+    "apiserverSearchWorkflowResponse": {
+      "type": "object",
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "apiserverWorkflowIdentifier": {
+      "type": "object",
+      "properties": {
+        "id": {
           "type": "string"
         }
       }

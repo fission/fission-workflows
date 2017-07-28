@@ -3,10 +3,14 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 
 message Workflow {
-    string id = 1;
-    string name = 2;
-    string version = 3;
+    ObjectMetadata metadata = 1;
+    WorkflowSpec spec = 2;
     // TODO add internals
+}
+
+message WorkflowSpec {
+    string name = 1;
+    string version = 2;
 }
 
 message WorkflowInvocation { // TODO move to SPEC and STATUS
@@ -25,7 +29,7 @@ message WorkflowInvocation { // TODO move to SPEC and STATUS
     // TODO more about status
 }
 
-enum WorkflowEvents {
+enum WorkflowEvent {
     WORKFLOW_CREATED = 0;
     WORKFLOW_UPDATED = 1;
     WORKFLOW_DELETED = 2;
@@ -53,20 +57,28 @@ message WorkflowInvocationSpec {
 message WorkflowInvocationStatus {
     enum Status {
         UNKNOWN = 0;
-        SCHEDULED = 1;
-        IN_PROGRESS = 2;
+        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        IN_PROGRESS = 2; // Scheduled
         SUCCEEDED = 3;
         FAILED = 4;
         ABORTED = 5;
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    google.protobuf.Timestamp createdAt = 3;
     // TODO status nodes
 }
 
 message WorkflowInvocationContainer {
-    string id = 1;
+   ObjectMetadata metadata = 1;
     WorkflowInvocationSpec spec = 2;
     WorkflowInvocationStatus status = 3;
+}
+
+
+// TODO decide on these >
+message ObjectMetadata {
+    string id = 1;
+//    string namespace = 2;
+//    string name = 3;
+    google.protobuf.Timestamp createdAt = 3;
 }

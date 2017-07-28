@@ -4,4 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["cache.go"],
     visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/sirupsen/logrus:go_default_library"],
 )

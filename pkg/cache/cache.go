@@ -1,5 +1,7 @@
 package cache
 
+import "github.com/sirupsen/logrus"
+
 type Cache interface {
 	Put(key string, data interface{}) error
 	Get(Key string) (interface{}, bool)
@@ -37,16 +39,31 @@ func NewMapCache() *MapCache {
 
 func (mc *MapCache) Put(key string, data interface{}) error {
 	mc.store[key] = data
+	logrus.WithFields(logrus.Fields{
+		"key":       key,
+		"val":       data,
+		"cacheSize": len(mc.store),
+	}).Debug("PUT kv-pair in cache.")
 	return nil
 }
 
 func (mc *MapCache) Get(key string) (interface{}, bool) {
 	val, exists := mc.store[key]
+	logrus.WithFields(logrus.Fields{
+		"key":       key,
+		"val":       val,
+		"present":   exists,
+		"cacheSize": len(mc.store),
+	}).Debug("GET kv-pair from cache.")
 	return val, exists
 }
 
 func (mc *MapCache) Delete(key string) error {
 	delete(mc.store, key)
+	logrus.WithFields(logrus.Fields{
+		"key":       key,
+		"cacheSize": len(mc.store),
+	}).Debug("DELETE kv-pair in cache.")
 	return nil
 }
 

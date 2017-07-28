@@ -1,52 +1,26 @@
-package project
+package invocation
 
 import (
 	"time"
 
-	"io"
-
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
-	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
+	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/invocationevent"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
-// Per object type view only!!!
-type InvocationProjector interface {
-	io.Closer
-	// Get projection from cache or attempt to replay it.
-	Get(subject string) (*types.WorkflowInvocationContainer, error)
-
-	Cache() cache.Cache
-
-	// Replays events, if it already exists, it is invalidated and replayed
-	// Populates cache
-	Watch(query string) error
-
-	// Suscribe to updates in this projector
-	Subscribe(updateCh chan *InvocationNotification) error
-}
-
-// In order to avoid leaking eventstore details
-type InvocationNotification struct {
-	Id   string
-	Data *types.WorkflowInvocationContainer
-	Type types.InvocationEvent
-	Time time.Time
-}
-
 type invocationProjector struct {
 	esClient    eventstore.Client
 	cache       cache.Cache // TODO ensure concurrent
 	sub         eventstore.Subscription
 	updateChan  chan *eventstore.Event
-	subscribers []chan *InvocationNotification
+	subscribers []chan *project.InvocationNotification
 }
 
-func NewInvocationProjector(esClient eventstore.Client, cache cache.Cache) InvocationProjector {
+func NewInvocationProjector(esClient eventstore.Client, cache cache.Cache) project.InvocationProjector {
 	p := &invocationProjector{
 		esClient:   esClient,
 		cache:      cache,
@@ -77,7 +51,7 @@ func (ip *invocationProjector) Get(subject string) (*types.WorkflowInvocationCon
 		return cached, nil
 	}
 
-	events, err := ip.esClient.Get("invocation." + subject)
+	events, err := ip.esClient.Get("invocation." + subject) // TODO Fix hardcode subject
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +82,7 @@ func (ip *invocationProjector) Watch(subject string) error {
 }
 
 // TODO Maybe add identifier per consumer
-func (ip *invocationProjector) Subscribe(updateCh chan *InvocationNotification) error {
+func (ip *invocationProjector) Subscribe(updateCh chan *project.InvocationNotification) error {
 	ip.subscribers = append(ip.subscribers, updateCh)
 	return nil
 }
@@ -156,8 +130,8 @@ func (ip *invocationProjector) Run() {
 		}
 
 		// TODO should judge whether to send notification (old messages not)
-		ip.notifySubscribers(&InvocationNotification{
-			Id:   updatedState.GetId(),
+		ip.notifySubscribers(&project.InvocationNotification{
+			Id:   updatedState.GetMetadata().GetId(),
 			Data: updatedState,
 			Type: invocationEventType,
 			Time: timestamp,
@@ -166,14 +140,15 @@ func (ip *invocationProjector) Run() {
 }
 
 func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.WorkflowInvocationContainer, error) {
+	logrus.WithField("event", event).Debug("InvocationProjector handling event.")
 	invocationId := event.EventId.Subjects[1] // TODO fix hardcoded lookup
 
 	currentState := ip.getCache(invocationId)
 	if currentState == nil {
-		currentState = invocation.Initial()
+		currentState = Initial()
 	}
 
-	newState, err := invocation.Apply(*currentState, event)
+	newState, err := Apply(*currentState, event)
 	if err != nil {
 		// TODO improve error handling (e.g. retry / replay)
 		return nil, err
@@ -186,7 +161,7 @@ func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.Work
 	return newState, nil
 }
 
-func (ip *invocationProjector) notifySubscribers(notification *InvocationNotification) {
+func (ip *invocationProjector) notifySubscribers(notification *project.InvocationNotification) {
 	for _, c := range ip.subscribers {
 		select {
 		case c <- notification:

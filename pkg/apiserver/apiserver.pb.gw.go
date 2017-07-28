@@ -30,7 +30,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 
 func request_WorkflowAPI_Create_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Workflow
+	var protoReq types.WorkflowSpec
 	var metadata runtime.ServerMetadata
 
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil {
@@ -38,6 +38,15 @@ func request_WorkflowAPI_Create_0(ctx context.Context, marshaler runtime.Marshal
 	}
 
 	msg, err := client.Create(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func request_WorkflowAPI_List_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq types.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.List(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
@@ -213,6 +222,35 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 
 	})
 
+	mux.Handle("GET", pattern_WorkflowAPI_List_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		if cn, ok := w.(http.CloseNotifier); ok {
+			go func(done <-chan struct{}, closed <-chan bool) {
+				select {
+				case <-done:
+				case <-closed:
+					cancel()
+				}
+			}(ctx.Done(), cn.CloseNotify())
+		}
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_WorkflowAPI_List_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_WorkflowAPI_List_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("GET", pattern_WorkflowAPI_Get_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -248,11 +286,15 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 var (
 	pattern_WorkflowAPI_Create_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"workflow"}, ""))
 
+	pattern_WorkflowAPI_List_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"workflow"}, ""))
+
 	pattern_WorkflowAPI_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"workflow", "id"}, ""))
 )
 
 var (
 	forward_WorkflowAPI_Create_0 = runtime.ForwardResponseMessage
+
+	forward_WorkflowAPI_List_0 = runtime.ForwardResponseMessage
 
 	forward_WorkflowAPI_Get_0 = runtime.ForwardResponseMessage
 )

@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
 	"github.com/fission/fission-workflow/pkg/eventstore/events"
 	"github.com/fission/fission-workflow/pkg/projector/project"
+	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/satori/go.uuid"
@@ -21,7 +22,7 @@ type InvocationApi struct {
 }
 
 func NewInvocationApi(esClient eventstore.Client) *InvocationApi {
-	return &InvocationApi{esClient, project.NewInvocationProjector(esClient, cache.NewMapCache())}
+	return &InvocationApi{esClient, invocation.NewInvocationProjector(esClient, cache.NewMapCache())}
 }
 
 // Commands
