@@ -65,6 +65,6 @@ func (ia *InvocationApi) Get(invocationId string) (*types.WorkflowInvocationCont
 	return ia.Projector.Get(invocationId)
 }
 
-// Get(invocationID)
-
-// Future: Search/List (time-based, workflow-based, status-based)
+func (ia *InvocationApi) List(query string) ([]string, error) {
+	return ia.Projector.List(query)
+}

@@ -62,6 +62,12 @@ service WorkflowInvocationAPI {
         };
     }
 
+    rpc List (Empty) returns (WorkflowInvocationList) {
+        option (google.api.http) = {
+            get: "/invocation"
+        };
+    }
+
     // Get the specification and status of a workflow invocation
     //
     // Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
@@ -71,15 +77,6 @@ service WorkflowInvocationAPI {
             get: "/invocation/{id}"
         };
     }
-
-    // Search for workflow invocations based on a query
-    //
-    // By default the search returns at most 10 workflow invocations in no specific order.
-//    rpc Search (Empty) returns (WorkflowInvocationList) {
-//        option (google.api.http) = {
-//            get: "/invocation"
-//        };
-//    }
 }
 
 message WorkflowInvocationIdentifier {

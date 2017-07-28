@@ -16,6 +16,20 @@
   ],
   "paths": {
     "/invocation": {
+      "get": {
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverWorkflowInvocationList"
+            }
+          }
+        },
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      },
       "post": {
         "summary": "Create a new workflow invocation",
         "description": "In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.",
@@ -309,6 +323,17 @@
       "properties": {
         "id": {
           "type": "string"
+        }
+      }
+    },
+    "apiserverWorkflowInvocationList": {
+      "type": "object",
+      "properties": {
+        "invocations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }

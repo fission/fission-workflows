@@ -38,6 +38,10 @@ func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *Workfl
 	return gi.api.Get(invocationId.GetId())
 }
 
-func (gi *grpcInvocationApiServer) Search(context.Context, *types.Empty) (*WorkflowInvocationList, error) {
-	panic("implement me")
+func (gi *grpcInvocationApiServer) List(context.Context, *types.Empty) (*WorkflowInvocationList, error) {
+	invocations, err := gi.api.List("*")
+	if err != nil {
+		return nil, err
+	}
+	return &WorkflowInvocationList{invocations}, nil
 }

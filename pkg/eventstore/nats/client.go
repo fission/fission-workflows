@@ -169,7 +169,7 @@ func (nc *Client) Subjects(query string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	results := []string{}
+	subjectCount := map[string]int{}
 	for _, msg := range msgs {
 		subjectEvent := &eventstore.SubjectEvent{}
 		err := proto.Unmarshal(msg.Data, subjectEvent)
@@ -183,8 +183,17 @@ func (nc *Client) Subjects(query string) ([]string, error) {
 		}
 
 		if queryMatches(subjectEvent.GetSubject(), query) {
-			results = append(results, subjectEvent.GetSubject())
+			count := 1
+			if c, ok := subjectCount[subjectEvent.GetSubject()]; ok {
+				count += c
+			}
+			subjectCount[subjectEvent.GetSubject()] = count
 		}
+	}
+
+	results := []string{}
+	for subject := range subjectCount {
+		results = append(results, subject)
 	}
 
 	return results, nil

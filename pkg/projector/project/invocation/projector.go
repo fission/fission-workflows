@@ -10,6 +10,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/types/invocationevent"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
+	"strings"
 )
 
 type invocationProjector struct {
@@ -85,6 +86,18 @@ func (ip *invocationProjector) Watch(subject string) error {
 func (ip *invocationProjector) Subscribe(updateCh chan *project.InvocationNotification) error {
 	ip.subscribers = append(ip.subscribers, updateCh)
 	return nil
+}
+
+func (ip *invocationProjector) List(query string) ([]string, error) {
+	subjects, err := ip.esClient.Subjects("invocation." + query) // TODO fix this hardcode
+	if err != nil {
+		return nil, err
+	}
+	results := make([]string, len(subjects))
+	for key, subject := range subjects {
+		results[key] = strings.SplitN(subject, ".", 2)[1] // TODO fix this hardcode
+	}
+	return results, nil
 }
 
 func (ip *invocationProjector) Cache() cache.Cache {

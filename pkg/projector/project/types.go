@@ -34,6 +34,9 @@ type InvocationProjector interface {
 	// Populates cache
 	Watch(query string) error
 
+	// Lists all subjects that fit the query
+	List(query string) ([]string, error)
+
 	// Suscribe to updates on subjects watched by this projector
 	Subscribe(updateCh chan *InvocationNotification) error
 }
