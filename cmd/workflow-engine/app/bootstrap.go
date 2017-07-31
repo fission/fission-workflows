@@ -12,6 +12,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
+	"github.com/fission/fission/poolmgr/client"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/nats-io/go-nats-streaming"
 	log "github.com/sirupsen/logrus"
@@ -47,17 +48,24 @@ func Run(ctx context.Context) {
 	natsClient := nats.New(nats.NewConn(natsConn))
 	cache := cache.NewMapCache()
 
+	// Fission client
+	poolmgrClient := client.MakeClient("http://192.168.99.100:32101")
+
 	// Setup API
 	workflowApi := api.NewWorkflowApi(natsClient)
 	invocationApi := api.NewInvocationApi(natsClient)
+	functionApi := api.NewFissionFunctionApi(poolmgrClient)
 
 	// API gRPC Server
 	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi)
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
+	functionServer := apiserver.NewGrpcFunctionApiServer(functionApi)
+
 	apiserver.RegisterWorkflowAPIServer(grpcServer, workflowServer)
 	apiserver.RegisterAdminAPIServer(grpcServer, adminServer)
 	apiserver.RegisterWorkflowInvocationAPIServer(grpcServer, invocationServer)
+	apiserver.RegisterFunctionEnvApiServer(grpcServer, functionServer)
 
 	// API Gateway server
 	mux := runtime.NewServeMux()
@@ -71,6 +79,10 @@ func Run(ctx context.Context) {
 		panic(err)
 	}
 	err = apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, GRPC_ADDRESS, opts)
+	if err != nil {
+		panic(err)
+	}
+	err = apiserver.RegisterFunctionEnvApiHandlerFromEndpoint(ctx, mux, GRPC_ADDRESS, opts)
 	if err != nil {
 		panic(err)
 	}

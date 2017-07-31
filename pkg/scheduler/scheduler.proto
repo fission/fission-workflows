@@ -28,5 +28,5 @@ message ScheduledNode {
 
 message ScheduleRequest {
     Workflow workflow = 1;
-    WorkflowInvocation invocation = 2; // TODO with spec and status
+    WorkflowInvocationContainer invocation = 2; // TODO with spec and status
 }

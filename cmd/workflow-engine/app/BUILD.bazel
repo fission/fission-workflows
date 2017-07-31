@@ -12,6 +12,7 @@ go_library(
         "//pkg/eventstore/nats:go_default_library",
         "//pkg/projector/project/invocation:go_default_library",
         "//pkg/scheduler:go_default_library",
+        "//vendor/github.com/fission/fission/poolmgr/client:go_default_library",
         "//vendor/github.com/grpc-ecosystem/grpc-gateway/runtime:go_default_library",
         "//vendor/github.com/nats-io/go-nats-streaming:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",

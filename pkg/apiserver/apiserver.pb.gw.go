@@ -14,6 +14,7 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/utilities"
 	"golang.org/x/net/context"
@@ -43,7 +44,7 @@ func request_WorkflowAPI_Create_0(ctx context.Context, marshaler runtime.Marshal
 }
 
 func request_WorkflowAPI_List_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Empty
+	var protoReq empty.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.List(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -119,7 +120,7 @@ func request_WorkflowInvocationAPI_Cancel_0(ctx context.Context, marshaler runti
 }
 
 func request_WorkflowInvocationAPI_List_0(ctx context.Context, marshaler runtime.Marshaler, client WorkflowInvocationAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Empty
+	var protoReq empty.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.List(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -155,7 +156,7 @@ func request_WorkflowInvocationAPI_Get_0(ctx context.Context, marshaler runtime.
 }
 
 func request_AdminAPI_Status_0(ctx context.Context, marshaler runtime.Marshaler, client AdminAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Empty
+	var protoReq empty.Empty
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.Status(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -163,11 +164,15 @@ func request_AdminAPI_Status_0(ctx context.Context, marshaler runtime.Marshaler,
 
 }
 
-func request_FunctionApi_Specialize_0(ctx context.Context, marshaler runtime.Marshaler, client FunctionApiClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq types.Empty
+func request_FunctionEnvApi_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, client FunctionEnvApiClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq types.FunctionInvocationSpec
 	var metadata runtime.ServerMetadata
 
-	msg, err := client.Specialize(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.Invoke(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
@@ -547,9 +552,9 @@ var (
 	forward_AdminAPI_Status_0 = runtime.ForwardResponseMessage
 )
 
-// RegisterFunctionApiHandlerFromEndpoint is same as RegisterFunctionApiHandler but
+// RegisterFunctionEnvApiHandlerFromEndpoint is same as RegisterFunctionEnvApiHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterFunctionApiHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterFunctionEnvApiHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -569,15 +574,15 @@ func RegisterFunctionApiHandlerFromEndpoint(ctx context.Context, mux *runtime.Se
 		}()
 	}()
 
-	return RegisterFunctionApiHandler(ctx, mux, conn)
+	return RegisterFunctionEnvApiHandler(ctx, mux, conn)
 }
 
-// RegisterFunctionApiHandler registers the http handlers for service FunctionApi to "mux".
+// RegisterFunctionEnvApiHandler registers the http handlers for service FunctionEnvApi to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterFunctionApiHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	client := NewFunctionApiClient(conn)
+func RegisterFunctionEnvApiHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	client := NewFunctionEnvApiClient(conn)
 
-	mux.Handle("GET", pattern_FunctionApi_Specialize_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_FunctionEnvApi_Invoke_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
@@ -595,14 +600,14 @@ func RegisterFunctionApiHandler(ctx context.Context, mux *runtime.ServeMux, conn
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_FunctionApi_Specialize_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_FunctionEnvApi_Invoke_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_FunctionApi_Specialize_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_FunctionEnvApi_Invoke_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -610,9 +615,9 @@ func RegisterFunctionApiHandler(ctx context.Context, mux *runtime.ServeMux, conn
 }
 
 var (
-	pattern_FunctionApi_Specialize_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"specialize"}, ""))
+	pattern_FunctionEnvApi_Invoke_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"function"}, ""))
 )
 
 var (
-	forward_FunctionApi_Specialize_0 = runtime.ForwardResponseMessage
+	forward_FunctionEnvApi_Invoke_0 = runtime.ForwardResponseMessage
 )

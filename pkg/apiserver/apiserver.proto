@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "github.com/fission/fission-workflow/pkg/types/types.proto";
 import "github.com/fission/fission-workflow/pkg/eventstore/eventstore.proto";
+import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
 package apiserver;
@@ -14,7 +15,7 @@ service WorkflowAPI {
         };
     }
 
-    rpc List (Empty) returns (SearchWorkflowResponse) {
+    rpc List (google.protobuf.Empty) returns (SearchWorkflowResponse) {
         option (google.api.http) = {
             get: "/workflow"
         };
@@ -56,13 +57,13 @@ service WorkflowInvocationAPI {
     // This action is irreverisble. A canceled invocation cannot be resumed or restarted.
     // In case that an invocation already is canceled, has failed or has completed, nothing happens.
     // In case that an invocation does not exist a HTTP 404 error status is returned.
-    rpc Cancel (WorkflowInvocationIdentifier) returns (Empty) {
+    rpc Cancel (WorkflowInvocationIdentifier) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             delete: "/invocation/{id}"
         };
     }
 
-    rpc List (Empty) returns (WorkflowInvocationList) {
+    rpc List (google.protobuf.Empty) returns (WorkflowInvocationList) {
         option (google.api.http) = {
             get: "/invocation"
         };
@@ -97,7 +98,7 @@ message WorkflowInvocationGetReponse {
 
 
 service AdminAPI {
-    rpc Status (Empty) returns (Health) {
+    rpc Status (google.protobuf.Empty) returns (Health) {
         option (google.api.http) = {
             get: "/status"
         };
@@ -108,16 +109,13 @@ message Health {
     string status = 1;
 }
 
-service FunctionApi {
-    rpc Specialize (Empty) returns (Empty) {
-        option (google.api.http) = {
-            get: "/specialize"
-        };
-    }
+service FunctionEnvApi {
 
-    rpc Invoke (Empty) returns (Empty) {
+    // Debug purposes
+    rpc Invoke (FunctionInvocationSpec) returns (FunctionInvocation) {
         option (google.api.http) = {
-            get: ""
+            post: "/function"
+            body: "*"
         };
     }
 }

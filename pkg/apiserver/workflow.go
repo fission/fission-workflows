@@ -3,6 +3,7 @@ package apiserver
 import (
 	"github.com/fission/fission-workflow/pkg/api"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
@@ -40,7 +41,7 @@ func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowId
 	return ga.api.Get(workflowId.GetId())
 }
 
-func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *types.Empty) (*SearchWorkflowResponse, error) {
+func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
 	wfs, err := ga.api.List("*")
 	if err != nil {
 		return nil, err

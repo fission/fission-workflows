@@ -2,33 +2,16 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-message Workflow {
-    ObjectMetadata metadata = 1;
-    WorkflowSpec spec = 2;
-    // TODO add internals
-}
-
-message WorkflowSpec {
-    string name = 1;
-    string version = 2;
-}
-
-message WorkflowInvocation { // TODO move to SPEC and STATUS
+// Common
+message ObjectMetadata {
     string id = 1;
-    string workflowId = 2;
-    enum Status {
-        UNKNOWN = 0;
-        SCHEDULED = 1;
-        IN_PROGRESS = 2;
-        SUCCEEDED = 3;
-        FAILED = 4;
-        ABORTED = 5;
-    }
-    Status status = 3;
-//    repeated Log logs = 4;
-    // TODO more about status
+    //    string namespace = 2;
+    //    string name = 3;
+    google.protobuf.Timestamp createdAt = 3;
 }
 
+
+// Event Types
 enum WorkflowEvent {
     WORKFLOW_CREATED = 0;
     WORKFLOW_UPDATED = 1;
@@ -47,11 +30,48 @@ enum InvocationEvent {
     INVOCATION_CANCELED = 8; // origin: User/Engine
 }
 
-// Util
-message Empty {}
+// Workflow Model
+message Workflow {
+    ObjectMetadata metadata = 1;
+    WorkflowSpec spec = 2;
+    // TODO add internals
+}
 
+message WorkflowSpec {
+    string name = 1;
+    string version = 2;
+}
+
+// Function Invocation Model
+message FunctionInvocation {
+    ObjectMetadata metadata = 1;
+    FunctionInvocationSpec spec = 2;
+    FunctionInvocationStatus status = 3;
+}
+
+message FunctionInvocationSpec {
+    string name = 1;
+    string id = 2;
+}
+
+message FunctionInvocationStatus {
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        IN_PROGRESS = 2; // Scheduled
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+        SKIPPED = 6;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+}
+
+
+// Workflow Invocation Model
 message WorkflowInvocationSpec {
-    string workflowId = 2;
+    string workflowId = 1;
 }
 
 message WorkflowInvocationStatus {
@@ -72,13 +92,4 @@ message WorkflowInvocationContainer {
    ObjectMetadata metadata = 1;
     WorkflowInvocationSpec spec = 2;
     WorkflowInvocationStatus status = 3;
-}
-
-
-// TODO decide on these >
-message ObjectMetadata {
-    string id = 1;
-//    string namespace = 2;
-//    string name = 3;
-    google.protobuf.Timestamp createdAt = 3;
 }

@@ -17,8 +17,11 @@ go_library(
         "//pkg/projector/project/invocation:go_default_library",
         "//pkg/projector/project/workflow:go_default_library",
         "//pkg/types:go_default_library",
+        "//vendor/github.com/fission/fission:go_default_library",
+        "//vendor/github.com/fission/fission/poolmgr/client:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/satori/go.uuid:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],
 )
 

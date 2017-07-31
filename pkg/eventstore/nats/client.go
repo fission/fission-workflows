@@ -208,7 +208,6 @@ func (nc *Client) Append(event *eventstore.Event) error {
 
 	err = nc.conn.Publish(invokeSubject, data)
 	if err != nil {
-		panic(err)
 		return err
 	}
 

@@ -3,6 +3,7 @@ package apiserver
 import (
 	"github.com/fission/fission-workflow/pkg/api"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
 )
 
@@ -25,20 +26,20 @@ func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, invocation *types
 	return &WorkflowInvocationIdentifier{eventId}, nil
 }
 
-func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.Empty, error) {
+func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*empty.Empty, error) {
 	err := gi.api.Cancel(invocationId.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.Empty{}, nil
+	return &empty.Empty{}, nil
 }
 
 func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocationContainer, error) {
 	return gi.api.Get(invocationId.GetId())
 }
 
-func (gi *grpcInvocationApiServer) List(context.Context, *types.Empty) (*WorkflowInvocationList, error) {
+func (gi *grpcInvocationApiServer) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
 	invocations, err := gi.api.List("*")
 	if err != nil {
 		return nil, err

@@ -15,6 +15,33 @@
     "application/json"
   ],
   "paths": {
+    "/function": {
+      "post": {
+        "summary": "Debug purposes",
+        "operationId": "Invoke",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/FunctionInvocation"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FunctionInvocationSpec"
+            }
+          }
+        ],
+        "tags": [
+          "FunctionEnvApi"
+        ]
+      }
+    },
     "/invocation": {
       "get": {
         "operationId": "List",
@@ -90,7 +117,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Empty"
+              "$ref": "#/definitions/protobufEmpty"
             }
           }
         },
@@ -104,22 +131,6 @@
         ],
         "tags": [
           "WorkflowInvocationAPI"
-        ]
-      }
-    },
-    "/specialize": {
-      "get": {
-        "operationId": "Specialize",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/Empty"
-            }
-          }
-        },
-        "tags": [
-          "FunctionApi"
         ]
       }
     },
@@ -205,9 +216,56 @@
     }
   },
   "definitions": {
-    "Empty": {
+    "FunctionInvocation": {
       "type": "object",
-      "title": "Util"
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/FunctionInvocationSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/FunctionInvocationStatus"
+        }
+      },
+      "title": "Function Invocation Model"
+    },
+    "FunctionInvocationSpec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "FunctionInvocationStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/FunctionInvocationStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "FunctionInvocationStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "ABORTED",
+        "SKIPPED"
+      ],
+      "default": "UNKNOWN"
     },
     "ObjectMetadata": {
       "type": "object",
@@ -221,7 +279,7 @@
           "title": "string namespace = 2;\n   string name = 3;"
         }
       },
-      "title": "TODO decide on these \u003e"
+      "title": "Common"
     },
     "Workflow": {
       "type": "object",
@@ -232,7 +290,8 @@
         "spec": {
           "$ref": "#/definitions/WorkflowSpec"
         }
-      }
+      },
+      "title": "Workflow Model"
     },
     "WorkflowInvocationContainer": {
       "type": "object",
@@ -254,7 +313,8 @@
         "workflowId": {
           "type": "string"
         }
-      }
+      },
+      "title": "Workflow Invocation Model"
     },
     "WorkflowInvocationStatus": {
       "type": "object",
@@ -336,6 +396,11 @@
           }
         }
       }
+    },
+    "protobufEmpty": {
+      "type": "object",
+      "description": "service Foo {\n      rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n    }\n\nThe JSON representation for `Empty` is empty JSON object `{}`.",
+      "title": "A generic empty message that you can re-use to avoid defining duplicated\nempty messages in your APIs. A typical example is to use it as the request\nor the response type of an API method. For instance:"
     }
   }
 }
