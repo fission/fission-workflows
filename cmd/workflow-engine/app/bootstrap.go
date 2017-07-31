@@ -9,7 +9,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
-	"github.com/fission/fission-workflow/pkg/eventstore/nats"
+	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission/poolmgr/client"
@@ -24,8 +24,18 @@ const (
 	API_GATEWAY_ADDRESS = ":8080"
 )
 
+type Options struct {
+	EventStore *EventStoreOptions
+}
+
+type EventStoreOptions struct {
+	Url string
+	Type string
+	Cluster string
+}
+
 // Blocking
-func Run(ctx context.Context) {
+func Run(ctx context.Context, options *Options) error {
 	// (shared) gRPC server
 	lis, err := net.Listen("tcp", GRPC_ADDRESS)
 	if err != nil {
@@ -41,11 +51,11 @@ func Run(ctx context.Context) {
 	defer lis.Close()
 
 	// EventStore
-	natsConn, err := stan.Connect("test-cluster", "test-client")
+	stanConn, err := stan.Connect("fissionMQTrigger", "test-client", stan.NatsURL(options.EventStore.Url))
 	if err != nil {
 		panic(err)
 	}
-	natsClient := nats.New(nats.NewConn(natsConn))
+	natsClient := inats.New(inats.NewConn(stanConn))
 	cache := cache.NewMapCache()
 
 	// Fission client
@@ -102,4 +112,6 @@ func Run(ctx context.Context) {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	return nil
 }

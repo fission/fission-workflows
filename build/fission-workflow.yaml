@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: workflow-engine
+  namespace: fission
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        svc: workflow-engine
+    spec:
+      containers:
+      - name: workflow-engine
+        image: fission/fission-workflow
+        command: ["/workflow-engine"]
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: EVENT_STORE_URL
+          value: nats://nats-streaming:4222
+        - name: EVENT_STORE_CLUSTER
+          value: fissionMQTrigger
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflow-engine
+  namespace: fission
+  labels:
+    svc: workflow-engine
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 31319
+  selector:
+    svc: workflow-engine

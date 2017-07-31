@@ -43,16 +43,15 @@ func (fi *FissionFunctionEnvApi) InvokeSync(fn *types.FunctionInvocationSpec) (*
 	meta := &fission.Metadata{
 		Name: fn.GetName(),
 		Uid:  fn.GetId(),
-		// TODO deal with uid
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
 	}).Debug("Invoking Fission function.")
-	//serviceUrl, err := fi.poolmgr.GetServiceForFunction(meta)
-	//if err != nil {
-	//	return nil, err
-	//}
-	serviceUrl := fmt.Sprintf("http://192.168.99.100:31314/fission-function/%s", fn.GetName())
+	serviceUrl, err := fi.poolmgr.GetServiceForFunction(meta)
+	if err != nil {
+		return nil, err
+	}
+	//serviceUrl := fmt.Sprintf("http://192.168.99.100:31314/fission-function/%s", fn.GetName())
 
 	resp, err := http.Get(serviceUrl) // TODO allow specifying of http method
 	if err != nil {
