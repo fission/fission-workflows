@@ -26,6 +26,13 @@ service WorkflowAPI {
             get: "/workflow/{id}"
         };
     }
+
+    rpc Validate (WorkflowSpec) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/workflow/validate"
+            body: "*"
+        };
+    }
 }
 
 message WorkflowIdentifier {
@@ -47,8 +54,11 @@ service WorkflowInvocationAPI {
     // In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
     rpc Invoke (WorkflowInvocationSpec) returns (WorkflowInvocationIdentifier) {
         option (google.api.http) = {
-            post: "/invocation"
-            body: "*"
+            get: "/invocation"
+            additional_bindings {
+				post: "/invocation"
+				body: "*"
+			}
         };
     }
 

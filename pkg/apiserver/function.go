@@ -1,16 +1,16 @@
 package apiserver
 
 import (
-	"github.com/fission/fission-workflow/pkg/api"
+	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
 	"golang.org/x/net/context"
 )
 
 type GrpcFunctionApiServer struct {
-	api api.FunctionEnvApi
+	api function.Api
 }
 
-func NewGrpcFunctionApiServer(api api.FunctionEnvApi) FunctionEnvApiServer {
+func NewGrpcFunctionApiServer(api function.Api) FunctionEnvApiServer {
 	return &GrpcFunctionApiServer{api}
 }
 
