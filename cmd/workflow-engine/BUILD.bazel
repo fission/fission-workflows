@@ -6,7 +6,9 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//cmd/workflow-engine/app:go_default_library",
+        "//vendor/github.com/nats-io/go-nats:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",
+        "//vendor/github.com/urfave/cli:go_default_library",
     ],
 )
 

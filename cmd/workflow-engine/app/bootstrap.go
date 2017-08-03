@@ -5,14 +5,20 @@ import (
 	"net"
 	"net/http"
 
+	"os"
+
 	"github.com/fission/fission-workflow/pkg/api"
+	"github.com/fission/fission-workflow/pkg/api/function"
+	"github.com/fission/fission-workflow/pkg/api/workflow"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
-	"github.com/fission/fission/poolmgr/client"
+	"github.com/fission/fission/controller/client"
+	poolmgr "github.com/fission/fission/poolmgr/client"
+	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/nats-io/go-nats-streaming"
 	log "github.com/sirupsen/logrus"
@@ -29,11 +35,12 @@ type Options struct {
 }
 
 type EventStoreOptions struct {
-	Url string
-	Type string
+	Url     string
+	Type    string
 	Cluster string
 }
 
+// TODO scratch, should be cleaned up
 // Blocking
 func Run(ctx context.Context, options *Options) error {
 	// (shared) gRPC server
@@ -59,15 +66,27 @@ func Run(ctx context.Context, options *Options) error {
 	cache := cache.NewMapCache()
 
 	// Fission client
-	poolmgrClient := client.MakeClient("http://192.168.99.100:32101")
+	poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
+	cotnrollerClient := client.MakeClient("http://192.168.99.100:31313")
 
+	workflowParser := workflow.NewParser(cotnrollerClient)
+	workflowValidator := workflow.NewValidator()
+	invocationProjector := invocation.NewInvocationProjector(natsClient, cache)
+	err = invocationProjector.Watch("invocation.>")
+	if err != nil {
+		panic(err)
+	}
 	// Setup API
-	workflowApi := api.NewWorkflowApi(natsClient)
-	invocationApi := api.NewInvocationApi(natsClient)
-	functionApi := api.NewFissionFunctionApi(poolmgrClient)
+	workflowApi := workflow.NewApi(natsClient, workflowParser)
+	invocationApi := api.NewInvocationApi(natsClient, invocationProjector)
+	functionApi := function.NewFissionFunctionApi(poolmgrClient)
+	err = workflowApi.Projector.Watch("workflows.>")
+	if err != nil {
+		log.Warnf("Failed to watch for workflows, because '%v'.", err)
+	}
 
 	// API gRPC Server
-	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi)
+	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator)
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
 	functionServer := apiserver.NewGrpcFunctionApiServer(functionApi)
@@ -98,12 +117,11 @@ func Run(ctx context.Context, options *Options) error {
 	}
 
 	log.Info("Serving HTTP API gateway at: ", API_GATEWAY_ADDRESS)
-	go http.ListenAndServe(API_GATEWAY_ADDRESS, mux)
+	go http.ListenAndServe(API_GATEWAY_ADDRESS, handlers.LoggingHandler(os.Stdout, mux))
 
 	// Controller
-	invocationProjector := invocation.NewInvocationProjector(natsClient, cache)
 	s := &scheduler.WorkflowScheduler{}
-	ctr := controller.NewController(invocationProjector, s)
+	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, natsClient)
 	defer ctr.Close()
 	go ctr.Run()
 

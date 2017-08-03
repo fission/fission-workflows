@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["fission-workflow.go"],
     visibility = ["//visibility:private"],
+    deps = ["//vendor/github.com/urfave/cli:go_default_library"],
 )
 
 go_binary(

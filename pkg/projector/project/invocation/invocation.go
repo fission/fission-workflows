@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/invocationevent"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -15,9 +16,16 @@ import (
 type reduceFunc func(invocation types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error)
 
 var eventMapping = map[types.InvocationEvent]reduceFunc{
-	types.InvocationEvent_INVOCATION_CREATED:   created,
-	types.InvocationEvent_INVOCATION_CANCELED:  canceled,
-	types.InvocationEvent_INVOCATION_COMPLETED: completed,
+	types.InvocationEvent_INVOCATION_CREATED:      created,
+	types.InvocationEvent_INVOCATION_CANCELED:     canceled,
+	types.InvocationEvent_INVOCATION_COMPLETED:    completed,
+	types.InvocationEvent_TASK_FAILED:             skip,
+	types.InvocationEvent_TASK_SUCCEEDED:          skip,
+	types.InvocationEvent_TASK_STARTED:            skip,
+	types.InvocationEvent_TASK_ABORTED:            skip,
+	types.InvocationEvent_TASK_HEARTBEAT_REQUEST:  skip,
+	types.InvocationEvent_TASK_HEARTBEAT_RESPONSE: skip,
+	types.InvocationEvent_TASK_SKIPPED:            skip,
 }
 
 func Initial() *types.WorkflowInvocationContainer {
@@ -81,5 +89,13 @@ func completed(currentState types.WorkflowInvocationContainer, event *eventstore
 	// TODO do some state checking
 
 	currentState.GetStatus().Status = types.WorkflowInvocationStatus_SUCCEEDED
+	return &currentState, nil
+}
+
+func skip(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+	logrus.WithFields(logrus.Fields{
+		"currentState": currentState,
+		"event":        event,
+	}).Debug("Skipping unimplemented event.")
 	return &currentState, nil
 }

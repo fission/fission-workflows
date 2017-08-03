@@ -36,8 +36,8 @@ func main() {
 	cliApp.Action = func(c *cli.Context) error {
 		options := &app.Options{
 			EventStore: &app.EventStoreOptions{
-				Url:  c.String("eventstore-url"),
-				Type: "nats-streaming",
+				Url:     c.String("eventstore-url"),
+				Type:    "nats-streaming",
 				Cluster: c.String("eventstore-cluster"),
 			},
 		}

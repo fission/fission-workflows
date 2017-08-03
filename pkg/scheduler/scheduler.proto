@@ -17,8 +17,8 @@ message Schedule {
 }
 
 message ScheduledNode {
-    string id = 1; // Of the task in(!) the workflow
-    string taskId = 2; // Name
+    // Id of the task in the workflow
+    string id = 1;
     // TODO uint32 priority = 4; // Compared to others
     // TODO google.protobuf.Timestamp startAfter = 3; // Needed?
     // TODO map<string,string> env = 5;

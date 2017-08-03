@@ -8,12 +8,15 @@ go_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/api/function:go_default_library",
         "//pkg/eventstore:go_default_library",
+        "//pkg/eventstore/eventids:go_default_library",
+        "//pkg/eventstore/events:go_default_library",
         "//pkg/projector/project:go_default_library",
         "//pkg/scheduler:go_default_library",
         "//pkg/types:go_default_library",
-        "//pkg/types/invocationevent:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],
 )

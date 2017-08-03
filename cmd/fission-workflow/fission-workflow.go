@@ -10,14 +10,14 @@ import (
 func main() {
 	app := cli.NewApp()
 
-	app.Flags = []cli.Flag {
+	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "lang, l",
+			Name:  "lang, l",
 			Value: "english",
 			Usage: "Language for the greeting",
 		},
 		cli.StringFlag{
-			Name: "config, c",
+			Name:  "config, c",
 			Usage: "Load configuration from `FILE`",
 		},
 	}
@@ -27,7 +27,7 @@ func main() {
 			Name:    "workflow",
 			Aliases: []string{"wf"},
 			Usage:   "Manage Workflows.",
-			Action:  func(c *cli.Context) error {
+			Action: func(c *cli.Context) error {
 				return nil
 			},
 		},
@@ -35,7 +35,7 @@ func main() {
 			Name:    "invocation",
 			Aliases: []string{"iv"},
 			Usage:   "Manage workflow invocations",
-			Action:  func(c *cli.Context) error {
+			Action: func(c *cli.Context) error {
 				return nil
 			},
 		},
@@ -43,7 +43,7 @@ func main() {
 			Name:    "invocation",
 			Aliases: []string{"iv"},
 			Usage:   "add a task to the list",
-			Action:  func(c *cli.Context) error {
+			Action: func(c *cli.Context) error {
 				return nil
 			},
 		},
