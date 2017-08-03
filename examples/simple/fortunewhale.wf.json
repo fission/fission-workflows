@@ -1,0 +1,19 @@
+{
+  "version": "v1",
+  "name" : "whyisthisrequired",
+  "src": {
+    "tasks": {
+      "generateFortune": {
+        "type": "function",
+        "name": "fortune"
+      },
+      "makeCowSayFortune": {
+        "type": "function",
+        "name": "whalesay",
+        "dependencies": [
+          "generateFortune"
+        ]
+      }
+    }
+  }
+}
