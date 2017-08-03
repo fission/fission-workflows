@@ -31,8 +31,13 @@ metadata:
 spec:
   type: NodePort
   ports:
+  - port: 135
+    targetPort: 5555
+    nodePort: 31319
+    name: grpc
   - port: 80
     targetPort: 8080
-    nodePort: 31319
+    nodePort: 31320
+    name: http
   selector:
     svc: workflow-engine

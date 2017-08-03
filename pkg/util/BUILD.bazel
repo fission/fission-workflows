@@ -4,4 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["util.go"],
     visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/satori/go.uuid:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+    ],
 )
