@@ -67,9 +67,9 @@ func Run(ctx context.Context, options *Options) error {
 
 	// Fission client
 	poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
-	cotnrollerClient := client.MakeClient("http://192.168.99.100:31313")
+	controllerClient := client.MakeClient("http://192.168.99.100:31313")
 
-	workflowParser := workflow.NewParser(cotnrollerClient)
+	workflowParser := workflow.NewParser(controllerClient)
 	workflowValidator := workflow.NewValidator()
 	invocationProjector := invocation.NewInvocationProjector(natsClient, cache)
 	err = invocationProjector.Watch("invocation.>")
@@ -121,7 +121,7 @@ func Run(ctx context.Context, options *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, natsClient)
+	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, invocationApi, natsClient)
 	defer ctr.Close()
 	go ctr.Run()
 

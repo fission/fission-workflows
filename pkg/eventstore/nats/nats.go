@@ -4,47 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 )
 
 // Wrapper of 'stan' package to augment the API
 type Conn struct {
-	conn stan.Conn
+	stan.Conn
 }
 
 func NewConn(conn stan.Conn) *Conn {
 	return &Conn{conn}
 }
 
-func (cn *Conn) Publish(subject string, data []byte) error {
-	return cn.conn.Publish(subject, data)
-}
-
-func (cn *Conn) PublishAsync(subject string, data []byte, ah stan.AckHandler) (string, error) {
-	return cn.conn.PublishAsync(subject, data, ah)
-}
-
-func (cn *Conn) Subscribe(subject string, cb stan.MsgHandler, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
-	return cn.conn.Subscribe(subject, cb, opts...)
-}
-
-func (cn *Conn) QueueSubscribe(subject, qgroup string, cb stan.MsgHandler, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
-	return cn.conn.QueueSubscribe(subject, qgroup, cb, opts...)
-}
-
-func (cn *Conn) Close() error {
-	return cn.conn.Close()
-}
-
-func (cn *Conn) NatsConn() *nats.Conn {
-	return cn.conn.NatsConn()
-}
-
 // Augmented functions
 
 func (cn *Conn) SubscribeChan(subject string, msgChan chan *stan.Msg, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
-	return cn.conn.Subscribe(subject, func(msg *stan.Msg) {
+	return cn.Subscribe(subject, func(msg *stan.Msg) {
 		msgChan <- msg
 	}, opts...)
 }
@@ -73,7 +48,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 	if seqEnd == 0 {
 		rightBound := make(chan uint64)
 
-		leftSub, err := cn.conn.Subscribe(subject, func(msg *stan.Msg) {
+		leftSub, err := cn.Subscribe(subject, func(msg *stan.Msg) {
 			rightBound <- msg.Sequence
 			msg.Sub.Close()
 			msg.Ack()
@@ -103,7 +78,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 
 	result := []*stan.Msg{}
 	c := make(chan *stan.Msg)
-	sub, err := cn.conn.Subscribe(subject, func(msg *stan.Msg) {
+	sub, err := cn.Subscribe(subject, func(msg *stan.Msg) {
 		defer msg.Ack()
 		// TODO maybe add a timeout here too?
 		c <- msg

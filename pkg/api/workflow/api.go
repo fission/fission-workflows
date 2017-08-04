@@ -45,6 +45,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 	parsed, err := wa.Parser.Parse(workflow)
 	if err != nil {
 		logrus.WithField("id", eventId).Errorf("Failed to parse workflow: %v", err)
+		return id, nil
 	}
 
 	parsedData, err := ptypes.MarshalAny(parsed)
@@ -65,7 +66,7 @@ func (wa *Api) Delete(id string) error {
 
 	eventId := eventids.NewSubject(types.SUBJECT_WORKFLOW, id)
 
-	event := events.New(eventId, types.WorkflowEvent_WORKFLOW_CREATED.String(), nil)
+	event := events.New(eventId, types.WorkflowEvent_WORKFLOW_DELETED.String(), nil)
 
 	err := wa.esClient.Append(event)
 	if err != nil {

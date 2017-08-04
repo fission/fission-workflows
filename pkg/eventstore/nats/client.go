@@ -75,17 +75,13 @@ func (nc *Client) Subscribe(config *eventstore.SubscriptionConfig) (eventstore.S
 
 		// Although the activity channel should be specific to one query, recheck if subject falls in range of query.
 		if !queryMatches(subjectEvent.GetSubject(), query) {
-			logrus.WithFields(logrus.Fields{
-				"activitySubject":  activitySubject,
-				"subscribeSubject": query,
-				"subjectEvent":     subjectEvent,
-			}).Debug("Ignoring activity event, because it does not match subscription subject.")
 			return
 		}
 
 		switch subjectEvent.GetType() {
 		case eventstore.SubjectEvent_CREATED:
 			if _, ok := sub.sources[subjectEvent.GetSubject()]; !ok {
+				fmt.Printf("Subscribing to.... %v\n", subjectEvent.GetSubject())
 				stanSub, err := nc.subscribeSingle(&eventstore.SubscriptionConfig{
 					Subject: subjectEvent.GetSubject(),
 					EventCh: config.EventCh,
@@ -128,6 +124,7 @@ func (nc *Client) subscribeSingle(config *eventstore.SubscriptionConfig) (stan.S
 	}).Debug("Subscribed to subject.")
 
 	return nc.conn.Subscribe(config.Subject, func(msg *stan.Msg) {
+		fmt.Printf("[%s] %v\n", config.Subject, msg)
 		event, err := unmarshalMsg(msg)
 		if err != nil {
 			logrus.Errorf("Failed to retrieve event from msg '%v'", msg)

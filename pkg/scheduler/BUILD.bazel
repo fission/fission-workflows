@@ -11,6 +11,7 @@ go_library(
         "//pkg/types:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes/any:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",
         "//vendor/golang.org/x/net/context:go_default_library",

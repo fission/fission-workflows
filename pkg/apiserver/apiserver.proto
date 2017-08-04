@@ -54,10 +54,17 @@ service WorkflowInvocationAPI {
     // In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
     rpc Invoke (WorkflowInvocationSpec) returns (WorkflowInvocationIdentifier) {
         option (google.api.http) = {
-            get: "/invocation"
+            post: "/invocation"
+            body: "*"
+        };
+    }
+
+    rpc InvokeSync (WorkflowInvocationSpec) returns (WorkflowInvocationContainer) {
+        option (google.api.http) = {
+            post: "/invocation/sync"
+            body: "*"
             additional_bindings {
-				post: "/invocation"
-				body: "*"
+                get: "/invocation/sync"
 			}
         };
     }
@@ -105,6 +112,12 @@ message WorkflowInvocationList {
 message WorkflowInvocationGetReponse {
     repeated Event events = 1;
 }
+
+//message WorkflowInvocationRequest {
+//    WorkflowInvocationSpec spec = 1;
+//    bool sync = 2; // async or sync (async by default)
+//    bool hideMetadata = 3; // If true, only show the output generated
+//}
 
 
 service AdminAPI {

@@ -60,6 +60,21 @@ func (ia *InvocationApi) Cancel(invocationId string) error {
 	return nil
 }
 
+func (ia *InvocationApi) Success(invocationId string) error {
+
+	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_COMPLETED.String(), nil)
+
+	err := ia.esClient.Append(event)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ia *InvocationApi) Fail(invocationId string) {
+	panic("not implemented")
+}
+
 func (ia *InvocationApi) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(INVOCATION_SUBJECT, invocationId)
 }

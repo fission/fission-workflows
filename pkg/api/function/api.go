@@ -43,12 +43,16 @@ func (fi *FissionFunctionApi) InvokeSync(spec *types.FunctionInvocationSpec) (*t
 	}).Debug("Invoking Fission function.")
 	serviceUrl, err := fi.poolmgr.GetServiceForFunction(meta)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"err":  err,
+			"meta": meta,
+		}).Error("Fission function failed!")
 		return nil, err
 	}
 
-	resp, err := http.Get(serviceUrl) // TODO allow specifying of http method
+	resp, err := http.Get(fmt.Sprintf("http://%s", serviceUrl)) // TODO allow specifying of http method
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("Error for url '%s': %v", serviceUrl, err))
 	}
 	defer resp.Body.Close()
 

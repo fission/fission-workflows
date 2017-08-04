@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "github.com/fission/fission-workflow/pkg/types/types.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
 
 service Scheduler {
 
@@ -12,11 +13,26 @@ service Scheduler {
 message Schedule {
     string invocationId = 1;
     google.protobuf.Timestamp createdAt = 2;
-    repeated ScheduledNode nodes = 3;
+    repeated Action actions = 3;
     // TODo Expected next evaluation
 }
 
-message ScheduledNode {
+enum ActionType {
+    INVOKE_TASK = 0;
+    ABORT = 1;
+    // Controller decides if workflow is completed (success or failure)
+}
+
+message Action {
+    ActionType type = 1;
+    google.protobuf.Any payload = 4;
+}
+
+message AbortAction {
+    string reason = 1;
+}
+
+message InvokeTaskAction {
     // Id of the task in the workflow
     string id = 1;
     // TODO uint32 priority = 4; // Compared to others

@@ -84,6 +84,54 @@
         ]
       }
     },
+    "/invocation/sync": {
+      "get": {
+        "operationId": "InvokeSync",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocationContainer"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      },
+      "post": {
+        "operationId": "InvokeSync",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocationContainer"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocationSpec"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      }
+    },
     "/invocation/{id}": {
       "get": {
         "summary": "Get the specification and status of a workflow invocation",
@@ -266,6 +314,9 @@
           "title": "Id of the function to be invoked (no ambiguatity at this point"
         },
         "functionName": {
+          "type": "string"
+        },
+        "taskId": {
           "type": "string"
         }
       }

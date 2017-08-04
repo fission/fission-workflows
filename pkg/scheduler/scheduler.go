@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"fmt"
+	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
@@ -9,6 +11,12 @@ type WorkflowScheduler struct {
 }
 
 func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
+	schedule := &Schedule{
+		InvocationId: request.Invocation.Metadata.Id,
+		CreatedAt:    ptypes.TimestampNow(),
+		Actions:      []*Action{},
+	}
+
 	ctxLog := log.WithFields(log.Fields{
 		"workflow": request.Workflow,
 		"invoke":   request.Invocation,
@@ -19,10 +27,25 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	openTasks := map[string][]string{} // bool = nothing
 	// Fill open tasks
 	for id, t := range request.Workflow.Spec.Src.Tasks {
-		_, ok := request.Invocation.Status.Tasks[id] // TODO Ignore failed tasks for now
+		invokedTask, ok := request.Invocation.Status.Tasks[id] // TODO Ignore failed tasks for now
 		if !ok {
 			openTasks[id] = t.Dependencies
+			continue
 		}
+		if invokedTask.Status.Status == types.FunctionInvocationStatus_FAILED {
+			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
+				Reason: fmt.Sprintf("Task '%s' failed!", invokedTask),
+			})
+
+			abortAction := &Action{
+				Type:    ActionType_ABORT,
+				Payload: AbortActionAny,
+			}
+			schedule.Actions = append(schedule.Actions, abortAction)
+		}
+	}
+	if len(schedule.Actions) > 0 {
+		return schedule, nil
 	}
 
 	// Determine graph
@@ -43,17 +66,15 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	ctxLog.WithField("horizon", horizon).Debug("Determined horizon")
 
 	// Determine schedule nodes
-	scheduledNodes := []*ScheduledNode{}
 	for _, taskId := range horizon {
-		scheduledNodes = append(scheduledNodes, &ScheduledNode{
+		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
 			Id: taskId,
 		})
-	}
 
-	schedule := &Schedule{
-		InvocationId: request.Invocation.Metadata.Id,
-		CreatedAt:    ptypes.TimestampNow(),
-		Nodes:        scheduledNodes,
+		schedule.Actions = append(schedule.Actions, &Action{
+			Type:    ActionType_INVOKE_TASK,
+			Payload: invokeTaskAction,
+		})
 	}
 
 	ctxLog.WithField("schedule", schedule).Info("Determined schedule")

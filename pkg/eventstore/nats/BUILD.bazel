@@ -10,7 +10,6 @@ go_library(
     deps = [
         "//pkg/eventstore:go_default_library",
         "//vendor/github.com/golang/protobuf/proto:go_default_library",
-        "//vendor/github.com/nats-io/go-nats:go_default_library",
         "//vendor/github.com/nats-io/go-nats-streaming:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],

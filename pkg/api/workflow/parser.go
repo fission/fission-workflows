@@ -24,8 +24,8 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 	// TODO paralize this resolving
 	taskTypes := map[string]*types.TaskTypeDef{}
 	for taskId, task := range src.GetTasks() {
-		if strings.EqualFold(task.GetType(), "function") {
-			return nil, fmt.Errorf("Unknown type: %s", task.GetType())
+		if len(task.GetType()) > 0 && !strings.EqualFold(task.GetType(), "function") {
+			return nil, fmt.Errorf("Unknown type: '%s'", task.GetType())
 		}
 
 		taskDef, err := ps.parseTask(task)
