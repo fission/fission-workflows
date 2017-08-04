@@ -6,7 +6,6 @@ import "google/protobuf/any.proto";
 
 service Scheduler {
 
-
     rpc evaluate (ScheduleRequest) returns (Schedule) {}
 }
 
@@ -14,15 +13,23 @@ message Schedule {
     string invocationId = 1;
     google.protobuf.Timestamp createdAt = 2;
     repeated Action actions = 3;
-    // TODo Expected next evaluation
+    // TODO Future: Expected next evaluation
 }
 
+// ActionType contains all possible types of actions the scheduler can undertake.
+//
+// Each action can have a seperate datastructure defined here.
+// Note about a RETURN/COMPLETE/FAIL action: The controller decides the final status of the workflow. In order to avoid
+// inconsistencies in the replay.
 enum ActionType {
+    // Invokes a task
     INVOKE_TASK = 0;
+
+    // Abort cancels the invocation, leading to an ABORTED status.
     ABORT = 1;
-    // Controller decides if workflow is completed (success or failure)
 }
 
+// Action is the generic container of an action (signalled by ActionType) and the relevant message as a payload
 message Action {
     ActionType type = 1;
     google.protobuf.Any payload = 4;
@@ -35,14 +42,10 @@ message AbortAction {
 message InvokeTaskAction {
     // Id of the task in the workflow
     string id = 1;
-    // TODO uint32 priority = 4; // Compared to others
-    // TODO google.protobuf.Timestamp startAfter = 3; // Needed?
-    // TODO map<string,string> env = 5;
-    // TODO placement constraints / function scheduler instructions
-    // TODO communication / routing
+    // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
 }
 
 message ScheduleRequest {
     Workflow workflow = 1;
-    WorkflowInvocationContainer invocation = 2; // TODO with spec and status
+    WorkflowInvocation invocation = 2;
 }

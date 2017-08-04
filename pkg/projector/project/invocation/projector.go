@@ -32,12 +32,12 @@ func NewInvocationProjector(esClient eventstore.Client, cache cache.Cache) proje
 	return p
 }
 
-func (ip *invocationProjector) getCache(subject string) *types.WorkflowInvocationContainer {
+func (ip *invocationProjector) getCache(subject string) *types.WorkflowInvocation {
 	raw, ok := ip.cache.Get(subject)
 	if !ok {
 		return nil
 	}
-	invocation, ok := raw.(*types.WorkflowInvocationContainer)
+	invocation, ok := raw.(*types.WorkflowInvocation)
 	if !ok {
 		logrus.Warnf("Cache contains invalid invocation '%v'. Invalidating key.", raw)
 		ip.cache.Delete(subject)
@@ -47,7 +47,7 @@ func (ip *invocationProjector) getCache(subject string) *types.WorkflowInvocatio
 
 // Get projection from cache or attempt to replay it.
 // Get should work without having to watch!
-func (ip *invocationProjector) Get(subject string) (*types.WorkflowInvocationContainer, error) {
+func (ip *invocationProjector) Get(subject string) (*types.WorkflowInvocation, error) {
 	cached := ip.getCache(subject)
 	if cached != nil {
 		return cached, nil
@@ -58,7 +58,7 @@ func (ip *invocationProjector) Get(subject string) (*types.WorkflowInvocationCon
 		return nil, err
 	}
 
-	var resultState *types.WorkflowInvocationContainer
+	var resultState *types.WorkflowInvocation
 	for _, event := range events {
 		updatedState, err := ip.applyUpdate(event)
 		if err != nil {
@@ -153,7 +153,7 @@ func (ip *invocationProjector) Run() {
 	}
 }
 
-func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.WorkflowInvocationContainer, error) {
+func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.WorkflowInvocation, error) {
 	logrus.WithField("event", event).Debug("InvocationProjector handling event.")
 	invocationId := event.EventId.Subjects[1] // TODO fix hardcoded lookup
 

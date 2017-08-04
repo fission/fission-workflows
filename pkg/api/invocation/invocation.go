@@ -79,7 +79,7 @@ func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(INVOCATION_SUBJECT, invocationId)
 }
 
-func (ia *Api) Get(invocationId string) (*types.WorkflowInvocationContainer, error) {
+func (ia *Api) Get(invocationId string) (*types.WorkflowInvocation, error) {
 	return ia.Projector.Get(invocationId)
 }
 

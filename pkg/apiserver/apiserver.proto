@@ -59,7 +59,7 @@ service WorkflowInvocationAPI {
         };
     }
 
-    rpc InvokeSync (WorkflowInvocationSpec) returns (WorkflowInvocationContainer) {
+    rpc InvokeSync (WorkflowInvocationSpec) returns (WorkflowInvocation) {
         option (google.api.http) = {
             post: "/invocation/sync"
             body: "*"
@@ -90,7 +90,7 @@ service WorkflowInvocationAPI {
     //
     // Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
     // To lighten the request load, consider using a more specific request.
-    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocationContainer) {
+    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocation) {
         option (google.api.http) = {
             get: "/invocation/{id}"
         };

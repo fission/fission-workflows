@@ -30,14 +30,14 @@ func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.Workf
 	return &WorkflowInvocationIdentifier{eventId}, nil
 }
 
-func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocationContainer, error) {
+func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
 	eventId, err := gi.api.Invoke(spec)
 	if err != nil {
 		return nil, err
 	}
 
 	timeout := time.After(time.Duration(1) * time.Minute)
-	var result *types.WorkflowInvocationContainer
+	var result *types.WorkflowInvocation
 	for {
 		wi, err := gi.api.Get(eventId)
 		if err != nil {
@@ -69,7 +69,7 @@ func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *Wor
 	return &empty.Empty{}, nil
 }
 
-func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocationContainer, error) {
+func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
 	return gi.api.Get(invocationId.GetId())
 }
 

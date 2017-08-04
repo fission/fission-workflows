@@ -91,7 +91,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationContainer"
+              "$ref": "#/definitions/WorkflowInvocation"
             }
           }
         },
@@ -113,7 +113,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationContainer"
+              "$ref": "#/definitions/WorkflowInvocation"
             }
           }
         },
@@ -141,7 +141,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationContainer"
+              "$ref": "#/definitions/WorkflowInvocation"
             }
           }
         },
@@ -435,7 +435,7 @@
       },
       "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow."
     },
-    "WorkflowInvocationContainer": {
+    "WorkflowInvocation": {
       "type": "object",
       "properties": {
         "metadata": {

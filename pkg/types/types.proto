@@ -96,7 +96,7 @@ message WorkflowInvocationStatus {
 }
 
 
-message WorkflowInvocationContainer {
+message WorkflowInvocation {
     ObjectMetadata metadata = 1;
     WorkflowInvocationSpec spec = 2;
     WorkflowInvocationStatus status = 3;

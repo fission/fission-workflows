@@ -26,7 +26,7 @@ type WorkflowProjector interface {
 type InvocationProjector interface {
 	io.Closer
 	// Get projection from cache or attempt to replay it.
-	Get(subject string) (*types.WorkflowInvocationContainer, error)
+	Get(subject string) (*types.WorkflowInvocation, error)
 
 	Cache() cache.Cache
 
@@ -45,7 +45,7 @@ type InvocationProjector interface {
 // In order to avoid leaking eventstore details
 type InvocationNotification struct {
 	Id   string
-	Data *types.WorkflowInvocationContainer
+	Data *types.WorkflowInvocation
 	Type types.InvocationEvent
 	Time time.Time
 }

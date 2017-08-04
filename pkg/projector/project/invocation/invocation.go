@@ -15,10 +15,10 @@ import (
 /*
 	Invocation Projection
 */
-type reduceFunc func(invocation types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error)
+type reduceFunc func(invocation types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error)
 
 var eventMapping = map[types.InvocationEvent]reduceFunc{
-	types.InvocationEvent_INVOCATION_CREATED:      created,       // Data: WorkflowInvocationContainer
+	types.InvocationEvent_INVOCATION_CREATED:      created,       // Data: WorkflowInvocation
 	types.InvocationEvent_INVOCATION_CANCELED:     canceled,      // Data: {}
 	types.InvocationEvent_INVOCATION_COMPLETED:    completed,     // Data: {}
 	types.InvocationEvent_TASK_STARTED:            taskStarted,   // Data: FunctionInvocation
@@ -30,15 +30,15 @@ var eventMapping = map[types.InvocationEvent]reduceFunc{
 	types.InvocationEvent_TASK_SKIPPED:            skip,
 }
 
-func Initial() *types.WorkflowInvocationContainer {
-	return &types.WorkflowInvocationContainer{}
+func Initial() *types.WorkflowInvocation {
+	return &types.WorkflowInvocation{}
 }
 
-func From(events ...*eventstore.Event) (currentState *types.WorkflowInvocationContainer, err error) {
+func From(events ...*eventstore.Event) (currentState *types.WorkflowInvocation, err error) {
 	return Apply(*Initial(), events...)
 }
 
-func Apply(currentState types.WorkflowInvocationContainer, events ...*eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func Apply(currentState types.WorkflowInvocation, events ...*eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	// Check if it is indeed next event (maybe wrap in a projectionContainer)
 	newState = &currentState
 	for _, event := range events {
@@ -56,9 +56,9 @@ func Apply(currentState types.WorkflowInvocationContainer, events ...*eventstore
 	return newState, nil
 }
 
-func created(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func created(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	// Check if state
-	if currentState != (types.WorkflowInvocationContainer{}) {
+	if currentState != (types.WorkflowInvocation{}) {
 		//return nil, fmt.Errorf("invalid event '%v' for state '%v'", event, currentState) // TODO fix errors
 		logrus.Warnf("invalid event '%v' for state '%v'", event, currentState)
 		return &currentState, nil
@@ -70,7 +70,7 @@ func created(currentState types.WorkflowInvocationContainer, event *eventstore.E
 		return nil, fmt.Errorf("Failed to unmarshal event: '%v' (%v)", event, err)
 	}
 
-	return &types.WorkflowInvocationContainer{
+	return &types.WorkflowInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        event.GetEventId().GetSubjects()[1], // TODO remove this hardcoding,
 			CreatedAt: event.GetTime(),
@@ -84,9 +84,9 @@ func created(currentState types.WorkflowInvocationContainer, event *eventstore.E
 	}, nil
 }
 
-func canceled(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func canceled(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	// Canceling non-existent / already invocationCanceled invocation does nothing
-	if currentState == (types.WorkflowInvocationContainer{}) {
+	if currentState == (types.WorkflowInvocation{}) {
 		return nil, errors.New("Unknown state") // TODO fix errors
 	}
 	currentState.GetStatus().Status = types.WorkflowInvocationStatus_ABORTED
@@ -94,7 +94,7 @@ func canceled(currentState types.WorkflowInvocationContainer, event *eventstore.
 	return &currentState, nil
 }
 
-func completed(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func completed(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	// TODO do some state checking
 
 	currentState.GetStatus().Status = types.WorkflowInvocationStatus_SUCCEEDED
@@ -102,7 +102,7 @@ func completed(currentState types.WorkflowInvocationContainer, event *eventstore
 	return &currentState, nil
 }
 
-func skip(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func skip(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	logrus.WithFields(logrus.Fields{
 		"currentState": currentState,
 		"event":        event,
@@ -110,7 +110,7 @@ func skip(currentState types.WorkflowInvocationContainer, event *eventstore.Even
 	return &currentState, nil
 }
 
-func taskStarted(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func taskStarted(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	fn := &types.FunctionInvocation{}
 	err = ptypes.UnmarshalAny(event.Data, fn)
 	if err != nil {
@@ -132,7 +132,7 @@ func taskStarted(currentState types.WorkflowInvocationContainer, event *eventsto
 	return &currentState, nil
 }
 
-func taskFailed(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func taskFailed(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	fn := &types.FunctionInvocation{}
 	err = ptypes.UnmarshalAny(event.Data, fn)
 
@@ -154,7 +154,7 @@ func taskFailed(currentState types.WorkflowInvocationContainer, event *eventstor
 	return &currentState, nil
 }
 
-func taskSucceeded(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func taskSucceeded(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	fn := &types.FunctionInvocation{}
 	err = ptypes.UnmarshalAny(event.Data, fn)
 
@@ -170,7 +170,7 @@ func taskSucceeded(currentState types.WorkflowInvocationContainer, event *events
 	return &currentState, nil
 }
 
-func taskAborted(currentState types.WorkflowInvocationContainer, event *eventstore.Event) (newState *types.WorkflowInvocationContainer, err error) {
+func taskAborted(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	fn := &types.FunctionInvocation{}
 	err = ptypes.UnmarshalAny(event.Data, fn)
 
