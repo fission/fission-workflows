@@ -88,7 +88,8 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		// Check if done
 
 		// Decide which task to execute next
-		wfId := notification.Data.Spec.WorkflowId
+		invoc := notification.Data
+		wfId := invoc.Spec.WorkflowId
 		wf, err := cr.workflowProjector.Get(wfId)
 		if err != nil {
 			logrus.Errorf("Failed to get workflow for invocation '%s': %v", wfId, err)
@@ -96,7 +97,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}
 
 		schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
-			Invocation: notification.Data,
+			Invocation: invoc,
 			Workflow:   wf,
 		})
 		if err != nil {
@@ -108,7 +109,8 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}).Info("Scheduler decided on schedule")
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			err := cr.invocationApi.Success(notification.Data.Metadata.Id)
+			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.Output // Might be better in projector
+			err := cr.invocationApi.Success(invoc.Metadata.Id, output)
 			if err != nil {
 				panic(err)
 			}
@@ -119,7 +121,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 			switch action.Type {
 			case scheduler.ActionType_ABORT:
 				logrus.Infof("aborting: '%v'", action)
-				cr.invocationApi.Cancel(notification.Data.Metadata.Id)
+				cr.invocationApi.Cancel(invoc.Metadata.Id)
 			case scheduler.ActionType_INVOKE_TASK:
 				invokeAction := &scheduler.InvokeTaskAction{}
 				ptypes.UnmarshalAny(action.Payload, invokeAction)
@@ -130,6 +132,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 					TaskId:       invokeAction.Id,
 					FunctionId:   task.Resolved,
 					FunctionName: task.Src,
+					Input:        invokeAction.Input,
 				}
 				fn := &types.FunctionInvocation{
 					Spec: fnSpec,

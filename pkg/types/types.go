@@ -21,3 +21,8 @@ func (wi WorkflowInvocationStatus_Status) Finished() bool {
 	}
 	return false
 }
+
+// True if workflow was successfully completed
+func (wi WorkflowInvocationStatus_Status) Successful() bool {
+	return wi == WorkflowInvocationStatus_SUCCEEDED
+}

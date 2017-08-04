@@ -2,6 +2,7 @@ package invocation
 
 import (
 	"errors"
+
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
 	"github.com/fission/fission-workflow/pkg/eventstore/events"
@@ -30,7 +31,6 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 		return "", errors.New("WorkflowId is required")
 	}
 
-	// TODO validation
 	id := uuid.NewV4().String()
 
 	data, err := ptypes.MarshalAny(invocation)
@@ -49,7 +49,9 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 }
 
 func (ia *Api) Cancel(invocationId string) error {
-	// TODO validation
+	if len(invocationId) == 0 {
+		return errors.New("invocationId is required")
+	}
 
 	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_CANCELED.String(), nil)
 
@@ -60,11 +62,24 @@ func (ia *Api) Cancel(invocationId string) error {
 	return nil
 }
 
-func (ia *Api) Success(invocationId string) error {
+// TODO might want to split out public vs. internal api
+func (ia *Api) Success(invocationId string, output string) error {
+	if len(invocationId) == 0 {
+		return errors.New("invocationId is required")
+	}
 
-	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_COMPLETED.String(), nil)
+	status := &types.WorkflowInvocationStatus{
+		Output: output,
+	}
 
-	err := ia.esClient.Append(event)
+	data, err := ptypes.MarshalAny(status)
+	if err != nil {
+		return err
+	}
+
+	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_COMPLETED.String(), data)
+
+	err = ia.esClient.Append(event)
 	if err != nil {
 		return err
 	}

@@ -101,6 +101,12 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -318,6 +324,9 @@
         },
         "taskId": {
           "type": "string"
+        },
+        "input": {
+          "type": "string"
         }
       }
     },
@@ -330,6 +339,9 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "output": {
+          "type": "string"
         }
       }
     },
@@ -431,6 +443,10 @@
           },
           "description": "Dependency graph is build into the tasks",
           "title": "TODO Parameters\nActions"
+        },
+        "outputTask": {
+          "type": "string",
+          "title": "From which task should the workflow return the output? (todo multiple? implicit?)"
         }
       },
       "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow."
@@ -454,6 +470,9 @@
       "properties": {
         "workflowId": {
           "type": "string"
+        },
+        "input": {
+          "type": "string"
         }
       },
       "title": "Workflow Invocation Model"
@@ -473,6 +492,9 @@
           "additionalProperties": {
             "$ref": "#/definitions/FunctionInvocation"
           }
+        },
+        "output": {
+          "type": "string"
         }
       }
     },

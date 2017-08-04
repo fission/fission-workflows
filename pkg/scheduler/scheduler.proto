@@ -42,6 +42,7 @@ message AbortAction {
 message InvokeTaskAction {
     // Id of the task in the workflow
     string id = 1;
+    string input = 2; // TODO turn into map?
     // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
 }
 

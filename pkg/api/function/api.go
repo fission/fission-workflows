@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"strings"
+
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission/poolmgr/client"
@@ -50,7 +52,18 @@ func (fi *FissionFunctionApi) InvokeSync(spec *types.FunctionInvocationSpec) (*t
 		return nil, err
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://%s", serviceUrl)) // TODO allow specifying of http method
+	url := fmt.Sprintf("http://%s", serviceUrl)
+
+	input := strings.NewReader(spec.Input)
+
+	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
+	if err != nil {
+		panic(fmt.Errorf("Failed to make request for '%s': %v", serviceUrl, err))
+	}
+
+	logrus.Infof("[%s][req]: %v", meta.Name, req)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(fmt.Errorf("Error for url '%s': %v", serviceUrl, err))
 	}
@@ -60,12 +73,14 @@ func (fi *FissionFunctionApi) InvokeSync(spec *types.FunctionInvocationSpec) (*t
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Resp: (%s)", body)
+
+	logrus.Infof("[%s][output]: %v", meta.Name, string(body))
 
 	return &types.FunctionInvocation{
 		Spec: spec,
 		Status: &types.FunctionInvocationStatus{
 			Status: types.FunctionInvocationStatus_SUCCEEDED,
+			Output: string(body),
 		},
 	}, nil
 }

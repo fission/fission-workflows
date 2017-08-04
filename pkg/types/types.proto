@@ -60,6 +60,7 @@ message FunctionInvocationSpec {
     string functionId = 1;
     string functionName = 2;
     string taskId = 3; // task in workflow
+    string input = 4; // TODO turn into map? bytes?
 }
 
 message FunctionInvocationStatus {
@@ -74,11 +75,13 @@ message FunctionInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
+    string output = 3;
 }
 
 // Workflow Invocation Model
 message WorkflowInvocationSpec {
     string workflowId = 1;
+    string input = 2;
 }
 
 message WorkflowInvocationStatus {
@@ -93,6 +96,7 @@ message WorkflowInvocationStatus {
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
     map <string,FunctionInvocation> tasks = 3;
+    string output = 4;
 }
 
 
@@ -124,7 +128,8 @@ message WorkflowDefinition {
     // Dependency graph is build into the tasks
     map <string,Task> tasks = 2; // key = taskId
 
-    // TODO outputs / inputs
+    // From which task should the workflow return the output? (todo multiple? implicit?)
+    string outputTask = 3;
 }
 
 // A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
@@ -141,8 +146,6 @@ message Task {
     string type = 2;
 
     // Name/identifier of the function
-    //
-    //
     string name = 3;
 
     repeated TaskParameters args = 4;

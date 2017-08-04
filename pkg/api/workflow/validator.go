@@ -75,8 +75,14 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		}
 	}
 
+	// Check if there are starting points
 	if len(startTasks) == 0 {
 		return errors.New("Workflow does not contain any start tasks (tasks with no dependencies)")
+	}
+
+	// Check output task (TODO make this implicit)
+	if _, ok := src.GetTasks()[src.OutputTask]; !ok {
+		return fmt.Errorf("Invalid outputTask '%s'", src.OutputTask)
 	}
 
 	return nil

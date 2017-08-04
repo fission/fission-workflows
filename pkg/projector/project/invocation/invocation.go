@@ -95,10 +95,15 @@ func canceled(currentState types.WorkflowInvocation, event *eventstore.Event) (n
 }
 
 func completed(currentState types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error) {
-	// TODO do some state checking
+	status := &types.WorkflowInvocationStatus{}
+	err = ptypes.UnmarshalAny(event.Data, status)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal event: '%v' (%v)", event, err)
+	}
 
 	currentState.GetStatus().Status = types.WorkflowInvocationStatus_SUCCEEDED
 	currentState.GetStatus().UpdatedAt = event.Time
+	currentState.GetStatus().Output = status.Output
 	return &currentState, nil
 }
 
@@ -158,14 +163,15 @@ func taskSucceeded(currentState types.WorkflowInvocation, event *eventstore.Even
 	fn := &types.FunctionInvocation{}
 	err = ptypes.UnmarshalAny(event.Data, fn)
 
-	existing, ok := currentState.GetStatus().Tasks[fn.Spec.TaskId]
+	fnExisting, ok := currentState.GetStatus().Tasks[fn.Spec.TaskId]
 	if !ok {
 		logrus.Warn("Non-recorded function succeeded '%v'", fn)
 		return &currentState, nil
 	}
 
-	existing.Status.Status = types.FunctionInvocationStatus_SUCCEEDED
-	existing.Status.UpdatedAt = event.Time
+	fnExisting.Status.Status = types.FunctionInvocationStatus_SUCCEEDED
+	fnExisting.Status.UpdatedAt = event.Time
+	fnExisting.Status.Output = fn.Status.Output
 
 	return &currentState, nil
 }
