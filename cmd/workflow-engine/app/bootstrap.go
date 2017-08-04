@@ -14,6 +14,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
+	"github.com/fission/fission-workflow/pkg/fission"
 	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission/controller/client"
@@ -26,8 +27,9 @@ import (
 )
 
 const (
-	GRPC_ADDRESS        = ":5555"
-	API_GATEWAY_ADDRESS = ":8080"
+	GRPC_ADDRESS          = ":5555"
+	API_GATEWAY_ADDRESS   = ":8080"
+	FISSION_PROXY_ADDRESS = ":8090"
 )
 
 type Options struct {
@@ -116,8 +118,16 @@ func Run(ctx context.Context, options *Options) error {
 		panic(err)
 	}
 
-	log.Info("Serving HTTP API gateway at: ", API_GATEWAY_ADDRESS)
+	// fission proxy
+	proxyMux := http.NewServeMux()
+	fissionProxyServer := fission.NewFissionProxyServer(invocationServer)
+	fissionProxyServer.RegisterServer(proxyMux)
+
+	go http.ListenAndServe(FISSION_PROXY_ADDRESS, handlers.LoggingHandler(os.Stdout, proxyMux))
+	log.Info("Serving HTTP Fission Proxy at: ", FISSION_PROXY_ADDRESS)
+
 	go http.ListenAndServe(API_GATEWAY_ADDRESS, handlers.LoggingHandler(os.Stdout, mux))
+	log.Info("Serving HTTP API gateway at: ", API_GATEWAY_ADDRESS)
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
