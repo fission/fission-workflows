@@ -38,6 +38,12 @@ spec:
   - port: 80
     targetPort: 8080
     nodePort: 31320
-    name: http
+    name: http-gateway
+  - port: 90
+    targetPort: 8090
+    nodePort: 31321
+    name: http-proxy
+  selector:
+    svc: workflow-engine
   selector:
     svc: workflow-engine
