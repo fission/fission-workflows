@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/api"
 	"github.com/fission/fission-workflow/pkg/api/function"
+	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
 	"github.com/fission/fission-workflow/pkg/eventstore/events"
@@ -26,7 +26,7 @@ type InvocationController struct {
 	invocationProjector project.InvocationProjector
 	workflowProjector   project.WorkflowProjector
 	functionApi         function.Api
-	invocationApi       *api.InvocationApi
+	invocationApi       *invocation.Api
 	esClient            eventstore.Client
 	scheduler           *scheduler.WorkflowScheduler
 	notifyChan          chan *project.InvocationNotification // TODO more complex => discard notifications of the same invocation
@@ -34,7 +34,7 @@ type InvocationController struct {
 
 // Does not deal with Workflows (notifications)
 func NewController(iproject project.InvocationProjector, wfproject project.WorkflowProjector,
-	workflowScheduler *scheduler.WorkflowScheduler, functionApi function.Api, invocationApi *api.InvocationApi,
+	workflowScheduler *scheduler.WorkflowScheduler, functionApi function.Api, invocationApi *invocation.Api,
 	esClient eventstore.Client) *InvocationController {
 	return &InvocationController{
 		invocationProjector: iproject,
@@ -78,7 +78,7 @@ func (cr *InvocationController) Run() {
 }
 
 func (cr *InvocationController) handleNotification(notification *project.InvocationNotification) {
-	println("controller event trigger!")
+	logrus.WithField("notification", notification).Debug("controller event trigger!")
 	switch notification.Type {
 	case types.InvocationEvent_INVOCATION_CREATED:
 		fallthrough

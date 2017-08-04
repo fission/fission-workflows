@@ -7,14 +7,14 @@ import (
 
 	"os"
 
-	"github.com/fission/fission-workflow/pkg/api"
 	"github.com/fission/fission-workflow/pkg/api/function"
+	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/api/workflow"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
-	"github.com/fission/fission-workflow/pkg/projector/project/invocation"
+	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission/controller/client"
 	poolmgr "github.com/fission/fission/poolmgr/client"
@@ -71,14 +71,14 @@ func Run(ctx context.Context, options *Options) error {
 
 	workflowParser := workflow.NewParser(controllerClient)
 	workflowValidator := workflow.NewValidator()
-	invocationProjector := invocation.NewInvocationProjector(natsClient, cache)
+	invocationProjector := ip.NewInvocationProjector(natsClient, cache)
 	err = invocationProjector.Watch("invocation.>")
 	if err != nil {
 		panic(err)
 	}
 	// Setup API
 	workflowApi := workflow.NewApi(natsClient, workflowParser)
-	invocationApi := api.NewInvocationApi(natsClient, invocationProjector)
+	invocationApi := invocation.NewApi(natsClient, invocationProjector)
 	functionApi := function.NewFissionFunctionApi(poolmgrClient)
 	err = workflowApi.Projector.Watch("workflows.>")
 	if err != nil {

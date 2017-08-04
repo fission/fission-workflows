@@ -1,4 +1,4 @@
-package api
+package invocation
 
 import (
 	"errors"
@@ -15,17 +15,17 @@ const (
 	INVOCATION_SUBJECT = "invocation"
 )
 
-type InvocationApi struct {
+type Api struct {
 	esClient  eventstore.Client
 	Projector project.InvocationProjector
 }
 
-func NewInvocationApi(esClient eventstore.Client, projector project.InvocationProjector) *InvocationApi {
-	return &InvocationApi{esClient, projector}
+func NewApi(esClient eventstore.Client, projector project.InvocationProjector) *Api {
+	return &Api{esClient, projector}
 }
 
 // Commands
-func (ia *InvocationApi) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
+func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
 	if len(invocation.WorkflowId) == 0 {
 		return "", errors.New("WorkflowId is required")
 	}
@@ -48,7 +48,7 @@ func (ia *InvocationApi) Invoke(invocation *types.WorkflowInvocationSpec) (strin
 	return id, nil
 }
 
-func (ia *InvocationApi) Cancel(invocationId string) error {
+func (ia *Api) Cancel(invocationId string) error {
 	// TODO validation
 
 	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_CANCELED.String(), nil)
@@ -60,7 +60,7 @@ func (ia *InvocationApi) Cancel(invocationId string) error {
 	return nil
 }
 
-func (ia *InvocationApi) Success(invocationId string) error {
+func (ia *Api) Success(invocationId string) error {
 
 	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_COMPLETED.String(), nil)
 
@@ -71,18 +71,18 @@ func (ia *InvocationApi) Success(invocationId string) error {
 	return nil
 }
 
-func (ia *InvocationApi) Fail(invocationId string) {
+func (ia *Api) Fail(invocationId string) {
 	panic("not implemented")
 }
 
-func (ia *InvocationApi) createSubject(invocationId string) *eventstore.EventID {
+func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(INVOCATION_SUBJECT, invocationId)
 }
 
-func (ia *InvocationApi) Get(invocationId string) (*types.WorkflowInvocationContainer, error) {
+func (ia *Api) Get(invocationId string) (*types.WorkflowInvocationContainer, error) {
 	return ia.Projector.Get(invocationId)
 }
 
-func (ia *InvocationApi) List(query string) ([]string, error) {
+func (ia *Api) List(query string) ([]string, error) {
 	return ia.Projector.List(query)
 }

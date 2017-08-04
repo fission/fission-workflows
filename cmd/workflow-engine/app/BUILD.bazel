@@ -5,8 +5,8 @@ go_library(
     srcs = ["bootstrap.go"],
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api:go_default_library",
         "//pkg/api/function:go_default_library",
+        "//pkg/api/invocation:go_default_library",
         "//pkg/api/workflow:go_default_library",
         "//pkg/apiserver:go_default_library",
         "//pkg/cache:go_default_library",

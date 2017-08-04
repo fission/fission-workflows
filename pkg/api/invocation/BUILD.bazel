@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["invocation.go"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/eventstore:go_default_library",
+        "//pkg/eventstore/eventids:go_default_library",
+        "//pkg/eventstore/events:go_default_library",
+        "//pkg/projector/project:go_default_library",
+        "//pkg/types:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
+        "//vendor/github.com/satori/go.uuid:go_default_library",
+    ],
+)

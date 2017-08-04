@@ -3,20 +3,21 @@ package apiserver
 import (
 	"errors"
 	"fmt"
-	"github.com/fission/fission-workflow/pkg/api"
+	"time"
+
+	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // Events all belong to the same invocation ID, but have different sequence numbers. EventID: <InvocationID>#<sequenceID>
 // TODO might need to optimize the bucket use in boltdb
 type grpcInvocationApiServer struct {
-	api *api.InvocationApi
+	api *invocation.Api
 }
 
-func NewGrpcInvocationApiServer(api *api.InvocationApi) WorkflowInvocationAPIServer {
+func NewGrpcInvocationApiServer(api *invocation.Api) WorkflowInvocationAPIServer {
 	return &grpcInvocationApiServer{api}
 }
 
