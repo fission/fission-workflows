@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "controller.pb.go",
+        "server.go",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/function:go_default_library",
+        "//pkg/api/invocation:go_default_library",
+        "//pkg/projector/project:go_default_library",
+        "//pkg/scheduler:go_default_library",
+        "//pkg/types:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
+    ],
+)
+
+filegroup(
+    name = "go_default_library_protos",
+    srcs = ["controller.proto"],
+    visibility = ["//visibility:public"],
+)

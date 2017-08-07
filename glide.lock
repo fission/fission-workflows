@@ -1,6 +1,10 @@
-hash: 72107ddc98f805782bf97d882b1b9087f8651057ac9af6e9de00e98b3545346e
-updated: 2017-07-27T13:33:57.962437512-07:00
+hash: 4a7acdc04a8e081ead76be060b9679dc2760317f0380af1dd97e5a0787f4045f
+updated: 2017-08-01T17:24:39.69027853-07:00
 imports:
+- name: github.com/fission/fission
+  version: 37aa266a4d4bd0484e66afbc5206b118638e77bf
+  subpackages:
+  - poolmgr/client
 - name: github.com/gogo/protobuf
   version: 100ba4e885062801d56799d78530b73b178a78f3
   subpackages:
@@ -16,6 +20,7 @@ imports:
   - ptypes
   - ptypes/any
   - ptypes/duration
+  - ptypes/empty
   - ptypes/struct
   - ptypes/timestamp
 - name: github.com/gorilla/handlers
@@ -23,7 +28,7 @@ imports:
 - name: github.com/gorilla/mux
   version: bcd8bc72b08df0f70df986b97f95590779502d31
 - name: github.com/grpc-ecosystem/grpc-gateway
-  version: 1a03ca3bad1e1ebadaedd3abb76bc58d4ac8143b
+  version: f2862b476edcef83412c7af8687c9cd8e4097c0f
   subpackages:
   - runtime
   - runtime/internal
@@ -35,7 +40,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/nats-io/nats
-  version: 34c8842105ac0b69c838a9998a239d482936c466
+  version: 43abfaad5f01e2185b415f0d9f9af47d846ee540
   subpackages:
   - encoders/builtin
   - util
@@ -48,7 +53,7 @@ imports:
 - name: github.com/urfave/cli
   version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
 - name: golang.org/x/net
-  version: b3756b4b77d7b13260a0a2ec658753cf48922eac
+  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   subpackages:
   - context
   - http2
@@ -58,23 +63,23 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 7a4fde3fda8ef580a89dbae8138c26041be14299
+  version: 396c9fc8fb0ce27fc7a1ff136dc5af797bba258a
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 836efe42bb4aa16aaa17b9c155d8813d336ed720
+  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: b0a3dcfcd1a9bd48e63634bd8802960804cf8315
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: c7e2c00ed1df1690ec11b9984b3fa8da1bfafbdd
+  version: b8669c35455183da6d5c474ea6e72fbf55183274
   subpackages:
   - codes
   - credentials

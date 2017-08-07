@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+// Event Types
+enum WorkflowEvent {
+    WORKFLOW_CREATED = 0;
+    WORKFLOW_UPDATED = 1;
+    WORKFLOW_PARSED = 2;
+    WORKFLOW_DELETED = 3;
+    WORKFLOW_PARSING_FAILED = 4;
+}
+
+enum InvocationEvent {
+    TASK_STARTED = 0; // origin: Engine
+    TASK_SKIPPED = 1; // origin: Engine
+    TASK_HEARTBEAT_REQUEST = 2; // origin: Engine
+    TASK_HEARTBEAT_RESPONSE = 3; // origin: Task
+    TASK_SUCCEEDED = 4; // origin: Task
+    TASK_FAILED = 5; // origin: Task
+    TASK_ABORTED = 6; // origin: Engine
+
+    INVOCATION_CREATED = 7; // origin: User
+    INVOCATION_COMPLETED = 8; // origin: Engine
+    INVOCATION_CANCELED = 9; // origin: User
+}
+
+// Common
+message ObjectMetadata {
+    string id = 1;
+    //    string namespace = 2;
+    //    string name = 3;
+    google.protobuf.Timestamp createdAt = 3;
+}
+
+// Workflow Model
+message Workflow {
+    ObjectMetadata metadata = 1;
+    WorkflowSpec spec = 2;
+    WorkflowStatus status = 3;
+}
+
+message WorkflowSpec {
+    string name = 1;
+    string version = 2;
+    WorkflowDefinition src = 3;
+}
+
+// Function Invocation Model
+//
+// It contains no indication which workflow/task it is executed for
+message FunctionInvocation {
+    ObjectMetadata metadata = 1;
+    FunctionInvocationSpec spec = 2;
+    FunctionInvocationStatus status = 3;
+}
+
+message FunctionInvocationSpec {
+    // Id of the function to be invoked (no ambiguatity at this point
+    string functionId = 1;
+    string functionName = 2;
+    string taskId = 3; // task in workflow
+    string input = 4; // TODO turn into map? bytes?
+}
+
+message FunctionInvocationStatus {
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        IN_PROGRESS = 2; // Scheduled
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+        SKIPPED = 6;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    string output = 3;
+}
+
+// Workflow Invocation Model
+message WorkflowInvocationSpec {
+    string workflowId = 1;
+    string input = 2;
+}
+
+message WorkflowInvocationStatus {
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        IN_PROGRESS = 2; // Scheduled
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    map <string,FunctionInvocation> tasks = 3;
+    string output = 4;
+}
+
+
+message WorkflowInvocation {
+    ObjectMetadata metadata = 1;
+    WorkflowInvocationSpec spec = 2;
+    WorkflowInvocationStatus status = 3;
+}
+
+// Workflow Definition
+
+// TODO site catalogs, transformation catalogs, ect...
+// TODO define a parser/mapper: Maps a resource-independent “abstract” workflow onto resources and executes the “executable” workflow
+
+// The workflowDefinition contains the definition of a workflow.
+//
+// Ideally the source code (json, yaml) can be converted directly to this message.
+// Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
+// to the user/system upon the creation of a workflow.
+message WorkflowDefinition {
+    // apiVersion describes what version is of the workflow definition.
+    //
+    // By default the workflow engine will assume the latest version to be used.
+    string apiVersion = 1;
+
+    // TODO Parameters
+    // Actions
+    //
+    // Dependency graph is build into the tasks
+    map <string,Task> tasks = 2; // key = taskId
+
+    // From which task should the workflow return the output? (todo multiple? implicit?)
+    string outputTask = 3;
+}
+
+// A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
+//
+// A task as a number of inputs and exactly two outputs
+// Id is specified outside of task
+message Task {
+
+    // Type defines the type of the task that needs to be performed
+    //
+    // By default the following types are supported:
+    // - `function`: execute a function.
+    // - `exit`: Once this task is executed, the controller will exit the workflow, canceling all running tasks.
+    string type = 2;
+
+    // Name/identifier of the function
+    string name = 3;
+
+    repeated TaskParameters args = 4;
+
+    // TODO next or after
+    // Dependencies for this task to execute
+    repeated string dependencies = 5;
+}
+
+message TaskParameters {
+
+}
+
+// Internal
+message WorkflowStatus {
+    enum Status {
+        UNKNOWN = 0;
+        PARSING = 1; // During validation/parsing
+        READY = 2;
+        FAILED = 3;
+        DELETED = 4;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    map <string,TaskTypeDef> resolvedTasks = 3; // Key = taskId
+    // TODO ammended spec (e.g. no type => function type)
+}
+
+message TaskTypeDef {
+    string src = 1;
+    string resolved = 2; // Address
+    // TODO namespace/origin maybe
+}
+
+enum TaskType {
+    FUNCTION = 0;
+}

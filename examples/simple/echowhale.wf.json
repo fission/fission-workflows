@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "name" : "foobar",
+  "src": {
+    "outputTask" : "whaleEcho",
+    "tasks": {
+      "whaleEcho": {
+        "type": "function",
+        "name": "whalesay",
+        "dependencies": []
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+import "github.com/fission/fission-workflow/pkg/types/types.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+service Scheduler {
+
+    rpc evaluate (ScheduleRequest) returns (Schedule) {}
+}
+
+message Schedule {
+    string invocationId = 1;
+    google.protobuf.Timestamp createdAt = 2;
+    repeated Action actions = 3;
+    // TODO Future: Expected next evaluation
+}
+
+// ActionType contains all possible types of actions the scheduler can undertake.
+//
+// Each action can have a seperate datastructure defined here.
+// Note about a RETURN/COMPLETE/FAIL action: The controller decides the final status of the workflow. In order to avoid
+// inconsistencies in the replay.
+enum ActionType {
+    // Invokes a task
+    INVOKE_TASK = 0;
+
+    // Abort cancels the invocation, leading to an ABORTED status.
+    ABORT = 1;
+}
+
+// Action is the generic container of an action (signalled by ActionType) and the relevant message as a payload
+message Action {
+    ActionType type = 1;
+    google.protobuf.Any payload = 4;
+}
+
+message AbortAction {
+    string reason = 1;
+}
+
+message InvokeTaskAction {
+    // Id of the task in the workflow
+    string id = 1;
+    string input = 2; // TODO turn into map?
+    // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
+}
+
+message ScheduleRequest {
+    Workflow workflow = 1;
+    WorkflowInvocation invocation = 2;
+}

@@ -1,0 +1,582 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "pkg/apiserver/apiserver.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/invocation": {
+      "get": {
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverWorkflowInvocationList"
+            }
+          }
+        },
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      },
+      "post": {
+        "summary": "Create a new workflow invocation",
+        "description": "In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.",
+        "operationId": "Invoke",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverWorkflowInvocationIdentifier"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocationSpec"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      }
+    },
+    "/invocation/sync": {
+      "get": {
+        "operationId": "InvokeSync",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocation"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workflowId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "input",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      },
+      "post": {
+        "operationId": "InvokeSync",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocation"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocationSpec"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      }
+    },
+    "/invocation/{id}": {
+      "get": {
+        "summary": "Get the specification and status of a workflow invocation",
+        "description": "Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.\nTo lighten the request load, consider using a more specific request.",
+        "operationId": "Get",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/WorkflowInvocation"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      },
+      "delete": {
+        "summary": "Cancel a workflow invocation",
+        "description": "This action is irreverisble. A canceled invocation cannot be resumed or restarted.\nIn case that an invocation already is canceled, has failed or has completed, nothing happens.\nIn case that an invocation does not exist a HTTP 404 error status is returned.",
+        "operationId": "Cancel",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/protobufEmpty"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "Status",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverHealth"
+            }
+          }
+        },
+        "tags": [
+          "AdminAPI"
+        ]
+      }
+    },
+    "/workflow": {
+      "get": {
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverSearchWorkflowResponse"
+            }
+          }
+        },
+        "tags": [
+          "WorkflowAPI"
+        ]
+      },
+      "post": {
+        "operationId": "Create",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverWorkflowIdentifier"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowSpec"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowAPI"
+        ]
+      }
+    },
+    "/workflow/validate": {
+      "post": {
+        "operationId": "Validate",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/protobufEmpty"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/WorkflowSpec"
+            }
+          }
+        ],
+        "tags": [
+          "WorkflowAPI"
+        ]
+      }
+    },
+    "/workflow/{id}": {
+      "get": {
+        "operationId": "Get",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Workflow"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowAPI"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "FunctionInvocation": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/FunctionInvocationSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/FunctionInvocationStatus"
+        }
+      },
+      "description": "It contains no indication which workflow/task it is executed for",
+      "title": "Function Invocation Model"
+    },
+    "FunctionInvocationSpec": {
+      "type": "object",
+      "properties": {
+        "functionId": {
+          "type": "string",
+          "title": "Id of the function to be invoked (no ambiguatity at this point"
+        },
+        "functionName": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        }
+      }
+    },
+    "FunctionInvocationStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/FunctionInvocationStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "output": {
+          "type": "string"
+        }
+      }
+    },
+    "FunctionInvocationStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "ABORTED",
+        "SKIPPED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "ObjectMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "string namespace = 2;\n   string name = 3;"
+        }
+      },
+      "title": "Common"
+    },
+    "Task": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "By default the following types are supported:\n- `function`: execute a function.\n- `exit`: Once this task is executed, the controller will exit the workflow, canceling all running tasks.",
+          "title": "Type defines the type of the task that needs to be performed"
+        },
+        "name": {
+          "type": "string",
+          "title": "Name/identifier of the function"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaskParameters"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "TODO next or after\nDependencies for this task to execute"
+        }
+      },
+      "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of task"
+    },
+    "TaskParameters": {
+      "type": "object"
+    },
+    "TaskTypeDef": {
+      "type": "object",
+      "properties": {
+        "src": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "string"
+        }
+      }
+    },
+    "Workflow": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/WorkflowSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/WorkflowStatus"
+        }
+      },
+      "title": "Workflow Model"
+    },
+    "WorkflowDefinition": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "type": "string",
+          "description": "apiVersion describes what version is of the workflow definition.\n\nBy default the workflow engine will assume the latest version to be used."
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Task"
+          },
+          "description": "Dependency graph is build into the tasks",
+          "title": "TODO Parameters\nActions"
+        },
+        "outputTask": {
+          "type": "string",
+          "title": "From which task should the workflow return the output? (todo multiple? implicit?)"
+        }
+      },
+      "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow."
+    },
+    "WorkflowInvocation": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/WorkflowInvocationSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/WorkflowInvocationStatus"
+        }
+      }
+    },
+    "WorkflowInvocationSpec": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        }
+      },
+      "title": "Workflow Invocation Model"
+    },
+    "WorkflowInvocationStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/WorkflowInvocationStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FunctionInvocation"
+          }
+        },
+        "output": {
+          "type": "string"
+        }
+      }
+    },
+    "WorkflowInvocationStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "ABORTED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "WorkflowSpec": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "src": {
+          "$ref": "#/definitions/WorkflowDefinition"
+        }
+      }
+    },
+    "WorkflowStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/WorkflowStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resolvedTasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TaskTypeDef"
+          }
+        }
+      },
+      "title": "Internal"
+    },
+    "WorkflowStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "PARSING",
+        "READY",
+        "FAILED",
+        "DELETED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "apiserverHealth": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "apiserverSearchWorkflowResponse": {
+      "type": "object",
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "apiserverWorkflowIdentifier": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "apiserverWorkflowInvocationIdentifier": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "apiserverWorkflowInvocationList": {
+      "type": "object",
+      "properties": {
+        "invocations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "protobufEmpty": {
+      "type": "object",
+      "description": "service Foo {\n      rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n    }\n\nThe JSON representation for `Empty` is empty JSON object `{}`.",
+      "title": "A generic empty message that you can re-use to avoid defining duplicated\nempty messages in your APIs. A typical example is to use it as the request\nor the response type of an API method. For instance:"
+    }
+  }
+}
