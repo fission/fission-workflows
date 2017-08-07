@@ -1,86 +1,82 @@
 package function
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
-
-	"strings"
-
-	"github.com/fission/fission"
+	"github.com/fission/fission-workflow/pkg/api"
+	"github.com/fission/fission-workflow/pkg/eventstore"
+	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
+	"github.com/fission/fission-workflow/pkg/eventstore/events"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission/poolmgr/client"
+	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
-type Api interface {
-	// Request function invocation (Async)
-	//Invoke(fn *types.FunctionInvocationSpec) (string, error)
-	//
-	InvokeSync(fn *types.FunctionInvocationSpec) (*types.FunctionInvocation, error)
-	// Cancel function invocation
-	//Cancel(id string) error
-
-	// Request status update of function
-	//Status()
-}
-
-// TODO doesn't belong in the API
 // Responsible for executing functions
-type FissionFunctionApi struct {
-	poolmgr *client.Client
+type Api struct {
+	runtime  api.FunctionRuntimeEnv
+	esClient eventstore.Client
 }
 
-func NewFissionFunctionApi(fission *client.Client) Api {
-	return &FissionFunctionApi{fission}
+func NewFissionFunctionApi(runtime api.FunctionRuntimeEnv, esClient eventstore.Client) *Api {
+	return &Api{
+		runtime:  runtime,
+		esClient: esClient,
+	}
 }
 
-func (fi *FissionFunctionApi) InvokeSync(spec *types.FunctionInvocationSpec) (*types.FunctionInvocation, error) {
-	meta := &fission.Metadata{
-		Name: spec.GetFunctionName(),
-		Uid:  spec.GetFunctionId(),
-	}
-	logrus.WithFields(logrus.Fields{
-		"metadata": meta,
-	}).Debug("Invoking Fission function.")
-	serviceUrl, err := fi.poolmgr.GetServiceForFunction(meta)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"err":  err,
-			"meta": meta,
-		}).Error("Fission function failed!")
-		return nil, err
+func (ap *Api) InvokeSync(invocationId string, fnSpec *types.FunctionInvocationSpec) (*types.FunctionInvocation, error) {
+	eventid := eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
+
+	fn := &types.FunctionInvocation{
+		Metadata: &types.ObjectMetadata{
+			Id:        util.Uid(),
+			CreatedAt: ptypes.TimestampNow(),
+		},
+		Spec: fnSpec,
 	}
 
-	url := fmt.Sprintf("http://%s", serviceUrl)
-
-	input := strings.NewReader(spec.Input)
-
-	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
-	if err != nil {
-		panic(fmt.Errorf("Failed to make request for '%s': %v", serviceUrl, err))
-	}
-
-	logrus.Infof("[%s][req]: %v", meta.Name, req)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		panic(fmt.Errorf("Error for url '%s': %v", serviceUrl, err))
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
+	fnAny, err := ptypes.MarshalAny(fn)
 	if err != nil {
 		panic(err)
 	}
 
-	logrus.Infof("[%s][output]: %v", meta.Name, string(body))
+	startEvent := events.New(eventid, types.InvocationEvent_TASK_STARTED.String(), fnAny)
 
-	return &types.FunctionInvocation{
-		Spec: spec,
-		Status: &types.FunctionInvocationStatus{
-			Status: types.FunctionInvocationStatus_SUCCEEDED,
-			Output: string(body),
-		},
-	}, nil
+	err = ap.esClient.Append(startEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	fnResult, err := ap.runtime.InvokeSync(fnSpec) // TODO spec or container?
+	if err != nil {
+		failedEvent := events.New(eventid, types.InvocationEvent_TASK_FAILED.String(), fnAny) // TODO record error message
+		err = ap.esClient.Append(failedEvent)
+		return nil, err
+	}
+	fn.Status = fnResult
+	fnStatusAny, err := ptypes.MarshalAny(fn)
+	if err != nil {
+		return nil, err
+	}
+
+	succeededEvent := events.New(eventid, types.InvocationEvent_TASK_SUCCEEDED.String(), fnStatusAny)
+	err = ap.esClient.Append(succeededEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	fn.Status = fnResult
+	return fn, nil
+}
+
+func (ap *Api) Invoke(invocationId string, spec *types.FunctionInvocationSpec) (string, error) {
+	panic("implement me")
+}
+
+func (ap *Api) Cancel(fnInvocationId string) error {
+	panic("implement me")
+}
+
+func (ap *Api) Status(fnInvocationId string) (*types.FunctionInvocationStatus, error) {
+	panic("implement me")
 }

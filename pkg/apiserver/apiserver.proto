@@ -131,14 +131,3 @@ service AdminAPI {
 message Health {
     string status = 1;
 }
-
-service FunctionEnvApi {
-
-    // Debug purposes
-    rpc Invoke (FunctionInvocationSpec) returns (FunctionInvocation) {
-        option (google.api.http) = {
-            post: "/function"
-            body: "*"
-        };
-    }
-}

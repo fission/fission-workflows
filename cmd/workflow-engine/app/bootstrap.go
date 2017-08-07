@@ -12,9 +12,9 @@ import (
 	"github.com/fission/fission-workflow/pkg/api/workflow"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
+	"github.com/fission/fission-workflow/pkg/client/fission"
 	"github.com/fission/fission-workflow/pkg/controller"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
-	"github.com/fission/fission-workflow/pkg/fission"
 	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission/controller/client"
@@ -70,6 +70,7 @@ func Run(ctx context.Context, options *Options) error {
 	// Fission client
 	poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
 	controllerClient := client.MakeClient("http://192.168.99.100:31313")
+	fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
 
 	workflowParser := workflow.NewParser(controllerClient)
 	workflowValidator := workflow.NewValidator()
@@ -81,7 +82,7 @@ func Run(ctx context.Context, options *Options) error {
 	// Setup API
 	workflowApi := workflow.NewApi(natsClient, workflowParser)
 	invocationApi := invocation.NewApi(natsClient, invocationProjector)
-	functionApi := function.NewFissionFunctionApi(poolmgrClient)
+	functionApi := function.NewFissionFunctionApi(fissionApi, natsClient)
 	err = workflowApi.Projector.Watch("workflows.>")
 	if err != nil {
 		log.Warnf("Failed to watch for workflows, because '%v'.", err)
@@ -91,12 +92,10 @@ func Run(ctx context.Context, options *Options) error {
 	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator)
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
-	functionServer := apiserver.NewGrpcFunctionApiServer(functionApi)
 
 	apiserver.RegisterWorkflowAPIServer(grpcServer, workflowServer)
 	apiserver.RegisterAdminAPIServer(grpcServer, adminServer)
 	apiserver.RegisterWorkflowInvocationAPIServer(grpcServer, invocationServer)
-	apiserver.RegisterFunctionEnvApiServer(grpcServer, functionServer)
 
 	// API Gateway server
 	mux := runtime.NewServeMux()
@@ -110,10 +109,6 @@ func Run(ctx context.Context, options *Options) error {
 		panic(err)
 	}
 	err = apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, GRPC_ADDRESS, opts)
-	if err != nil {
-		panic(err)
-	}
-	err = apiserver.RegisterFunctionEnvApiHandlerFromEndpoint(ctx, mux, GRPC_ADDRESS, opts)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +126,7 @@ func Run(ctx context.Context, options *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, invocationApi, natsClient)
+	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, invocationApi)
 	defer ctr.Close()
 	go ctr.Run()
 

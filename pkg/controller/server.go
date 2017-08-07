@@ -1,18 +1,13 @@
 package controller
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
-	"github.com/fission/fission-workflow/pkg/eventstore"
-	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
-	"github.com/fission/fission-workflow/pkg/eventstore/events"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -25,23 +20,21 @@ const (
 type InvocationController struct {
 	invocationProjector project.InvocationProjector
 	workflowProjector   project.WorkflowProjector
-	functionApi         function.Api
+	functionApi         *function.Api
 	invocationApi       *invocation.Api
-	esClient            eventstore.Client
 	scheduler           *scheduler.WorkflowScheduler
 	notifyChan          chan *project.InvocationNotification // TODO more complex => discard notifications of the same invocation
 }
 
 // Does not deal with Workflows (notifications)
 func NewController(iproject project.InvocationProjector, wfproject project.WorkflowProjector,
-	workflowScheduler *scheduler.WorkflowScheduler, functionApi function.Api, invocationApi *invocation.Api,
-	esClient eventstore.Client) *InvocationController {
+	workflowScheduler *scheduler.WorkflowScheduler, functionApi *function.Api,
+	invocationApi *invocation.Api) *InvocationController {
 	return &InvocationController{
 		invocationProjector: iproject,
 		workflowProjector:   wfproject,
 		scheduler:           workflowScheduler,
 		functionApi:         functionApi,
-		esClient:            esClient,
 		invocationApi:       invocationApi,
 	}
 }
@@ -85,8 +78,6 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 	case types.InvocationEvent_TASK_SUCCEEDED:
 		fallthrough
 	case types.InvocationEvent_TASK_FAILED:
-		// Check if done
-
 		// Decide which task to execute next
 		invoc := notification.Data
 		wfId := invoc.Spec.WorkflowId
@@ -109,7 +100,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}).Info("Scheduler decided on schedule")
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.Output // Might be better in projector
+			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.Output
 			err := cr.invocationApi.Success(invoc.Metadata.Id, output)
 			if err != nil {
 				panic(err)
@@ -126,73 +117,18 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 				invokeAction := &scheduler.InvokeTaskAction{}
 				ptypes.UnmarshalAny(action.Payload, invokeAction)
 
-				//go func() { // TODO move to functionproxy/execution/manager/api
-				task, _ := wf.Status.ResolvedTasks[invokeAction.Id]
+				taskDef, _ := wf.Status.ResolvedTasks[invokeAction.Id]
 				fnSpec := &types.FunctionInvocationSpec{
 					TaskId:       invokeAction.Id,
-					FunctionId:   task.Resolved,
-					FunctionName: task.Src,
+					FunctionId:   taskDef.Resolved,
+					FunctionName: taskDef.Src,
 					Input:        invokeAction.Input,
 				}
-				fn := &types.FunctionInvocation{
-					Spec: fnSpec,
-					Metadata: &types.ObjectMetadata{
-						Id:        util.Uid(),
-						CreatedAt: ptypes.TimestampNow(),
-					},
-				}
-
-				fnAny, err := ptypes.MarshalAny(fn)
-				if err != nil {
-					panic(err)
-				}
-
-				eventid := eventids.NewSubject(types.SUBJECT_INVOCATION, notification.Id)
-
-				startEvent := events.New(eventid, types.InvocationEvent_TASK_STARTED.String(), fnAny)
-
-				err = cr.esClient.Append(startEvent)
-				if err != nil {
-					panic(err)
-				}
-
-				fnInvoke, err := cr.functionApi.InvokeSync(fnSpec)
-
-				if err != nil {
-					fnFailedAny, err := ptypes.MarshalAny(&types.FunctionInvocation{
-						Spec: fnSpec,
-					})
-					if err != nil {
-						panic(err)
-					}
-					logrus.WithFields(logrus.Fields{
-						"err":  err,
-						"spec": fnSpec,
-					}).Errorf("Failed to execute function")
-					failedEvent := events.New(eventid, types.InvocationEvent_TASK_FAILED.String(), fnFailedAny)
-					err = cr.esClient.Append(failedEvent)
-					if err != nil {
-						panic(err)
-					}
-					return
-				}
-
-				fnInvokeAny, err := ptypes.MarshalAny(fnInvoke)
-				if err != nil {
-					panic(err)
-				}
-
-				succeededEvent := events.New(eventid, types.InvocationEvent_TASK_SUCCEEDED.String(), fnInvokeAny)
-				err = cr.esClient.Append(succeededEvent)
-				if err != nil {
-					panic(err)
-				}
-				logrus.WithField("fnInvoke", fnInvoke).Info("Function execution succeeded")
-				//}()
+				go cr.functionApi.InvokeSync(notification.Id, fnSpec)
 			}
 		}
 	default:
-		fmt.Printf("I do not know what to do on this event: %s\n", notification.Type)
+		logrus.WithField("type", notification.Type).Warn("Unknown event")
 	}
 }
 

@@ -28,7 +28,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	openTasks := map[string]*types.Task{} // bool = nothing
 	// Fill open tasks
 	for id, t := range request.Workflow.Spec.Src.Tasks {
-		invokedTask, ok := request.Invocation.Status.Tasks[id] // TODO Ignore failed tasks for now
+		invokedTask, ok := request.Invocation.Status.Tasks[id]
 		if !ok {
 			openTasks[id] = t
 			continue

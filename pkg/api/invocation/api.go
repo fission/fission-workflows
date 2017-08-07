@@ -12,13 +12,9 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-const (
-	INVOCATION_SUBJECT = "invocation"
-)
-
 type Api struct {
 	esClient  eventstore.Client
-	Projector project.InvocationProjector
+	Projector project.InvocationProjector // TODO move projection functions out?
 }
 
 func NewApi(esClient eventstore.Client, projector project.InvocationProjector) *Api {
@@ -91,9 +87,10 @@ func (ia *Api) Fail(invocationId string) {
 }
 
 func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
-	return eventids.NewSubject(INVOCATION_SUBJECT, invocationId)
+	return eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
 }
 
+// TODO move projection functions out?
 func (ia *Api) Get(invocationId string) (*types.WorkflowInvocation, error) {
 	return ia.Projector.Get(invocationId)
 }

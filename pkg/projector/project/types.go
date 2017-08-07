@@ -32,6 +32,7 @@ type InvocationProjector interface {
 
 	// Replays events, if it already exists, it is invalidated and replayed
 	// Populates cache
+	// TODO could be moved to constructor
 	Watch(query string) error
 
 	// Lists all subjects that fit the query

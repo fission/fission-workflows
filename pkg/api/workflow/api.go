@@ -15,7 +15,7 @@ import (
 
 type Api struct {
 	esClient  eventstore.Client
-	Projector project.WorkflowProjector
+	Projector project.WorkflowProjector // TODO move projections out?
 	Parser    *Parser
 }
 

@@ -6,13 +6,11 @@ go_library(
         "admin.go",
         "apiserver.pb.go",
         "apiserver.pb.gw.go",
-        "function.go",
         "invocation.go",
         "workflow.go",
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api/function:go_default_library",
         "//pkg/api/invocation:go_default_library",
         "//pkg/api/workflow:go_default_library",
         "//pkg/eventstore:go_default_library",

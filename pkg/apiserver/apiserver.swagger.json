@@ -15,33 +15,6 @@
     "application/json"
   ],
   "paths": {
-    "/function": {
-      "post": {
-        "summary": "Debug purposes",
-        "operationId": "Invoke",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/FunctionInvocation"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/FunctionInvocationSpec"
-            }
-          }
-        ],
-        "tags": [
-          "FunctionEnvApi"
-        ]
-      }
-    },
     "/invocation": {
       "get": {
         "operationId": "List",
