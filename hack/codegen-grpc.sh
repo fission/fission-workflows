@@ -15,14 +15,13 @@ while read -r path; do
          ${path}
 done <<< "$protopaths"
 
-# API server (generate HTTP gateway + swagger)
-echo "Generating golang HTTP gateway and swagger definition for proto-file: pkg/apiserver/apiserver.proto"
+echo "Generating golang HTTP gateway for proto-file: pkg/apiserver/apiserver.proto"
 protoc -I . \
         -I/usr/local/include \
         -I ./pkg/ \
         -I $GOPATH/src \
         -I $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
         --grpc-gateway_out=logtostderr=true:. \
-        --swagger_out=logtostderr=true:. \
         --go_out=plugins=grpc:. \
         pkg/apiserver/apiserver.proto
+
