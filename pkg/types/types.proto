@@ -60,7 +60,7 @@ message FunctionInvocationSpec {
     string functionId = 1;
     string functionName = 2;
     string taskId = 3; // task in workflow
-    string input = 4; // TODO turn into map? bytes?
+    map<string,string> input = 4;
 }
 
 message FunctionInvocationStatus {
@@ -75,7 +75,7 @@ message FunctionInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    string output = 3;
+    bytes output = 3;
 }
 
 // Workflow Invocation Model
@@ -150,9 +150,18 @@ message Task {
 
     repeated TaskParameters args = 4;
 
-    // TODO next or after
     // Dependencies for this task to execute
-    repeated string dependencies = 5;
+    map<string, TaskDependencyParameters> dependencies = 5;
+}
+
+message TaskDependencyParameters {
+
+    enum DependencyType  {
+        DATA = 0;
+        CONTROL = 1;
+    }
+    DependencyType type = 1;
+    string alias = 2;
 }
 
 message TaskParameters {

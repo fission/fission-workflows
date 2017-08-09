@@ -68,9 +68,9 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 			startTasks = append(startTasks, task)
 		}
 
-		for _, dep := range task.GetDependencies() {
-			if _, ok := refTable[dep]; !ok {
-				return fmt.Errorf("Task '%s' ocntains undefined dependency '%s'", taskId, dep)
+		for depName, _ := range task.GetDependencies() {
+			if _, ok := refTable[depName]; !ok {
+				return fmt.Errorf("Task '%s' ocntains undefined dependency '%s'", taskId, depName)
 			}
 		}
 	}

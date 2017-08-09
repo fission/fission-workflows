@@ -44,7 +44,10 @@ func (fe *FunctionEnv) InvokeSync(spec *types.FunctionInvocationSpec) (*types.Fu
 
 	url := fmt.Sprintf("http://%s", serviceUrl)
 
-	input := strings.NewReader(spec.Input)
+	// Map input parameters to actual Fission function parameters
+
+	input := strings.NewReader(spec.Input[types.INPUT_MAIN])
+	// TODO map other parameters as well (to params)
 
 	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
 	if err != nil {
@@ -66,7 +69,7 @@ func (fe *FunctionEnv) InvokeSync(spec *types.FunctionInvocationSpec) (*types.Fu
 
 	return &types.FunctionInvocationStatus{
 		Status: types.FunctionInvocationStatus_SUCCEEDED,
-		Output: string(body),
+		Output: body,
 	}, nil
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/sirupsen/logrus"
 )
 
 // Responsible for executing functions
