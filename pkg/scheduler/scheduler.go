@@ -53,8 +53,8 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	horizon := map[string]*types.Task{}
 	for id, task := range openTasks {
 		free := true
-		for _, dep := range task.GetDependencies() {
-			if _, ok := openTasks[dep]; ok {
+		for depName := range task.GetDependencies() {
+			if _, ok := openTasks[depName]; ok {
 				free = false
 				break
 			}
@@ -69,19 +69,25 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	// Determine schedule nodes
 	for taskId, task := range horizon {
 		// Fetch input
-		var input string
+		inputs := map[string]string{}
 		if len(task.GetDependencies()) == 0 {
-			input = request.Invocation.Spec.Input
+			inputs = request.Invocation.Spec.Inputs
 		} else {
-			for _, dep := range task.GetDependencies() {
-				// TODO allow input of more than one dependency
-				input = request.Invocation.Status.Tasks[dep].Status.Output
+
+			for depName, dep := range task.GetDependencies() {
+				// TODO check for overwrites (especially the alias)
+				inputs[depName] = string(request.Invocation.Status.Tasks[depName].Status.Output)
+				if len(dep.Alias) > 0 {
+					inputs[dep.Alias] = inputs[depName]
+				}
+
 			}
+			// Decide which one is the main input
 		}
 
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
 			Id:    taskId,
-			Input: input,
+			Input: inputs,
 		})
 
 		schedule.Actions = append(schedule.Actions, &Action{

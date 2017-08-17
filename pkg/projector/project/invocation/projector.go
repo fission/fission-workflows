@@ -3,7 +3,8 @@ package invocation
 import (
 	"time"
 
-	"fmt"
+	"strings"
+
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/projector/project"
@@ -11,7 +12,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/types/invocationevent"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 type invocationProjector struct {
@@ -106,10 +106,7 @@ func (ip *invocationProjector) Cache() cache.Cache {
 }
 
 func (ip *invocationProjector) Close() error {
-	// Close channel
-	for _, ch := range ip.subscribers {
-		close(ch)
-	}
+	// Note: subscribers are responsible for closing their own channels
 	return nil
 }
 
@@ -159,7 +156,6 @@ func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.Work
 
 	currentState := ip.getCache(invocationId)
 	if currentState == nil {
-		fmt.Printf("New state! '%s'\n", invocationId)
 		currentState = Initial()
 	}
 
@@ -168,7 +164,6 @@ func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.Work
 		// TODO improve error handling (e.g. retry / replay)
 		return nil, err
 	}
-	fmt.Printf("newState: '%v' for event '%v'\n", newState, event)
 
 	err = ip.cache.Put(invocationId, newState)
 	if err != nil {

@@ -1,8 +1,8 @@
 {
   "version": "v1",
-  "name" : "whyisthisrequired",
+  "name": "whyisthisrequired",
   "src": {
-    "outputTask" : "makeWhaleSayFortune",
+    "outputTask": "makeWhaleSayFortune",
     "tasks": {
       "generateFortune": {
         "type": "function",
@@ -11,9 +11,9 @@
       "makeWhaleSayFortune": {
         "type": "function",
         "name": "whalesay",
-        "dependencies": [
-          "generateFortune"
-        ]
+        "dependencies": {
+          "generateFortune" : {}
+        }
       }
     }
   }

@@ -5,6 +5,9 @@ import (
 	"os"
 
 	"github.com/fission/fission-workflow/cmd/workflow-engine/app"
+	"github.com/fission/fission-workflow/pkg/client/fission"
+	"github.com/fission/fission/controller/client"
+	poolmgr "github.com/fission/fission/poolmgr/client"
 	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -33,6 +36,12 @@ func main() {
 		},
 	}
 
+	// Fission client
+	poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
+	controllerClient := client.MakeClient("http://192.168.99.100:31313")
+	fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
+	fissionRegistry := fission.NewRegistry(controllerClient)
+
 	cliApp.Action = func(c *cli.Context) error {
 		options := &app.Options{
 			EventStore: &app.EventStoreOptions{
@@ -40,6 +49,11 @@ func main() {
 				Type:    "nats-streaming",
 				Cluster: c.String("eventstore-cluster"),
 			},
+			GrpcApiServerAddress: app.GRPC_ADDRESS,
+			HttpApiServerAddress: app.API_GATEWAY_ADDRESS,
+			FissionProxyAddress:  app.FISSION_PROXY_ADDRESS,
+			FunctionRuntimeEnv:   fissionApi,
+			FunctionRegistry:     fissionRegistry,
 		}
 
 		return app.Run(ctx, options)

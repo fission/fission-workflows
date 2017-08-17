@@ -4,16 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fission/fission"
+	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission/controller/client"
 )
 
 type Parser struct {
-	client *client.Client // TODO abstract away fission
+	client function.Resolver
 }
 
-func NewParser(client *client.Client) *Parser {
+func NewParser(client function.Resolver) *Parser {
 	return &Parser{client}
 }
 
@@ -43,15 +42,13 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 func (ps *Parser) parseTask(task *types.Task) (*types.TaskTypeDef, error) {
 	// TODO Split up for different task types
 	name := task.GetName()
-	fn, err := ps.client.FunctionGet(&fission.Metadata{
-		Name: name,
-	})
+	fnId, err := ps.client.Resolve(name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to resolve function '%s' using client '%v', because '%v'.", name, ps.client, err)
 	}
 
 	return &types.TaskTypeDef{
 		Src:      task.GetName(),
-		Resolved: fn.Uid,
+		Resolved: fnId,
 	}, nil
 }
