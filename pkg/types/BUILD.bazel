@@ -16,6 +16,9 @@ go_library(
 
 filegroup(
     name = "go_default_library_protos",
-    srcs = ["types.proto"],
+    srcs = [
+        "events.proto",
+        "types.proto",
+    ],
     visibility = ["//visibility:public"],
 )

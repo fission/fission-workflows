@@ -11,6 +11,7 @@ import (
 
 type Parser struct {
 	clients map[string]function.Resolver
+	// TODO allow aliases
 }
 
 func NewParser(client map[string]function.Resolver) *Parser {
@@ -45,23 +46,54 @@ func (ps *Parser) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	// TODO Split up for different task types
 	t := task.GetName()
 	// Use clients to resolve task to id
-	var err error
-	var fnId, clientName string
-	for cName, client := range ps.clients { // TODO priority-based or store all resolved functions
-		fnId, err = client.Resolve(t)
-		clientName = cName
+	parsed, _ := parseTaskAddress(t)
+	if len(parsed.GetRuntime()) > 0 {
+		return ps.resolveForRuntime(t, parsed.GetRuntime())
+	}
+
+	for cName := range ps.clients { // TODO priority-based or store all resolved functions
+		def, err := ps.resolveForRuntime(t, cName)
 		if err == nil {
-			logrus.WithFields(logrus.Fields{
-				"src" : task.GetName(),
-				"runtime" : clientName,
-				"resolved" : fnId,
-			}).Info("Resolved task")
-			return &types.TaskTypeDef{
-				Src:      task.GetName(),
-				Runtime:  clientName,
-				Resolved: fnId,
-			}, nil
+			return def, nil
 		}
 	}
-	return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v', because '%v'.", t, ps.clients, err)
+	return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v'.", t, ps.clients)
+}
+
+func (ps *Parser) resolveForRuntime(taskName string, runtime string) (*types.TaskTypeDef, error) {
+	resolver, ok := ps.clients[runtime];
+	if !ok {
+		return nil, fmt.Errorf("Runtime '%s' could not be found.", runtime)
+	}
+
+	fnId, err := resolver.Resolve(taskName)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"src":      taskName,
+		"runtime":  runtime,
+		"resolved": fnId,
+	}).Info("Resolved task")
+	return &types.TaskTypeDef{
+		Src:      taskName,
+		Runtime:  runtime,
+		Resolved: fnId,
+	}, nil
+}
+
+// Format: <runtime>:<name> for now
+func parseTaskAddress(task string) (*types.TaskTypeDef, error) {
+	parts := strings.SplitN(task, ":", 2)
+	if len(parts) == 1 {
+		return &types.TaskTypeDef{
+			Src: parts[0],
+		}, nil
+	}
+
+	return &types.TaskTypeDef{
+		Src:     parts[1],
+		Runtime: parts[0],
+	}, nil
 }

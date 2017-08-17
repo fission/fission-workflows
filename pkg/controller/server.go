@@ -111,7 +111,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}).Info("Scheduler decided on schedule")
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.Output
+			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.GetData()
 			err := cr.invocationApi.Success(invoc.Metadata.Id, string(output))
 			if err != nil {
 				panic(err)
