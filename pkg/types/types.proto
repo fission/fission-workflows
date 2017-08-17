@@ -76,12 +76,14 @@ message FunctionInvocationStatus {
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
     bytes output = 3;
+    bool controlFlow = 4; // Indicate whether the output is a control flow or data (default)
 }
 
 // Workflow Invocation Model
 message WorkflowInvocationSpec {
     string workflowId = 1;
-    string input = 2;
+    map<string,string> inputs = 3;
+    // TODO add tasks
 }
 
 message WorkflowInvocationStatus {
@@ -184,8 +186,9 @@ message WorkflowStatus {
 }
 
 message TaskTypeDef {
-    string src = 1;
-    string resolved = 2; // Address
+    string src = 1; // Orginal
+    string runtime = 2; // Function Runtime
+    string resolved = 3; // Address (Uid) to the
     // TODO namespace/origin maybe
 }
 

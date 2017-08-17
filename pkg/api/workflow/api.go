@@ -1,6 +1,8 @@
 package workflow
 
 import (
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
@@ -10,7 +12,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/sirupsen/logrus"
 )
 
 type Api struct {
@@ -44,8 +45,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 	// TODO more FT
 	parsed, err := wa.Parser.Parse(workflow)
 	if err != nil {
-		logrus.WithField("id", eventId).Errorf("Failed to parse workflow: %v", err)
-		return id, nil
+		return "", fmt.Errorf("Failed to parse workflow: %v", err)
 	}
 
 	parsedData, err := ptypes.MarshalAny(parsed)

@@ -2,10 +2,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["api.go"],
+    srcs = [
+        "api.go",
+        "function.go",
+    ],
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api:go_default_library",
         "//pkg/eventstore:go_default_library",
         "//pkg/eventstore/eventids:go_default_library",
         "//pkg/eventstore/events:go_default_library",

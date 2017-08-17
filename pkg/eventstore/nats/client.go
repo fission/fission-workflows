@@ -81,7 +81,6 @@ func (nc *Client) Subscribe(config *eventstore.SubscriptionConfig) (eventstore.S
 		switch subjectEvent.GetType() {
 		case eventstore.SubjectEvent_CREATED:
 			if _, ok := sub.sources[subjectEvent.GetSubject()]; !ok {
-				fmt.Printf("Subscribing to.... %v\n", subjectEvent.GetSubject())
 				stanSub, err := nc.subscribeSingle(&eventstore.SubscriptionConfig{
 					Subject: subjectEvent.GetSubject(),
 					EventCh: config.EventCh,
@@ -124,7 +123,6 @@ func (nc *Client) subscribeSingle(config *eventstore.SubscriptionConfig) (stan.S
 	}).Debug("Subscribed to subject.")
 
 	return nc.conn.Subscribe(config.Subject, func(msg *stan.Msg) {
-		fmt.Printf("[%s] %v\n", config.Subject, msg)
 		event, err := unmarshalMsg(msg)
 		if err != nil {
 			logrus.Errorf("Failed to retrieve event from msg '%v'", msg)
@@ -221,9 +219,8 @@ func (nc *Client) Append(event *eventstore.Event) error {
 	}
 	logrus.WithFields(logrus.Fields{
 		"subject":         invokeSubject,
-		"event":           event,
+		"eventType":       event.Type,
 		"activitySubject": activitySubject,
-		"activityEvent":   activityEvent,
 	}).Info("PUBLISH event to event store.")
 
 	return nil

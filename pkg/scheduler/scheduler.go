@@ -71,7 +71,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		// Fetch input
 		inputs := map[string]string{}
 		if len(task.GetDependencies()) == 0 {
-			inputs[types.INPUT_MAIN] = request.Invocation.Spec.Input
+			inputs = request.Invocation.Spec.Inputs
 		} else {
 
 			for depName, dep := range task.GetDependencies() {

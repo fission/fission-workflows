@@ -36,10 +36,15 @@ func (fp *FissionProxyServer) handleRequest(w http.ResponseWriter, r *http.Reque
 		panic(err)
 	}
 
+	// Map Inputs to function parameters
+	inputs := map[string]string{
+		types.INPUT_MAIN: string(body),
+	}
+
 	ctx := context.Background()
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
 		WorkflowId: id,
-		Input:      string(body),
+		Inputs:     inputs,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), 500)

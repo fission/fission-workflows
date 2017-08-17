@@ -3,6 +3,7 @@ package controller
 import (
 	"time"
 
+	"context"
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/projector/project"
@@ -40,7 +41,7 @@ func NewController(iproject project.InvocationProjector, wfproject project.Workf
 }
 
 // Blocking control loop
-func (cr *InvocationController) Run() {
+func (cr *InvocationController) Run(ctx context.Context) error {
 
 	logrus.Debug("Running controller init...")
 
@@ -53,20 +54,29 @@ func (cr *InvocationController) Run() {
 	}
 
 	// Invocation Notification lane
-	go func() {
+	go func(ctx context.Context) {
 		for {
-			notification := <-cr.notifyChan
-			logrus.WithField("notification", notification).Info("Handling invocation notification.")
-			cr.handleNotification(notification)
+			select {
+			case notification := <-cr.notifyChan:
+				logrus.WithField("notification", notification).Info("Handling invocation notification.")
+				cr.handleNotification(notification)
+			case <-ctx.Done():
+				logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+				return
+			}
 		}
-	}()
+	}(ctx)
 
 	// Control lane
 	logrus.Debug("Init done. Entering control loop.")
 	ticker := time.NewTicker(TICK_SPEED)
 	for {
-		<-ticker.C
-		cr.handleControlLoopTick()
+		select {
+		case <-ctx.Done():
+			return err
+		case <-ticker.C:
+			cr.handleControlLoopTick()
+		}
 	}
 }
 
@@ -124,7 +134,15 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 					FunctionName: taskDef.Src,
 					Input:        invokeAction.Input,
 				}
-				go cr.functionApi.InvokeSync(notification.Id, fnSpec)
+				go func() {
+					_, err := cr.functionApi.Invoke(notification.Id, fnSpec)
+					if err != nil {
+						logrus.WithFields(logrus.Fields{
+							"id":  notification.Id,
+							"err": err,
+						}).Errorf("Failed to execute task")
+					}
+				}()
 			}
 		}
 	default:
