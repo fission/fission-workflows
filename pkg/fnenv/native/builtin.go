@@ -1,4 +1,4 @@
-package internal
+package native
 
 import (
 	"errors"
@@ -11,13 +11,13 @@ import (
 //
 // Should be refactored to a extensible system, using go plugins for example.
 
-type FunctionIf struct {}
+type FunctionIf struct{}
 
 func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error) {
 	return nil, errors.New("Not implemented FunctionIf")
 }
 
-type FunctionNoop struct {}
+type FunctionNoop struct{}
 
 func (fn *FunctionNoop) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error) {
 	logrus.WithField("spec", spec).Debug("Noop")

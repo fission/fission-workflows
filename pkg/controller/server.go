@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"context"
+
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/projector/project"
@@ -129,10 +130,9 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 
 				taskDef, _ := wf.Status.ResolvedTasks[invokeAction.Id]
 				fnSpec := &types.FunctionInvocationSpec{
-					TaskId:       invokeAction.Id,
-					FunctionId:   taskDef.Resolved,
-					FunctionName: taskDef.Src,
-					Input:        invokeAction.Input,
+					TaskId: invokeAction.Id,
+					Type:   taskDef,
+					Input:  invokeAction.Input,
 				}
 				go func() {
 					_, err := cr.functionApi.Invoke(notification.Id, fnSpec)

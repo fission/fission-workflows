@@ -9,10 +9,10 @@ import (
 )
 
 type Parser struct {
-	client function.Resolver
+	clients map[string]function.Resolver
 }
 
-func NewParser(client function.Resolver) *Parser {
+func NewParser(client map[string]function.Resolver) *Parser {
 	return &Parser{client}
 }
 
@@ -39,16 +39,26 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 	}, nil
 }
 
+// TODO support specific runtime
 func (ps *Parser) parseTask(task *types.Task) (*types.TaskTypeDef, error) {
 	// TODO Split up for different task types
-	name := task.GetName()
-	fnId, err := ps.client.Resolve(name)
+	t := task.GetName()
+	var err error
+	var fnId, clientName string
+	for cName, client := range ps.clients { // TODO priority-based or store all resolved functions
+		fnId, err = client.Resolve(t)
+		clientName = cName
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
-		return nil, fmt.Errorf("Failed to resolve function '%s' using client '%v', because '%v'.", name, ps.client, err)
+		return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v', because '%v'.", t, ps.clients, err)
 	}
 
 	return &types.TaskTypeDef{
 		Src:      task.GetName(),
+		Runtime:  clientName,
 		Resolved: fnId,
 	}, nil
 }

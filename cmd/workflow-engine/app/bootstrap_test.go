@@ -17,6 +17,7 @@ import (
 	"reflect"
 
 	"github.com/fission/fission-workflow/cmd/workflow-engine/app"
+	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/fnenv/test"
 	"github.com/fission/fission-workflow/pkg/types"
@@ -206,13 +207,17 @@ func TestWorkflowInvocation(t *testing.T) {
 
 func setup(ctx context.Context) *app.Options {
 	// TODO Maybe replace with actual Fission deployment
-	mockFunctionRegistry := &test.MockFunctionResolver{mockFuncResolves}
+	mockFunctionResolver := &test.MockFunctionResolver{mockFuncResolves}
 	mockFunctionRuntime := &test.MockRuntimeEnv{Functions: mockFuncs, Results: map[string]*types.FunctionInvocation{}}
 
 	esOpts := setupEventStore(ctx)
 	opts := &app.Options{
-		FunctionRegistry:     mockFunctionRegistry,
-		FunctionRuntimeEnv:   mockFunctionRuntime,
+		FunctionRegistry: map[string]function.Resolver{
+			"mock": mockFunctionResolver,
+		},
+		FunctionRuntimeEnv: map[string]function.Runtime{
+			"mock": mockFunctionRuntime,
+		},
 		EventStore:           esOpts,
 		GrpcApiServerAddress: app.GRPC_ADDRESS,
 		HttpApiServerAddress: app.API_GATEWAY_ADDRESS,

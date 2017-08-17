@@ -28,8 +28,8 @@ func NewFunctionEnv(poolmgr *poolmgr.Client, controller *controller.Client) func
 
 func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {
 	meta := &fission.Metadata{
-		Name: spec.GetFunctionName(),
-		Uid:  spec.GetFunctionId(),
+		Name: spec.GetType().GetSrc(),
+		Uid:  spec.GetType().GetResolved(),
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,

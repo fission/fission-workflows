@@ -12,9 +12,9 @@ import (
 	"github.com/fission/fission-workflow/pkg/api/workflow"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
-	"github.com/fission/fission-workflow/pkg/client/fission"
 	"github.com/fission/fission-workflow/pkg/controller"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
+	"github.com/fission/fission-workflow/pkg/fnenv/fission"
 	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/gorilla/handlers"
@@ -31,8 +31,8 @@ const (
 )
 
 type Options struct {
-	FunctionRuntimeEnv   function.Runtime
-	FunctionRegistry     function.Resolver
+	FunctionRuntimeEnv   map[string]function.Runtime
+	FunctionRegistry     map[string]function.Resolver
 	EventStore           *EventStoreOptions
 	FissionProxyAddress  string
 	GrpcApiServerAddress string

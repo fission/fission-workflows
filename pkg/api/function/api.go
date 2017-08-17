@@ -11,11 +11,11 @@ import (
 
 // A function.Runtime wrapper that deals with the higher-level logic workflow-related logic
 type Api struct {
-	runtime  Runtime // TODO support async
+	runtime  map[string]Runtime // TODO support async
 	esClient eventstore.Client
 }
 
-func NewFissionFunctionApi(runtime Runtime, esClient eventstore.Client) *Api {
+func NewFissionFunctionApi(runtime map[string]Runtime, esClient eventstore.Client) *Api {
 	return &Api{
 		runtime:  runtime,
 		esClient: esClient,
@@ -45,7 +45,7 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 		return nil, err
 	}
 
-	fnResult, err := ap.runtime.Invoke(fnSpec) // TODO spec or container?
+	fnResult, err := ap.runtime[fnSpec.Type.Runtime].Invoke(fnSpec) // TODO spec or container?
 	if err != nil {
 		failedEvent := events.New(eventid, types.InvocationEvent_TASK_FAILED.String(), fnAny) // TODO record error message
 		esErr := ap.esClient.Append(failedEvent)

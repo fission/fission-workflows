@@ -57,10 +57,9 @@ message FunctionInvocation {
 
 message FunctionInvocationSpec {
     // Id of the function to be invoked (no ambiguatity at this point
-    string functionId = 1;
-    string functionName = 2;
-    string taskId = 3; // task in workflow
-    map<string,string> input = 4;
+    TaskTypeDef type = 1;
+    string taskId = 2; // task in workflow
+    map<string,string> input = 3;
 }
 
 message FunctionInvocationStatus {
