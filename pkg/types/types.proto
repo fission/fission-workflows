@@ -51,11 +51,7 @@ message FunctionInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    oneof output {
-        bytes data = 3;
-        // TODO support inline workflows
-        Task controlflow = 4; // Indicate whether the output is a control flow or data (default)
-    }
+    bytes output = 3;
 }
 
 // Workflow Invocation Model

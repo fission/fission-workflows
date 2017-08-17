@@ -6,6 +6,7 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
 )
 
 type WorkflowProjector interface {
@@ -47,6 +48,6 @@ type InvocationProjector interface {
 type InvocationNotification struct {
 	Id   string
 	Data *types.WorkflowInvocation
-	Type types.InvocationEvent
+	Type events.Invocation
 	Time time.Time
 }

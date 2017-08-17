@@ -7,7 +7,7 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/invocationevent"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -17,17 +17,14 @@ import (
 */
 type reduceFunc func(invocation types.WorkflowInvocation, event *eventstore.Event) (newState *types.WorkflowInvocation, err error)
 
-var eventMapping = map[types.InvocationEvent]reduceFunc{
-	types.InvocationEvent_INVOCATION_CREATED:      created,       // Data: WorkflowInvocation
-	types.InvocationEvent_INVOCATION_CANCELED:     canceled,      // Data: {}
-	types.InvocationEvent_INVOCATION_COMPLETED:    completed,     // Data: {}
-	types.InvocationEvent_TASK_STARTED:            taskStarted,   // Data: FunctionInvocation
-	types.InvocationEvent_TASK_FAILED:             taskFailed,    // Data: FunctionInvocation
-	types.InvocationEvent_TASK_SUCCEEDED:          taskSucceeded, // Data: FunctionInvocation
-	types.InvocationEvent_TASK_ABORTED:            taskAborted,
-	types.InvocationEvent_TASK_HEARTBEAT_REQUEST:  skip,
-	types.InvocationEvent_TASK_HEARTBEAT_RESPONSE: skip,
-	types.InvocationEvent_TASK_SKIPPED:            skip,
+var eventMapping = map[events.Invocation]reduceFunc{
+	events.Invocation_INVOCATION_CREATED:   created,       // Data: WorkflowInvocation
+	events.Invocation_INVOCATION_CANCELED:  canceled,      // Data: {}
+	events.Invocation_INVOCATION_COMPLETED: completed,     // Data: {}
+	events.Invocation_TASK_STARTED:         taskStarted,   // Data: FunctionInvocation
+	events.Invocation_TASK_FAILED:          taskFailed,    // Data: FunctionInvocation
+	events.Invocation_TASK_SUCCEEDED:       taskSucceeded, // Data: FunctionInvocation
+	events.Invocation_TASK_ABORTED:         taskAborted,
 }
 
 func Initial() *types.WorkflowInvocation {
@@ -38,12 +35,12 @@ func From(events ...*eventstore.Event) (currentState *types.WorkflowInvocation, 
 	return Apply(*Initial(), events...)
 }
 
-func Apply(currentState types.WorkflowInvocation, events ...*eventstore.Event) (newState *types.WorkflowInvocation, err error) {
+func Apply(currentState types.WorkflowInvocation, seqEvents ...*eventstore.Event) (newState *types.WorkflowInvocation, err error) {
 	// Check if it is indeed next event (maybe wrap in a projectionContainer)
 	newState = &currentState
-	for _, event := range events {
+	for _, event := range seqEvents {
 
-		eventType, err := invocationevent.Parse(event.GetType())
+		eventType, err := events.ParseInvocation(event.GetType())
 		if err != nil {
 			return nil, err
 		}

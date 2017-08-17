@@ -5,17 +5,18 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
 type reduceFunc func(currentState types.Workflow, event *eventstore.Event) (newState *types.Workflow, err error)
 
-var eventMapping = map[types.WorkflowEvent]reduceFunc{
-	types.WorkflowEvent_WORKFLOW_CREATED: created,
-	types.WorkflowEvent_WORKFLOW_DELETED: deleted,
-	types.WorkflowEvent_WORKFLOW_PARSED:  parsed,
-	types.WorkflowEvent_WORKFLOW_UPDATED: skip,
+var eventMapping = map[events.Workflow]reduceFunc{
+	events.Workflow_WORKFLOW_CREATED: created,
+	events.Workflow_WORKFLOW_DELETED: deleted,
+	events.Workflow_WORKFLOW_PARSED:  parsed,
+	events.Workflow_WORKFLOW_UPDATED: skip,
 }
 
 func Initial() *types.Workflow {
@@ -26,12 +27,12 @@ func From(events ...*eventstore.Event) (currentState *types.Workflow, err error)
 	return Apply(*Initial(), events...)
 }
 
-func Apply(currentState types.Workflow, events ...*eventstore.Event) (newState *types.Workflow, err error) {
+func Apply(currentState types.Workflow, seqEvents ...*eventstore.Event) (newState *types.Workflow, err error) {
 	// Check if it is indeed next event (maybe wrap in a projectionContainer)
 	newState = &currentState
-	for _, event := range events {
+	for _, event := range seqEvents {
 
-		eventType, err := types.ParseWorkflowEvent(event.GetType())
+		eventType, err := events.ParseWorkflow(event.GetType())
 		if err != nil {
 			return nil, err
 		}

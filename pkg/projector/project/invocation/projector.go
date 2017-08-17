@@ -9,7 +9,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/invocationevent"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -130,21 +130,21 @@ func (ip *invocationProjector) Run() {
 			timestamp = time.Now()
 		}
 
-		invocationEventType, err := invocationevent.Parse(event.Type)
+		t, err := events.ParseInvocation(event.Type)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"event": event,
 				"types": event.Type,
 				"err":   err,
 			}).Warn("Failed to parse event type")
-			invocationEventType = -1
+			t = -1
 		}
 
 		// TODO should judge whether to send notification (old messages not)
 		ip.notifySubscribers(&project.InvocationNotification{
 			Id:   updatedState.GetMetadata().GetId(),
 			Data: updatedState,
-			Type: invocationEventType,
+			Type: t,
 			Time: timestamp,
 		})
 	}

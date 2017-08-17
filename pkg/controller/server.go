@@ -10,6 +10,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -84,11 +85,11 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 func (cr *InvocationController) handleNotification(notification *project.InvocationNotification) {
 	logrus.WithField("notification", notification).Debug("controller event trigger!")
 	switch notification.Type {
-	case types.InvocationEvent_INVOCATION_CREATED:
+	case events.Invocation_INVOCATION_CREATED:
 		fallthrough
-	case types.InvocationEvent_TASK_SUCCEEDED:
+	case events.Invocation_TASK_SUCCEEDED:
 		fallthrough
-	case types.InvocationEvent_TASK_FAILED:
+	case events.Invocation_TASK_FAILED:
 		// Decide which task to execute next
 		invoc := notification.Data
 		wfId := invoc.Spec.WorkflowId
@@ -111,7 +112,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}).Info("Scheduler decided on schedule")
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.GetData()
+			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.GetOutput()
 			err := cr.invocationApi.Success(invoc.Metadata.Id, string(output))
 			if err != nil {
 				panic(err)

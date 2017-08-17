@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-option go_package = "types";
+package events;
 
-enum WorkflowEvent {
+enum Workflow {
     WORKFLOW_CREATED = 0;
     WORKFLOW_UPDATED = 1;
     WORKFLOW_PARSED = 2;
@@ -10,7 +10,7 @@ enum WorkflowEvent {
     WORKFLOW_PARSING_FAILED = 4;
 }
 
-enum InvocationEvent {
+enum Invocation {
     TASK_STARTED = 0; // origin: Engine
     TASK_SKIPPED = 1; // origin: Engine
     TASK_HEARTBEAT_REQUEST = 2; // origin: Engine

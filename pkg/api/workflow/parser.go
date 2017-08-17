@@ -61,7 +61,7 @@ func (ps *Parser) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 }
 
 func (ps *Parser) resolveForRuntime(taskName string, runtime string) (*types.TaskTypeDef, error) {
-	resolver, ok := ps.clients[runtime];
+	resolver, ok := ps.clients[runtime]
 	if !ok {
 		return nil, fmt.Errorf("Runtime '%s' could not be found.", runtime)
 	}
