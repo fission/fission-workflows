@@ -93,6 +93,7 @@ message WorkflowInvocationStatus {
         SUCCEEDED = 3;
         FAILED = 4;
         ABORTED = 5;
+        //PAUSED = 6;
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;

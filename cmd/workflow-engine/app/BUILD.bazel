@@ -29,6 +29,7 @@ go_test(
     library = ":go_default_library",
     deps = [
         ":go_default_library",
+        "//pkg/api/function:go_default_library",
         "//pkg/apiserver:go_default_library",
         "//pkg/fnenv/test:go_default_library",
         "//pkg/types:go_default_library",

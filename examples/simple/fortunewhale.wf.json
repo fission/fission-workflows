@@ -4,9 +4,16 @@
   "src": {
     "outputTask": "makeWhaleSayFortune",
     "tasks": {
+      "internalFuncShowoff": {
+        "type": "function",
+        "name": "noop"
+      },
       "generateFortune": {
         "type": "function",
-        "name": "fortune"
+        "name": "fortune",
+        "dependencies": {
+          "internalFuncShowoff" : {}
+        }
       },
       "makeWhaleSayFortune": {
         "type": "function",

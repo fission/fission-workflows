@@ -7,7 +7,7 @@
       "whaleEcho": {
         "type": "function",
         "name": "whalesay",
-        "dependencies": []
+        "dependencies": {}
       }
     }
   }

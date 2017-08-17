@@ -20,6 +20,6 @@ func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error)
 type FunctionNoop struct{}
 
 func (fn *FunctionNoop) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error) {
-	logrus.WithField("spec", spec).Debug("Noop")
+	logrus.WithField("spec", spec).Info("Internal Noop-function invoked.")
 	return nil, nil
 }

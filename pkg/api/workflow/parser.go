@@ -6,6 +6,7 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/sirupsen/logrus"
 )
 
 type Parser struct {
@@ -27,7 +28,7 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 			return nil, fmt.Errorf("Unknown type: '%s'", task.GetType())
 		}
 
-		taskDef, err := ps.parseTask(task)
+		taskDef, err := ps.resolveTask(task)
 		if err != nil {
 			return nil, err
 		}
@@ -39,26 +40,28 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 	}, nil
 }
 
-// TODO support specific runtime
-func (ps *Parser) parseTask(task *types.Task) (*types.TaskTypeDef, error) {
+// TODO support specific runtime (e.g. <runtime>:<name>)
+func (ps *Parser) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	// TODO Split up for different task types
 	t := task.GetName()
+	// Use clients to resolve task to id
 	var err error
 	var fnId, clientName string
 	for cName, client := range ps.clients { // TODO priority-based or store all resolved functions
 		fnId, err = client.Resolve(t)
 		clientName = cName
 		if err == nil {
-			break
+			logrus.WithFields(logrus.Fields{
+				"src" : task.GetName(),
+				"runtime" : clientName,
+				"resolved" : fnId,
+			}).Info("Resolved task")
+			return &types.TaskTypeDef{
+				Src:      task.GetName(),
+				Runtime:  clientName,
+				Resolved: fnId,
+			}, nil
 		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v', because '%v'.", t, ps.clients, err)
-	}
-
-	return &types.TaskTypeDef{
-		Src:      task.GetName(),
-		Runtime:  clientName,
-		Resolved: fnId,
-	}, nil
+	return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v', because '%v'.", t, ps.clients, err)
 }
