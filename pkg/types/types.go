@@ -4,7 +4,7 @@ package types
 const (
 	SUBJECT_INVOCATION = "invocation"
 	SUBJECT_WORKFLOW   = "workflows"
-	INPUT_MAIN         = "*"
+	INPUT_MAIN         = "default"
 )
 
 // InvocationEvent

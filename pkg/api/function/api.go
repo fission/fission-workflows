@@ -23,7 +23,7 @@ func NewFissionFunctionApi(runtime map[string]Runtime, esClient eventstore.Clien
 }
 
 func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec) (*types.FunctionInvocation, error) {
-	eventid := eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
+	eventId := eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
 
 	fn := &types.FunctionInvocation{
 		Metadata: &types.ObjectMetadata{
@@ -38,16 +38,17 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 		panic(err)
 	}
 
-	startEvent := eventstore.NewEvent(eventid, events.Invocation_TASK_STARTED.String(), fnAny)
+	startEvent := eventstore.NewEvent(eventId, events.Invocation_TASK_STARTED.String(), fnAny)
 
 	err = ap.esClient.Append(startEvent)
 	if err != nil {
 		return nil, err
 	}
 
-	fnResult, err := ap.runtime[fnSpec.Type.Runtime].Invoke(fnSpec) // TODO spec or container?
+	fnResult, err := ap.runtime[fnSpec.Type.Runtime].Invoke(fnSpec)
 	if err != nil {
-		failedEvent := eventstore.NewEvent(eventid, events.Invocation_TASK_FAILED.String(), fnAny) // TODO record error message
+		// TODO record error message
+		failedEvent := eventstore.NewEvent(eventId, events.Invocation_TASK_FAILED.String(), fnAny)
 		esErr := ap.esClient.Append(failedEvent)
 		if esErr != nil {
 			return nil, esErr
@@ -60,7 +61,7 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 		return nil, err
 	}
 
-	succeededEvent := eventstore.NewEvent(eventid, events.Invocation_TASK_SUCCEEDED.String(), fnStatusAny)
+	succeededEvent := eventstore.NewEvent(eventId, events.Invocation_TASK_SUCCEEDED.String(), fnStatusAny)
 	err = ap.esClient.Append(succeededEvent)
 	if err != nil {
 		return nil, err

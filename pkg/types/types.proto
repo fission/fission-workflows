@@ -36,7 +36,7 @@ message FunctionInvocationSpec {
     // Id of the function to be invoked (no ambiguatity at this point
     TaskTypeDef type = 1;
     string taskId = 2; // task in workflow
-    map<string,string> input = 3;
+    map<string, TypedValue> inputs = 3;
 }
 
 message FunctionInvocationStatus {
@@ -51,14 +51,13 @@ message FunctionInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    bytes output = 3;
+    TypedValue output = 3;
 }
 
 // Workflow Invocation Model
 message WorkflowInvocationSpec {
     string workflowId = 1;
-    map<string,string> inputs = 3;
-    // TODO add tasks
+    map<string, TypedValue> input = 3;
 }
 
 message WorkflowInvocationStatus {
@@ -73,8 +72,8 @@ message WorkflowInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    map <string,FunctionInvocation> tasks = 3;
-    string output = 4;
+    map<string, FunctionInvocation> tasks = 3;
+    TypedValue output = 4;
 }
 
 
@@ -85,10 +84,7 @@ message WorkflowInvocation {
 }
 
 // Workflow Definition
-
-// TODO site catalogs, transformation catalogs, ect...
-// TODO define a parser/mapper: Maps a resource-independent “abstract” workflow onto resources and executes the “executable” workflow
-
+//
 // The workflowDefinition contains the definition of a workflow.
 //
 // Ideally the source code (json, yaml) can be converted directly to this message.
@@ -104,9 +100,9 @@ message WorkflowDefinition {
     // Actions
     //
     // Dependency graph is build into the tasks
-    map <string,Task> tasks = 2; // key = taskId
+    map<string, Task> tasks = 2; // key = taskId
 
-    // From which task should the workflow return the output? (todo multiple? implicit?)
+    // From which task should the workflow return the output? Future: multiple? Implicit?
     string outputTask = 3;
 }
 
@@ -126,24 +122,23 @@ message Task {
     // Name/identifier of the function
     string name = 3;
 
-    repeated TaskParameters args = 4;
+    map<string, TypedValue> inputs = 4;
 
     // Dependencies for this task to execute
     map<string, TaskDependencyParameters> dependencies = 5;
+
+    // Number of dependencies to wait for
+    int32 dependencies_await = 6;
 }
 
 message TaskDependencyParameters {
 
-    enum DependencyType  {
+    enum DependencyType {
         DATA = 0;
         CONTROL = 1;
     }
     DependencyType type = 1;
     string alias = 2;
-}
-
-message TaskParameters {
-
 }
 
 // Internal
@@ -157,13 +152,17 @@ message WorkflowStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    map <string,TaskTypeDef> resolvedTasks = 3; // Key = taskId
-    // TODO ammended spec (e.g. no type => function type)
+    map<string, TaskTypeDef> resolvedTasks = 3; // Key = taskId
 }
 
 message TaskTypeDef {
     string src = 1; // Orginal
     string runtime = 2; // Function Runtime
-    string resolved = 3; // Address (Uid) to the
-    // TODO namespace/origin maybe
+    string resolved = 3; // Address (Uid) to the function
+}
+
+// Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
+message TypedValue {
+    string type = 1;
+    bytes value = 2;
 }

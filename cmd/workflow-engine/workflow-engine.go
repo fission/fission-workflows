@@ -6,10 +6,7 @@ import (
 
 	"github.com/fission/fission-workflow/cmd/workflow-engine/app"
 	"github.com/fission/fission-workflow/pkg/api/function"
-	"github.com/fission/fission-workflow/pkg/fnenv/fission"
 	"github.com/fission/fission-workflow/pkg/fnenv/native"
-	"github.com/fission/fission/controller/client"
-	poolmgr "github.com/fission/fission/poolmgr/client"
 	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -39,10 +36,10 @@ func main() {
 	}
 
 	// Fission client
-	poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
-	controllerClient := client.MakeClient("http://192.168.99.100:31313")
-	fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
-	fissionResolver := fission.NewResolver(controllerClient)
+	//poolmgrClient := poolmgr.MakeClient("http://192.168.99.100:32101")
+	//controllerClient := client.MakeClient("http://192.168.99.100:31313")
+	//fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
+	//fissionResolver := fission.NewResolver(controllerClient)
 	nativeEnv := native.NewFunctionEnv()
 
 	cliApp.Action = func(c *cli.Context) error {
@@ -56,11 +53,11 @@ func main() {
 			HttpApiServerAddress: app.API_GATEWAY_ADDRESS,
 			FissionProxyAddress:  app.FISSION_PROXY_ADDRESS,
 			FunctionRuntimeEnv: map[string]function.Runtime{
-				"fission":  fissionApi,
+				//"fission":  fissionApi,
 				"internal": nativeEnv,
 			},
 			FunctionRegistry: map[string]function.Resolver{
-				"fission":  fissionResolver,
+				//"fission":  fissionResolver,
 				"internal": nativeEnv,
 			},
 		}

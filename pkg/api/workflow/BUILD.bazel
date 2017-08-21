@@ -10,11 +10,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/function:go_default_library",
-        "//pkg/cache:go_default_library",
         "//pkg/eventstore:go_default_library",
         "//pkg/eventstore/eventids:go_default_library",
-        "//pkg/projector/project:go_default_library",
-        "//pkg/projector/project/workflow:go_default_library",
         "//pkg/types:go_default_library",
         "//pkg/types/events:go_default_library",
         "//pkg/util:go_default_library",

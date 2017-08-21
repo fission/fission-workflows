@@ -13,13 +13,17 @@ import (
 
 type FunctionIf struct{}
 
-func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error) {
+func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
 	return nil, errors.New("Not implemented FunctionIf")
 }
 
 type FunctionNoop struct{}
 
-func (fn *FunctionNoop) Invoke(spec *types.FunctionInvocationSpec) ([]byte, error) {
-	logrus.WithField("spec", spec).Info("Internal Noop-function invoked.")
-	return nil, nil
+func (fn *FunctionNoop) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+	output := spec.GetInputs()[types.INPUT_MAIN]
+	logrus.WithFields(logrus.Fields{
+		"spec":   spec,
+		"output": output,
+	}).Info("Internal Noop-function invoked.")
+	return output, nil
 }

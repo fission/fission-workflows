@@ -22,7 +22,7 @@ func NewParser(client map[string]function.Resolver) *Parser {
 func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error) {
 	src := spec.GetSrc()
 
-	// TODO paralize this resolving
+	// TODO make resolving parallel
 	taskTypes := map[string]*types.TaskTypeDef{}
 	for taskId, task := range src.GetTasks() {
 		if len(task.GetType()) > 0 && !strings.EqualFold(task.GetType(), "function") {
@@ -41,9 +41,7 @@ func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error)
 	}, nil
 }
 
-// TODO support specific runtime (e.g. <runtime>:<name>)
 func (ps *Parser) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
-	// TODO Split up for different task types
 	t := task.GetName()
 	// Use clients to resolve task to id
 	parsed, _ := parseTaskAddress(t)
@@ -51,7 +49,8 @@ func (ps *Parser) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 		return ps.resolveForRuntime(t, parsed.GetRuntime())
 	}
 
-	for cName := range ps.clients { // TODO priority-based or store all resolved functions
+	// TODO resolve function for all clients, and apply a priority or policy for scheduling (overhead vs. load)
+	for cName := range ps.clients {
 		def, err := ps.resolveForRuntime(t, cName)
 		if err == nil {
 			return def, nil

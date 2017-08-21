@@ -1,10 +1,10 @@
 package fission
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflow/pkg/api/function"
@@ -47,7 +47,7 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 
 	// Map input parameters to actual Fission function parameters
 
-	input := strings.NewReader(spec.Input[types.INPUT_MAIN])
+	input := bytes.NewReader(spec.Inputs[types.INPUT_MAIN].Value)
 	// TODO map other parameters as well (to params)
 
 	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
@@ -68,8 +68,13 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 
 	logrus.Infof("[%s][output]: %v", meta.Name, string(body))
 
+	output := &types.TypedValue{
+		// TODO infer type from response
+		Value: body,
+	}
+
 	return &types.FunctionInvocationStatus{
 		Status: types.FunctionInvocationStatus_SUCCEEDED,
-		Output: body,
+		Output: output,
 	}, nil
 }

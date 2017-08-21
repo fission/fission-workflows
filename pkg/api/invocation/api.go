@@ -59,7 +59,7 @@ func (ia *Api) Cancel(invocationId string) error {
 }
 
 // TODO might want to split out public vs. internal api
-func (ia *Api) Success(invocationId string, output string) error {
+func (ia *Api) Success(invocationId string, output *types.TypedValue) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -90,7 +90,6 @@ func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
 }
 
-// TODO move projection functions out?
 func (ia *Api) Get(invocationId string) (*types.WorkflowInvocation, error) {
 	return ia.Projector.Get(invocationId)
 }

@@ -113,7 +113,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
 			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.GetOutput()
-			err := cr.invocationApi.Success(invoc.Metadata.Id, string(output))
+			err := cr.invocationApi.Success(invoc.Metadata.Id, output)
 			if err != nil {
 				panic(err)
 			}
@@ -129,11 +129,36 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 				invokeAction := &scheduler.InvokeTaskAction{}
 				ptypes.UnmarshalAny(action.Payload, invokeAction)
 
+				// Resolve type of the task
 				taskDef, _ := wf.Status.ResolvedTasks[invokeAction.Id]
+
+				// Resolve the inputs
+				inputs := invokeAction.Inputs
+				//inputs := map[string]string{}
+				//cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
+				//
+				//for inputKey, val := range invokeAction.Inputs {
+				//
+				//	// e.g. $.foo.bar
+				//	// TODO make notation more consise, abstracting away the spec/metadata/status things
+				//	resolvedInput, err := query.Resolve(invoc, val, cwd)
+				//	if err != nil {
+				//		logrus.WithFields(logrus.Fields{
+				//			"val":      val,
+				//			"inputKey": inputKey,
+				//			"cwd":      cwd,
+				//		}).Warnf("Failed to resolve input: %v", err)
+				//		continue
+				//	}
+				//
+				//	inputs[inputKey] = fmt.Sprintf("%v", resolvedInput) // TODO allow passing of actual json to functions
+				//}
+
+				// Invoke
 				fnSpec := &types.FunctionInvocationSpec{
 					TaskId: invokeAction.Id,
 					Type:   taskDef,
-					Input:  invokeAction.Input,
+					Inputs: inputs,
 				}
 				go func() {
 					_, err := cr.functionApi.Invoke(notification.Id, fnSpec)
@@ -147,7 +172,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 			}
 		}
 	default:
-		logrus.WithField("type", notification.Type).Warn("Unknown event")
+		logrus.WithField("type", notification.Type).Warn("Controller ignores event.")
 	}
 }
 

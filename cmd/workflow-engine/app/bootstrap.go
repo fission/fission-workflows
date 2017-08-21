@@ -16,6 +16,7 @@ import (
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/fnenv/fission"
 	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
+	wp "github.com/fission/fission-workflow/pkg/projector/project/workflow"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -73,6 +74,7 @@ func Run(ctx context.Context, opts *Options) error {
 	workflowParser := workflow.NewParser(opts.FunctionRegistry)
 	workflowValidator := workflow.NewValidator()
 	invocationProjector := ip.NewInvocationProjector(natsClient, cache)
+	workflowProjector := wp.NewWorkflowProjector(natsClient, cache)
 	err = invocationProjector.Watch("invocation.>")
 	if err != nil {
 		panic(err)
@@ -81,13 +83,13 @@ func Run(ctx context.Context, opts *Options) error {
 	workflowApi := workflow.NewApi(natsClient, workflowParser)
 	invocationApi := invocation.NewApi(natsClient, invocationProjector)
 	functionApi := function.NewFissionFunctionApi(opts.FunctionRuntimeEnv, natsClient)
-	err = workflowApi.Projector.Watch("workflows.>")
+	err = workflowProjector.Watch("workflows.>")
 	if err != nil {
 		log.Warnf("Failed to watch for workflows, because '%v'.", err)
 	}
 
 	// API gRPC Server
-	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator)
+	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, workflowProjector)
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
 
@@ -128,7 +130,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	ctr := controller.NewController(invocationProjector, workflowApi.Projector, s, functionApi, invocationApi)
+	ctr := controller.NewController(invocationProjector, workflowProjector, s, functionApi, invocationApi)
 	defer ctr.Close()
 	go ctr.Run(ctx)
 

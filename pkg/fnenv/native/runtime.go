@@ -10,7 +10,7 @@ import (
 
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
-	Invoke(spec *types.FunctionInvocationSpec) ([]byte, error)
+	Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
 }
 
 // Internal InternalFunction Environment for executing low overhead functions, such as control flow constructs
@@ -21,12 +21,14 @@ type FunctionEnv struct {
 }
 
 func NewFunctionEnv() *FunctionEnv {
-	return &FunctionEnv{
+	env := &FunctionEnv{
 		fns: map[string]InternalFunction{
 			"if":   InternalFunction(&FunctionIf{}),
 			"noop": InternalFunction(&FunctionNoop{}),
 		},
 	}
+	log.WithField("fns", env.fns).Debugf("Internal function runtime installed.")
+	return env
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {

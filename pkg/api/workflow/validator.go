@@ -42,7 +42,7 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		}
 
 		if len(task.Name) == 0 {
-			return errors.New("Task requires an name")
+			return errors.New("Task requires a function name")
 		}
 
 		_, ok := refTable[taskId]
@@ -60,7 +60,6 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		return errors.New("Workflow needs at least one task")
 	}
 
-	// TODO check for cycles (?)
 	// Dependency testing
 	startTasks := []*types.Task{}
 	for taskId, task := range src.GetTasks() {
@@ -80,7 +79,7 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		return errors.New("Workflow does not contain any start tasks (tasks with no dependencies)")
 	}
 
-	// Check output task (TODO make this implicit)
+	// Check output task
 	if _, ok := src.GetTasks()[src.OutputTask]; !ok {
 		return fmt.Errorf("Invalid outputTask '%s'", src.OutputTask)
 	}

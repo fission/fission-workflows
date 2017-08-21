@@ -113,13 +113,6 @@ message WorkflowInvocationGetReponse {
     repeated Event events = 1;
 }
 
-//message WorkflowInvocationRequest {
-//    WorkflowInvocationSpec spec = 1;
-//    bool sync = 2; // async or sync (async by default)
-//    bool hideMetadata = 3; // If true, only show the output generated
-//}
-
-
 service AdminAPI {
     rpc Status (google.protobuf.Empty) returns (Health) {
         option (google.api.http) = {
