@@ -4,11 +4,17 @@ import (
 	"time"
 
 	"context"
+
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
+	"github.com/fission/fission-workflow/pkg/controller/query"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -83,11 +89,11 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 func (cr *InvocationController) handleNotification(notification *project.InvocationNotification) {
 	logrus.WithField("notification", notification).Debug("controller event trigger!")
 	switch notification.Type {
-	case types.InvocationEvent_INVOCATION_CREATED:
+	case events.Invocation_INVOCATION_CREATED:
 		fallthrough
-	case types.InvocationEvent_TASK_SUCCEEDED:
+	case events.Invocation_TASK_SUCCEEDED:
 		fallthrough
-	case types.InvocationEvent_TASK_FAILED:
+	case events.Invocation_TASK_FAILED:
 		// Decide which task to execute next
 		invoc := notification.Data
 		wfId := invoc.Spec.WorkflowId
@@ -110,8 +116,8 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 		}).Info("Scheduler decided on schedule")
 
 		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			output := invoc.Status.Tasks[wf.Spec.Src.OutputTask].Status.Output
-			err := cr.invocationApi.Success(invoc.Metadata.Id, string(output))
+			output := invoc.Status.Tasks[wf.Spec.OutputTask].Status.GetOutput()
+			err := cr.invocationApi.Success(invoc.Metadata.Id, output)
 			if err != nil {
 				panic(err)
 			}
@@ -127,12 +133,40 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 				invokeAction := &scheduler.InvokeTaskAction{}
 				ptypes.UnmarshalAny(action.Payload, invokeAction)
 
+				// Resolve type of the task
 				taskDef, _ := wf.Status.ResolvedTasks[invokeAction.Id]
+
+				// Resolve the inputs
+				inputs := map[string]*types.TypedValue{}
+				for inputKey, val := range invokeAction.Inputs {
+
+					resolvedInput := val
+					if typedvalues.IsReference(val) {
+						q := typedvalues.Dereference(val)
+						cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
+						resolvedInput, err = query.Select(invoc, q, cwd)
+						if err != nil {
+							logrus.WithFields(logrus.Fields{
+								"val":      val,
+								"inputKey": inputKey,
+								"cwd":      cwd,
+							}).Warnf("Failed to resolve input: %v", err)
+							continue
+						}
+					}
+					inputs[inputKey] = resolvedInput
+					logrus.WithFields(logrus.Fields{
+						"val":      val,
+						"key":      inputKey,
+						"resolved": resolvedInput,
+					}).Infof("Resolved variable")
+				}
+
+				// Invoke
 				fnSpec := &types.FunctionInvocationSpec{
-					TaskId:       invokeAction.Id,
-					FunctionId:   taskDef.Resolved,
-					FunctionName: taskDef.Src,
-					Input:        invokeAction.Input,
+					TaskId: invokeAction.Id,
+					Type:   taskDef,
+					Inputs: inputs,
 				}
 				go func() {
 					_, err := cr.functionApi.Invoke(notification.Id, fnSpec)
@@ -146,7 +180,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 			}
 		}
 	default:
-		logrus.WithField("type", notification.Type).Warn("Unknown event")
+		logrus.WithField("type", notification.Type).Warn("Controller ignores event.")
 	}
 }
 

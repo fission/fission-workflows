@@ -2,11 +2,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["types.go"],
+    srcs = ["jsonpath.go"],
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/cache:go_default_library",
         "//pkg/types:go_default_library",
-        "//pkg/types/events:go_default_library",
+        "//pkg/types/typedvalues:go_default_library",
+        "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],
 )

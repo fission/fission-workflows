@@ -1,19 +1,30 @@
 {
   "version": "v1",
-  "name": "whyisthisrequired",
-  "src": {
-    "outputTask": "makeWhaleSayFortune",
-    "tasks": {
-      "generateFortune": {
-        "type": "function",
-        "name": "fortune"
+  "outputTask": "makeWhaleSayFortune",
+  "tasks": {
+    "internalFuncShowoff": {
+      "name": "noop"
+    },
+    "generateFortune": {
+      "name": "fortune",
+      "inputs" : {
+        "type" : "ref",
+        "value" : "$.invocation.inputs.default"
       },
-      "makeWhaleSayFortune": {
-        "type": "function",
-        "name": "whalesay",
-        "dependencies": {
-          "generateFortune" : {}
+      "dependencies": {
+        "internalFuncShowoff" : {}
+      }
+    },
+    "makeWhaleSayFortune": {
+      "name": "whalesay",
+      "inputs" : {
+        "default" : {
+          "type" : "ref",
+          "value" : "$.tasks.generateFortune.output"
         }
+      },
+      "dependencies": {
+        "generateFortune" : {}
       }
     }
   }

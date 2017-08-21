@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
+	"math"
 )
 
 type WorkflowScheduler struct {
@@ -27,7 +28,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 
 	openTasks := map[string]*types.Task{} // bool = nothing
 	// Fill open tasks
-	for id, t := range request.Workflow.Spec.Src.Tasks {
+	for id, t := range request.Workflow.Spec.Tasks {
 		invokedTask, ok := request.Invocation.Status.Tasks[id]
 		if !ok {
 			openTasks[id] = t
@@ -52,14 +53,24 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	// Determine horizon (aka tasks that can be executed now)
 	horizon := map[string]*types.Task{}
 	for id, task := range openTasks {
-		free := true
+		if len(task.GetDependencies()) == 0 {
+			horizon[id] = task
+			break
+		}
+
+		completedDeps := 0
 		for depName := range task.GetDependencies() {
-			if _, ok := openTasks[depName]; ok {
-				free = false
+			if _, ok := openTasks[depName]; !ok {
+				completedDeps = completedDeps + 1
 				break
 			}
 		}
-		if free {
+		log.WithFields(log.Fields{
+			"completedDeps": completedDeps,
+			"task":          id,
+			"max":           int(math.Max(float64(task.DependenciesAwait), float64(len(task.GetDependencies())-1))),
+		}).Infof("Checking if dependencies have been satisfied")
+		if completedDeps > int(math.Max(float64(task.DependenciesAwait), float64(len(task.GetDependencies())-1))) {
 			horizon[id] = task
 		}
 	}
@@ -67,27 +78,12 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	ctxLog.WithField("horizon", horizon).Debug("Determined horizon")
 
 	// Determine schedule nodes
-	for taskId, task := range horizon {
+	for taskId, taskDef := range horizon {
 		// Fetch input
-		inputs := map[string]string{}
-		if len(task.GetDependencies()) == 0 {
-			inputs = request.Invocation.Spec.Inputs
-		} else {
-
-			for depName, dep := range task.GetDependencies() {
-				// TODO check for overwrites (especially the alias)
-				inputs[depName] = string(request.Invocation.Status.Tasks[depName].Status.Output)
-				if len(dep.Alias) > 0 {
-					inputs[dep.Alias] = inputs[depName]
-				}
-
-			}
-			// Decide which one is the main input
-		}
-
+		inputs := taskDef.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:    taskId,
-			Input: inputs,
+			Id:     taskId,
+			Inputs: inputs, // TODO interpolated inputs
 		})
 
 		schedule.Actions = append(schedule.Actions, &Action{

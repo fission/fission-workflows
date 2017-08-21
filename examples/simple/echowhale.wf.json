@@ -1,14 +1,13 @@
 {
   "version": "v1",
-  "name" : "foobar",
-  "src": {
-    "outputTask" : "whaleEcho",
-    "tasks": {
-      "whaleEcho": {
-        "type": "function",
-        "name": "whalesay",
-        "dependencies": []
-      }
+  "outputTask" : "whaleEcho",
+  "tasks": {
+    "whaleEcho": {
+      "inputs" : {
+        "type" : "ref",
+        "value" : "$.invocation.inputs.default"
+      },
+      "name": "whalesay",
     }
   }
 }

@@ -18,31 +18,24 @@ func NewValidator() *Validator {
 
 // Pre-parse
 func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
-	if len(spec.GetName()) == 0 {
-		return errors.New("Workflow requires a name")
+
+	if spec == nil {
+		return errors.New("No source (spec) provided")
 	}
 
-	// Version is not important right now
-
-	src := spec.GetSrc()
-
-	if src == nil {
-		return errors.New("No source (src) provided")
-	}
-
-	if len(src.ApiVersion) > 0 && !strings.EqualFold(src.GetApiVersion(), "v1") {
-		return fmt.Errorf("Unknown API version: '%v'.", src.GetApiVersion())
+	if len(spec.ApiVersion) > 0 && !strings.EqualFold(spec.GetApiVersion(), "v1") {
+		return fmt.Errorf("Unknown API version: '%v'.", spec.GetApiVersion())
 	}
 
 	refTable := map[string]*types.Task{}
 
-	for taskId, task := range src.Tasks {
+	for taskId, task := range spec.Tasks {
 		if len(taskId) == 0 {
 			return errors.New("Task requires an id")
 		}
 
 		if len(task.Name) == 0 {
-			return errors.New("Task requires an name")
+			return errors.New("Task requires a function name")
 		}
 
 		_, ok := refTable[taskId]
@@ -56,14 +49,13 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		}
 	}
 
-	if len(src.Tasks) == 0 {
+	if len(spec.Tasks) == 0 {
 		return errors.New("Workflow needs at least one task")
 	}
 
-	// TODO check for cycles (?)
 	// Dependency testing
 	startTasks := []*types.Task{}
-	for taskId, task := range src.GetTasks() {
+	for taskId, task := range spec.GetTasks() {
 		if len(task.GetDependencies()) == 0 {
 			startTasks = append(startTasks, task)
 		}
@@ -80,9 +72,9 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		return errors.New("Workflow does not contain any start tasks (tasks with no dependencies)")
 	}
 
-	// Check output task (TODO make this implicit)
-	if _, ok := src.GetTasks()[src.OutputTask]; !ok {
-		return fmt.Errorf("Invalid outputTask '%s'", src.OutputTask)
+	// Check output task
+	if _, ok := spec.GetTasks()[spec.OutputTask]; !ok {
+		return fmt.Errorf("Invalid outputTask '%s'", spec.OutputTask)
 	}
 
 	return nil

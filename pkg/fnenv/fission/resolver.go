@@ -10,7 +10,7 @@ type Registry struct {
 	client *client.Client
 }
 
-func NewRegistry(client *client.Client) function.Resolver {
+func NewResolver(client *client.Client) function.Resolver {
 	return &Registry{client}
 }
 

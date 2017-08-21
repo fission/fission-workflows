@@ -3,26 +3,21 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
-	"github.com/fission/fission-workflow/pkg/eventstore/events"
-	"github.com/fission/fission-workflow/pkg/projector/project"
-	"github.com/fission/fission-workflow/pkg/projector/project/workflow"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/ptypes"
 )
 
 type Api struct {
-	esClient  eventstore.Client
-	Projector project.WorkflowProjector // TODO move projections out?
-	Parser    *Parser
+	esClient eventstore.Client
+	Parser   *Parser
 }
 
 func NewApi(esClient eventstore.Client, parser *Parser) *Api {
-	projector := workflow.NewWorkflowProjector(esClient, cache.NewMapCache()) // TODO move to arguments
-	return &Api{esClient, projector, parser}
+	return &Api{esClient, parser}
 }
 
 func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
@@ -35,7 +30,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 	}
 
 	eventId := eventids.NewSubject(types.SUBJECT_WORKFLOW, id)
-	event := events.New(eventId, types.WorkflowEvent_WORKFLOW_CREATED.String(), data)
+	event := eventstore.NewEvent(eventId, events.Workflow_WORKFLOW_CREATED.String(), data)
 	err = wa.esClient.Append(event)
 	if err != nil {
 		return "", err
@@ -53,7 +48,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 		return "", err
 	}
 
-	parsedEvent := events.New(eventId, types.WorkflowEvent_WORKFLOW_PARSED.String(), parsedData)
+	parsedEvent := eventstore.NewEvent(eventId, events.Workflow_WORKFLOW_PARSED.String(), parsedData)
 	err = wa.esClient.Append(parsedEvent)
 	if err != nil {
 		return "", err
@@ -66,22 +61,11 @@ func (wa *Api) Delete(id string) error {
 
 	eventId := eventids.NewSubject(types.SUBJECT_WORKFLOW, id)
 
-	event := events.New(eventId, types.WorkflowEvent_WORKFLOW_DELETED.String(), nil)
+	event := eventstore.NewEvent(eventId, events.Workflow_WORKFLOW_DELETED.String(), nil)
 
 	err := wa.esClient.Append(event)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (wa *Api) Get(id string) (*types.Workflow, error) {
-	return wa.Projector.Get(id)
-}
-
-// TODO Support queries
-// TODO support filtering; not fetching all
-// Lists all the ids of all workflows, watched by the projector
-func (wa *Api) List(query string) ([]string, error) {
-	return wa.Projector.List(query)
 }

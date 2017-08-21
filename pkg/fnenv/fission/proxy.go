@@ -12,19 +12,19 @@ import (
 )
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
-type FissionProxyServer struct {
+type Proxy struct {
 	invocationServer apiserver.WorkflowInvocationAPIServer
 }
 
-func NewFissionProxyServer(srv apiserver.WorkflowInvocationAPIServer) *FissionProxyServer {
-	return &FissionProxyServer{srv}
+func NewFissionProxyServer(srv apiserver.WorkflowInvocationAPIServer) *Proxy {
+	return &Proxy{srv}
 }
 
-func (fp *FissionProxyServer) RegisterServer(mux *http.ServeMux) {
+func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
 	mux.HandleFunc("/", fp.handleRequest)
 }
 
-func (fp *FissionProxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
+func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("workflowId")
 	if len(id) == 0 {
 		http.Error(w, "WorkflowId is missing", 400)
@@ -37,8 +37,11 @@ func (fp *FissionProxyServer) handleRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Map Inputs to function parameters
-	inputs := map[string]string{
-		types.INPUT_MAIN: string(body),
+	inputs := map[string]*types.TypedValue{
+		types.INPUT_MAIN: {
+			// TODO infer type from headers
+			Value: body,
+		},
 	}
 
 	ctx := context.Background()
@@ -56,6 +59,8 @@ func (fp *FissionProxyServer) handleRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// TODO determine header based on the output value
+	resp := invocation.Status.Output.Value
 	w.WriteHeader(200)
-	w.Write([]byte(invocation.Status.Output))
+	w.Write(resp)
 }

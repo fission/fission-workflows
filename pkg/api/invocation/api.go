@@ -5,9 +5,9 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
-	"github.com/fission/fission-workflow/pkg/eventstore/events"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/satori/go.uuid"
 )
@@ -34,7 +34,7 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 		return "", err
 	}
 
-	event := events.New(ia.createSubject(id), types.InvocationEvent_INVOCATION_CREATED.String(), data)
+	event := eventstore.NewEvent(ia.createSubject(id), events.Invocation_INVOCATION_CREATED.String(), data)
 
 	err = ia.esClient.Append(event)
 	if err != nil {
@@ -49,7 +49,7 @@ func (ia *Api) Cancel(invocationId string) error {
 		return errors.New("invocationId is required")
 	}
 
-	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_CANCELED.String(), nil)
+	event := eventstore.NewEvent(ia.createSubject(invocationId), events.Invocation_INVOCATION_CANCELED.String(), nil)
 
 	err := ia.esClient.Append(event)
 	if err != nil {
@@ -59,7 +59,7 @@ func (ia *Api) Cancel(invocationId string) error {
 }
 
 // TODO might want to split out public vs. internal api
-func (ia *Api) Success(invocationId string, output string) error {
+func (ia *Api) Success(invocationId string, output *types.TypedValue) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -73,7 +73,7 @@ func (ia *Api) Success(invocationId string, output string) error {
 		return err
 	}
 
-	event := events.New(ia.createSubject(invocationId), types.InvocationEvent_INVOCATION_COMPLETED.String(), data)
+	event := eventstore.NewEvent(ia.createSubject(invocationId), events.Invocation_INVOCATION_COMPLETED.String(), data)
 
 	err = ia.esClient.Append(event)
 	if err != nil {
@@ -90,7 +90,6 @@ func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
 	return eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
 }
 
-// TODO move projection functions out?
 func (ia *Api) Get(invocationId string) (*types.WorkflowInvocation, error) {
 	return ia.Projector.Get(invocationId)
 }

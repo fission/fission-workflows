@@ -12,7 +12,6 @@ import (
 )
 
 // Events all belong to the same invocation ID, but have different sequence numbers. EventID: <InvocationID>#<sequenceID>
-// TODO might need to optimize the bucket use in boltdb
 type grpcInvocationApiServer struct {
 	api *invocation.Api
 }
@@ -21,6 +20,7 @@ func NewGrpcInvocationApiServer(api *invocation.Api) WorkflowInvocationAPIServer
 	return &grpcInvocationApiServer{api}
 }
 
+// TODO simplify inputs by allowing inputs without type (string vs. { type, value })
 func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
 	eventId, err := gi.api.Invoke(spec)
 	if err != nil {
@@ -53,7 +53,8 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		case <-timeout:
 			return nil, errors.New("Timeout occurred")
 		default:
-			time.Sleep(time.Duration(1) * time.Second) // TODO optimize
+			// TODO temporary shortcut; needs optimizing.
+			time.Sleep(time.Duration(1) * time.Second)
 		}
 	}
 

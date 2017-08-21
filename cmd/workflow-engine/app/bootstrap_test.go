@@ -16,11 +16,11 @@ import (
 
 	"reflect"
 
-	"github.com/fission/fission-workflow/cmd/workflow-engine/app"
+	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/fnenv/test"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/test/"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
@@ -28,7 +28,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var env *app.Options
+var env *Options
 
 const (
 	UID_FUNC_ECHO = "FuncUid1"
@@ -42,12 +42,12 @@ var mockFuncs = map[string]test.MockFunc{
 	UID_FUNC_ECHO: echo,
 }
 
-func echo(spec *types.FunctionInvocationSpec) ([]byte, error) {
-	val, ok := spec.Input[types.INPUT_MAIN]
+func echo(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+	val, ok := spec.Inputs[types.INPUT_MAIN]
 	if !ok {
-		return []byte{}, nil
+		return nil, nil
 	}
-	return []byte(val), nil
+	return val, nil
 }
 
 func TestMain(m *testing.M) {
@@ -69,16 +69,11 @@ func TestWorkflowCreate(t *testing.T) {
 
 	// Test workflow creation
 	spec := &types.WorkflowSpec{
-		Name:    "TestWorkflowCreate_WF",
-		Version: "unknown",
-		Src: &types.WorkflowDefinition{
-			ApiVersion: "v1",
-			OutputTask: "fakeFinalTask",
-			Tasks: map[string]*types.Task{
-				"fakeFinalTask": {
-					Type: types.TaskType_FUNCTION.String(),
-					Name: "echo",
-				},
+		ApiVersion: "v1",
+		OutputTask: "fakeFinalTask",
+		Tasks: map[string]*types.Task{
+			"fakeFinalTask": {
+				Name: "echo",
 			},
 		},
 	}
@@ -121,26 +116,23 @@ func TestWorkflowInvocation(t *testing.T) {
 	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
 
 	// Test workflow creation
-	wf := "TestWorkflowInvocation_WF"
 	wfSpec := &types.WorkflowSpec{
-		Name:    wf,
-		Version: "unknown",
-		Src: &types.WorkflowDefinition{
-			ApiVersion: "v1",
-			OutputTask: "fakeFinalTask",
-			Tasks: map[string]*types.Task{
-				"fakeFinalTask": {
-					Type: types.TaskType_FUNCTION.String(),
-					Name: "echo",
-					// TODO dependency input
-					Dependencies: map[string]*types.TaskDependencyParameters{
-						"FirstTask": {},
-					},
+		ApiVersion: "v1",
+		OutputTask: "fakeFinalTask",
+		Tasks: map[string]*types.Task{
+			"fakeFinalTask": {
+				Name: "echo",
+				Inputs: map[string]*types.TypedValue{
+					types.INPUT_MAIN: typedvalues.Reference("$.tasks.FirstTask.output"),
 				},
-				"FirstTask": {
-					Type: types.TaskType_FUNCTION.String(),
-					// TODO input from workflow
-					Name: "echo",
+				Dependencies: map[string]*types.TaskDependencyParameters{
+					"FirstTask": {},
+				},
+			},
+			"FirstTask": {
+				Name: "echo",
+				Inputs: map[string]*types.TypedValue{
+					types.INPUT_MAIN: typedvalues.Reference(fmt.Sprintf("$.invocation.inputs.%s", types.INPUT_MAIN)),
 				},
 			},
 		},
@@ -155,10 +147,14 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Create invocation
 	expectedOutput := "Hello world!"
+	tv, err := typedvalues.Parse(expectedOutput)
+	if err != nil {
+		t.Fatal(err)
+	}
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
-		Inputs: map[string]string{
-			types.INPUT_MAIN: expectedOutput,
+		Inputs: map[string]*types.TypedValue{
+			types.INPUT_MAIN: tv,
 		},
 	}
 	wiId, err := wi.Invoke(ctx, wiSpec)
@@ -195,7 +191,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		t.Error("Specs of created and fetched do not match!")
 	}
 
-	if !strings.EqualFold(invocation.Status.Output, expectedOutput) {
+	if !reflect.DeepEqual(invocation.Status.Output, tv) {
 		t.Errorf("Output '%s' does not match expected output '%s'", invocation.Status.Output, expectedOutput)
 	}
 
@@ -204,26 +200,30 @@ func TestWorkflowInvocation(t *testing.T) {
 	}
 }
 
-func setup(ctx context.Context) *app.Options {
+func setup(ctx context.Context) *Options {
 	// TODO Maybe replace with actual Fission deployment
-	mockFunctionRegistry := &test.MockFunctionResolver{mockFuncResolves}
+	mockFunctionResolver := &test.MockFunctionResolver{mockFuncResolves}
 	mockFunctionRuntime := &test.MockRuntimeEnv{Functions: mockFuncs, Results: map[string]*types.FunctionInvocation{}}
 
 	esOpts := setupEventStore(ctx)
-	opts := &app.Options{
-		FunctionRegistry:     mockFunctionRegistry,
-		FunctionRuntimeEnv:   mockFunctionRuntime,
+	opts := &Options{
+		FunctionRegistry: map[string]function.Resolver{
+			"mock": mockFunctionResolver,
+		},
+		FunctionRuntimeEnv: map[string]function.Runtime{
+			"mock": mockFunctionRuntime,
+		},
 		EventStore:           esOpts,
-		GrpcApiServerAddress: app.GRPC_ADDRESS,
-		HttpApiServerAddress: app.API_GATEWAY_ADDRESS,
-		FissionProxyAddress:  app.FISSION_PROXY_ADDRESS,
+		GrpcApiServerAddress: GRPC_ADDRESS,
+		HttpApiServerAddress: API_GATEWAY_ADDRESS,
+		FissionProxyAddress:  FISSION_PROXY_ADDRESS,
 	}
-	go app.Run(ctx, opts)
+	go Run(ctx, opts)
 
 	return opts
 }
 
-func setupEventStore(ctx context.Context) *app.EventStoreOptions {
+func setupEventStore(ctx context.Context) *EventStoreOptions {
 	clusterId := fmt.Sprintf("fission-workflow-e2e-%d", time.Now().UnixNano())
 	port, err := findFreePort()
 	if err != nil {
@@ -241,7 +241,7 @@ func setupEventStore(ctx context.Context) *app.EventStoreOptions {
 	if err != nil {
 		panic(err)
 	}
-	esOpts := &app.EventStoreOptions{
+	esOpts := &EventStoreOptions{
 		Cluster: clusterId,
 		Type:    "NATS",
 		Url:     fmt.Sprintf("nats://%s:%d", address, port),

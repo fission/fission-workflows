@@ -1,29 +1,8 @@
 syntax = "proto3";
 
+option go_package = "types";
+
 import "google/protobuf/timestamp.proto";
-
-// Event Types
-enum WorkflowEvent {
-    WORKFLOW_CREATED = 0;
-    WORKFLOW_UPDATED = 1;
-    WORKFLOW_PARSED = 2;
-    WORKFLOW_DELETED = 3;
-    WORKFLOW_PARSING_FAILED = 4;
-}
-
-enum InvocationEvent {
-    TASK_STARTED = 0; // origin: Engine
-    TASK_SKIPPED = 1; // origin: Engine
-    TASK_HEARTBEAT_REQUEST = 2; // origin: Engine
-    TASK_HEARTBEAT_RESPONSE = 3; // origin: Task
-    TASK_SUCCEEDED = 4; // origin: Task
-    TASK_FAILED = 5; // origin: Task
-    TASK_ABORTED = 6; // origin: Engine
-
-    INVOCATION_CREATED = 7; // origin: User
-    INVOCATION_COMPLETED = 8; // origin: Engine
-    INVOCATION_CANCELED = 9; // origin: User
-}
 
 // Common
 message ObjectMetadata {
@@ -40,15 +19,7 @@ message Workflow {
     WorkflowStatus status = 3;
 }
 
-message WorkflowSpec {
-    string name = 1;
-    string version = 2;
-    WorkflowDefinition src = 3;
-}
-
 // Function Invocation Model
-//
-// It contains no indication which workflow/task it is executed for
 message FunctionInvocation {
     ObjectMetadata metadata = 1;
     FunctionInvocationSpec spec = 2;
@@ -57,10 +28,9 @@ message FunctionInvocation {
 
 message FunctionInvocationSpec {
     // Id of the function to be invoked (no ambiguatity at this point
-    string functionId = 1;
-    string functionName = 2;
-    string taskId = 3; // task in workflow
-    map<string,string> input = 4;
+    TaskTypeDef type = 1;
+    string taskId = 2; // task in workflow
+    map<string, TypedValue> inputs = 3;
 }
 
 message FunctionInvocationStatus {
@@ -75,15 +45,13 @@ message FunctionInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    bytes output = 3;
-    bool controlFlow = 4; // Indicate whether the output is a control flow or data (default)
+    TypedValue output = 3;
 }
 
 // Workflow Invocation Model
 message WorkflowInvocationSpec {
     string workflowId = 1;
-    map<string,string> inputs = 3;
-    // TODO add tasks
+    map<string, TypedValue> inputs = 3;
 }
 
 message WorkflowInvocationStatus {
@@ -94,11 +62,12 @@ message WorkflowInvocationStatus {
         SUCCEEDED = 3;
         FAILED = 4;
         ABORTED = 5;
+        //PAUSED = 6;
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    map <string,FunctionInvocation> tasks = 3;
-    string output = 4;
+    map<string, FunctionInvocation> tasks = 3;
+    TypedValue output = 4;
 }
 
 
@@ -109,16 +78,13 @@ message WorkflowInvocation {
 }
 
 // Workflow Definition
-
-// TODO site catalogs, transformation catalogs, ect...
-// TODO define a parser/mapper: Maps a resource-independent “abstract” workflow onto resources and executes the “executable” workflow
-
+//
 // The workflowDefinition contains the definition of a workflow.
 //
 // Ideally the source code (json, yaml) can be converted directly to this message.
 // Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
 // to the user/system upon the creation of a workflow.
-message WorkflowDefinition {
+message WorkflowSpec {
     // apiVersion describes what version is of the workflow definition.
     //
     // By default the workflow engine will assume the latest version to be used.
@@ -128,9 +94,9 @@ message WorkflowDefinition {
     // Actions
     //
     // Dependency graph is build into the tasks
-    map <string,Task> tasks = 2; // key = taskId
+    map<string, Task> tasks = 2; // key = taskId
 
-    // From which task should the workflow return the output? (todo multiple? implicit?)
+    // From which task should the workflow return the output? Future: multiple? Implicit?
     string outputTask = 3;
 }
 
@@ -150,24 +116,23 @@ message Task {
     // Name/identifier of the function
     string name = 3;
 
-    repeated TaskParameters args = 4;
+    map<string, TypedValue> inputs = 4;
 
     // Dependencies for this task to execute
     map<string, TaskDependencyParameters> dependencies = 5;
+
+    // Number of dependencies to wait for
+    int32 dependencies_await = 6;
 }
 
 message TaskDependencyParameters {
 
-    enum DependencyType  {
+    enum DependencyType {
         DATA = 0;
         CONTROL = 1;
     }
     DependencyType type = 1;
     string alias = 2;
-}
-
-message TaskParameters {
-
 }
 
 // Internal
@@ -181,17 +146,17 @@ message WorkflowStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    map <string,TaskTypeDef> resolvedTasks = 3; // Key = taskId
-    // TODO ammended spec (e.g. no type => function type)
+    map<string, TaskTypeDef> resolvedTasks = 3; // Key = taskId
 }
 
 message TaskTypeDef {
     string src = 1; // Orginal
     string runtime = 2; // Function Runtime
-    string resolved = 3; // Address (Uid) to the
-    // TODO namespace/origin maybe
+    string resolved = 3; // Address (Uid) to the function
 }
 
-enum TaskType {
-    FUNCTION = 0;
+// Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
+message TypedValue {
+    string type = 1;
+    bytes value = 2;
 }

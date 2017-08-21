@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "proxy.go",
-        "registry.go",
+        "resolver.go",
         "runtime.go",
     ],
     visibility = ["//visibility:public"],

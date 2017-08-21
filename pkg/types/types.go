@@ -4,18 +4,25 @@ package types
 const (
 	SUBJECT_INVOCATION = "invocation"
 	SUBJECT_WORKFLOW   = "workflows"
-	INPUT_MAIN         = "*"
+	INPUT_MAIN         = "default"
 )
 
 // InvocationEvent
-var finalStates = []WorkflowInvocationStatus_Status{
+var invocationFinalStates = []WorkflowInvocationStatus_Status{
 	WorkflowInvocationStatus_ABORTED,
 	WorkflowInvocationStatus_SUCCEEDED,
 	WorkflowInvocationStatus_FAILED,
 }
 
+var functionFinalStates = []FunctionInvocationStatus_Status{
+	FunctionInvocationStatus_FAILED,
+	FunctionInvocationStatus_ABORTED,
+	FunctionInvocationStatus_SKIPPED,
+	FunctionInvocationStatus_SUCCEEDED,
+}
+
 func (wi WorkflowInvocationStatus_Status) Finished() bool {
-	for _, event := range finalStates {
+	for _, event := range invocationFinalStates {
 		if event == wi {
 			return true
 		}
@@ -26,4 +33,13 @@ func (wi WorkflowInvocationStatus_Status) Finished() bool {
 // True if workflow was successfully completed
 func (wi WorkflowInvocationStatus_Status) Successful() bool {
 	return wi == WorkflowInvocationStatus_SUCCEEDED
+}
+
+func (fi FunctionInvocationStatus_Status) Finished() bool {
+	for _, event := range functionFinalStates {
+		if event == fi {
+			return true
+		}
+	}
+	return false
 }

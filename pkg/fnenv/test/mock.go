@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type MockFunc func(spec *types.FunctionInvocationSpec) ([]byte, error)
+type MockFunc func(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
 
 type MockRuntimeEnv struct {
 	Functions       map[string]MockFunc
@@ -19,7 +19,7 @@ type MockRuntimeEnv struct {
 
 // Running invoke will change the state of the function invocation to IN_PROGRESS
 func (mk *MockRuntimeEnv) InvokeAsync(spec *types.FunctionInvocationSpec) (string, error) {
-	fnName := spec.FunctionId
+	fnName := spec.GetType().GetResolved()
 
 	if _, ok := mk.Functions[fnName]; !ok {
 		return "", fmt.Errorf("Could not invoke unknown function '%s'", fnName)
@@ -55,7 +55,7 @@ func (mk *MockRuntimeEnv) MockComplete(fnInvocationId string) error {
 		return fmt.Errorf("Could not invoke unknown invocation '%s'", fnInvocationId)
 	}
 
-	fnName := invocation.Spec.FunctionId
+	fnName := invocation.Spec.GetType().GetResolved()
 	fn, ok := mk.Functions[fnName]
 	if !ok {
 		return fmt.Errorf("Could not invoke unknown function '%s'", fnName)
@@ -111,7 +111,7 @@ func (mk *MockRuntimeEnv) Cancel(fnInvocationId string) error {
 }
 
 func (mk *MockRuntimeEnv) Status(fnInvocationId string) (*types.FunctionInvocationStatus, error) {
-	invocation, ok := mk.Results[fnInvocationId];
+	invocation, ok := mk.Results[fnInvocationId]
 	if !ok {
 		return nil, fmt.Errorf("Could not invoke unknown invocation '%s'", fnInvocationId)
 	}

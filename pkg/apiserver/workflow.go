@@ -4,28 +4,28 @@ import (
 	"errors"
 
 	"github.com/fission/fission-workflow/pkg/api/workflow"
+	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
 )
 
-// TODO move logic to gRPC-less code
 type GrpcWorkflowApiServer struct {
 	api       *workflow.Api
 	validator *workflow.Validator
+	projector project.WorkflowProjector
 }
 
-func NewGrpcWorkflowApiServer(api *workflow.Api, validator *workflow.Validator) *GrpcWorkflowApiServer {
-	// TODO es: check if available
+func NewGrpcWorkflowApiServer(api *workflow.Api, validator *workflow.Validator, projector project.WorkflowProjector) *GrpcWorkflowApiServer {
 	wf := &GrpcWorkflowApiServer{
 		api:       api,
 		validator: validator,
+		projector: projector,
 	}
 
 	return wf
 }
 
-// TODO validate workflow
 func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, wf *types.WorkflowSpec) (*WorkflowIdentifier, error) {
 	err := ga.validator.Validate(wf)
 	if err != nil {
@@ -46,18 +46,17 @@ func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowId
 		return nil, errors.New("No id provided")
 	}
 
-	return ga.api.Get(id)
+	return ga.projector.Get(id)
 }
 
 func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
-	wfs, err := ga.api.List("*")
+	wfs, err := ga.projector.List("*")
 	if err != nil {
 		return nil, err
 	}
 	return &SearchWorkflowResponse{wfs}, nil
 }
 
-// TODO option to do a dummy parse to validate successful parse
 func (ga *GrpcWorkflowApiServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
 	err := ga.validator.Validate(spec)
 	if err != nil {
