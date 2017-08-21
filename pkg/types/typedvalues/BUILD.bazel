@@ -4,8 +4,5 @@ go_library(
     name = "go_default_library",
     srcs = ["json.go"],
     visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/types:go_default_library",
-        "//vendor/github.com/sirupsen/logrus:go_default_library",
-    ],
+    deps = ["//pkg/types:go_default_library"],
 )

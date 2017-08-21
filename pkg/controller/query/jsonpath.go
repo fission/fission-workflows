@@ -56,7 +56,8 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 	}
 
 	// Normalize
-	query = strings.Trim(strings.ToLower(query), " ")
+	// TODO make scase-insensitive
+	query = strings.Trim(query, " ")
 
 	// TODO fix hard-coding certain look-ups to more consist format (this is just for prototyping the view)
 	switch {
@@ -111,6 +112,10 @@ func selectTask(task *types.FunctionInvocation, taskQuery []string) (*types.Type
 func selectJsonTypedValue(root *types.TypedValue, query []string) (*types.TypedValue, error) {
 	if !typedvalues.Supported(root) {
 		return nil, ErrUnsupportedDataType
+	}
+
+	if len(query) == 0 {
+		return root, nil
 	}
 
 	val := typedvalues.From(root)

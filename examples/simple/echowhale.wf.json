@@ -3,7 +3,11 @@
   "outputTask" : "whaleEcho",
   "tasks": {
     "whaleEcho": {
-      "name": "whalesay"
+      "inputs" : {
+        "type" : "ref",
+        "value" : "$.invocation.inputs.default"
+      },
+      "name": "whalesay",
     }
   }
 }

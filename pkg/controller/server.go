@@ -140,10 +140,11 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 				inputs := map[string]*types.TypedValue{}
 				for inputKey, val := range invokeAction.Inputs {
 
+					resolvedInput := val
 					if typedvalues.IsReference(val) {
 						q := typedvalues.Dereference(val)
 						cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
-						resolvedInput, err := query.Select(invoc, q, cwd)
+						resolvedInput, err = query.Select(invoc, q, cwd)
 						if err != nil {
 							logrus.WithFields(logrus.Fields{
 								"val":      val,
@@ -152,11 +153,13 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 							}).Warnf("Failed to resolve input: %v", err)
 							continue
 						}
-
-						inputs[inputKey] = resolvedInput
-					} else {
-						inputs[inputKey] = val
 					}
+					inputs[inputKey] = resolvedInput
+					logrus.WithFields(logrus.Fields{
+						"val":      val,
+						"key":      inputKey,
+						"resolved": resolvedInput,
+					}).Infof("Resolved variable")
 				}
 
 				// Invoke

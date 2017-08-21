@@ -29,12 +29,11 @@ go_test(
     srcs = ["bootstrap_test.go"],
     library = ":go_default_library",
     deps = [
-        ":go_default_library",
         "//pkg/api/function:go_default_library",
         "//pkg/apiserver:go_default_library",
         "//pkg/fnenv/test:go_default_library",
         "//pkg/types:go_default_library",
-        "//test/:go_default_library",
+        "//pkg/types/typedvalues:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes/empty:go_default_library",
         "//vendor/github.com/nats-io/go-nats:go_default_library",
         "//vendor/github.com/nats-io/go-nats-streaming:go_default_library",

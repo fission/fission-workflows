@@ -80,10 +80,10 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	// Determine schedule nodes
 	for taskId, taskDef := range horizon {
 		// Fetch input
-
+		inputs := taskDef.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
 			Id:     taskId,
-			Inputs: taskDef.Inputs, // TODO interpolated inputs
+			Inputs: inputs, // TODO interpolated inputs
 		})
 
 		schedule.Actions = append(schedule.Actions, &Action{

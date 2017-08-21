@@ -7,6 +7,10 @@
     },
     "generateFortune": {
       "name": "fortune",
+      "inputs" : {
+        "type" : "ref",
+        "value" : "$.invocation.inputs.default"
+      },
       "dependencies": {
         "internalFuncShowoff" : {}
       }

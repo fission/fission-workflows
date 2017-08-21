@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type MockFunc func(spec *types.FunctionInvocationSpec) ([]byte, error)
+type MockFunc func(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
 
 type MockRuntimeEnv struct {
 	Functions       map[string]MockFunc
