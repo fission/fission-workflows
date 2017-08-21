@@ -19,12 +19,6 @@ message Workflow {
     WorkflowStatus status = 3;
 }
 
-message WorkflowSpec {
-    string name = 1;
-    string version = 2;
-    WorkflowDefinition src = 3;
-}
-
 // Function Invocation Model
 message FunctionInvocation {
     ObjectMetadata metadata = 1;
@@ -90,7 +84,7 @@ message WorkflowInvocation {
 // Ideally the source code (json, yaml) can be converted directly to this message.
 // Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
 // to the user/system upon the creation of a workflow.
-message WorkflowDefinition {
+message WorkflowSpec {
     // apiVersion describes what version is of the workflow definition.
     //
     // By default the workflow engine will assume the latest version to be used.

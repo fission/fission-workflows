@@ -20,11 +20,10 @@ func NewParser(client map[string]function.Resolver) *Parser {
 
 // Parse parses the interpreted workflow from a given spec.
 func (ps *Parser) Parse(spec *types.WorkflowSpec) (*types.WorkflowStatus, error) {
-	src := spec.GetSrc()
 
 	// TODO make resolving parallel
 	taskTypes := map[string]*types.TaskTypeDef{}
-	for taskId, task := range src.GetTasks() {
+	for taskId, task := range spec.GetTasks() {
 		if len(task.GetType()) > 0 && !strings.EqualFold(task.GetType(), "function") {
 			return nil, fmt.Errorf("Unknown type: '%s'", task.GetType())
 		}
