@@ -5,18 +5,15 @@
     "outputTask": "makeWhaleSayFortune",
     "tasks": {
       "internalFuncShowoff": {
-        "type": "function",
         "name": "noop"
       },
       "generateFortune": {
-        "type": "function",
         "name": "fortune",
         "dependencies": {
           "internalFuncShowoff" : {}
         }
       },
       "makeWhaleSayFortune": {
-        "type": "function",
         "name": "whalesay",
         "dependencies": {
           "generateFortune" : {}
