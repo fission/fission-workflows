@@ -13,6 +13,12 @@
     },
     "makeWhaleSayFortune": {
       "name": "whalesay",
+      "inputs" : {
+        "default" : {
+          "type" : "ref/jsonpath",
+          "value" : "$.tasks.generateFortune.output"
+        }
+      },
       "dependencies": {
         "generateFortune" : {}
       }

@@ -51,7 +51,7 @@ message FunctionInvocationStatus {
 // Workflow Invocation Model
 message WorkflowInvocationSpec {
     string workflowId = 1;
-    map<string, TypedValue> input = 3;
+    map<string, TypedValue> inputs = 3;
 }
 
 message WorkflowInvocationStatus {

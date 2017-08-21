@@ -5,12 +5,16 @@ import (
 
 	"context"
 
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
+	"github.com/fission/fission-workflow/pkg/controller/query"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -133,26 +137,27 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 				taskDef, _ := wf.Status.ResolvedTasks[invokeAction.Id]
 
 				// Resolve the inputs
-				inputs := invokeAction.Inputs
-				//inputs := map[string]string{}
-				//cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
-				//
-				//for inputKey, val := range invokeAction.Inputs {
-				//
-				//	// e.g. $.foo.bar
-				//	// TODO make notation more consise, abstracting away the spec/metadata/status things
-				//	resolvedInput, err := query.Resolve(invoc, val, cwd)
-				//	if err != nil {
-				//		logrus.WithFields(logrus.Fields{
-				//			"val":      val,
-				//			"inputKey": inputKey,
-				//			"cwd":      cwd,
-				//		}).Warnf("Failed to resolve input: %v", err)
-				//		continue
-				//	}
-				//
-				//	inputs[inputKey] = fmt.Sprintf("%v", resolvedInput) // TODO allow passing of actual json to functions
-				//}
+				inputs := map[string]*types.TypedValue{}
+				for inputKey, val := range invokeAction.Inputs {
+
+					if typedvalues.IsReference(val) {
+						q := typedvalues.Dereference(val)
+						cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
+						resolvedInput, err := query.Select(invoc, q, cwd)
+						if err != nil {
+							logrus.WithFields(logrus.Fields{
+								"val":      val,
+								"inputKey": inputKey,
+								"cwd":      cwd,
+							}).Warnf("Failed to resolve input: %v", err)
+							continue
+						}
+
+						inputs[inputKey] = resolvedInput
+					} else {
+						inputs[inputKey] = val
+					}
+				}
 
 				// Invoke
 				fnSpec := &types.FunctionInvocationSpec{

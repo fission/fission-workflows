@@ -37,7 +37,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Map Inputs to function parameters
-	input := map[string]*types.TypedValue{
+	inputs := map[string]*types.TypedValue{
 		types.INPUT_MAIN: {
 			// TODO infer type from headers
 			Value: body,
@@ -47,7 +47,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
 		WorkflowId: id,
-		Input:      input,
+		Inputs:     inputs,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), 500)
