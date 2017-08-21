@@ -15,7 +15,7 @@
       "name": "whalesay",
       "inputs" : {
         "default" : {
-          "type" : "ref/jsonpath",
+          "type" : "ref",
           "value" : "$.tasks.generateFortune.output"
         }
       },

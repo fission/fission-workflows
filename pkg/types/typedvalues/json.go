@@ -3,15 +3,16 @@ package typedvalues
 import (
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/types"
-	log "github.com/sirupsen/logrus"
 )
 
 type Object map[string]interface{}
 
 // The additional subtype (e.g. json/string) is needed to be able to evaluate inline functions on specific json types (e.g. strings vs. arrays)
 const (
-	TYPE_REFERENCE = "ref/jsonpath"
+	TYPE_REFERENCE = "ref"
 	TYPE_STRING    = "json/string"
 	TYPE_OBJECT    = "json/object"
 )
@@ -21,20 +22,26 @@ var TYPES = []string{
 	TYPE_OBJECT,
 }
 
-func fromString(src string) *types.TypedValue {
-	val, _ := json.Marshal(src)
+func fromString(src string) (*types.TypedValue, error) {
+	val, err := json.Marshal(src)
+	if err != nil {
+		return nil, err
+	}
 	return &types.TypedValue{
 		Type:  TYPE_STRING,
 		Value: val,
-	}
+	}, nil
 }
 
-func fromObject(src Object) *types.TypedValue {
-	val, _ := json.Marshal(src)
+func fromObject(src Object) (*types.TypedValue, error) {
+	val, err := json.Marshal(src)
+	if err != nil {
+		return nil, err
+	}
 	return &types.TypedValue{
 		Type:  TYPE_OBJECT,
 		Value: val,
-	}
+	}, nil
 }
 
 func Supported(val *types.TypedValue) bool {
@@ -46,7 +53,7 @@ func Supported(val *types.TypedValue) bool {
 	return false
 }
 
-func Parse(i interface{}) *types.TypedValue {
+func Parse(i interface{}) (*types.TypedValue, error) {
 	// For now just duck-type conversions
 	switch t := i.(type) {
 	case string:
@@ -54,8 +61,7 @@ func Parse(i interface{}) *types.TypedValue {
 	case Object:
 		return fromObject(t)
 	default:
-		log.Debugf("Unknown type '%v' for i '%v'!", t, i)
-		return nil
+		return nil, fmt.Errorf("Unknown type '%v' for i '%v'!", t, i)
 	}
 }
 

@@ -61,13 +61,13 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 	// TODO fix hard-coding certain look-ups to more consist format (this is just for prototyping the view)
 	switch {
 	case strings.EqualFold(query, "$.workflow.id"):
-		return typedvalues.Parse(root.Spec.WorkflowId), nil
+		return typedvalues.Parse(root.Spec.WorkflowId)
 
 	case strings.EqualFold(query, "$.invocation.id"):
-		return typedvalues.Parse(root.Metadata.Id), nil
+		return typedvalues.Parse(root.Metadata.Id)
 
 	case strings.EqualFold(query, "$.invocation.startedAt"):
-		return typedvalues.Parse(root.Metadata.CreatedAt.String()), nil
+		return typedvalues.Parse(root.Metadata.CreatedAt.String())
 	case strings.HasPrefix(query, "$.invocation.inputs"):
 		c := strings.Split(query, JSONPATH_CHILD)
 		input, ok := root.Spec.Inputs[c[3]]
@@ -94,18 +94,17 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 func selectTask(task *types.FunctionInvocation, taskQuery []string) (*types.TypedValue, error) {
 	switch taskQuery[0] {
 	case "status":
-		return typedvalues.Parse(task.Status.Status.String()), nil
+		return typedvalues.Parse(task.Status.Status.String())
 	case "startedAt":
-		return typedvalues.Parse(task.Metadata.CreatedAt.String()), nil
+		return typedvalues.Parse(task.Metadata.CreatedAt.String())
 	case "completedAt":
 		if task.Status.Status.Finished() {
-			return typedvalues.Parse(task.Status.Status.String()), nil
+			return typedvalues.Parse(task.Status.Status.String())
 		}
 	case "output":
 		return selectJsonTypedValue(task.Status.Output, taskQuery[1:])
-	default:
-		return nil, nil
 	}
+	return nil, nil
 }
 
 // TODO move this out to typedvalues to support more data formats
@@ -121,7 +120,7 @@ func selectJsonTypedValue(root *types.TypedValue, query []string) (*types.TypedV
 		return nil, err
 	}
 
-	return typedvalues.Parse(result), nil
+	return typedvalues.Parse(result)
 }
 
 // query: foo.bar
