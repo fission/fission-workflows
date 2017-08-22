@@ -1,4 +1,10 @@
 # Fission Workflow
+[![Build Status](https://travis-ci.org/fission/fission-workflow.svg?branch=master)](https://travis-ci.org/fission/fission-workflow)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fission/fission-workflow)](https://goreportcard.com/report/github.com/fission/fission-workflow)
+[![Fission Slack](http://slack.fission.io/badge.svg)](http://slack.fission.io)
+
+[fission.io](http://fission.io)  [@fissionio](http://twitter.com/fissionio)
+
 Fission Workflow is a workflow-based serverless function composition framework built on top of the [Fission](https://github.com/fission/fission) Function-as-a-Service (FaaS) platform.
 
 ### Highlights
