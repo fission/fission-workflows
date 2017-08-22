@@ -2,10 +2,20 @@
 
 ## Setting up Fission (temporary)
 As of the moment of writing, the prototype of the Fission Workflow engine has been implemented in Fission using a couple of shortcuts.
-In the coming weeks, Fission Workflow will be implemented to fully conform to the Fission Environment API, removing the need for any special modfications to Fission.
+In the coming weeks, Fission Workflow will be implemented to fully conform to the Fission Environment API, removing the need for any special modifications to Fission.
 
+To deploy the augmented version of fission, either pull the image:
+```bash
+docker pull erwinvaneyk/fission-workflow
+
+# To install, update fission.yaml to point to the augmented image: "erwinvaneyk/fission-bundle"
+$EDITOR fission.yaml
+```
+
+Or, manually build:
 ```bash
 # clone or add a remote to git@github.com:erwinvaneyk/fission.git
+git clone git@github.com:erwinvaneyk/fission.git
 
 # Switch to the branch that contains the Fission Workflow integration
 git checkout <remote> fission-workflow-integration
@@ -14,7 +24,11 @@ git checkout <remote> fission-workflow-integration
 
 # Compile and push the fission-bundle to the local Docker repo
 (cd fission-bundle/ && bash ./push.sh)
+```
 
+After either pulling the custom image or building it yourself, deploy the bundle like usual:
+
+```bash
 # Deploy fission (assuming that a cluster is available) including the NATS plugin
 kubectl create -f fission.yaml fission-nodeport.yaml fission-nats.yaml
 
