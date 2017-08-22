@@ -139,7 +139,6 @@ func traverse(root interface{}, query []string) (interface{}, error) {
 		if !field.IsValid() {
 			return nil, nil
 		}
-		root = reflect.Indirect(field)
 		result = src.Interface()
 	}
 

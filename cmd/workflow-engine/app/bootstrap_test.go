@@ -250,7 +250,8 @@ func setupEventStore(ctx context.Context) *EventStoreOptions {
 	logrus.WithField("config", esOpts).Info("Setting up NATS server")
 
 	// wait for a bit to set it up
-	awaitCtx, _ := context.WithTimeout(ctx, time.Duration(10)*time.Second)
+	awaitCtx, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
+	defer cancel()
 	err = waitForNats(awaitCtx, esOpts.Url, esOpts.Cluster)
 	if err != nil {
 		logrus.Error(err)
@@ -272,7 +273,6 @@ func waitForNats(ctx context.Context, url string, cluster string) error {
 		case <-time.After(time.Duration(1) * time.Second):
 			return waitForNats(ctx, url, cluster)
 		case <-ctx.Done():
-
 			return ctx.Err()
 		}
 	}
