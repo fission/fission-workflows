@@ -97,7 +97,6 @@ func (nc *Client) Subscribe(config *eventstore.SubscriptionConfig) (eventstore.S
 		}
 	}, stan.DeliverAllAvailable())
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 

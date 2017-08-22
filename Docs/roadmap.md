@@ -1,6 +1,6 @@
 # Roadmap
+Roughly ordered based on priority.
 
-## Short Term, ~1 month
 - **Performance optimizations**: Pre-warm functions, the main optimization that would make the workflow engine faster than calling functions yourself. 
 The workflow engine interprets the dependency graph, notices that a certain function will be called ‘soon’, and triggers the specialization of the function by Fission before it has to call it.
 - **Workflow language**: Provide simple Python library, that allows users to generate workflows by just writing code and feeding it to a parser.
@@ -10,8 +10,6 @@ For example, users could provide a fallback function that is executed when the f
 - **Observability**: Add initial telemetry support, measuring function runtime, workflow engine overhead.
 - **Function Versioning**: provide support for dealing with versions of functions. Users can indicate how to workflow should deal with new versions. 
 Examples of strategies for dealing with versioning: never upgrade, canary deployment, blue/green deployment...
-
-## Longer term, ~3-6 months
 - Build a user-friendly GUI.
 - Add support for passing around data ‘by reference’. 
 Currently, all data passes through. the workflow engine, which can be costly for data-intensive tasks. 

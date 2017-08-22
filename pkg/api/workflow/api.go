@@ -36,7 +36,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 		return "", err
 	}
 
-	// TODO move this to controller or seperate service or fission function, in order to make it more reliable
+	// TODO move this to controller or separate service or fission function, in order to make it more reliable
 	// TODO more FT
 	parsed, err := wa.Parser.Parse(workflow)
 	if err != nil {

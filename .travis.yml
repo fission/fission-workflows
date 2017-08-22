@@ -1,0 +1,17 @@
+sudo: required
+dist: trusty
+language: go
+
+go:
+- 1.8
+
+install:
+- go get github.com/Masterminds/glide
+- go get github.com/nats-io/nats-streaming-server
+
+script:
+- cd ${TRAVIS_BUILD_DIR}
+- glide install
+- ./build/build-linux.sh
+- hack/verify-gofmt.sh
+- test/runtests.sh
