@@ -4,7 +4,7 @@ Fission Workflow is a workflow-based serverless function composition framework b
 ### Highlights
 - **Lightweight**: With just the need for a single data store (NATS Streaming) and a FaaS platform (Fission), the engine consumes minimal resources.
 - **Fault-Tolerant**: Fission Workflow engine keeps track of state, re-tries, handling of errors, etc. By internally utilizing event sourcing, it allows the engine to recover from failures and continue exactly were it left off.   
-- **Scalable**: Other than a backing data store, the workflow system is stateless and can easily be scaled. The independent nature of workflows allows for relatively straightforward charding of workloads over multiple workflow engines.
+- **Scalable**: Other than a backing data store, the workflow system is stateless and can easily be scaled. The independent nature of workflows allows for relatively straightforward sharding of workloads over multiple workflow engines.
 - **High Performance**: In contrast to existing workflow engines targeting other domains, Fission Workflow is designed from the ground up for low overhead, low latency workflow executions.
 - **Extensible**: All main aspects of the engine are extensible. For example, you can even define your own control flow constructs.
 
