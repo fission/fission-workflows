@@ -1,9 +1,10 @@
-hash: 4a7acdc04a8e081ead76be060b9679dc2760317f0380af1dd97e5a0787f4045f
-updated: 2017-08-01T17:24:39.69027853-07:00
+hash: eb497c68c230f80855d9c4ac635d17fe0ab9d331d7860726881f719ee560224b
+updated: 2017-08-22T19:05:22.898750196-07:00
 imports:
 - name: github.com/fission/fission
   version: 37aa266a4d4bd0484e66afbc5206b118638e77bf
   subpackages:
+  - controller/client
   - poolmgr/client
 - name: github.com/gogo/protobuf
   version: 100ba4e885062801d56799d78530b73b178a78f3
@@ -34,7 +35,7 @@ imports:
   - runtime/internal
   - utilities
 - name: github.com/nats-io/go-nats
-  version: 61923ed1eaf8398000991fbbee2ef11ab5a5be0d
+  version: 29f9728a183bf3fa7e809e14edac00b33be72088
 - name: github.com/nats-io/go-nats-streaming
   version: 6e620057a207bd61e992c1c5b6a2de7b6a4cb010
   subpackages:
@@ -51,7 +52,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
 - name: github.com/urfave/cli
-  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+  version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
 - name: golang.org/x/net
   version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   subpackages:
@@ -94,4 +95,8 @@ imports:
   - status
   - tap
   - transport
+- name: k8s.io/apimachinery
+  version: dc1f89aff9a7509782bde3b68824c8043a3e58cc
+  subpackages:
+  - pkg/labels
 testImports: []
