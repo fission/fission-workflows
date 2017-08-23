@@ -32,4 +32,3 @@ func TestEmptyLabel(t *testing.T) {
 		t.Error("Expected labels not matched")
 	}
 }
-

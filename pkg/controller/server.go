@@ -11,12 +11,17 @@ import (
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/controller/query"
 	"github.com/fission/fission-workflow/pkg/projector/project"
+	invocproject "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
+	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -30,7 +35,7 @@ type InvocationController struct {
 	functionApi         *function.Api
 	invocationApi       *invocation.Api
 	scheduler           *scheduler.WorkflowScheduler
-	notifyChan          chan *project.InvocationNotification // TODO more complex => discard notifications of the same invocation
+	invocSub            *pubsub.Subscription
 }
 
 // Does not deal with Workflows (notifications)
@@ -52,9 +57,22 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 	logrus.Debug("Running controller init...")
 
 	// Subscribe to invocation creations
-	cr.notifyChan = make(chan *project.InvocationNotification, NOTIFICATION_BUFFER)
+	//cr.notifyChan = make(chan *project.InvocationNotification, NOTIFICATION_BUFFER)
+	req, err := labels.NewRequirement("event", selection.In, []string{
+		events.Invocation_TASK_SUCCEEDED.String(),
+		events.Invocation_TASK_FAILED.String(),
+		events.Invocation_INVOCATION_CREATED.String(),
+	})
+	if err != nil {
+		return err
+	}
+	selector := kubelabels.NewSelector(labels.NewSelector().Add(*req))
 
-	err := cr.invocationProjector.Subscribe(cr.notifyChan) // TODO provide clean channel that multiplexes into actual one
+	//err := cr.invocationProjector.Subscribe(cr.notifyChan) // TODO provide clean channel that multiplexes into actual one
+	cr.invocSub = cr.invocationProjector.Subscribe(pubsub.SubscriptionOptions{
+		Buf:           NOTIFICATION_BUFFER,
+		LabelSelector: selector,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -63,9 +81,14 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 	go func(ctx context.Context) {
 		for {
 			select {
-			case notification := <-cr.notifyChan:
+			case notification := <-cr.invocSub.Ch:
 				logrus.WithField("notification", notification).Info("Handling invocation notification.")
-				cr.handleNotification(notification)
+				switch n := notification.(type) {
+				case invocproject.Notification:
+					cr.handleNotification(n)
+				default:
+					logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+				}
 			case <-ctx.Done():
 				logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
 				return
@@ -86,16 +109,18 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 	}
 }
 
-func (cr *InvocationController) handleNotification(notification *project.InvocationNotification) {
-	logrus.WithField("notification", notification).Debug("controller event trigger!")
-	switch notification.Type {
+func (cr *InvocationController) handleNotification(msg invocproject.Notification) {
+	logrus.WithField("notification", msg).Debug("controller event trigger!")
+
+	switch msg.Event() {
 	case events.Invocation_INVOCATION_CREATED:
 		fallthrough
 	case events.Invocation_TASK_SUCCEEDED:
 		fallthrough
 	case events.Invocation_TASK_FAILED:
 		// Decide which task to execute next
-		invoc := notification.Data
+		invoc := msg.Payload
+
 		wfId := invoc.Spec.WorkflowId
 		wf, err := cr.workflowProjector.Get(wfId)
 		if err != nil {
@@ -108,7 +133,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 			Workflow:   wf,
 		})
 		if err != nil {
-			logrus.Errorf("Failed to schedule workflow invocation '%s': %v", notification.Id, err)
+			logrus.Errorf("Failed to schedule workflow invocation '%s': %v", invoc.Metadata.Id, err)
 			return
 		}
 		logrus.WithFields(logrus.Fields{
@@ -169,10 +194,10 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 					Inputs: inputs,
 				}
 				go func() {
-					_, err := cr.functionApi.Invoke(notification.Id, fnSpec)
+					_, err := cr.functionApi.Invoke(invoc.Metadata.Id, fnSpec)
 					if err != nil {
 						logrus.WithFields(logrus.Fields{
-							"id":  notification.Id,
+							"id":  invoc.Metadata.Id,
 							"err": err,
 						}).Errorf("Failed to execute task")
 					}
@@ -180,7 +205,7 @@ func (cr *InvocationController) handleNotification(notification *project.Invocat
 			}
 		}
 	default:
-		logrus.WithField("type", notification.Type).Warn("Controller ignores event.")
+		logrus.WithField("type", msg.Event().String()).Warn("Controller ignores unknown event.")
 	}
 }
 
@@ -189,8 +214,7 @@ func (cr *InvocationController) handleControlLoopTick() {
 	// Options: refresh projection, send ping, cancel invocation
 }
 
-func (cr *InvocationController) Close() {
+func (cr *InvocationController) Close() error {
 	logrus.Debug("Closing controller...")
-	cr.invocationProjector.Close()
-	close(cr.notifyChan)
+	return cr.invocationProjector.Close()
 }

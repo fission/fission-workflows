@@ -4,6 +4,8 @@ import (
 	"io"
 	"sync"
 
+	"time"
+
 	"github.com/fission/fission-workflow/pkg/util/labels"
 )
 
@@ -12,6 +14,18 @@ const (
 	DEFAULT_SUB_CAP = 10
 )
 
+type Msg interface {
+	Labels() labels.Labels
+	CreatedAt() time.Time
+}
+
+type Publisher interface {
+	io.Closer
+	Subscribe(opts ...SubscriptionOptions) *Subscription
+	Unsubscribe(sub *Subscription) error
+	Publish(msg Msg) error
+}
+
 type SubscriptionOptions struct {
 	Buf           int
 	LabelSelector labels.Selector
@@ -19,19 +33,43 @@ type SubscriptionOptions struct {
 
 type Subscription struct {
 	SubscriptionOptions
-	Ch chan interface{}
+	Ch chan Msg
 }
 
-type Msg struct {
-	Labels  labels.Labels
-	Payload interface{}
+type EmptyMsg struct {
+	labels    labels.Labels
+	createdAt time.Time
 }
 
-type Publisher interface {
-	io.Closer
-	Subscribe(opts ...SubscriptionOptions) *Subscription
-	Unsubscribe(sub *Subscription) error
-	Publish(msg *Msg) error
+func (gm *EmptyMsg) Labels() labels.Labels {
+	return gm.labels
+}
+
+func (gm *EmptyMsg) CreatedAt() time.Time {
+	return gm.createdAt
+}
+
+type GenericMsg struct {
+	*EmptyMsg
+	payload interface{}
+}
+
+func NewEmptyMsg(lbls labels.Labels, createdAt time.Time) *EmptyMsg {
+	return &EmptyMsg{
+		labels:    lbls,
+		createdAt: createdAt,
+	}
+}
+
+func NewGenericMsg(lbls labels.Labels, createdAt time.Time, payload interface{}) *GenericMsg {
+	return &GenericMsg{
+		EmptyMsg: NewEmptyMsg(lbls, createdAt),
+		payload:  payload,
+	}
+}
+
+func (pm *GenericMsg) Payload() interface{} {
+	return pm.payload
 }
 
 func NewPublisher() Publisher {
@@ -71,7 +109,7 @@ func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	}
 
 	sub := &Subscription{
-		Ch:                  make(chan interface{}, subOpts.Buf),
+		Ch:                  make(chan Msg, subOpts.Buf),
 		SubscriptionOptions: subOpts,
 	}
 
@@ -79,11 +117,11 @@ func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	return sub
 }
 
-func (pu *publisher) Publish(msg *Msg) error {
+func (pu *publisher) Publish(msg Msg) error {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	for _, sub := range pu.subs {
-		if sub.LabelSelector != nil && !sub.LabelSelector.Matches(msg.Labels) {
+		if sub.LabelSelector != nil && !sub.LabelSelector.Matches(msg.Labels()) {
 			continue
 		}
 		select {

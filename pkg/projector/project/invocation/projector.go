@@ -10,20 +10,23 @@ import (
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
+	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
 type invocationProjector struct {
-	esClient    eventstore.Client
-	cache       cache.Cache // TODO ensure concurrent
-	sub         eventstore.Subscription
-	updateChan  chan *eventstore.Event
-	subscribers []chan *project.InvocationNotification
+	pubsub.Publisher
+	esClient   eventstore.Client
+	cache      cache.Cache // TODO ensure concurrent
+	sub        eventstore.Subscription
+	updateChan chan *eventstore.Event
 }
 
 func NewInvocationProjector(esClient eventstore.Client, cache cache.Cache) project.InvocationProjector {
 	p := &invocationProjector{
+		Publisher:  pubsub.NewPublisher(),
 		esClient:   esClient,
 		cache:      cache,
 		updateChan: make(chan *eventstore.Event),
@@ -83,12 +86,6 @@ func (ip *invocationProjector) Watch(subject string) error {
 	return err
 }
 
-// TODO Maybe add identifier per consumer
-func (ip *invocationProjector) Subscribe(updateCh chan *project.InvocationNotification) error {
-	ip.subscribers = append(ip.subscribers, updateCh)
-	return nil
-}
-
 func (ip *invocationProjector) List(query string) ([]string, error) {
 	subjects, err := ip.esClient.Subjects("invocation." + query) // TODO fix this hardcode
 	if err != nil {
@@ -107,7 +104,7 @@ func (ip *invocationProjector) Cache() cache.Cache {
 
 func (ip *invocationProjector) Close() error {
 	// Note: subscribers are responsible for closing their own channels
-	return nil
+	return ip.Publisher.Close()
 }
 
 func (ip *invocationProjector) Run() {
@@ -141,20 +138,15 @@ func (ip *invocationProjector) Run() {
 		}
 
 		// TODO should judge whether to send notification (old messages not)
-		ip.notifySubscribers(&project.InvocationNotification{
-			Id:   updatedState.GetMetadata().GetId(),
-			Data: updatedState,
-			Type: t,
-			Time: timestamp,
-		})
+		ip.Publisher.Publish(NewNotification(t, timestamp, updatedState))
 	}
 }
 
 func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.WorkflowInvocation, error) {
 	logrus.WithField("event", event).Debug("InvocationProjector handling event.")
-	invocationId := event.EventId.Subjects[1] // TODO fix hardcoded lookup
+	invocId := event.EventId.Subjects[1] // TODO fix hardcoded lookup
 
-	currentState := ip.getCache(invocationId)
+	currentState := ip.getCache(invocId)
 	if currentState == nil {
 		currentState = Initial()
 	}
@@ -165,21 +157,27 @@ func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.Work
 		return nil, err
 	}
 
-	err = ip.cache.Put(invocationId, newState)
+	err = ip.cache.Put(invocId, newState)
 	if err != nil {
 		return nil, err
 	}
 	return newState, nil
 }
 
-func (ip *invocationProjector) notifySubscribers(notification *project.InvocationNotification) {
-	for _, c := range ip.subscribers {
-		select {
-		case c <- notification:
-			logrus.WithField("notification", notification).Debug("Notified subscriber.")
-		default:
-			logrus.WithField("notification", notification).
-				Debug("Failed to notify subscriber chan because of blocked channel.")
-		}
+type Notification struct {
+	*pubsub.EmptyMsg
+	Payload *types.WorkflowInvocation
+}
+
+func (nf *Notification) Event() events.Invocation {
+	return events.Invocation(events.Invocation_value[nf.Labels().Get("event")])
+}
+
+func NewNotification(event events.Invocation, timestamp time.Time, invoc *types.WorkflowInvocation) *Notification {
+	return &Notification{
+		EmptyMsg: pubsub.NewEmptyMsg(kubelabels.New(kubelabels.LabelSet{
+			"event": event.String(),
+		}), timestamp),
+		Payload: invoc,
 	}
 }

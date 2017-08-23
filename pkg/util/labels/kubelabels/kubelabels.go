@@ -1,8 +1,6 @@
 package kubelabels
 
 import (
-	"fmt"
-
 	"github.com/fission/fission-workflow/pkg/util/labels"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
@@ -10,21 +8,19 @@ import (
 type LabelSet kubelabels.Set
 
 type Labels struct {
-	labels kubelabels.Labels
+	kubelabels.Labels
 }
 
 func New(labelSet LabelSet) labels.Labels {
-	return &Labels{
-		labels: kubelabels.Set(labelSet),
-	}
-}
-
-func (kl *Labels) String() string {
-	return fmt.Sprintf("%v", kl.labels)
+	return &Labels{kubelabels.Set(labelSet)}
 }
 
 type Selector struct {
 	selector kubelabels.Selector
+}
+
+func NewSelector(selector kubelabels.Selector) *Selector {
+	return &Selector{selector}
 }
 
 func (kl *Selector) Matches(labels labels.Labels) bool {
@@ -36,5 +32,5 @@ func (kl *Selector) Matches(labels labels.Labels) bool {
 		return true
 	}
 
-	return kl.selector.Matches(klabel.labels)
+	return kl.selector.Matches(klabel)
 }

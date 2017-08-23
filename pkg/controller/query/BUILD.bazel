@@ -7,6 +7,5 @@ go_library(
     deps = [
         "//pkg/types:go_default_library",
         "//pkg/types/typedvalues:go_default_library",
-        "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],
 )

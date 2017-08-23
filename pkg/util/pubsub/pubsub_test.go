@@ -23,12 +23,9 @@ func TestPublish(t *testing.T) {
 		Buf: 1,
 	})
 
-	msg := &Msg{
-		Labels:  kubelabels.New(map[string]string{
-			"foo" : "bar",
-		}),
-		Payload: "TestMsg",
-	}
+	msg := NewGenericMsg(kubelabels.New(map[string]string{
+		"foo": "bar",
+	}), "TestMsg")
 
 	err := pub.Publish(msg)
 	if err != nil {
@@ -36,7 +33,7 @@ func TestPublish(t *testing.T) {
 	}
 	pub.Close()
 
-	err = expectMsgs(sub, []*Msg{
+	err = expectMsgs(sub, []Msg{
 		msg,
 	})
 	if err != nil {
@@ -53,18 +50,14 @@ func TestPublishBufferOverflow(t *testing.T) {
 		Buf: 10,
 	})
 
-	firstMsg := &Msg{
-		Labels:  kubelabels.New(map[string]string{
-			"foo" : "bar",
-		}),
-		Payload: "TestMsg1",
-	}
-	secondMsg := &Msg{
-		Labels:  kubelabels.New(map[string]string{
-			"foo" : "bar",
-		}),
-		Payload: "TestMsg2",
-	}
+	firstMsg := NewGenericMsg(kubelabels.New(map[string]string{
+		"foo": "bar",
+	}), "TestMsg1")
+
+	secondMsg := NewGenericMsg(kubelabels.New(map[string]string{
+		"foo": "bar",
+	}), "TestMsg2")
+
 	err := pub.Publish(firstMsg)
 	if err != nil {
 		t.Error(err)
@@ -75,14 +68,14 @@ func TestPublishBufferOverflow(t *testing.T) {
 	}
 	pub.Close()
 
-	err = expectMsgs(sub, []*Msg{
+	err = expectMsgs(sub, []Msg{
 		firstMsg,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = expectMsgs(sub2, []*Msg{
+	err = expectMsgs(sub2, []Msg{
 		firstMsg,
 		secondMsg,
 	})
@@ -92,7 +85,7 @@ func TestPublishBufferOverflow(t *testing.T) {
 }
 
 // Note ensure that subscriptions are closed before this check
-func expectMsgs(sub *Subscription, expectedMsgs []*Msg) error {
+func expectMsgs(sub *Subscription, expectedMsgs []Msg) error {
 	i := 0
 	for msg := range sub.Ch {
 		if i > len(expectedMsgs) {

@@ -1,15 +1,18 @@
 package workflow
 
 import (
+	"strings"
+
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/projector/project"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 type workflowProjector struct {
+	pubsub.Publisher
 	esClient   eventstore.Client
 	cache      cache.Cache // TODO ensure concurrent
 	updateChan chan *eventstore.Event
@@ -17,6 +20,7 @@ type workflowProjector struct {
 
 func NewWorkflowProjector(esClient eventstore.Client, cache cache.Cache) project.WorkflowProjector {
 	p := &workflowProjector{
+		Publisher:  pubsub.NewPublisher(),
 		esClient:   esClient,
 		cache:      cache,
 		updateChan: make(chan *eventstore.Event),
