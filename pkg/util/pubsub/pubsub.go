@@ -11,7 +11,7 @@ import (
 
 // A simple PubSub implementation
 const (
-	DEFAULT_SUB_CAP = 10
+	DEFAULT_SUB_BUF = 10
 )
 
 type Msg interface {
@@ -105,7 +105,7 @@ func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	}
 
 	if subOpts.Buf <= 0 {
-		subOpts.Buf = DEFAULT_SUB_CAP
+		subOpts.Buf = DEFAULT_SUB_BUF
 	}
 
 	sub := &Subscription{

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
+	"time"
 )
 
 func TestPublisherSubscribe(t *testing.T) {
@@ -25,7 +26,7 @@ func TestPublish(t *testing.T) {
 
 	msg := NewGenericMsg(kubelabels.New(map[string]string{
 		"foo": "bar",
-	}), "TestMsg")
+	}), time.Now(), "TestMsg")
 
 	err := pub.Publish(msg)
 	if err != nil {
@@ -52,11 +53,11 @@ func TestPublishBufferOverflow(t *testing.T) {
 
 	firstMsg := NewGenericMsg(kubelabels.New(map[string]string{
 		"foo": "bar",
-	}), "TestMsg1")
+	}), time.Now(), "TestMsg1")
 
 	secondMsg := NewGenericMsg(kubelabels.New(map[string]string{
 		"foo": "bar",
-	}), "TestMsg2")
+	}), time.Now(), "TestMsg2")
 
 	err := pub.Publish(firstMsg)
 	if err != nil {

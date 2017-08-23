@@ -25,6 +25,7 @@ import:
   version: ^0.4.0
   subpackages:
   - gogoproto
+- package: github.com/golang/glog
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/labels

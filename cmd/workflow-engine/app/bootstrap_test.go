@@ -196,7 +196,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	}
 
 	if !invocation.Status.Status.Successful() {
-		t.Errorf("Invocation status is not succesfull,s but '%v", invocation.Status.Status)
+		t.Errorf("Invocation status is not 'succesfull', instead it is '%v'", invocation.Status.Status)
 	}
 }
 

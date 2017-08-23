@@ -56,8 +56,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 
 	logrus.Debug("Running controller init...")
 
-	// Subscribe to invocation creations
-	//cr.notifyChan = make(chan *project.InvocationNotification, NOTIFICATION_BUFFER)
+	// Subscribe to invocation creations and task events.
 	req, err := labels.NewRequirement("event", selection.In, []string{
 		events.Invocation_TASK_SUCCEEDED.String(),
 		events.Invocation_TASK_FAILED.String(),
@@ -68,7 +67,6 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 	}
 	selector := kubelabels.NewSelector(labels.NewSelector().Add(*req))
 
-	//err := cr.invocationProjector.Subscribe(cr.notifyChan) // TODO provide clean channel that multiplexes into actual one
 	cr.invocSub = cr.invocationProjector.Subscribe(pubsub.SubscriptionOptions{
 		Buf:           NOTIFICATION_BUFFER,
 		LabelSelector: selector,
@@ -84,7 +82,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 			case notification := <-cr.invocSub.Ch:
 				logrus.WithField("notification", notification).Info("Handling invocation notification.")
 				switch n := notification.(type) {
-				case invocproject.Notification:
+				case *invocproject.Notification:
 					cr.handleNotification(n)
 				default:
 					logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
@@ -109,7 +107,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 	}
 }
 
-func (cr *InvocationController) handleNotification(msg invocproject.Notification) {
+func (cr *InvocationController) handleNotification(msg *invocproject.Notification) {
 	logrus.WithField("notification", msg).Debug("controller event trigger!")
 
 	switch msg.Event() {

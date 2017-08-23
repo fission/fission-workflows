@@ -35,7 +35,7 @@ func NewInvocationProjector(esClient eventstore.Client, cache cache.Cache) proje
 	return p
 }
 
-func (ip *invocationProjector) getCache(subject string) *types.WorkflowInvocation {
+func (ip *invocationProjector) checkCache(subject string) *types.WorkflowInvocation {
 	raw, ok := ip.cache.Get(subject)
 	if !ok {
 		return nil
@@ -51,7 +51,7 @@ func (ip *invocationProjector) getCache(subject string) *types.WorkflowInvocatio
 // Get projection from cache or attempt to replay it.
 // Get should work without having to watch!
 func (ip *invocationProjector) Get(subject string) (*types.WorkflowInvocation, error) {
-	cached := ip.getCache(subject)
+	cached := ip.checkCache(subject)
 	if cached != nil {
 		return cached, nil
 	}
@@ -138,7 +138,7 @@ func (ip *invocationProjector) Run() {
 		}
 
 		// TODO should judge whether to send notification (old messages not)
-		ip.Publisher.Publish(NewNotification(t, timestamp, updatedState))
+		ip.Publisher.Publish(newNotification(t, timestamp, updatedState))
 	}
 }
 
@@ -146,7 +146,7 @@ func (ip *invocationProjector) applyUpdate(event *eventstore.Event) (*types.Work
 	logrus.WithField("event", event).Debug("InvocationProjector handling event.")
 	invocId := event.EventId.Subjects[1] // TODO fix hardcoded lookup
 
-	currentState := ip.getCache(invocId)
+	currentState := ip.checkCache(invocId)
 	if currentState == nil {
 		currentState = Initial()
 	}
@@ -173,7 +173,7 @@ func (nf *Notification) Event() events.Invocation {
 	return events.Invocation(events.Invocation_value[nf.Labels().Get("event")])
 }
 
-func NewNotification(event events.Invocation, timestamp time.Time, invoc *types.WorkflowInvocation) *Notification {
+func newNotification(event events.Invocation, timestamp time.Time, invoc *types.WorkflowInvocation) *Notification {
 	return &Notification{
 		EmptyMsg: pubsub.NewEmptyMsg(kubelabels.New(kubelabels.LabelSet{
 			"event": event.String(),

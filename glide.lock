@@ -1,5 +1,5 @@
-hash: eb497c68c230f80855d9c4ac635d17fe0ab9d331d7860726881f719ee560224b
-updated: 2017-08-22T19:05:22.898750196-07:00
+hash: a081108074a8ed5da5b5f8190bb64155065875a9e55f127e63b9cea6a0f24800
+updated: 2017-08-23T17:27:58.230766466-07:00
 imports:
 - name: github.com/fission/fission
   version: 37aa266a4d4bd0484e66afbc5206b118638e77bf
@@ -12,6 +12,8 @@ imports:
   - gogoproto
   - proto
   - protoc-gen-gogo/descriptor
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 - name: github.com/golang/protobuf
   version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
   subpackages:
@@ -36,15 +38,13 @@ imports:
   - utilities
 - name: github.com/nats-io/go-nats
   version: 29f9728a183bf3fa7e809e14edac00b33be72088
+  subpackages:
+  - encoders/builtin
+  - util
 - name: github.com/nats-io/go-nats-streaming
   version: 6e620057a207bd61e992c1c5b6a2de7b6a4cb010
   subpackages:
   - pb
-- name: github.com/nats-io/nats
-  version: 43abfaad5f01e2185b415f0d9f9af47d846ee540
-  subpackages:
-  - encoders/builtin
-  - util
 - name: github.com/nats-io/nuid
   version: 289cccf02c178dc782430d534e3c1f5b72af807f
 - name: github.com/satori/go.uuid

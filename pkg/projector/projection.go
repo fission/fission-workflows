@@ -1,11 +1,8 @@
 package projector
 
 import (
-	"time"
-
 	"github.com/fission/fission-workflow/pkg/eventstore"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
 )
 
@@ -26,11 +23,3 @@ type Projector interface {
 	// Replays events, if it already exists, it is invalidated and replayed
 	Fetch(subject string) error
 }
-
-// In order to avoid leaking eventstore details
-//type InvocationNotification struct {
-//	Id   string
-//	Data *types.WorkflowInvocation
-//	Type events.Invocation
-//	Time *time.Time
-//}
