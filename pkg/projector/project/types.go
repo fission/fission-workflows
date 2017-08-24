@@ -1,16 +1,14 @@
 package project
 
 import (
-	"io"
-	"time"
-
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/fission/fission-workflow/pkg/util/pubsub"
 )
 
 type WorkflowProjector interface {
-	io.Closer
+	pubsub.Publisher
+
 	// Get projection from cache or attempt to replay it.
 	Get(subject string) (*types.Workflow, error)
 
@@ -25,7 +23,8 @@ type WorkflowProjector interface {
 }
 
 type InvocationProjector interface {
-	io.Closer
+	pubsub.Publisher
+
 	// Get projection from cache or attempt to replay it.
 	Get(subject string) (*types.WorkflowInvocation, error)
 
@@ -38,16 +37,4 @@ type InvocationProjector interface {
 
 	// Lists all subjects that fit the query
 	List(query string) ([]string, error)
-
-	// Suscribe to updates on subjects watched by this projector
-	Subscribe(updateCh chan *InvocationNotification) error
-}
-
-// TODO generify
-// In order to avoid leaking eventstore details
-type InvocationNotification struct {
-	Id   string
-	Data *types.WorkflowInvocation
-	Type events.Invocation
-	Time time.Time
 }

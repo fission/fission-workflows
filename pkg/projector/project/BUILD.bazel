@@ -7,6 +7,6 @@ go_library(
     deps = [
         "//pkg/cache:go_default_library",
         "//pkg/types:go_default_library",
-        "//pkg/types/events:go_default_library",
+        "//pkg/util/pubsub:go_default_library",
     ],
 )
