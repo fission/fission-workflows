@@ -46,10 +46,10 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 		tasks[taskId] = &TaskScope{
 			ObjectMetadata:           fn.Metadata,
 			FunctionInvocationStatus: fn.Status,
-			Inputs:                   formatTypedValueMap(fn.Spec.Inputs),
-			Dependencies:             wf.Spec.Tasks[taskId].Dependencies,
-			Name:                     wf.Spec.Tasks[taskId].Name,
-			Output:                   out,
+			Inputs:       formatTypedValueMap(fn.Spec.Inputs),
+			Dependencies: wf.Spec.Tasks[taskId].Dependencies,
+			Name:         wf.Spec.Tasks[taskId].Name,
+			Output:       out,
 		}
 	}
 

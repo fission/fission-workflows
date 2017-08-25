@@ -23,7 +23,7 @@ task().
 dependency(id).
 
 guid
- */
+*/
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
 	// TODO inject helper functions
 	vm := otto.New()

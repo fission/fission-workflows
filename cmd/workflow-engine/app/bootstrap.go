@@ -13,18 +13,18 @@ import (
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
+	"github.com/fission/fission-workflow/pkg/controller/query"
 	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/fnenv/fission"
 	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
 	wp "github.com/fission/fission-workflow/pkg/projector/project/workflow"
 	"github.com/fission/fission-workflow/pkg/scheduler"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/nats-io/go-nats-streaming"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"github.com/fission/fission-workflow/pkg/controller/query"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 )
 
 const (

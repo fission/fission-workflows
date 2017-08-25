@@ -16,7 +16,7 @@ const (
 
 func Expr(expr string) *types.TypedValue {
 	return &types.TypedValue{
-		Type: FormatType(TYPE_EXPRESSION),
+		Type:  FormatType(TYPE_EXPRESSION),
 		Value: []byte(expr),
 	}
 }
