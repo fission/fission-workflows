@@ -10,7 +10,6 @@ import (
 // Temporary file containing built-in internal functions
 //
 // Should be refactored to a extensible system, using go plugins for example.
-
 type FunctionIf struct{}
 
 func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {

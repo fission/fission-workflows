@@ -12,76 +12,59 @@ type Object map[string]interface{}
 
 // The additional subtype (e.g. json/string) is needed to be able to evaluate inline functions on specific json types (e.g. strings vs. arrays)
 const (
-	TYPE_REFERENCE = "ref"
-	TYPE_STRING    = "json/string"
-	TYPE_OBJECT    = "json/object"
+	FORMAT_JSON = "json"
+	TYPE_STRING = "string"
+	TYPE_OBJECT = "object"
+	TYPE_ARRAY  = "array"
 )
 
-var TYPES = []string{
+var JSON_TYPES = []string{
 	TYPE_STRING,
 	TYPE_OBJECT,
+	TYPE_ARRAY,
 }
 
-func fromString(src string) (*types.TypedValue, error) {
-	val, err := json.Marshal(src)
-	if err != nil {
-		return nil, err
-	}
-	return &types.TypedValue{
-		Type:  TYPE_STRING,
-		Value: val,
-	}, nil
-}
-
-func fromObject(src Object) (*types.TypedValue, error) {
-	val, err := json.Marshal(src)
-	if err != nil {
-		return nil, err
-	}
-	return &types.TypedValue{
-		Type:  TYPE_OBJECT,
-		Value: val,
-	}, nil
-}
-
-func Supported(val *types.TypedValue) bool {
-	for _, vtype := range TYPES {
-		if vtype == val.Type {
+func isJsonValue(val *types.TypedValue) bool {
+	for _, vtype := range JSON_TYPES {
+		if FormatType(FORMAT_JSON, vtype) == val.Type {
 			return true
 		}
 	}
 	return false
 }
 
-func Parse(i interface{}) (*types.TypedValue, error) {
-	// For now just duck-type conversions
-	switch t := i.(type) {
+type JsonParserFormatter struct{}
+
+func (JsonParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
+	var tp string
+	switch i.(type) {
 	case string:
-		return fromString(t)
-	case Object:
-		return fromObject(t)
+		tp = TYPE_STRING
+	case map[string]interface{}:
+		tp = TYPE_OBJECT
+	case []interface{}:
+		tp = TYPE_ARRAY
 	default:
-		return nil, fmt.Errorf("Unknown type '%v' for i '%v'!", t, i)
+		return nil, fmt.Errorf("Value '%v' cannot be parsed to json", i)
 	}
-}
 
-func From(t *types.TypedValue) (i interface{}) {
-	json.Unmarshal(t.Value, &i)
-	return i
-}
+	bs, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
 
-// TODO extract to more abstract reference file
-func Reference(ref string) *types.TypedValue {
 	return &types.TypedValue{
-		Type:  TYPE_REFERENCE,
-		Value: []byte(ref),
+		Type:  FormatType(FORMAT_JSON, tp),
+		Value: bs,
+	}, nil
+}
+
+func (JsonParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+	if !isJsonValue(v) {
+		return nil, fmt.Errorf("Value '%v' is not a JSON type", v)
 	}
-}
 
-func Dereference(ref *types.TypedValue) string {
-	return string(ref.Value)
-}
-
-func IsReference(value *types.TypedValue) bool {
-	return value.Type == TYPE_REFERENCE
+	var i interface{}
+	err := json.Unmarshal(v.Value, &i)
+	return i, err
 }

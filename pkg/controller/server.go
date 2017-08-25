@@ -5,8 +5,6 @@ import (
 
 	"context"
 
-	"fmt"
-
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/controller/query"
@@ -15,7 +13,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/events"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -36,18 +33,20 @@ type InvocationController struct {
 	invocationApi       *invocation.Api
 	scheduler           *scheduler.WorkflowScheduler
 	invocSub            *pubsub.Subscription
+	exprParser          query.ExpressionParser
 }
 
 // Does not deal with Workflows (notifications)
 func NewController(iproject project.InvocationProjector, wfproject project.WorkflowProjector,
 	workflowScheduler *scheduler.WorkflowScheduler, functionApi *function.Api,
-	invocationApi *invocation.Api) *InvocationController {
+	invocationApi *invocation.Api, exprParser query.ExpressionParser) *InvocationController {
 	return &InvocationController{
 		invocationProjector: iproject,
 		workflowProjector:   wfproject,
 		scheduler:           workflowScheduler,
 		functionApi:         functionApi,
 		invocationApi:       invocationApi,
+		exprParser:          exprParser,
 	}
 }
 
@@ -161,28 +160,23 @@ func (cr *InvocationController) handleNotification(msg *invocproject.Notificatio
 
 				// Resolve the inputs
 				inputs := map[string]*types.TypedValue{}
+				queryScope := query.NewScope(wf, invoc)
 				for inputKey, val := range invokeAction.Inputs {
-
-					resolvedInput := val
-					if typedvalues.IsReference(val) {
-						q := typedvalues.Dereference(val)
-						cwd := fmt.Sprintf("$.Tasks.%s", invokeAction.Id)
-						resolvedInput, err = query.Select(invoc, q, cwd)
-						if err != nil {
-							logrus.WithFields(logrus.Fields{
-								"val":      val,
-								"inputKey": inputKey,
-								"cwd":      cwd,
-							}).Warnf("Failed to resolve input: %v", err)
-							continue
-						}
+					resolvedInput, err := cr.exprParser.Resolve(queryScope, queryScope.Tasks[invokeAction.Id], val)
+					if err != nil {
+						logrus.WithFields(logrus.Fields{
+							"val":      val,
+							"inputKey": inputKey,
+						}).Warnf("Failed to parse input: %v", err)
+						continue
 					}
+
 					inputs[inputKey] = resolvedInput
 					logrus.WithFields(logrus.Fields{
 						"val":      val,
 						"key":      inputKey,
 						"resolved": resolvedInput,
-					}).Infof("Resolved variable")
+					}).Infof("Resolved expression")
 				}
 
 				// Invoke
