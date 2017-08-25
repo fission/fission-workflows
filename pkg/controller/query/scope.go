@@ -5,7 +5,8 @@ import (
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 )
 
-// The scope is a custom view of the data that can be queried by the user
+// The scope is a custom view of the data that can be queried by the user.
+// TODO remove dependency on types.workflow, ideally invocation should contain all this.
 type Scope struct {
 	Workflow   *WorkflowScope
 	Invocation *InvocationScope
@@ -31,12 +32,14 @@ type TaskScope struct {
 	Output       interface{}
 }
 
+var parserFormatter = typedvalues.NewDefaultParserFormatter()
+
 func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 
 	tasks := map[string]*TaskScope{}
 	for taskId, fn := range invoc.Status.Tasks {
 
-		out, err := typedvalues.NewDefaultParserFormatter().Format(fn.Status.Output)
+		out, err := parserFormatter.Format(fn.Status.Output)
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +69,7 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {
 	result := map[string]interface{}{}
 	for k, v := range values {
-		i, err := typedvalues.NewDefaultParserFormatter().Format(v)
+		i, err := parserFormatter.Format(v)
 		if err != nil {
 			panic(err)
 		}
