@@ -4,7 +4,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/robertkrimen/otto"
-	"github.com/sirupsen/logrus"
 )
 
 type ExpressionParser interface {
@@ -30,14 +29,12 @@ func (oe *JavascriptExpressionParser) Resolve(scope interface{}, expr *types.Typ
 		return expr, nil
 	}
 
-	// TODO inject scope
-	logrus.Error(expr)
+	oe.vm.Set("$", scope)
 	jsResult, err := oe.vm.Run(expr.Value)
 	if err != nil {
 		return nil, err
 	}
 
 	i, _ := jsResult.Export() // Err is always nil
-
 	return oe.parser.Parse(i)
 }

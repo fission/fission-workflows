@@ -42,7 +42,7 @@ func ParseType(valueType string) (format string, subType string) {
 }
 
 func FormatType(parts ...string) string {
-	return strings.Join(parts[:1], "/")
+	return strings.Join(parts, "/")
 }
 
 func isFormat(targetValueType string, format string) bool {
@@ -51,9 +51,19 @@ func isFormat(targetValueType string, format string) bool {
 }
 
 func NewDefaultParserFormatter() ParserFormatter {
+	// TODO Less verbose
+	jsPf := &JsonParserFormatter{}
 	return NewComposedParserFormatter(map[string]ParserFormatter{
-		FormatType(FORMAT_JSON) : &JsonParserFormatter{},
-		FormatType(TYPE_EXPRESSION) : &ExprParserFormatter{},
-		FormatType(TYPE_RAW) : &RawParserFormatter{},
-	})
+		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
+		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
+		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
+		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
+		FormatType(TYPE_RAW):                 &RawParserFormatter{},
+	}, []string{
+		FormatType(FORMAT_JSON, TYPE_STRING),
+		FormatType(FORMAT_JSON, TYPE_ARRAY),
+		FormatType(FORMAT_JSON, TYPE_OBJECT),
+		FormatType(TYPE_EXPRESSION),
+		FormatType(TYPE_RAW),
+	}...)
 }

@@ -123,7 +123,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"fakeFinalTask": {
 				Name: "echo",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("'42'"),
+					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.FirstTask.Output"),
 				},
 				Dependencies: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -132,7 +132,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				Name: "echo",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("'foobar'"),
+					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
 				},
 			},
 		},
@@ -148,9 +148,11 @@ func TestWorkflowInvocation(t *testing.T) {
 	// Create invocation
 	expectedOutput := "Hello world!"
 	tv, err := typedvalues.JsonParserFormatter{}.Parse(expectedOutput)
+	etv, err := typedvalues.JsonParserFormatter{}.Parse(strings.ToUpper(expectedOutput))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
 		Inputs: map[string]*types.TypedValue{
@@ -191,7 +193,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		t.Error("Specs of created and fetched do not match!")
 	}
 
-	if !reflect.DeepEqual(invocation.Status.Output, tv) {
+	if !reflect.DeepEqual(invocation.Status.Output, etv) {
 		t.Errorf("Output '%s' does not match expected output '%s'", invocation.Status.Output, expectedOutput)
 	}
 

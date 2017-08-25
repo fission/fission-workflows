@@ -162,7 +162,8 @@ func (cr *InvocationController) handleNotification(msg *invocproject.Notificatio
 				inputs := map[string]*types.TypedValue{}
 				for inputKey, val := range invokeAction.Inputs {
 
-					resolvedInput, err := cr.exprParser.Resolve(invoc, val)
+					queryScope := query.NewScope(wf, invoc)
+					resolvedInput, err := cr.exprParser.Resolve(queryScope, val)
 					if err != nil {
 						logrus.WithFields(logrus.Fields{
 							"val":      val,

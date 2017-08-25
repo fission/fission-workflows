@@ -26,7 +26,7 @@ var JSON_TYPES = []string{
 
 func isJsonValue(val *types.TypedValue) bool {
 	for _, vtype := range JSON_TYPES {
-		if vtype == val.Type {
+		if FormatType(FORMAT_JSON, vtype) == val.Type {
 			return true
 		}
 	}

@@ -108,6 +108,10 @@ func NewComposedParserFormatter(pfs map[string]ParserFormatter, order ...string)
 }
 
 func (cp *ComposedParserFormatter) Parse(i interface{}) (result *types.TypedValue, err error) {
+	if tv, ok := i.(*types.TypedValue); ok {
+		return tv, nil
+	}
+
 	for _, p := range cp.priorities {
 		result, err = cp.pfs[p].Parse(i)
 		if err == nil && result != nil {
@@ -121,9 +125,7 @@ func (cp *ComposedParserFormatter) Parse(i interface{}) (result *types.TypedValu
 }
 
 func (cp *ComposedParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
-	f, _ := ParseType(v.Type)
-
-	formatter, ok := cp.pfs[f]
+	formatter, ok := cp.pfs[v.Type]
 	if !ok {
 		return nil, fmt.Errorf("TypedValue '%v' has unknown type '%v'", v, v.Type)
 	}
