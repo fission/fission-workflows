@@ -8,6 +8,7 @@ go_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/controller/query:go_default_library",
         "//pkg/types:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",

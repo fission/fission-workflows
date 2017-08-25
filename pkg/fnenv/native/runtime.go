@@ -3,6 +3,7 @@ package native
 import (
 	"fmt"
 
+	"github.com/fission/fission-workflow/pkg/controller/query"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
@@ -11,6 +12,16 @@ import (
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
 	Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
+}
+
+// A helper that allows DataTransformers to adhere to the internal function interface, allowing them to be used as tasks.
+type InternalDataTransformer struct {
+	query.DataTransformer
+}
+
+func (dt *InternalDataTransformer) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+	mainInput := spec.Inputs[types.INPUT_MAIN]
+	return dt.Apply(mainInput)
 }
 
 // Internal InternalFunction Environment for executing low overhead functions, such as control flow constructs
@@ -23,8 +34,8 @@ type FunctionEnv struct {
 func NewFunctionEnv() *FunctionEnv {
 	env := &FunctionEnv{
 		fns: map[string]InternalFunction{
-			"if":   InternalFunction(&FunctionIf{}),
-			"noop": InternalFunction(&FunctionNoop{}),
+			"if":   &FunctionIf{},
+			"noop": &FunctionNoop{},
 		},
 	}
 	log.WithField("fns", env.fns).Debugf("Internal function runtime installed.")
