@@ -123,7 +123,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"fakeFinalTask": {
 				Name: "echo",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Reference("$.tasks.FirstTask.output"),
+					types.INPUT_MAIN: typedvalues.Expr("'42'"),
 				},
 				Dependencies: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -132,7 +132,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				Name: "echo",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Reference(fmt.Sprintf("$.invocation.inputs.%s", types.INPUT_MAIN)),
+					types.INPUT_MAIN: typedvalues.Expr("'foobar'"),
 				},
 			},
 		},
@@ -147,7 +147,7 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Create invocation
 	expectedOutput := "Hello world!"
-	tv, err := typedvalues.Parse(expectedOutput)
+	tv, err := typedvalues.JsonParserFormatter{}.Parse(expectedOutput)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -45,7 +45,11 @@ Supported functionality / semantics:
 - `@` = current task
 - `.` = child element
 */
-func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types.TypedValue, error) {
+type JsonPathSelector struct {
+	pf typedvalues.ParserFormatter
+}
+
+func (jp *JsonPathSelector) Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types.TypedValue, error) {
 	// Check preconditions
 	if strings.HasPrefix(query, JSONPATH_CURRENT_TASK) && len(cwd) > 0 {
 		query = cwd[0]
@@ -62,20 +66,20 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 	// TODO fix hard-coding certain look-ups to more consist format (this is just for prototyping the view)
 	switch {
 	case strings.EqualFold(query, "$.workflow.id"):
-		return typedvalues.Parse(root.Spec.WorkflowId)
+		return jp.pf.Parse(root.Spec.WorkflowId)
 
 	case strings.EqualFold(query, "$.invocation.id"):
-		return typedvalues.Parse(root.Metadata.Id)
+		return jp.pf.Parse(root.Metadata.Id)
 
 	case strings.EqualFold(query, "$.invocation.startedAt"):
-		return typedvalues.Parse(root.Metadata.CreatedAt.String())
+		return jp.pf.Parse(root.Metadata.CreatedAt.String())
 	case strings.HasPrefix(query, "$.invocation.inputs"):
 		c := strings.Split(query, JSONPATH_CHILD)
 		input, ok := root.Spec.Inputs[c[3]]
 		if !ok {
 			return nil, nil
 		}
-		return selectJsonTypedValue(input, c[4:])
+		return jp.selectJsonTypedValue(input, c[4:])
 
 	case strings.HasPrefix(query, "$.tasks"):
 		// TODO currently just use tasks in status to catch most use cases, should be refactored to also include non-started tasks.
@@ -84,7 +88,7 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 		if !ok {
 			return nil, nil
 		}
-		return selectTask(task, c[3:])
+		return jp.selectTask(task, c[3:])
 	}
 
 	// Nothing could be found
@@ -92,44 +96,43 @@ func Select(root *types.WorkflowInvocation, query string, cwd ...string) (*types
 }
 
 // taskQuery consists of the task-scoped query (e.g. input.<xyz>)
-func selectTask(task *types.FunctionInvocation, taskQuery []string) (*types.TypedValue, error) {
+func (jp *JsonPathSelector) selectTask(task *types.FunctionInvocation, taskQuery []string) (*types.TypedValue, error) {
 	switch taskQuery[0] {
 	case "status":
-		return typedvalues.Parse(task.Status.Status.String())
+		return jp.pf.Parse(task.Status.Status.String())
 	case "startedAt":
-		return typedvalues.Parse(task.Metadata.CreatedAt.String())
+		return jp.pf.Parse(task.Metadata.CreatedAt.String())
 	case "completedAt":
 		if task.Status.Status.Finished() {
-			return typedvalues.Parse(task.Status.Status.String())
+			return jp.pf.Parse(task.Status.Status.String())
 		}
 	case "output":
-		return selectJsonTypedValue(task.Status.Output, taskQuery[1:])
+		return jp.selectJsonTypedValue(task.Status.Output, taskQuery[1:])
 	}
 	return nil, nil
 }
 
 // TODO move this out to typedvalues to support more data formats
-func selectJsonTypedValue(root *types.TypedValue, query []string) (*types.TypedValue, error) {
-	if !typedvalues.Supported(root) {
-		return nil, ErrUnsupportedDataType
-	}
-
+func (jp *JsonPathSelector) selectJsonTypedValue(root *types.TypedValue, query []string) (*types.TypedValue, error) {
 	if len(query) == 0 {
 		return root, nil
 	}
 
-	val := typedvalues.From(root)
-
-	result, err := traverse(val, query)
+	val, err := jp.pf.Format(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return typedvalues.Parse(result)
+	result, err := jp.traverse(val, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return jp.pf.Parse(result)
 }
 
 // query: foo.bar
-func traverse(root interface{}, query []string) (interface{}, error) {
+func (jp *JsonPathSelector) traverse(root interface{}, query []string) (interface{}, error) {
 	src := reflect.Indirect(reflect.ValueOf(root))
 
 	var result interface{}

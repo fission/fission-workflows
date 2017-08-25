@@ -23,6 +23,8 @@ import (
 	"github.com/nats-io/go-nats-streaming"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"github.com/fission/fission-workflow/pkg/controller/query"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 )
 
 const (
@@ -130,7 +132,9 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	ctr := controller.NewController(invocationProjector, workflowProjector, s, functionApi, invocationApi)
+	pf := typedvalues.NewDefaultParserFormatter()
+	ep := query.NewJavascriptExpressionParser(pf)
+	ctr := controller.NewController(invocationProjector, workflowProjector, s, functionApi, invocationApi, ep)
 	defer ctr.Close()
 	go ctr.Run(ctx)
 

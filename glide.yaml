@@ -29,3 +29,6 @@ import:
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/labels
+- package: github.com/robertkrimen/otto
+- package: gopkg.in/sourcemap.v1
+  version: v2.0.0
