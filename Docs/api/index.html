@@ -354,25 +354,33 @@ font-style: italic;
     "id" : "aeiou"
   },
   "spec" : {
-    "src" : {
-      "apiVersion" : "aeiou",
-      "outputTask" : "aeiou",
-      "tasks" : {
-        "key" : {
-          "args" : [ { } ],
-          "name" : "aeiou",
-          "type" : "aeiou",
-          "dependencies" : [ "aeiou" ]
-        }
+    "apiVersion" : "aeiou",
+    "outputTask" : "aeiou",
+    "tasks" : {
+      "key" : {
+        "inputs" : {
+          "key" : {
+            "type" : "aeiou",
+            "value" : "aeiou"
+          }
+        },
+        "name" : "aeiou",
+        "type" : "aeiou",
+        "dependencies" : {
+          "key" : {
+            "alias" : "aeiou",
+            "type" : { }
+          }
+        },
+        "dependencies_await" : 0
       }
-    },
-    "name" : "aeiou",
-    "version" : "aeiou"
+    }
   },
   "status" : {
     "resolvedTasks" : {
       "key" : {
         "src" : "aeiou",
+        "runtime" : "aeiou",
         "resolved" : "aeiou"
       }
     },
@@ -582,22 +590,32 @@ To lighten the request load, consider using a more specific request.</div>
     "id" : "aeiou"
   },
   "spec" : {
-    "input" : "aeiou",
+    "inputs" : {
+      "key" : {
+        "type" : "aeiou",
+        "value" : "aeiou"
+      }
+    },
     "workflowId" : "aeiou"
   },
   "status" : {
-    "output" : "aeiou",
+    "output" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
         "spec" : {
-          "input" : "aeiou",
-          "functionId" : "aeiou",
-          "functionName" : "aeiou",
+          "inputs" : {
+            "key" : ""
+          },
+          "type" : {
+            "src" : "aeiou",
+            "runtime" : "aeiou",
+            "resolved" : "aeiou"
+          },
           "taskId" : "aeiou"
         },
         "status" : {
-          "output" : "aeiou",
+          "output" : "",
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -693,8 +711,6 @@ To lighten the request load, consider using a more specific request.</div>
     <div class="field-items">
       <div class="param">workflowId (optional)</div>
 
-      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  </div><div class="param">input (optional)</div>
-
       <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  </div>
     </div>  <!-- field-items -->
 
@@ -715,22 +731,32 @@ To lighten the request load, consider using a more specific request.</div>
     "id" : "aeiou"
   },
   "spec" : {
-    "input" : "aeiou",
+    "inputs" : {
+      "key" : {
+        "type" : "aeiou",
+        "value" : "aeiou"
+      }
+    },
     "workflowId" : "aeiou"
   },
   "status" : {
-    "output" : "aeiou",
+    "output" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
         "spec" : {
-          "input" : "aeiou",
-          "functionId" : "aeiou",
-          "functionName" : "aeiou",
+          "inputs" : {
+            "key" : ""
+          },
+          "type" : {
+            "src" : "aeiou",
+            "runtime" : "aeiou",
+            "resolved" : "aeiou"
+          },
           "taskId" : "aeiou"
         },
         "status" : {
-          "output" : "aeiou",
+          "output" : "",
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -795,22 +821,32 @@ To lighten the request load, consider using a more specific request.</div>
     "id" : "aeiou"
   },
   "spec" : {
-    "input" : "aeiou",
+    "inputs" : {
+      "key" : {
+        "type" : "aeiou",
+        "value" : "aeiou"
+      }
+    },
     "workflowId" : "aeiou"
   },
   "status" : {
-    "output" : "aeiou",
+    "output" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
         "spec" : {
-          "input" : "aeiou",
-          "functionId" : "aeiou",
-          "functionName" : "aeiou",
+          "inputs" : {
+            "key" : ""
+          },
+          "type" : {
+            "src" : "aeiou",
+            "runtime" : "aeiou",
+            "resolved" : "aeiou"
+          },
           "taskId" : "aeiou"
         },
         "status" : {
-          "output" : "aeiou",
+          "output" : "",
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -891,15 +927,16 @@ To lighten the request load, consider using a more specific request.</div>
     <li><a href="#FunctionInvocationStatusStatus"><code>FunctionInvocationStatusStatus</code> - </a></li>
     <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
     <li><a href="#Task"><code>Task</code> - </a></li>
-    <li><a href="#TaskParameters"><code>TaskParameters</code> - </a></li>
+    <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
+    <li><a href="#TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a></li>
     <li><a href="#TaskTypeDef"><code>TaskTypeDef</code> - </a></li>
+    <li><a href="#TypedValue"><code>TypedValue</code> - </a></li>
     <li><a href="#Workflow"><code>Workflow</code> - Workflow Model</a></li>
-    <li><a href="#WorkflowDefinition"><code>WorkflowDefinition</code> - </a></li>
     <li><a href="#WorkflowInvocation"><code>WorkflowInvocation</code> - </a></li>
     <li><a href="#WorkflowInvocationSpec"><code>WorkflowInvocationSpec</code> - Workflow Invocation Model</a></li>
     <li><a href="#WorkflowInvocationStatus"><code>WorkflowInvocationStatus</code> - </a></li>
     <li><a href="#WorkflowInvocationStatusStatus"><code>WorkflowInvocationStatusStatus</code> - </a></li>
-    <li><a href="#WorkflowSpec"><code>WorkflowSpec</code> - </a></li>
+    <li><a href="#WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a></li>
     <li><a href="#WorkflowStatus"><code>WorkflowStatus</code> - Internal</a></li>
     <li><a href="#WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - </a></li>
     <li><a href="#apiserverHealth"><code>apiserverHealth</code> - </a></li>
@@ -914,7 +951,7 @@ or the response type of an API method. For instance:</a></li>
 
   <div class="model">
     <h3><a name="FunctionInvocation"><code>FunctionInvocation</code> - Function Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'>It contains no indication which workflow/task it is executed for</div>
+    <div class='model-description'></div>
     <div class="field-items">
       <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
 <div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocationSpec">FunctionInvocationSpec</a></span>  </div>
@@ -925,10 +962,9 @@ or the response type of an API method. For instance:</a></li>
     <h3><a name="FunctionInvocationSpec"><code>FunctionInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">functionId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">functionName (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskTypeDef">TaskTypeDef</a></span>  </div>
 <div class="param">taskId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">input (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -937,7 +973,7 @@ or the response type of an API method. For instance:</a></li>
     <div class="field-items">
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocationStatusStatus">FunctionInvocationStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -968,12 +1004,21 @@ Id is specified outside of task</p>
 </ul>
  </div>
 <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">args (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskParameters">array[TaskParameters]</a></span>  </div>
-<div class="param">dependencies (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
+<div class="param">dependencies (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
+<div class="param">dependencies_await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="TaskParameters"><code>TaskParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParametersDependencyType">TaskDependencyParametersDependencyType</a></span>  </div>
+<div class="param">alias (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->
@@ -983,7 +1028,16 @@ Id is specified outside of task</p>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">src (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">resolved (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TypedValue"><code>TypedValue</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'>Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.</div>
+    <div class="field-items">
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">value (optional)</div><div class="param-desc"><span class="param-type"><a href="#ByteArray">byte[]</a></span>  format: byte</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -993,21 +1047,6 @@ Id is specified outside of task</p>
       <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
 <div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowSpec">WorkflowSpec</a></span>  </div>
 <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowStatus">WorkflowStatus</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowDefinition"><code>WorkflowDefinition</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>The workflowDefinition contains the definition of a workflow.</p>
-<p>Ideally the source code (json, yaml) can be converted directly to this message.
-Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
-to the user/system upon the creation of a workflow.</p>
-</div>
-    <div class="field-items">
-      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>apiVersion describes what version is of the workflow definition.</p>
-<p>By default the workflow engine will assume the latest version to be used.</p>
- </div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> Dependency graph is build into the tasks </div>
-<div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1024,7 +1063,7 @@ to the user/system upon the creation of a workflow.</p>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">workflowId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">input (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1034,7 +1073,7 @@ to the user/system upon the creation of a workflow.</p>
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowInvocationStatusStatus">WorkflowInvocationStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocation">map[String, FunctionInvocation]</a></span>  </div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1044,12 +1083,18 @@ to the user/system upon the creation of a workflow.</p>
           </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="WorkflowSpec"><code>WorkflowSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
+    <h3><a name="WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>The workflowDefinition contains the definition of a workflow.</p>
+<p>Ideally the source code (json, yaml) can be converted directly to this message.
+Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
+to the user/system upon the creation of a workflow.</p>
+</div>
     <div class="field-items">
-      <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">version (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">src (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowDefinition">WorkflowDefinition</a></span>  </div>
+      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>apiVersion describes what version is of the workflow definition.</p>
+<p>By default the workflow engine will assume the latest version to be used.</p>
+ </div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> Dependency graph is build into the tasks </div>
+<div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

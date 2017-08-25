@@ -74,12 +74,6 @@
             "in": "query",
             "required": false,
             "type": "string"
-          },
-          {
-            "name": "input",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -282,24 +276,23 @@
           "$ref": "#/definitions/FunctionInvocationStatus"
         }
       },
-      "description": "It contains no indication which workflow/task it is executed for",
       "title": "Function Invocation Model"
     },
     "FunctionInvocationSpec": {
       "type": "object",
       "properties": {
-        "functionId": {
-          "type": "string",
+        "type": {
+          "$ref": "#/definitions/TaskTypeDef",
           "title": "Id of the function to be invoked (no ambiguatity at this point"
-        },
-        "functionName": {
-          "type": "string"
         },
         "taskId": {
           "type": "string"
         },
-        "input": {
-          "type": "string"
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TypedValue"
+          }
         }
       }
     },
@@ -314,7 +307,7 @@
           "format": "date-time"
         },
         "output": {
-          "type": "string"
+          "$ref": "#/definitions/TypedValue"
         }
       }
     },
@@ -357,24 +350,45 @@
           "type": "string",
           "title": "Name/identifier of the function"
         },
-        "args": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/TaskParameters"
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TypedValue"
           }
         },
         "dependencies": {
-          "type": "array",
-          "items": {
-            "type": "string"
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TaskDependencyParameters"
           },
-          "title": "TODO next or after\nDependencies for this task to execute"
+          "title": "Dependencies for this task to execute"
+        },
+        "dependencies_await": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of dependencies to wait for"
         }
       },
       "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of task"
     },
-    "TaskParameters": {
-      "type": "object"
+    "TaskDependencyParameters": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/TaskDependencyParametersDependencyType"
+        },
+        "alias": {
+          "type": "string"
+        }
+      }
+    },
+    "TaskDependencyParametersDependencyType": {
+      "type": "string",
+      "enum": [
+        "DATA",
+        "CONTROL"
+      ],
+      "default": "DATA"
     },
     "TaskTypeDef": {
       "type": "object",
@@ -382,10 +396,26 @@
         "src": {
           "type": "string"
         },
+        "runtime": {
+          "type": "string"
+        },
         "resolved": {
           "type": "string"
         }
       }
+    },
+    "TypedValue": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type."
     },
     "Workflow": {
       "type": "object",
@@ -401,28 +431,6 @@
         }
       },
       "title": "Workflow Model"
-    },
-    "WorkflowDefinition": {
-      "type": "object",
-      "properties": {
-        "apiVersion": {
-          "type": "string",
-          "description": "apiVersion describes what version is of the workflow definition.\n\nBy default the workflow engine will assume the latest version to be used."
-        },
-        "tasks": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/Task"
-          },
-          "description": "Dependency graph is build into the tasks",
-          "title": "TODO Parameters\nActions"
-        },
-        "outputTask": {
-          "type": "string",
-          "title": "From which task should the workflow return the output? (todo multiple? implicit?)"
-        }
-      },
-      "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow."
     },
     "WorkflowInvocation": {
       "type": "object",
@@ -444,8 +452,11 @@
         "workflowId": {
           "type": "string"
         },
-        "input": {
-          "type": "string"
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TypedValue"
+          }
         }
       },
       "title": "Workflow Invocation Model"
@@ -467,7 +478,7 @@
           }
         },
         "output": {
-          "type": "string"
+          "$ref": "#/definitions/TypedValue"
         }
       }
     },
@@ -486,16 +497,25 @@
     "WorkflowSpec": {
       "type": "object",
       "properties": {
-        "name": {
-          "type": "string"
+        "apiVersion": {
+          "type": "string",
+          "description": "apiVersion describes what version is of the workflow definition.\n\nBy default the workflow engine will assume the latest version to be used."
         },
-        "version": {
-          "type": "string"
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Task"
+          },
+          "description": "Dependency graph is build into the tasks",
+          "title": "TODO Parameters\nActions"
         },
-        "src": {
-          "$ref": "#/definitions/WorkflowDefinition"
+        "outputTask": {
+          "type": "string",
+          "title": "From which task should the workflow return the output? Future: multiple? Implicit?"
         }
-      }
+      },
+      "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow.",
+      "title": "Workflow Definition"
     },
     "WorkflowStatus": {
       "type": "object",
