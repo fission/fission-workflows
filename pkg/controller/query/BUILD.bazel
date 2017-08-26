@@ -4,14 +4,13 @@ go_library(
     name = "go_default_library",
     srcs = [
         "expr.go",
-        "jsonpath.go",
-        "transformers.go",
+        "scope.go",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/types:go_default_library",
         "//pkg/types/typedvalues:go_default_library",
+        "//pkg/util:go_default_library",
         "//vendor/github.com/robertkrimen/otto:go_default_library",
-        "//vendor/github.com/sirupsen/logrus:go_default_library",
     ],
 )
