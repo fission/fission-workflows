@@ -4,7 +4,7 @@
   "tasks": {
     "whaleEcho": {
       "inputs" : {
-        "type" : "ref",
+        "type" : "expr",
         "value" : "$.invocation.inputs.default"
       },
       "name": "whalesay",

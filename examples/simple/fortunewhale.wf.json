@@ -8,7 +8,7 @@
     "generateFortune": {
       "name": "fortune",
       "inputs" : {
-        "type" : "ref",
+        "type" : "expr",
         "value" : "$.invocation.inputs.default"
       },
       "dependencies": {
@@ -19,7 +19,7 @@
       "name": "whalesay",
       "inputs" : {
         "default" : {
-          "type" : "ref",
+          "type" : "expr",
           "value" : "$.tasks.generateFortune.output"
         }
       },
