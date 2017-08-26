@@ -1,31 +1,30 @@
 package query
 
 import (
+	"time"
+
+	"errors"
+
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/robertkrimen/otto"
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 type ExpressionParser interface {
 	Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error)
 }
 
-// TODO measure performance
+var RESOLVING_TIMEOUT = time.Duration(100) * time.Millisecond
+var ErrTimeOut = errors.New("Expression resolve timeout.")
+
 type JavascriptExpressionParser struct {
-	vm     *otto.Otto // TODO limit functionality (might need a fork?)
+	vm     *otto.Otto
 	parser typedvalues.Parser
 }
 
-/*
-Helper functions
-task().
-dependency(id).
-
-guid
-*/
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
-	// TODO inject helper functions
 	vm := otto.New()
 	err := vm.Set("uid", func(call otto.FunctionCall) otto.Value {
 		uid, _ := vm.ToValue(util.Uid())
@@ -45,10 +44,26 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, scope inter
 		return expr, nil
 	}
 
-	oe.vm.Set("$", rootScope)
-	oe.vm.Set("@", scope)
+	defer func() {
+		if caught := recover(); caught != nil {
+			if ErrTimeOut != caught {
+				panic(caught)
+			}
+		}
+	}()
 
-	jsResult, err := oe.vm.Run(expr.Value)
+	scoped := oe.vm.Copy()
+	scoped.Set("$", rootScope)
+	scoped.Set("task", scope)
+
+	go func() {
+		<-time.After(RESOLVING_TIMEOUT)
+		scoped.Interrupt <- func() {
+			panic(ErrTimeOut)
+		}
+	}()
+
+	jsResult, err := scoped.Run(expr.Value)
 	if err != nil {
 		return nil, err
 	}
