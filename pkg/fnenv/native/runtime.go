@@ -20,12 +20,9 @@ type FunctionEnv struct {
 	fns map[string]InternalFunction // Name -> function
 }
 
-func NewFunctionEnv() *FunctionEnv {
+func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 	env := &FunctionEnv{
-		fns: map[string]InternalFunction{
-			"if":   &FunctionIf{},
-			"noop": &FunctionNoop{},
-		},
+		fns: fns,
 	}
 	log.WithField("fns", env.fns).Debugf("Internal function runtime installed.")
 	return env

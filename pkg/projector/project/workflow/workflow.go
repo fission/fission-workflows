@@ -63,8 +63,8 @@ func created(currentState types.Workflow, event *eventstore.Event) (newState *ty
 			CreatedAt: event.GetTime(),
 		},
 		Spec: spec,
-		Status: &types.WorkflowStatus{ // TODO Nest into own state machine maybe
-			Status:    types.WorkflowStatus_UNKNOWN,
+		Status: &types.WorkflowStatus{
+			Status:    types.WorkflowStatus_UNKNOWN, // TODO Nest into own state machine maybe
 			UpdatedAt: event.GetTime(),
 		},
 	}, nil

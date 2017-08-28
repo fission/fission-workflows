@@ -147,8 +147,8 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Create invocation
 	expectedOutput := "Hello world!"
-	tv, err := typedvalues.JsonParserFormatter{}.Parse(expectedOutput)
-	etv, err := typedvalues.JsonParserFormatter{}.Parse(strings.ToUpper(expectedOutput))
+	tv, err := typedvalues.Parse(expectedOutput)
+	etv, err := typedvalues.Parse(strings.ToUpper(expectedOutput))
 	if err != nil {
 		t.Fatal(err)
 	}

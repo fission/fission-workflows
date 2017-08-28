@@ -32,14 +32,12 @@ type TaskScope struct {
 	Output       interface{}
 }
 
-var parserFormatter = typedvalues.NewDefaultParserFormatter()
-
 func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 
 	tasks := map[string]*TaskScope{}
 	for taskId, fn := range invoc.Status.Tasks {
 
-		out, err := parserFormatter.Format(fn.Status.Output)
+		out, err := typedvalues.Format(fn.Status.Output)
 		if err != nil {
 			panic(err)
 		}
@@ -69,7 +67,7 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {
 	result := map[string]interface{}{}
 	for k, v := range values {
-		i, err := parserFormatter.Format(v)
+		i, err := typedvalues.Format(v)
 		if err != nil {
 			panic(err)
 		}

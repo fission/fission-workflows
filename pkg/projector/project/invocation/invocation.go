@@ -170,6 +170,44 @@ func taskSucceeded(currentState types.WorkflowInvocation, event *eventstore.Even
 	fnExisting.Status.UpdatedAt = event.Time
 	fnExisting.Status.Output = fn.Status.Output
 
+	// If a task returned a flow, restructure the status
+	//if typedvalues.IsFormat(fn.Status.Output.Type, typedvalues.TYPE_FLOW) {
+	//
+	//	flow, err := typedvalues.NewDefaultParserFormatter().Format(fn.Status.Output)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	outputTask, ok := flow.(*types.Task)
+	//	if ok {
+	//		return nil, err
+	//	}
+	//
+	//	// TODO Copy src task dependencies
+	//	// TODO limit scope
+	//	outputTask.Dependencies = map[string]*types.TaskDependencyParameters{
+	//		taskId: nil,
+	//	}
+	//	outputTask.DependenciesAwait = 1
+	//
+	//	// Generate a name
+	//	outputTaskId := fmt.Sprintf("%s_generated", taskId)
+	//
+	//	invocation.GetStatus().Workflow.Tasks[outputTaskId] = outputTask
+	//	// TODO change dependencies in other tasks to depend on the new task
+	//	for _, task := range invocation.GetStatus().Workflow.Tasks {
+	//		dependee := false
+	//		for depKey := range task.Dependencies {
+	//			if depKey == taskId {
+	//				dependee = true
+	//			}
+	//		}
+	//		if dependee {
+	//			task.Dependencies[outputTaskId] = nil
+	//		}
+	//	}
+	//}
+
 	return &currentState, nil
 }
 

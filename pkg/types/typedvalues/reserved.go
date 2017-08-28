@@ -6,11 +6,13 @@ import (
 	"strings"
 
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 const (
 	FORMAT_RESERVED = "reserved"
 	TYPE_EXPRESSION = "expr"
+	TYPE_FLOW       = "flow"
 	TYPE_RAW        = "raw"
 )
 
@@ -28,7 +30,7 @@ func IsExpression(value *types.TypedValue) bool {
 // RawParserFormatter converts []byte values to TypedValue, without any formatting or parsing.
 type RawParserFormatter struct{}
 
-func (dp *RawParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
+func (dp *RawParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	b, ok := i.([]byte)
 	if !ok {
 		return nil, errors.New("Provided value is not of type '[]byte'")
@@ -48,7 +50,7 @@ func (dp *RawParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
 // ExprParserFormatter parses and formats expressions to and from valid expression-strings
 type ExprParserFormatter struct{}
 
-func (ExprParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
+func (ep *ExprParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	s, ok := i.(string)
 
 	if !ok {
@@ -68,8 +70,8 @@ func (ExprParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
 	}, nil
 }
 
-func (ExprParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
-	if isFormat(v.Type, TYPE_EXPRESSION) {
+func (ep *ExprParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+	if IsFormat(v.Type, TYPE_EXPRESSION) {
 		return nil, fmt.Errorf("Value '%v' is not of type 'expr'", v)
 	}
 
@@ -107,13 +109,21 @@ func NewComposedParserFormatter(pfs map[string]ParserFormatter, order ...string)
 	}
 }
 
-func (cp *ComposedParserFormatter) Parse(i interface{}) (result *types.TypedValue, err error) {
+func (cp *ComposedParserFormatter) Parse(i interface{}, allowedTypes ...string) (result *types.TypedValue, err error) {
 	if tv, ok := i.(*types.TypedValue); ok {
 		return tv, nil
 	}
 
-	for _, p := range cp.priorities {
-		result, err = cp.pfs[p].Parse(i)
+	if len(allowedTypes) == 0 {
+		allowedTypes = cp.priorities
+	}
+
+	for _, p := range allowedTypes {
+		parser, ok := cp.pfs[p]
+		if !ok {
+			continue
+		}
+		result, err = parser.Parse(i)
 		if err == nil && result != nil {
 			break
 		}
@@ -125,9 +135,48 @@ func (cp *ComposedParserFormatter) Parse(i interface{}) (result *types.TypedValu
 }
 
 func (cp *ComposedParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+
 	formatter, ok := cp.pfs[v.Type]
 	if !ok {
 		return nil, fmt.Errorf("TypedValue '%v' has unknown type '%v'", v, v.Type)
 	}
 	return formatter.Format(v)
+}
+
+type ControlFlowParserFormatter struct {
+}
+
+func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
+	// TODO allow scope too
+	t, ok := i.(*types.Task)
+	if !ok {
+		return nil, errors.New("Provided value is not of type 'task'")
+	}
+
+	bs, err := proto.Marshal(t)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.TypedValue{
+		Type:  TYPE_FLOW,
+		Value: bs,
+	}, nil
+}
+
+func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+	//if IsFormat(v.Type, TYPE_FLOW) {
+	//	return nil, fmt.Errorf("Value '%v' is not of type 'flow'", v)
+	//}
+
+	// TODO allow scope too
+	t := &types.Task{}
+	err := proto.Unmarshal(v.Value, t)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
 }

@@ -132,7 +132,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	pf := typedvalues.NewDefaultParserFormatter()
+	pf := typedvalues.DefaultParserFormatter
 	ep := query.NewJavascriptExpressionParser(pf)
 	ctr := controller.NewController(invocationProjector, workflowProjector, s, functionApi, invocationApi, ep)
 	defer ctr.Close()

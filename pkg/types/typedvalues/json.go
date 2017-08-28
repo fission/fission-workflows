@@ -16,12 +16,14 @@ const (
 	TYPE_STRING = "string"
 	TYPE_OBJECT = "object"
 	TYPE_ARRAY  = "array"
+	TYPE_BOOL   = "bool"
 )
 
 var JSON_TYPES = []string{
 	TYPE_STRING,
 	TYPE_OBJECT,
 	TYPE_ARRAY,
+	TYPE_BOOL,
 }
 
 func isJsonValue(val *types.TypedValue) bool {
@@ -35,9 +37,11 @@ func isJsonValue(val *types.TypedValue) bool {
 
 type JsonParserFormatter struct{}
 
-func (JsonParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
+func (jp *JsonParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	var tp string
 	switch i.(type) {
+	case bool:
+		tp = TYPE_BOOL
 	case string:
 		tp = TYPE_STRING
 	case map[string]interface{}:
@@ -59,7 +63,7 @@ func (JsonParserFormatter) Parse(i interface{}) (*types.TypedValue, error) {
 	}, nil
 }
 
-func (JsonParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+func (jp *JsonParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
 	if !isJsonValue(v) {
 		return nil, fmt.Errorf("Value '%v' is not a JSON type", v)
 	}
