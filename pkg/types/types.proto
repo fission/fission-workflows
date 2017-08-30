@@ -106,6 +106,10 @@ message WorkflowSpec {
 // Id is specified outside of task
 message Task {
 
+    // Same as the string in the map<string, Task> definition. One needs to be set.
+    //
+    // If there is a conflict the map key gets precendence over this field.
+    string id = 1;
     // Type defines the type of the task that needs to be performed
     //
     // By default the following types are supported:
