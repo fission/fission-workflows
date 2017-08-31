@@ -9,14 +9,15 @@ import (
 	"github.com/fission/fission-workflow/pkg/types/events"
 	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/fission/fission-workflow/pkg/api/workflow/parse"
 )
 
 type Api struct {
 	esClient eventstore.Client
-	Parser   *Parser
+	Resolver *parse.Resolver
 }
 
-func NewApi(esClient eventstore.Client, parser *Parser) *Api {
+func NewApi(esClient eventstore.Client, parser *parse.Resolver) *Api {
 	return &Api{esClient, parser}
 }
 
@@ -38,7 +39,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 
 	// TODO move this to controller or separate service or fission function, in order to make it more reliable
 	// TODO more FT
-	parsed, err := wa.Parser.Parse(workflow)
+	parsed, err := wa.Resolver.Resolve(workflow)
 	if err != nil {
 		return "", fmt.Errorf("Failed to parse workflow: %v", err)
 	}

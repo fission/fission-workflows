@@ -8,6 +8,7 @@ go_library(
         "//pkg/api/function:go_default_library",
         "//pkg/api/invocation:go_default_library",
         "//pkg/api/workflow:go_default_library",
+        "//pkg/api/workflow/parse:go_default_library",
         "//pkg/apiserver:go_default_library",
         "//pkg/cache:go_default_library",
         "//pkg/controller:go_default_library",

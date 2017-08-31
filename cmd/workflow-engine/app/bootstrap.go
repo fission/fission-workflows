@@ -25,6 +25,7 @@ import (
 	"github.com/nats-io/go-nats-streaming"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"github.com/fission/fission-workflow/pkg/api/workflow/parse"
 )
 
 const (
@@ -73,8 +74,8 @@ func Run(ctx context.Context, opts *Options) error {
 	natsClient := inats.New(inats.NewConn(stanConn))
 	cache := cache.NewMapCache()
 
-	workflowParser := workflow.NewParser(opts.FunctionRegistry)
-	workflowValidator := workflow.NewValidator()
+	workflowParser := parse.NewResolver(opts.FunctionRegistry)
+	workflowValidator := parse.NewValidator()
 	invocationProjector := ip.NewInvocationProjector(natsClient, cache)
 	workflowProjector := wp.NewWorkflowProjector(natsClient, cache)
 	err = invocationProjector.Watch("invocation.>")

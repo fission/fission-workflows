@@ -12,6 +12,8 @@ import:
   version: v1.5.1
 - package: github.com/golang/protobuf
   version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
+- package: golang.org/x/net
+  version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
 - package: google.golang.org/genproto
 - package: github.com/satori/go.uuid
   version: ^1.1.0
@@ -32,3 +34,4 @@ import:
 - package: github.com/robertkrimen/otto
 - package: gopkg.in/sourcemap.v1
   version: v2.0.0
+- package: gopkg.in/yaml.v2

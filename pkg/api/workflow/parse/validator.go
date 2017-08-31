@@ -1,4 +1,4 @@
-package workflow
+package parse
 
 import (
 	"errors"
@@ -43,10 +43,6 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 			return fmt.Errorf("Task id '%s' is not unique", taskId)
 		}
 		refTable[taskId] = task
-
-		if len(task.GetType()) > 0 && !strings.EqualFold(task.GetType(), "function") {
-			return fmt.Errorf("Unknown task type '%s'", task.GetType())
-		}
 	}
 
 	if len(spec.Tasks) == 0 {

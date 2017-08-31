@@ -1,5 +1,5 @@
-hash: 1358893ead2958b1049524016bf73c96c87431eab4d1e7de6c3978995558cf4a
-updated: 2017-08-24T16:51:31.458944681-07:00
+hash: 69b7c3a6555a36036eb2b1579c8f8308588ed930508f601abe2b5b9902b5e6b5
+updated: 2017-08-30T16:26:01.952754427-07:00
 imports:
 - name: github.com/fission/fission
   version: 37aa266a4d4bd0484e66afbc5206b118638e77bf
@@ -17,7 +17,7 @@ imports:
   - proto
   - protoc-gen-gogo/descriptor
 - name: github.com/golang/glog
-  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+  version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
   version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
   subpackages:
@@ -60,6 +60,7 @@ imports:
   - parser
   - registry
   - token
+  - underscore
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
@@ -80,13 +81,6 @@ imports:
   version: 396c9fc8fb0ce27fc7a1ff136dc5af797bba258a
   subpackages:
   - unix
-- name: golang.org/x/text
-  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
-  subpackages:
-  - secure/bidirule
-  - transform
-  - unicode/bidi
-  - unicode/norm
 - name: google.golang.org/genproto
   version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
@@ -108,10 +102,21 @@ imports:
   - status
   - tap
   - transport
+- name: gopkg.in/sourcemap.v1
+  version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b5
+- name: gopkg.in/yaml.v2
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 - name: k8s.io/apimachinery
   version: dc1f89aff9a7509782bde3b68824c8043a3e58cc
   subpackages:
+  - pkg/conversion
   - pkg/labels
-- name: gopkg.in/sourcemap.v1
-  version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b
-testImports: []
+  - pkg/selection
+  - pkg/util/sets
+  - pkg/util/validation
+  - third_party/forked/golang/reflect
+testImports:
+- name: github.com/magiconair/properties
+  version: be5ece7dd465ab0765a9682137865547526d1dfb
+  subpackages:
+  - assert
