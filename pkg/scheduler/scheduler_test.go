@@ -5,13 +5,13 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCalculateWorkflowDynamicTaskInjection(t *testing.T) {
 	dynamicTask, _ := typedvalues.Parse(&types.Task{
-		Id: "injected",
-		Name: "InjectedFunction",
+		Id:           "injected",
+		Name:         "InjectedFunction",
 		Dependencies: map[string]*types.TaskDependencyParameters{},
 	})
 

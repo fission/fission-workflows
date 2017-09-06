@@ -6,7 +6,7 @@ import (
 
 	"fmt"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {

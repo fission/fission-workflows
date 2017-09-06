@@ -6,6 +6,7 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
 	"time"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPublisherSubscribe(t *testing.T) {
@@ -13,9 +14,7 @@ func TestPublisherSubscribe(t *testing.T) {
 	defer pub.Close()
 	sub := pub.Subscribe()
 
-	if sub == nil {
-		t.Error("Empty subscription provided")
-	}
+	assert.NotNil(t, sub)
 }
 
 func TestPublish(t *testing.T) {
@@ -29,17 +28,13 @@ func TestPublish(t *testing.T) {
 	}), time.Now(), "TestMsg")
 
 	err := pub.Publish(msg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	pub.Close()
 
 	err = expectMsgs(sub, []Msg{
 		msg,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestPublishBufferOverflow(t *testing.T) {
@@ -60,29 +55,22 @@ func TestPublishBufferOverflow(t *testing.T) {
 	}), time.Now(), "TestMsg2")
 
 	err := pub.Publish(firstMsg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
+
 	err = pub.Publish(secondMsg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	pub.Close()
 
 	err = expectMsgs(sub, []Msg{
 		firstMsg,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	err = expectMsgs(sub2, []Msg{
 		firstMsg,
 		secondMsg,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 }
 
 // Note ensure that subscriptions are closed before this check
