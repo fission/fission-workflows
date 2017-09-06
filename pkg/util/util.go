@@ -38,7 +38,7 @@ func Wait(wg sync.WaitGroup, timeout time.Duration) bool {
 	select {
 	case <-wgDone:
 		return true
-	case time.After(timeout):
+	case <-time.After(timeout):
 		return false
 	}
 }
