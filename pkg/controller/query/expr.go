@@ -16,8 +16,11 @@ type ExpressionParser interface {
 	Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error)
 }
 
-var RESOLVING_TIMEOUT = time.Duration(100) * time.Millisecond
-var ErrTimeOut = errors.New("Expression resolve timeout.")
+var (
+	RESOLVING_TIMEOUT = time.Duration(100) * time.Millisecond
+
+	ErrTimeOut = errors.New("expression resolver timed out")
+)
 
 type JavascriptExpressionParser struct {
 	vm     *otto.Otto
@@ -26,6 +29,7 @@ type JavascriptExpressionParser struct {
 
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
 	vm := otto.New()
+	// Uid serves mostly as an example of how to add functions to the Otto runtime.
 	err := vm.Set("uid", func(call otto.FunctionCall) otto.Value {
 		uid, _ := vm.ToValue(util.Uid())
 		return uid
