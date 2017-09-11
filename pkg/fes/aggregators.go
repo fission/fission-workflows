@@ -5,7 +5,10 @@ import (
 	"reflect"
 )
 
-// Helper to implement most of the Aggregator
+// AggregatorMixin is a helper to implement most of the Aggregator interface.
+//
+// Structs using this struct will only need to implement the following methods:
+// - ApplyEvent(event)
 type AggregatorMixin struct {
 	aggregate Aggregate
 	parent    Aggregator
@@ -18,7 +21,7 @@ func (am *AggregatorMixin) Aggregate() Aggregate {
 // For improved performance override this method with a aggregate-specific one
 func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
 	if newState.Aggregate() != am.Aggregate() {
-		return errors.New("Invalid newState!")
+		return errors.New("invalid newState")
 	}
 
 	n := reflect.Indirect(reflect.ValueOf(newState))
@@ -40,6 +43,6 @@ func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
 func NewAggregatorMixin(thiz Aggregator, aggregate Aggregate) *AggregatorMixin {
 	return &AggregatorMixin{
 		aggregate: aggregate,
-		parent: thiz,
+		parent:    thiz,
 	}
 }

@@ -6,9 +6,9 @@ import (
 
 	"strings"
 
-	"github.com/fission/fission-workflow/pkg/eventstore"
-	"github.com/fission/fission-workflow/pkg/util/fes"
-	"github.com/golang/protobuf/proto"
+	"encoding/json"
+
+	"github.com/fission/fission-workflow/pkg/fes"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 )
@@ -132,8 +132,8 @@ func (wc *WildcardConn) Subscribe(subject string, cb stan.MsgHandler, opts ...st
 		wc.activitySub.Close()
 	}
 	metaSub, err := wc.Conn.Subscribe(SUBJECT_ACTIVITY, func(msg *stan.Msg) {
-		subjectEvent := &eventstore.SubjectEvent{}
-		err := proto.Unmarshal(msg.Data, subjectEvent)
+		subjectEvent := &SubjectEvent{}
+		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"msg":     subjectEvent,
@@ -146,24 +146,25 @@ func (wc *WildcardConn) Subscribe(subject string, cb stan.MsgHandler, opts ...st
 			"event":   subjectEvent,
 		}).Debug("NatsClient received activity.")
 
+		subject := subjectEvent.Subject
 		// Although the activity channel should be specific to one query, recheck if subject falls in range of query.
-		if !queryMatches(subjectEvent.GetSubject(), subject) {
+		if !queryMatches(subject, subject) {
 			return
 		}
 
-		switch subjectEvent.GetType() {
-		case eventstore.SubjectEvent_CREATED:
-			if _, ok := ws.sources[subjectEvent.GetSubject()]; !ok {
+		switch subjectEvent.Type {
+		case ACTIVITY_CREATED:
+			if _, ok := ws.sources[subject]; !ok {
 
-				sub, err := wc.Subscribe(subjectEvent.GetSubject(), cb, opts...)
+				sub, err := wc.Subscribe(subject, cb, opts...)
 				if err != nil {
 					logrus.Errorf("Failed to subscribe to subject '%v': %v", subjectEvent, err)
 				}
-				ws.sources[subjectEvent.GetSubject()] = sub
+				ws.sources[subject] = sub
 			}
 		default:
 			// TODO notify subscription that subject has been closed, close channel...
-			panic(fmt.Sprintf("Unknown SubjectEvent: %v", subjectEvent))
+			panic(fmt.Sprintf("Unknown ActivityEvent: %v", subjectEvent))
 		}
 	}, stan.DeliverAllAvailable())
 	if err != nil {
@@ -181,9 +182,9 @@ func (wc *WildcardConn) Publish(subject string, data []byte) error {
 	}
 
 	// Announce subject activity on notification thread, because of missing wildcards in NATS streaming
-	activityEvent := &eventstore.SubjectEvent{
+	activityEvent := &SubjectEvent{
 		Subject: subject,
-		Type:    eventstore.SubjectEvent_CREATED, // TODO infer from context if created or closed
+		Type:    ACTIVITY_CREATED, // TODO infer from context if created or closed
 	}
 	err = wc.publishActivity(activityEvent)
 	if err != nil {
@@ -193,8 +194,8 @@ func (wc *WildcardConn) Publish(subject string, data []byte) error {
 	return nil
 }
 
-func (wc *WildcardConn) publishActivity(activity *eventstore.SubjectEvent) error {
-	subjectData, err := proto.Marshal(activity)
+func (wc *WildcardConn) publishActivity(activity *SubjectEvent) error {
+	subjectData, err := json.Marshal(activity)
 	if err != nil {
 		return err
 	}
@@ -220,8 +221,8 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 	}
 	subjectCount := map[string]int{}
 	for _, msg := range msgs {
-		subjectEvent := &eventstore.SubjectEvent{}
-		err := proto.Unmarshal(msg.Data, subjectEvent)
+		subjectEvent := &SubjectEvent{}
+		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"msg":             subjectEvent,
@@ -230,12 +231,13 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 			continue
 		}
 
-		if matcher.Match(subjectEvent.GetSubject()) {
+		subject := subjectEvent.Subject
+		if matcher.Match(subject) {
 			count := 1
-			if c, ok := subjectCount[subjectEvent.GetSubject()]; ok {
+			if c, ok := subjectCount[subject]; ok {
 				count += c
 			}
-			subjectCount[subjectEvent.GetSubject()] = count
+			subjectCount[subject] = count
 		}
 	}
 
@@ -294,4 +296,16 @@ func queryMatches(subject string, query string) bool {
 		}
 	}
 	return true
+}
+
+type ActivityEvent int32
+
+const (
+	ACTIVITY_CREATED ActivityEvent = iota
+	ACTIVITY_DELETED
+)
+
+type SubjectEvent struct {
+	Subject string        `json:"subject,omitempty"`
+	Type    ActivityEvent `json:"type,omitempty"`
 }

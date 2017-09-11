@@ -3,7 +3,7 @@ package nats
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/util/fes"
+	"github.com/fission/fission-workflow/pkg/fes"
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/go-nats-streaming"
@@ -20,16 +20,26 @@ func NewEventStore(conn *WildcardConn) *EventStore {
 	return &EventStore{
 		Publisher: pubsub.NewPublisher(),
 		conn:      conn,
+		sub:       map[fes.Aggregate]stan.Subscription{},
 	}
 }
 
 // Watch a aggregate type
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
-	sub, err := es.conn.Subscribe(aggregate.Type, func(msg *stan.Msg) {
+
+	sub, err := es.conn.Subscribe(fmt.Sprintf("%s.>", aggregate.Type), func(msg *stan.Msg) {
 		event, err := toEvent(msg)
 		if err != nil {
 			logrus.Error(err)
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"aggregate.type": event.Aggregate.Type,
+			"aggregate.id":   event.Aggregate.Id,
+			"event.type":     event.Type,
+			"event.id":       event.Id,
+		}).Infof("Publishing aggregate event to subscribers.")
+
 		err = es.Publisher.Publish(event)
 		if err != nil {
 			logrus.Error(err)
@@ -47,6 +57,13 @@ func (es *EventStore) Close() error {
 }
 
 func (es *EventStore) HandleEvent(event *fes.Event) error {
+	logrus.WithFields(logrus.Fields{
+		"event.id":       event.Id,
+		"event.type":     event.Type,
+		"aggregate.id":   event.Aggregate.Id,
+		"aggregate.type": event.Aggregate.Type,
+	}).Info("EventStore client appending event.")
+
 	subject := toSubject(event.Aggregate)
 	data, err := proto.Marshal(event)
 	if err != nil {

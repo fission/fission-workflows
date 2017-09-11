@@ -23,7 +23,7 @@ type EventHandler interface {
 // EventStore is a persistent store for events
 type EventStore interface {
 	EventHandler
-	Get(subject string) ([]*Event, error)
+	Get(aggregate *Aggregate) ([]*Event, error)
 	List(matcher StringMatcher) ([]string, error)
 }
 
@@ -40,6 +40,8 @@ type Projector interface {
 
 type CacheReader interface {
 	Get(entity Aggregator) error
+	List() []Aggregate
+	GetAggregate(a Aggregate) (Aggregator, error)
 }
 
 type CacheWriter interface {

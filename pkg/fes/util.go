@@ -7,11 +7,11 @@ import (
 
 func validateAggregate(aggregate Aggregate) error {
 	if len(aggregate.Id) == 0 {
-		return errors.New("Aggregate does not contain id")
+		return errors.New("aggregate does not contain id")
 	}
 
 	if len(aggregate.Type) == 0 {
-		return errors.New("Aggregate does not contain type")
+		return errors.New("aggregate does not contain type")
 	}
 
 	return nil
