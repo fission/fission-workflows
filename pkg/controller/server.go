@@ -5,6 +5,7 @@ import (
 
 	"context"
 
+	"fmt"
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/controller/actions"
@@ -18,7 +19,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
-	"fmt"
 )
 
 const (

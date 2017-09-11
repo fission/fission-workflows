@@ -135,8 +135,8 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 		}
 
 		log.WithFields(log.Fields{
-			"id" : dynamicTask.Id,
-			"name" : dynamicTask.Name,
+			"id":   dynamicTask.Id,
+			"name": dynamicTask.Name,
 		}).Info("Adding dynamic task.")
 
 		wi.Status.DynamicTasks[id] = dynamicTask
