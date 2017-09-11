@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/controller/actions"
@@ -23,7 +24,7 @@ import (
 
 const (
 	NOTIFICATION_BUFFER = 100
-	TICK_SPEED          = time.Duration(10) * time.Second
+	TICK_SPEED          = time.Duration(5) * time.Second
 )
 
 type InvocationController struct {
@@ -68,7 +69,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 		for {
 			select {
 			case notification := <-cr.invocSub.Ch:
-				logrus.WithField("notification", notification).Info("Handling invocation notification.")
+				logrus.WithField("notification", notification.Labels()).Info("Handling invocation notification.")
 				switch n := notification.(type) {
 				case *fes.Notification:
 					cr.handleNotification(n)
@@ -96,7 +97,10 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 }
 
 func (cr *InvocationController) handleNotification(msg *fes.Notification) {
-	logrus.WithField("notification", msg).Info("controller event trigger!")
+	logrus.WithFields(logrus.Fields{
+		"notification": msg.EventType,
+		"labels":       msg.Labels(),
+	}).Info("controller event trigger!")
 
 	switch msg.EventType {
 	case events.Invocation_INVOCATION_CREATED.String():
@@ -110,56 +114,7 @@ func (cr *InvocationController) handleNotification(msg *fes.Notification) {
 			panic(msg)
 		}
 
-		wfId := invoc.Spec.WorkflowId
-		wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
-		err := cr.wfCache.Get(wf)
-		if err != nil {
-			logrus.Errorf("Failed to get workflow for invocation '%s': %v", wfId, err)
-			return
-		}
-
-		schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
-			Invocation: invoc.WorkflowInvocation,
-			Workflow:   wf.Workflow, // TODO move around wf aggregate instead
-		})
-		if err != nil {
-			logrus.Errorf("Failed to schedule workflow invocation '%s': %v", invoc.Metadata.Id, err)
-			return
-		}
-		logrus.WithFields(logrus.Fields{
-			"schedule": schedule,
-		}).Info("Scheduler decided on schedule")
-
-		if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-			var output *types.TypedValue
-			if t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]; ok {
-				output = t.Status.Output
-			} else {
-
-				panic(fmt.Sprintf("Output task '%v' does not exist", wf.Spec.OutputTask))
-			}
-			err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, output)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		for _, action := range schedule.Actions {
-			switch action.Type {
-			case scheduler.ActionType_ABORT:
-				err := actions.Abort(invoc.Metadata.Id, cr.invocationApi)
-				if err != nil {
-					logrus.Error(err)
-				}
-			case scheduler.ActionType_INVOKE_TASK:
-				invokeAction := &scheduler.InvokeTaskAction{}
-				ptypes.UnmarshalAny(action.Payload, invokeAction)
-				err := actions.InvokeTask(invokeAction, wf.Workflow, invoc.WorkflowInvocation, cr.exprParser, cr.functionApi)
-				if err != nil {
-					logrus.Error(err)
-				}
-			}
-		}
+		cr.evaluateInvocation(invoc.WorkflowInvocation)
 	default:
 		logrus.WithField("type", msg.EventType).Warn("Controller ignores unknown event.")
 	}
@@ -169,6 +124,63 @@ func (cr *InvocationController) handleControlLoopTick() {
 	logrus.Debug("Controller tick...")
 	// Options: refresh projection, send ping, cancel invocation
 	// Short loop (invocations the controller is actively tracking) and long loop (to check if there are any orphans)
+
+	// Long loop
+	entities := cr.invokeCache.List()
+	for _, entity := range entities {
+		invoc := aggregates.NewWorkflowInvocation(entity.Id, nil)
+		err := cr.invokeCache.Get(invoc)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+
+		cr.evaluateInvocation(invoc.WorkflowInvocation)
+	}
+}
+
+func (cr *InvocationController) evaluateInvocation(invoc *types.WorkflowInvocation) {
+	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
+	err := cr.wfCache.Get(wf)
+	if err != nil {
+		logrus.Errorf("Failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
+		return
+	}
+
+	schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
+		Invocation: invoc,
+		Workflow:   wf.Workflow,
+	})
+
+	if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
+		var output *types.TypedValue
+		if t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]; ok {
+			output = t.Status.Output
+		} else {
+			panic(fmt.Sprintf("Output task '%v' does not exist", wf.Spec.OutputTask))
+		}
+		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, output)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	for _, action := range schedule.Actions {
+		switch action.Type {
+		case scheduler.ActionType_ABORT:
+			err := actions.Abort(invoc.Metadata.Id, cr.invocationApi)
+			if err != nil {
+				logrus.Error(err)
+			}
+		case scheduler.ActionType_INVOKE_TASK:
+			invokeAction := &scheduler.InvokeTaskAction{}
+			ptypes.UnmarshalAny(action.Payload, invokeAction)
+			err := actions.InvokeTask(invokeAction, wf.Workflow, invoc, cr.exprParser, cr.functionApi)
+			if err != nil {
+				logrus.Error(err)
+			}
+		}
+	}
 }
 
 func (cr *InvocationController) Close() error {

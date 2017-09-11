@@ -23,7 +23,7 @@ func NewApi(esClient fes.EventStore, parser *parse.Resolver) *Api {
 }
 
 func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
-	id := util.Uid()
+	id := fmt.Sprintf("wf-%s", util.Uid())
 
 	data, err := proto.Marshal(workflow)
 	if err != nil {

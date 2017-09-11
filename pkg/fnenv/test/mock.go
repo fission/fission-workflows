@@ -17,12 +17,11 @@ type MockRuntimeEnv struct {
 	ManualExecution bool
 }
 
-// Running invoke will change the state of the function invocation to IN_PROGRESS
 func (mk *MockRuntimeEnv) InvokeAsync(spec *types.FunctionInvocationSpec) (string, error) {
 	fnName := spec.GetType().GetResolved()
 
 	if _, ok := mk.Functions[fnName]; !ok {
-		return "", fmt.Errorf("Could not invoke unknown function '%s'", fnName)
+		return "", fmt.Errorf("could not invoke unknown function '%s'", fnName)
 	}
 
 	invocationId := util.Uid()
@@ -48,17 +47,16 @@ func (mk *MockRuntimeEnv) InvokeAsync(spec *types.FunctionInvocationSpec) (strin
 	return invocationId, nil
 }
 
-// Manually completes an existing invocation
 func (mk *MockRuntimeEnv) MockComplete(fnInvocationId string) error {
 	invocation, ok := mk.Results[fnInvocationId]
 	if !ok {
-		return fmt.Errorf("Could not invoke unknown invocation '%s'", fnInvocationId)
+		return fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationId)
 	}
 
 	fnName := invocation.Spec.GetType().GetResolved()
 	fn, ok := mk.Functions[fnName]
 	if !ok {
-		return fmt.Errorf("Could not invoke unknown function '%s'", fnName)
+		return fmt.Errorf("could not invoke unknown function '%s'", fnName)
 	}
 
 	result, err := fn(invocation.Spec)
@@ -91,14 +89,14 @@ func (mk *MockRuntimeEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Fun
 		return nil, err
 	}
 
-	logrus.Infof("...completing function execution '%v'", mk.Results)
+	logrus.Infof("...completing function execution for '%v'", invocationId)
 	return mk.Status(invocationId)
 }
 
 func (mk *MockRuntimeEnv) Cancel(fnInvocationId string) error {
 	invocation, ok := mk.Results[fnInvocationId]
 	if !ok {
-		return fmt.Errorf("Could not invoke unknown invocation '%s'", fnInvocationId)
+		return fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationId)
 	}
 
 	invocation.Status = &types.FunctionInvocationStatus{
@@ -113,7 +111,7 @@ func (mk *MockRuntimeEnv) Cancel(fnInvocationId string) error {
 func (mk *MockRuntimeEnv) Status(fnInvocationId string) (*types.FunctionInvocationStatus, error) {
 	invocation, ok := mk.Results[fnInvocationId]
 	if !ok {
-		return nil, fmt.Errorf("Could not invoke unknown invocation '%s'", fnInvocationId)
+		return nil, fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationId)
 	}
 
 	return invocation.Status, nil
@@ -126,7 +124,7 @@ type MockFunctionResolver struct {
 func (mf *MockFunctionResolver) Resolve(fnName string) (string, error) {
 	fnId, ok := mf.FnNameIds[fnName]
 	if !ok {
-		return "", fmt.Errorf("Could not resolve function '%s' using resolve-map '%v'", fnName, mf.FnNameIds)
+		return "", fmt.Errorf("could not resolve function '%s' using resolve-map '%v'", fnName, mf.FnNameIds)
 	}
 
 	return fnId, nil

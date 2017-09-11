@@ -38,7 +38,7 @@ func (rc *MapCache) Get(entity Aggregator) error {
 
 	if cached == nil {
 		//panic(fmt.Sprintf("%v", entity.Aggregate()))
-		return fmt.Errorf("entity '%v' not found", entity.Aggregate())
+		return fmt.Errorf("entity '%v' not found (%v)", entity.Aggregate(), rc.contents)
 	}
 
 	e := entity.UpdateState(cached)

@@ -3,13 +3,15 @@ package invocation
 import (
 	"errors"
 
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/fes"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/aggregates"
 	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/satori/go.uuid"
 )
 
 type Api struct {
@@ -26,7 +28,7 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 		return "", errors.New("workflowId is required")
 	}
 
-	id := uuid.NewV4().String()
+	id := fmt.Sprintf("wi-%s", util.Uid())
 
 	data, err := proto.Marshal(invocation)
 	if err != nil {

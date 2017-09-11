@@ -21,8 +21,8 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}
 
 	ctxLog := log.WithFields(log.Fields{
-		"workflow": request.Workflow,
-		"invoke":   request.Invocation,
+		"workflow": request.Workflow.Metadata.Id,
+		"invoke":   request.Invocation.Metadata.Id,
 	})
 
 	ctxLog.Info("Scheduler evaluating...")
