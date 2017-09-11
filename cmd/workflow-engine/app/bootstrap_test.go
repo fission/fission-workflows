@@ -14,10 +14,9 @@ import (
 	"io"
 	"net"
 
-	"reflect"
-
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/apiserver"
+	"github.com/fission/fission-workflow/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflow/pkg/fnenv/test"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
@@ -25,29 +24,25 @@ import (
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )
 
 var env *Options
 
 const (
-	UID_FUNC_ECHO = "FuncUid1"
+	UID_FUNC_NOOP = "FuncUid1"
+	UID_FUNC_IF   = "FuncUid2"
 )
 
 var mockFuncResolves = map[string]string{
-	"echo": UID_FUNC_ECHO,
+	"noop": UID_FUNC_NOOP,
+	"if":   UID_FUNC_IF,
 }
 
 var mockFuncs = map[string]test.MockFunc{
-	UID_FUNC_ECHO: echo,
-}
-
-func echo(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
-	val, ok := spec.Inputs[types.INPUT_MAIN]
-	if !ok {
-		return nil, nil
-	}
-	return val, nil
+	UID_FUNC_NOOP: (&builtin.FunctionNoop{}).Invoke,
+	UID_FUNC_IF:   (&builtin.FunctionIf{}).Invoke,
 }
 
 func TestMain(m *testing.M) {
@@ -73,40 +68,27 @@ func TestWorkflowCreate(t *testing.T) {
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.Task{
 			"fakeFinalTask": {
-				Name: "echo",
+				Name: "noop",
 			},
 		},
 	}
 	wfId, err := cl.Create(ctx, spec)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if wfId == nil || len(wfId.GetId()) == 0 {
-		t.Errorf("Invalid ID returned '%v'", wfId)
-	}
+	assert.NoError(t, err)
+	assert.NotNil(t, wfId)
+	assert.NotEmpty(t, wfId.GetId())
 
 	// Test workflow list
 	l, err := cl.List(ctx, &empty.Empty{})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	if len(l.Workflows) != 1 || l.Workflows[0] != wfId.Id {
 		t.Errorf("Listed workflows '%v' did not match expected workflow '%s'", l.Workflows, wfId.Id)
 	}
 
 	// Test workflow get
 	wf, err := cl.Get(ctx, wfId)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !reflect.DeepEqual(wf.Spec, spec) {
-		t.Error("Specs of created and fetched do not match!")
-	}
-
-	if wf.Status.Status != types.WorkflowStatus_READY {
-		t.Errorf("Workflow status is not ready, but '%v'", wf.Status.Status)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, wf.Spec, spec)
+	assert.Equal(t, wf.Status.Status, types.WorkflowStatus_READY)
 }
 
 func TestWorkflowInvocation(t *testing.T) {
@@ -121,7 +103,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.Task{
 			"fakeFinalTask": {
-				Name: "echo",
+				Name: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.FirstTask.Output"),
 				},
@@ -130,7 +112,7 @@ func TestWorkflowInvocation(t *testing.T) {
 				},
 			},
 			"FirstTask": {
-				Name: "echo",
+				Name: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
 				},
@@ -138,9 +120,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		},
 	}
 	wfResp, err := cl.Create(ctx, wfSpec)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	if wfResp == nil || len(wfResp.GetId()) == 0 {
 		t.Errorf("Invalid ID returned '%v'", wfResp)
 	}
@@ -149,9 +129,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	expectedOutput := "Hello world!"
 	tv, err := typedvalues.Parse(expectedOutput)
 	etv, err := typedvalues.Parse(strings.ToUpper(expectedOutput))
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
@@ -159,18 +137,15 @@ func TestWorkflowInvocation(t *testing.T) {
 			types.INPUT_MAIN: tv,
 		},
 	}
-	wiId, err := wi.Invoke(ctx, wiSpec)
-	if err != nil {
-		t.Fatal(err)
-	}
+	result, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	wiId := result.Metadata.Id
 
 	// Test invocation list
 	l, err := wi.List(ctx, &empty.Empty{})
-	if err != nil {
-		t.Error(err)
-	}
-	if len(l.Invocations) != 1 || l.Invocations[0] != wiId.Id {
-		t.Errorf("Listed invocations '%v' did not match expected invocation '%s'", l.Invocations, wiId.Id)
+	assert.NoError(t, err)
+	if len(l.Invocations) != 1 || l.Invocations[0] != wiId {
+		t.Errorf("Listed invocations '%v' did not match expected invocation '%s'", l.Invocations, wiId)
 	}
 
 	// Test invocation get, give some slack to actually invoke it
@@ -178,10 +153,8 @@ func TestWorkflowInvocation(t *testing.T) {
 	deadline := time.Now().Add(time.Duration(1) * time.Second)
 	tick := time.NewTicker(time.Duration(100) * time.Millisecond)
 	for ti := range tick.C {
-		invoc, err := wi.Get(ctx, wiId)
-		if err != nil {
-			t.Error(err)
-		}
+		invoc, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wiId})
+		assert.NoError(t, err)
 		if invoc.Status.Status.Finished() || ti.After(deadline) {
 			invocation = invoc
 			tick.Stop()
@@ -189,17 +162,76 @@ func TestWorkflowInvocation(t *testing.T) {
 		}
 	}
 
-	if !reflect.DeepEqual(invocation.Spec, wiSpec) {
-		t.Error("Specs of created and fetched do not match!")
-	}
+	assert.Equal(t, wiSpec, invocation.Spec)
+	assert.Equal(t, etv, invocation.Status.Output)
+	assert.True(t, invocation.Status.Status.Successful())
+}
 
-	if !reflect.DeepEqual(invocation.Status.Output, etv) {
-		t.Errorf("Output '%s' does not match expected output '%s'", invocation.Status.Output, expectedOutput)
-	}
+func TestDynamicWorkflowInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, _ := grpc.Dial(env.GrpcApiServerAddress, grpc.WithInsecure())
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
 
-	if !invocation.Status.Status.Successful() {
-		t.Errorf("Invocation status is not 'succesfull', instead it is '%v'", invocation.Status.Status)
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: "v1",
+		OutputTask: "fakeFinalTask",
+		Tasks: map[string]*types.Task{
+			"fakeFinalTask": {
+				Name: "noop",
+				Inputs: map[string]*types.TypedValue{
+					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.someConditionalTask.Output"),
+				},
+				Dependencies: map[string]*types.TaskDependencyParameters{
+					"FirstTask":           {},
+					"someConditionalTask": {},
+				},
+			},
+			"FirstTask": {
+				Name: "noop",
+				Inputs: map[string]*types.TypedValue{
+					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
+				},
+			},
+			"someConditionalTask": {
+				Name: "if",
+				Inputs: map[string]*types.TypedValue{
+					"condition": typedvalues.Expr("$.Invocation.Inputs.default == 'FOO'"),
+					"consequent": typedvalues.Flow(&types.Task{
+						Name: "noop",
+						Inputs: map[string]*types.TypedValue{
+							types.INPUT_MAIN: typedvalues.Expr("'consequent'"),
+						},
+					}),
+					"alternative": typedvalues.Flow(&types.Task{
+						Name: "noop",
+						Inputs: map[string]*types.TypedValue{
+							types.INPUT_MAIN: typedvalues.Expr("'alternative'"),
+						},
+					}),
+				},
+				Dependencies: map[string]*types.TaskDependencyParameters{
+					"FirstTask": {},
+				},
+			},
+		},
 	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+		Inputs: map[string]*types.TypedValue{
+			types.INPUT_MAIN: typedvalues.Expr("'foo'"),
+		},
+	}
+	result, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+
+	typedvalues.Format(result.Status.Output)
 }
 
 func setup(ctx context.Context) *Options {
@@ -265,12 +297,13 @@ func setupEventStore(ctx context.Context) *EventStoreOptions {
 
 // Wait for NATS to come online, ignoring ErrNoServer as it could mean that NATS is still being setup
 func waitForNats(ctx context.Context, url string, cluster string) error {
-	conn, err := stan.Connect(cluster, "setupEventStore-alive-test", stan.NatsURL(url), stan.ConnectWait(time.Duration(10)*time.Second))
+	conn, err := stan.Connect(cluster, "setupEventStore-alive-test", stan.NatsURL(url),
+		stan.ConnectWait(time.Duration(10)*time.Second))
 	if err == nats.ErrNoServers {
 		logrus.WithFields(logrus.Fields{
 			"cluster": cluster,
 			"url":     url,
-		}).Warn(err)
+		}).Warnf("retrying due to err: %v", err)
 		select {
 		case <-time.After(time.Duration(1) * time.Second):
 			return waitForNats(ctx, url, cluster)
