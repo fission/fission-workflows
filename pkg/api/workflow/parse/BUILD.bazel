@@ -21,6 +21,6 @@ go_test(
     deps = [
         "//pkg/api/function:go_default_library",
         "//pkg/types:go_default_library",
-        "//vendor/github.com/magiconair/properties/assert:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
     ],
 )

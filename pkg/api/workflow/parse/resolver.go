@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/sirupsen/logrus"
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 )
 
 // Resolver contacts function execution runtime clients to resolve the function definitions to concrete function ids.
@@ -40,12 +41,7 @@ func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, er
 	taskTypes := map[string]*types.TaskTypeDef{}
 	for taskId, task := range spec.GetTasks() {
 		go func(taskId string, task *types.Task) {
-			taskDef, err := ps.resolveTask(task)
-			if err != nil {
-				lastErr = err
-			} else {
-				taskTypes[taskId] = taskDef
-			}
+			lastErr = ps.resolveTaskAndInputs(task, taskTypes)
 			wg.Done()
 		}(taskId, task)
 	}
@@ -57,6 +53,30 @@ func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, er
 	return &types.WorkflowStatus{
 		ResolvedTasks: taskTypes,
 	}, nil
+}
+
+func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolved map[string]*types.TaskTypeDef) error {
+	t, err := ps.resolveTask(task)
+	if err != nil {
+		return err
+	}
+	resolved[task.Name] = t
+	for _, input := range task.Inputs {
+		if input.Type == typedvalues.TYPE_FLOW {
+			f, err := typedvalues.Format(input)
+			if err != nil {
+				return err
+			}
+			switch it := f.(type) {
+			case *types.Task:
+				err = ps.resolveTaskAndInputs(it, resolved)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
@@ -94,14 +114,14 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	case result := <-resolved:
 		return result, nil
 	default:
-		return nil, fmt.Errorf("Failed to resolve function '%s' using clients '%v'.", t, ps.clients)
+		return nil, fmt.Errorf("failed to resolve function '%s' using clients '%v'", t, ps.clients)
 	}
 }
 
 func (ps *Resolver) resolveForRuntime(taskName string, runtime string) (*types.TaskTypeDef, error) {
 	resolver, ok := ps.clients[runtime]
 	if !ok {
-		return nil, fmt.Errorf("Runtime '%s' could not be found.", runtime)
+		return nil, fmt.Errorf("runtime '%s' could not be found", runtime)
 	}
 
 	fnId, err := resolver.Resolve(taskName)

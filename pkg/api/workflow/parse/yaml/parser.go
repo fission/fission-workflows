@@ -103,7 +103,6 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 
 	inputs, err := parseInput(t.Inputs)
 	if err != nil {
-		fmt.Printf(">>> %v\n", t)
 		return nil, err
 	}
 
