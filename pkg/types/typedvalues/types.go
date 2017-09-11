@@ -64,12 +64,14 @@ func newDefaultParserFormatter() ParserFormatter {
 	// TODO Less verbose
 	jsPf := &JsonParserFormatter{}
 	return NewComposedParserFormatter(map[string]ParserFormatter{
+		// TODO remove types ? not needed
 		FormatType(FORMAT_JSON, TYPE_BOOL):   jsPf,
 		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
 		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
 		FormatType(TYPE_FLOW):                &ControlFlowParserFormatter{},
 		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
+		FormatType(TYPE_NIL):                 &NilParserFormatter{},
 		FormatType(TYPE_RAW):                 &RawParserFormatter{},
 	}, []string{
 		FormatType(FORMAT_JSON, TYPE_BOOL),
@@ -78,6 +80,7 @@ func newDefaultParserFormatter() ParserFormatter {
 		FormatType(FORMAT_JSON, TYPE_OBJECT),
 		FormatType(TYPE_FLOW),
 		FormatType(TYPE_EXPRESSION),
+		FormatType(TYPE_NIL),
 		FormatType(TYPE_RAW),
 	}...)
 }

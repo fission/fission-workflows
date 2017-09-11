@@ -14,12 +14,24 @@ const (
 	TYPE_EXPRESSION = "expr"
 	TYPE_FLOW       = "flow"
 	TYPE_RAW        = "raw"
+	TYPE_NIL        = "empty"
 )
 
 func Expr(expr string) *types.TypedValue {
 	return &types.TypedValue{
 		Type:  FormatType(TYPE_EXPRESSION),
 		Value: []byte(expr),
+	}
+}
+
+func Flow(task *types.Task) *types.TypedValue {
+	data, err := proto.Marshal(task)
+	if err != nil {
+		panic(err)
+	}
+	return &types.TypedValue{
+		Type:  FormatType(TYPE_FLOW),
+		Value: data,
 	}
 }
 
@@ -179,4 +191,20 @@ func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, 
 		return nil, err
 	}
 	return t, nil
+}
+
+type NilParserFormatter struct {
+}
+
+func (NilParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
+	if i == nil {
+		return &types.TypedValue{
+			Type: TYPE_NIL,
+		}, nil
+	}
+	return nil, errors.New("Value not nil")
+}
+
+func (NilParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
+	return nil, nil
 }
