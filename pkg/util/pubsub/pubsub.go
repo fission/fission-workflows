@@ -10,6 +10,7 @@ import (
 )
 
 // A simple PubSub implementation
+
 const (
 	DEFAULT_SUB_BUF = 10
 )
