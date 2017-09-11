@@ -1,0 +1,57 @@
+{
+  "apiVersion": "v1",
+  "outputTask": "makeWhaleSayFortune",
+  "tasks": {
+    "internalFuncShowoff": {
+      "name": "noop"
+    },
+    "ifLongInput" : {
+      "name" : "if",
+      "inputs" : {
+        "condition" : {
+          "type" : "expr",
+          "value" : "$.invocation.inputs.default.length() < 10"
+        },
+        "consequent" : {
+          "type" : "flow",
+          "value" : {
+            "id" : "capitalize",
+            "name" : "noop",
+            "inputs" : {
+              "default" : {
+                "type" : "expr",
+                "input" : "$.invocation.inputs.default.toUpperCase()"
+              }
+            }
+          }
+        },
+        "alternative" : {
+          "type" : "flow",
+          "value" : {
+            "id" : "makeItLong",
+            "name" : "noop",
+            "inputs" : {
+              "default" : {
+                "type" : "expr",
+                "input" : "$.invocation.inputs.default + ' (now even longer!)'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "makeWhaleSayFortune": {
+      "name": "whalesay",
+      "inputs" : {
+        "default" : {
+          "type" : "expr",
+          "value" : "$.tasks.ifLongInput.output"
+        }
+      },
+      "dependencies": {
+        "ifLongInput" : {},
+        "internalFuncShowoff" : {}
+      }
+    }
+  }
+}
