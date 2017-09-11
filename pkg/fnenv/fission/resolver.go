@@ -1,9 +1,9 @@
 package fission
 
 import (
-	"github.com/fission/fission"
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission/controller/client"
+	"k8s.io/client-go/1.5/pkg/api"
 )
 
 type Registry struct {
@@ -15,12 +15,12 @@ func NewResolver(client *client.Client) function.Resolver {
 }
 
 func (re *Registry) Resolve(fnName string) (string, error) {
-	fn, err := re.client.FunctionGet(&fission.Metadata{
+	fn, err := re.client.FunctionGet(&api.ObjectMeta{
 		Name: fnName,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	return fn.Uid, nil
+	return string(fn.Metadata.UID), nil
 }

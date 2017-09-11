@@ -13,9 +13,6 @@ const (
 	IF_INPUT_CONSEQUENT  = "consequent"
 )
 
-// Temporary file containing built-in internal functions
-//
-// Should be refactored to a extensible system, using go plugins for example.
 type FunctionIf struct{}
 
 func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
@@ -42,7 +39,7 @@ func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedVa
 
 	condition, ok := i.(bool)
 	if !ok {
-		return nil, fmt.Errorf("Condition needs to be a bool, but was '%v'", i)
+		return nil, fmt.Errorf("condition needs to be a bool, but was '%v'", i)
 	}
 
 	if condition {

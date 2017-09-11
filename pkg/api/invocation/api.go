@@ -3,40 +3,44 @@ package invocation
 import (
 	"errors"
 
-	"github.com/fission/fission-workflow/pkg/eventstore"
-	"github.com/fission/fission-workflow/pkg/eventstore/eventids"
-	"github.com/fission/fission-workflow/pkg/projector/project"
+	"github.com/fission/fission-workflow/pkg/fes"
 	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflow/pkg/types/aggregates"
 	"github.com/fission/fission-workflow/pkg/types/events"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/satori/go.uuid"
 )
 
 type Api struct {
-	esClient  eventstore.Client
-	Projector project.InvocationProjector // TODO move projection functions out?
+	es          fes.EventStore
+	invocations fes.CacheReader // TODO move projection functions out?
 }
 
-func NewApi(esClient eventstore.Client, projector project.InvocationProjector) *Api {
-	return &Api{esClient, projector}
+func NewApi(esClient fes.EventStore, invocations fes.CacheReader) *Api {
+	return &Api{esClient, invocations}
 }
 
-// Commands
 func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
 	if len(invocation.WorkflowId) == 0 {
-		return "", errors.New("WorkflowId is required")
+		return "", errors.New("workflowId is required")
 	}
 
 	id := uuid.NewV4().String()
 
-	data, err := ptypes.MarshalAny(invocation)
+	data, err := proto.Marshal(invocation)
 	if err != nil {
 		return "", err
 	}
 
-	event := eventstore.NewEvent(ia.createSubject(id), events.Invocation_INVOCATION_CREATED.String(), data)
+	event := &fes.Event{
+		Type:      events.Invocation_INVOCATION_CREATED.String(),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(id),
+		Timestamp: ptypes.TimestampNow(),
+		Data:      data,
+	}
 
-	err = ia.esClient.Append(event)
+	err = ia.es.HandleEvent(event)
 	if err != nil {
 		return "", err
 	}
@@ -49,9 +53,12 @@ func (ia *Api) Cancel(invocationId string) error {
 		return errors.New("invocationId is required")
 	}
 
-	event := eventstore.NewEvent(ia.createSubject(invocationId), events.Invocation_INVOCATION_CANCELED.String(), nil)
-
-	err := ia.esClient.Append(event)
+	event := &fes.Event{
+		Type:      events.Invocation_INVOCATION_CANCELED.String(),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Timestamp: ptypes.TimestampNow(),
+	}
+	err := ia.es.HandleEvent(event)
 	if err != nil {
 		return err
 	}
@@ -59,7 +66,7 @@ func (ia *Api) Cancel(invocationId string) error {
 }
 
 // TODO might want to split out public vs. internal api
-func (ia *Api) Success(invocationId string, output *types.TypedValue) error {
+func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -68,32 +75,48 @@ func (ia *Api) Success(invocationId string, output *types.TypedValue) error {
 		Output: output,
 	}
 
-	data, err := ptypes.MarshalAny(status)
+	data, err := proto.Marshal(status)
 	if err != nil {
 		return err
 	}
 
-	event := eventstore.NewEvent(ia.createSubject(invocationId), events.Invocation_INVOCATION_COMPLETED.String(), data)
+	event := &fes.Event{
+		Type:      events.Invocation_INVOCATION_COMPLETED.String(),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Timestamp: ptypes.TimestampNow(),
+		Data:      data,
+	}
 
-	err = ia.esClient.Append(event)
+	err = ia.es.HandleEvent(event)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ia *Api) Fail(invocationId string) {
+func (ia *Api) MarkFailed(invocationId string) {
 	panic("not implemented")
 }
 
-func (ia *Api) createSubject(invocationId string) *eventstore.EventID {
-	return eventids.NewSubject(types.SUBJECT_INVOCATION, invocationId)
-}
-
 func (ia *Api) Get(invocationId string) (*types.WorkflowInvocation, error) {
-	return ia.Projector.Get(invocationId)
+	wi := aggregates.NewWorkflowInvocation(invocationId, &types.WorkflowInvocation{})
+	err := ia.invocations.Get(wi)
+	if err != nil {
+		return nil, err
+	}
+
+	return wi.WorkflowInvocation, nil
 }
 
 func (ia *Api) List(query string) ([]string, error) {
-	return ia.Projector.List(query)
+	results := []string{}
+	as := ia.invocations.List()
+	for _, a := range as {
+		if a.Type != aggregates.TYPE_WORKFLOW_INVOCATION {
+			return nil, errors.New("invalid type in invocation cache")
+		}
+
+		results = append(results, a.Id)
+	}
+	return results, nil
 }

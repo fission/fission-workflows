@@ -2,12 +2,12 @@ package apiserver
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -41,17 +41,16 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 	for {
 		wi, err := gi.api.Get(eventId)
 		if err != nil {
-			return nil, err
+			logrus.Warn(err)
 		}
 		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Status.Finished() {
 			result = wi
 			break
 		}
-		fmt.Printf("current status: %v \n", wi)
 
 		select {
 		case <-timeout:
-			return nil, errors.New("Timeout occurred")
+			return nil, errors.New("timeout occurred")
 		default:
 			// TODO temporary shortcut; needs optimizing.
 			time.Sleep(time.Duration(1) * time.Second)

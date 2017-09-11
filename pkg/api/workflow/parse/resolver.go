@@ -8,8 +8,8 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/sirupsen/logrus"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/sirupsen/logrus"
 )
 
 // Resolver contacts function execution runtime clients to resolve the function definitions to concrete function ids.

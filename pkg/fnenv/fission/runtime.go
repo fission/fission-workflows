@@ -6,16 +6,20 @@ import (
 	"net/http"
 
 	"encoding/json"
-	"github.com/fission/fission"
+	"io/ioutil"
+
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	controller "github.com/fission/fission/controller/client"
 	poolmgr "github.com/fission/fission/poolmgr/client"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
+	"k8s.io/client-go/1.5/pkg/api"
+
+	k8stypes "k8s.io/client-go/1.5/pkg/types"
 )
 
+// FunctionEnv adapts the Fission platform to the function execution runtime.
 type FunctionEnv struct {
 	poolmgr    *poolmgr.Client
 	controller *controller.Client
@@ -31,9 +35,9 @@ func NewFunctionEnv(poolmgr *poolmgr.Client, controller *controller.Client, pf t
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {
-	meta := &fission.Metadata{
+	meta := &api.ObjectMeta{
 		Name: spec.GetType().GetSrc(),
-		Uid:  spec.GetType().GetResolved(),
+		UID:  k8stypes.UID(spec.GetType().GetResolved()),
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
@@ -57,7 +61,7 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 
 	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
 	if err != nil {
-		panic(fmt.Errorf("Failed to make request for '%s': %v", serviceUrl, err))
+		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}
 
 	reqContentType := fe.ct.ToContentType(mainInput)

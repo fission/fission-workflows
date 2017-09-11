@@ -1,8 +1,6 @@
 package yaml
 
 import (
-	"fmt"
-
 	"errors"
 
 	"io"
