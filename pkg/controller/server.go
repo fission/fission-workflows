@@ -35,6 +35,7 @@ type InvocationController struct {
 	scheduler     *scheduler.WorkflowScheduler
 	invocSub      *pubsub.Subscription
 	exprParser    query.ExpressionParser
+	// TODO add active cache
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
@@ -128,14 +129,14 @@ func (cr *InvocationController) handleControlLoopTick() {
 	// Long loop
 	entities := cr.invokeCache.List()
 	for _, entity := range entities {
-		invoc := aggregates.NewWorkflowInvocation(entity.Id, nil)
-		err := cr.invokeCache.Get(invoc)
+		wi := aggregates.NewWorkflowInvocation(entity.Id, nil)
+		err := cr.invokeCache.Get(wi)
 		if err != nil {
 			logrus.Error(err)
 			return
 		}
 
-		cr.evaluateInvocation(invoc.WorkflowInvocation)
+		cr.evaluateInvocation(wi.WorkflowInvocation)
 	}
 }
 
