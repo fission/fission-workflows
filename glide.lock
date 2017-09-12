@@ -1,5 +1,5 @@
-hash: a36a3a6e2b01f194bede83f16a2686262572e1916a0117f61fec92b372f4318e
-updated: 2017-09-08T18:26:10.105430717-07:00
+hash: 316f330dbf6768c9af0406741d5363ff650b76102299b4b7534b9cbb588cff12
+updated: 2017-09-12T15:19:09.437824118-07:00
 imports:
 - name: github.com/blang/semver
   version: 60ec3488bfea7cca02b021d106d9911120d25fe9
@@ -32,7 +32,7 @@ imports:
   - log
   - swagger
 - name: github.com/fission/fission
-  version: 1b9fa5bc3034c9816ceaf3a435c699faa5d8fe1c
+  version: dc50ebb8898d5474012ff20e88834a5966a8830e
   subpackages:
   - controller/client
   - poolmgr/client
@@ -77,7 +77,7 @@ imports:
 - name: github.com/gorilla/handlers
   version: a4043c62cc2329bacda331d33fc908ab11ef0ec3
 - name: github.com/gorilla/mux
-  version: bcd8bc72b08df0f70df986b97f95590779502d31
+  version: 24fca303ac6da784b9e8269f724ddeb0b2eea5e7
 - name: github.com/grpc-ecosystem/grpc-gateway
   version: f2862b476edcef83412c7af8687c9cd8e4097c0f
   subpackages:
