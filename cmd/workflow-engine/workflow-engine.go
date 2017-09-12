@@ -42,8 +42,9 @@ func main() {
 	//fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
 	//fissionResolver := fission.NewResolver(controllerClient)
 	nativeEnv := native.NewFunctionEnv(map[string]native.InternalFunction{
-		"if":   &builtin.FunctionIf{},
-		"noop": &builtin.FunctionNoop{},
+		"if":    &builtin.FunctionIf{},
+		"noop":  &builtin.FunctionNoop{},
+		"sleep": &builtin.FunctionSleep{},
 	})
 
 	cliApp.Action = func(c *cli.Context) error {

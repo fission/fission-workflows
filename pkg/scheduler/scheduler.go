@@ -95,7 +95,9 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		})
 	}
 
-	ctxLog.WithField("schedule", schedule).Info("Determined schedule")
+	ctxLog.WithField("schedule", len(schedule.Actions)).
+		WithField("invocation", schedule.InvocationId).
+		Info("Determined schedule")
 
 	return schedule, nil
 }

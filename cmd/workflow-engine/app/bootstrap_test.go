@@ -31,18 +31,21 @@ import (
 var env *Options
 
 const (
-	UID_FUNC_NOOP = "FuncUid1"
-	UID_FUNC_IF   = "FuncUid2"
+	UID_FUNC_NOOP  = "FuncUid1"
+	UID_FUNC_IF    = "FuncUid2"
+	UID_FUNC_SLEEP = "FuncUid3"
 )
 
 var mockFuncResolves = map[string]string{
-	"noop": UID_FUNC_NOOP,
-	"if":   UID_FUNC_IF,
+	"noop":  UID_FUNC_NOOP,
+	"if":    UID_FUNC_IF,
+	"sleep": UID_FUNC_SLEEP,
 }
 
 var mockFuncs = map[string]test.MockFunc{
-	UID_FUNC_NOOP: (&builtin.FunctionNoop{}).Invoke,
-	UID_FUNC_IF:   (&builtin.FunctionIf{}).Invoke,
+	UID_FUNC_NOOP:  (&builtin.FunctionNoop{}).Invoke,
+	UID_FUNC_IF:    (&builtin.FunctionIf{}).Invoke,
+	UID_FUNC_SLEEP: (&builtin.FunctionSleep{}).Invoke,
 }
 
 func TestMain(m *testing.M) {
