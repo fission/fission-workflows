@@ -9,15 +9,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type MockFunc func(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
+type MockFunc func(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
 
 type MockRuntimeEnv struct {
 	Functions       map[string]MockFunc
-	Results         map[string]*types.FunctionInvocation
+	Results         map[string]*types.TaskInvocation
 	ManualExecution bool
 }
 
-func (mk *MockRuntimeEnv) InvokeAsync(spec *types.FunctionInvocationSpec) (string, error) {
+func (mk *MockRuntimeEnv) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
 	fnName := spec.GetType().GetResolved()
 
 	if _, ok := mk.Functions[fnName]; !ok {
@@ -25,14 +25,14 @@ func (mk *MockRuntimeEnv) InvokeAsync(spec *types.FunctionInvocationSpec) (strin
 	}
 
 	invocationId := util.Uid()
-	mk.Results[invocationId] = &types.FunctionInvocation{
+	mk.Results[invocationId] = &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        invocationId,
 			CreatedAt: ptypes.TimestampNow(),
 		},
 		Spec: spec,
-		Status: &types.FunctionInvocationStatus{
-			Status:    types.FunctionInvocationStatus_IN_PROGRESS,
+		Status: &types.TaskInvocationStatus{
+			Status:    types.TaskInvocationStatus_IN_PROGRESS,
 			UpdatedAt: ptypes.TimestampNow(),
 		},
 	}
@@ -62,23 +62,23 @@ func (mk *MockRuntimeEnv) MockComplete(fnInvocationId string) error {
 	result, err := fn(invocation.Spec)
 	if err != nil {
 		logrus.Infof("Function '%s' invocation resulted in an error: %v", fnName, err)
-		mk.Results[fnInvocationId].Status = &types.FunctionInvocationStatus{
+		mk.Results[fnInvocationId].Status = &types.TaskInvocationStatus{
 			Output:    nil,
 			UpdatedAt: ptypes.TimestampNow(),
-			Status:    types.FunctionInvocationStatus_FAILED,
+			Status:    types.TaskInvocationStatus_FAILED,
 		}
 	} else {
-		mk.Results[fnInvocationId].Status = &types.FunctionInvocationStatus{
+		mk.Results[fnInvocationId].Status = &types.TaskInvocationStatus{
 			Output:    result,
 			UpdatedAt: ptypes.TimestampNow(),
-			Status:    types.FunctionInvocationStatus_SUCCEEDED,
+			Status:    types.TaskInvocationStatus_SUCCEEDED,
 		}
 	}
 
 	return nil
 }
 
-func (mk *MockRuntimeEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {
+func (mk *MockRuntimeEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
 	logrus.Info("Starting invocation...")
 	invocationId, err := mk.InvokeAsync(spec)
 	if err != nil {
@@ -99,16 +99,16 @@ func (mk *MockRuntimeEnv) Cancel(fnInvocationId string) error {
 		return fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationId)
 	}
 
-	invocation.Status = &types.FunctionInvocationStatus{
+	invocation.Status = &types.TaskInvocationStatus{
 		Output:    nil,
 		UpdatedAt: ptypes.TimestampNow(),
-		Status:    types.FunctionInvocationStatus_ABORTED,
+		Status:    types.TaskInvocationStatus_ABORTED,
 	}
 
 	return nil
 }
 
-func (mk *MockRuntimeEnv) Status(fnInvocationId string) (*types.FunctionInvocationStatus, error) {
+func (mk *MockRuntimeEnv) Status(fnInvocationId string) (*types.TaskInvocationStatus, error) {
 	invocation, ok := mk.Results[fnInvocationId]
 	if !ok {
 		return nil, fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationId)

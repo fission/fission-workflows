@@ -33,7 +33,7 @@ func parseUnsafe(i interface{}) *types.TypedValue {
 	return val
 }
 
-func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types.FunctionInvocationSpec, expected interface{}) {
+func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types.TaskInvocationSpec, expected interface{}) {
 	output, err := fn.Invoke(input)
 	if err != nil {
 		t.Fatal(err)

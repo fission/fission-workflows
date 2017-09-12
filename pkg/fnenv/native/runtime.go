@@ -10,7 +10,7 @@ import (
 
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
-	Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
+	Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
 }
 
 // FunctionEnv for executing low overhead functions, such as control flow constructs, inside the workflow engine
@@ -28,7 +28,7 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 	return env
 }
 
-func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {
+func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
 	fnId := spec.GetType().GetResolved()
 	fn, ok := fe.fns[fnId]
 	if !ok {
@@ -41,15 +41,15 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 			"fnId": fnId,
 			"err":  err,
 		}).Error("Internal function failed.")
-		return &types.FunctionInvocationStatus{
+		return &types.TaskInvocationStatus{
 			UpdatedAt: ptypes.TimestampNow(),
-			Status:    types.FunctionInvocationStatus_FAILED,
+			Status:    types.TaskInvocationStatus_FAILED,
 		}, nil
 	}
 
-	return &types.FunctionInvocationStatus{
+	return &types.TaskInvocationStatus{
 		UpdatedAt: ptypes.TimestampNow(),
-		Status:    types.FunctionInvocationStatus_SUCCEEDED,
+		Status:    types.TaskInvocationStatus_SUCCEEDED,
 		Output:    out,
 	}, nil
 }

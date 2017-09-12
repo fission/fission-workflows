@@ -8,11 +8,11 @@ import (
 
 func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 	dynamicTask := &Task{
-		Id:   "injected",
-		Name: "InjectedFunction",
-		Dependencies: map[string]*TaskDependencyParameters{
+		Id:          "injected",
+		FunctionRef: "InjectedFunction",
+		Requires: map[string]*TaskDependencyParameters{
 			"foo": {
-				Type: TaskDependencyParameters_FUNKTOR_OUTPUT,
+				Type: TaskDependencyParameters_DYNAMIC_OUTPUT,
 			},
 		},
 	}
@@ -21,17 +21,17 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 		Spec: &WorkflowSpec{
 			Tasks: map[string]*Task{
 				"foo": {
-					Name: "123Function",
+					FunctionRef: "123Function",
 				},
 				"bar": {
-					Name: "123Function",
-					Dependencies: map[string]*TaskDependencyParameters{
+					FunctionRef: "123Function",
+					Requires: map[string]*TaskDependencyParameters{
 						"foo": {},
 					},
 				},
 				"bar2": {
-					Name: "123Function",
-					Dependencies: map[string]*TaskDependencyParameters{
+					FunctionRef: "123Function",
+					Requires: map[string]*TaskDependencyParameters{
 						"foo_injected": {},
 					},
 				},
@@ -48,8 +48,8 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 	cwf := CalculateTaskDependencyGraph(workflow, invocation)
 
 	assert.Equal(t, 4, len(cwf))
-	assert.Equal(t, 2, len(cwf["bar"].Dependencies))
-	assert.Equal(t, 1, len(cwf["foo_injected"].Dependencies))
-	assert.Equal(t, 1, len(cwf["bar2"].Dependencies))
-	assert.Equal(t, 0, len(cwf["foo"].Dependencies))
+	assert.Equal(t, 2, len(cwf["bar"].Requires))
+	assert.Equal(t, 1, len(cwf["foo_injected"].Requires))
+	assert.Equal(t, 1, len(cwf["bar2"].Requires))
+	assert.Equal(t, 0, len(cwf["foo"].Requires))
 }

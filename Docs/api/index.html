@@ -921,10 +921,10 @@ To lighten the request load, consider using a more specific request.</div>
 
   <h3>Table of Contents</h3>
   <ol>
-    <li><a href="#FunctionInvocation"><code>FunctionInvocation</code> - Function Invocation Model</a></li>
-    <li><a href="#FunctionInvocationSpec"><code>FunctionInvocationSpec</code> - </a></li>
-    <li><a href="#FunctionInvocationStatus"><code>FunctionInvocationStatus</code> - </a></li>
-    <li><a href="#FunctionInvocationStatusStatus"><code>FunctionInvocationStatusStatus</code> - </a></li>
+    <li><a href="#TaskInvocation"><code>TaskInvocation</code> - Function Invocation Model</a></li>
+    <li><a href="#TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a></li>
+    <li><a href="#TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a></li>
+    <li><a href="#TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a></li>
     <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
     <li><a href="#Task"><code>Task</code> - </a></li>
     <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
@@ -950,16 +950,16 @@ or the response type of an API method. For instance:</a></li>
   </ol>
 
   <div class="model">
-    <h3><a name="FunctionInvocation"><code>FunctionInvocation</code> - Function Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskInvocation"><code>TaskInvocation</code> - Function Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
-<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocationSpec">FunctionInvocationSpec</a></span>  </div>
-<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocationStatus">FunctionInvocationStatus</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationSpec">TaskInvocationSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationStatus">TaskInvocationStatus</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="FunctionInvocationSpec"><code>FunctionInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskTypeDef">TaskTypeDef</a></span>  </div>
@@ -968,16 +968,16 @@ or the response type of an API method. For instance:</a></li>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="FunctionInvocationStatus"><code>FunctionInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocationStatusStatus">FunctionInvocationStatusStatus</a></span>  </div>
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationStatusStatus">TaskInvocationStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="FunctionInvocationStatusStatus"><code>FunctionInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->
@@ -1072,7 +1072,7 @@ Id is specified outside of task</p>
     <div class="field-items">
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowInvocationStatusStatus">WorkflowInvocationStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#FunctionInvocation">map[String, FunctionInvocation]</a></span>  </div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocation">map[String, TaskInvocation]</a></span>  </div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
     </div>  <!-- field-items -->
   </div>

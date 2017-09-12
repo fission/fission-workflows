@@ -14,11 +14,11 @@ var invocationFinalStates = []WorkflowInvocationStatus_Status{
 	WorkflowInvocationStatus_FAILED,
 }
 
-var functionFinalStates = []FunctionInvocationStatus_Status{
-	FunctionInvocationStatus_FAILED,
-	FunctionInvocationStatus_ABORTED,
-	FunctionInvocationStatus_SKIPPED,
-	FunctionInvocationStatus_SUCCEEDED,
+var taskFinalStates = []TaskInvocationStatus_Status{
+	TaskInvocationStatus_FAILED,
+	TaskInvocationStatus_ABORTED,
+	TaskInvocationStatus_SKIPPED,
+	TaskInvocationStatus_SUCCEEDED,
 }
 
 func (wi WorkflowInvocationStatus_Status) Finished() bool {
@@ -30,21 +30,15 @@ func (wi WorkflowInvocationStatus_Status) Finished() bool {
 	return false
 }
 
-// True if workflow was successfully completed
 func (wi WorkflowInvocationStatus_Status) Successful() bool {
 	return wi == WorkflowInvocationStatus_SUCCEEDED
 }
 
-func (fi FunctionInvocationStatus_Status) Finished() bool {
-	for _, event := range functionFinalStates {
-		if event == fi {
+func (ti TaskInvocationStatus_Status) Finished() bool {
+	for _, event := range taskFinalStates {
+		if event == ti {
 			return true
 		}
 	}
 	return false
-}
-
-func (t Task) Requires(taskId string) bool {
-	_, ok := t.Dependencies[taskId]
-	return ok
 }

@@ -24,11 +24,11 @@ type InvocationScope struct {
 
 type TaskScope struct {
 	*types.ObjectMetadata
-	*types.FunctionInvocationStatus
-	Inputs       map[string]interface{}
-	Dependencies map[string]*types.TaskDependencyParameters
-	Name         string
-	Output       interface{}
+	*types.TaskInvocationStatus
+	Inputs   map[string]interface{}
+	Requires map[string]*types.TaskDependencyParameters
+	Name     string
+	Output   interface{}
 }
 
 func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
@@ -36,7 +36,7 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 	tasks := map[string]*TaskScope{}
 	for taskId, fn := range invoc.Status.Tasks {
 
-		// Dep: pipe output of control flow structs
+		// Dep: pipe output of dynamic tasks
 		t := typedvalues.ResolveTaskOutput(taskId, invoc)
 		output, err := typedvalues.Format(t)
 		if err != nil {
@@ -49,12 +49,12 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 		}
 
 		tasks[taskId] = &TaskScope{
-			ObjectMetadata:           fn.Metadata,
-			FunctionInvocationStatus: fn.Status,
-			Inputs:       formatTypedValueMap(fn.Spec.Inputs),
-			Dependencies: taskDef.Dependencies,
-			Name:         taskDef.Name,
-			Output:       output,
+			ObjectMetadata:       fn.Metadata,
+			TaskInvocationStatus: fn.Status,
+			Inputs:               formatTypedValueMap(fn.Spec.Inputs),
+			Requires:             taskDef.Requires,
+			Name:                 taskDef.FunctionRef,
+			Output:               output,
 		}
 	}
 

@@ -18,7 +18,7 @@ const (
 
 type FunctionSleep struct{}
 
-func (f *FunctionSleep) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 	duration := SLEEP_INPUT_MS_DEFAULT
 	input, ok := spec.Inputs[SLEEP_INPUT_MS]
 	if ok {

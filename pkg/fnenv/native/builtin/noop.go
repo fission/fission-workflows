@@ -11,7 +11,7 @@ const (
 
 type FunctionNoop struct{}
 
-func (fn *FunctionNoop) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 	output := spec.GetInputs()[NOOP_INPUT]
 	logrus.WithFields(logrus.Fields{
 		"spec":   spec,

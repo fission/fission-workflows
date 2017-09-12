@@ -71,7 +71,7 @@ func TestWorkflowCreate(t *testing.T) {
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.Task{
 			"fakeFinalTask": {
-				Name: "noop",
+				FunctionRef: "noop",
 			},
 		},
 	}
@@ -106,16 +106,16 @@ func TestWorkflowInvocation(t *testing.T) {
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.Task{
 			"fakeFinalTask": {
-				Name: "noop",
+				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.FirstTask.Output"),
 				},
-				Dependencies: map[string]*types.TaskDependencyParameters{
+				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
 				},
 			},
 			"FirstTask": {
-				Name: "noop",
+				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
 				},
@@ -182,39 +182,39 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.Task{
 			"fakeFinalTask": {
-				Name: "noop",
+				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.someConditionalTask.Output"),
 				},
-				Dependencies: map[string]*types.TaskDependencyParameters{
+				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask":           {},
 					"someConditionalTask": {},
 				},
 			},
 			"FirstTask": {
-				Name: "noop",
+				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
 					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
 				},
 			},
 			"someConditionalTask": {
-				Name: "if",
+				FunctionRef: "if",
 				Inputs: map[string]*types.TypedValue{
 					"condition": typedvalues.Expr("$.Invocation.Inputs.default == 'FOO'"),
 					"consequent": typedvalues.Flow(&types.Task{
-						Name: "noop",
+						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'consequent'"),
 						},
 					}),
 					"alternative": typedvalues.Flow(&types.Task{
-						Name: "noop",
+						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'alternative'"),
 						},
 					}),
 				},
-				Dependencies: map[string]*types.TaskDependencyParameters{
+				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
 				},
 			},
@@ -240,7 +240,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 func setup(ctx context.Context) *Options {
 	// TODO Maybe replace with actual Fission deployment
 	mockFunctionResolver := &test.MockFunctionResolver{mockFuncResolves}
-	mockFunctionRuntime := &test.MockRuntimeEnv{Functions: mockFuncs, Results: map[string]*types.FunctionInvocation{}}
+	mockFunctionRuntime := &test.MockRuntimeEnv{Functions: mockFuncs, Results: map[string]*types.TaskInvocation{}}
 
 	esOpts := setupEventStore(ctx)
 	opts := &Options{

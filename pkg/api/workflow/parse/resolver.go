@@ -60,7 +60,7 @@ func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolved map[string]*
 	if err != nil {
 		return err
 	}
-	resolved[task.Name] = t
+	resolved[task.FunctionRef] = t
 	for _, input := range task.Inputs {
 		if input.Type == typedvalues.TYPE_FLOW {
 			f, err := typedvalues.Format(input)
@@ -80,7 +80,7 @@ func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolved map[string]*
 }
 
 func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
-	t := task.GetName()
+	t := task.FunctionRef
 	// Use clients to resolve task to id
 	p, err := parseTaskAddress(t)
 	if err != nil {

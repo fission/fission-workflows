@@ -24,7 +24,7 @@ func addStaticTasks(wf *Workflow, invoc *WorkflowInvocation, target map[string]*
 }
 
 func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
-	funktorMapping := map[string]string{}
+	mapping := map[string]string{}
 	for id, task := range invoc.Status.DynamicTasks {
 		taskStatus := invoc.Status.Tasks[id]
 		target[id] = &TaskStatus{
@@ -32,19 +32,19 @@ func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 			Invocation: taskStatus,
 		}
 
-		for depId, depParams := range task.Dependencies {
-			if depParams.Type == TaskDependencyParameters_FUNKTOR_OUTPUT {
-				funktorMapping[depId] = id
+		for depId, depParams := range task.Requires {
+			if depParams.Type == TaskDependencyParameters_DYNAMIC_OUTPUT {
+				mapping[depId] = id
 			}
 		}
 		// TODO Amend static task if it exists instead of overriding it completely.
 	}
 
-	// Reroute dependencies to also depend on the outputted task of funktors.
+	// Reroute dependencies to also depend on the outputted task of dynamic tasks.
 	for _, task := range target {
-		for depId, depParams := range task.Dependencies {
-			if outputTask, ok := funktorMapping[depId]; ok && depParams.Type != TaskDependencyParameters_FUNKTOR_OUTPUT {
-				task.Dependencies[outputTask] = &TaskDependencyParameters{}
+		for depId, depParams := range task.Requires {
+			if outputTask, ok := mapping[depId]; ok && depParams.Type != TaskDependencyParameters_DYNAMIC_OUTPUT {
+				task.Requires[outputTask] = &TaskDependencyParameters{}
 			}
 		}
 	}
@@ -53,5 +53,5 @@ func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 type TaskStatus struct {
 	*Task
 	// Invocation is nil if not yet invoked
-	Invocation *FunctionInvocation
+	Invocation *TaskInvocation
 }
