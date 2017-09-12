@@ -2,13 +2,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "builtin.go",
-        "runtime.go",
-    ],
+    srcs = ["runtime.go"],
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/controller/query:go_default_library",
         "//pkg/types:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",

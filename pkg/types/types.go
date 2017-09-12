@@ -43,3 +43,8 @@ func (fi FunctionInvocationStatus_Status) Finished() bool {
 	}
 	return false
 }
+
+func (t Task) Requires(taskId string) bool {
+	_, ok := t.Dependencies[taskId]
+	return ok
+}

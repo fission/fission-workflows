@@ -7,7 +7,7 @@ import (
 )
 
 type Parser interface {
-	Parse(i interface{}) (*types.TypedValue, error) // TODO allow hint of type
+	Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error)
 }
 
 type Formatter interface {
@@ -45,25 +45,42 @@ func FormatType(parts ...string) string {
 	return strings.Join(parts, "/")
 }
 
-func isFormat(targetValueType string, format string) bool {
+func IsFormat(targetValueType string, format string) bool {
 	f, _ := ParseType(targetValueType)
 	return strings.EqualFold(f, format)
 }
 
-func NewDefaultParserFormatter() ParserFormatter {
+var DefaultParserFormatter = newDefaultParserFormatter()
+
+func Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
+	return DefaultParserFormatter.Parse(i, allowedTypes...)
+}
+
+func Format(v *types.TypedValue) (interface{}, error) {
+	return DefaultParserFormatter.Format(v)
+}
+
+func newDefaultParserFormatter() ParserFormatter {
 	// TODO Less verbose
 	jsPf := &JsonParserFormatter{}
 	return NewComposedParserFormatter(map[string]ParserFormatter{
+		// TODO remove types ? not needed
+		FormatType(FORMAT_JSON, TYPE_BOOL):   jsPf,
 		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
 		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
+		FormatType(TYPE_FLOW):                &ControlFlowParserFormatter{},
 		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
+		FormatType(TYPE_NIL):                 &NilParserFormatter{},
 		FormatType(TYPE_RAW):                 &RawParserFormatter{},
 	}, []string{
+		FormatType(FORMAT_JSON, TYPE_BOOL),
 		FormatType(FORMAT_JSON, TYPE_STRING),
 		FormatType(FORMAT_JSON, TYPE_ARRAY),
 		FormatType(FORMAT_JSON, TYPE_OBJECT),
+		FormatType(TYPE_FLOW),
 		FormatType(TYPE_EXPRESSION),
+		FormatType(TYPE_NIL),
 		FormatType(TYPE_RAW),
 	}...)
 }

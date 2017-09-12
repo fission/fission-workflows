@@ -68,6 +68,7 @@ message WorkflowInvocationStatus {
     google.protobuf.Timestamp updatedAt = 2;
     map<string, FunctionInvocation> tasks = 3;
     TypedValue output = 4;
+    map<string, Task> dynamicTasks = 5;
 }
 
 
@@ -106,12 +107,10 @@ message WorkflowSpec {
 // Id is specified outside of task
 message Task {
 
-    // Type defines the type of the task that needs to be performed
+    // Same as the string in the map<string, Task> definition. One needs to be set.
     //
-    // By default the following types are supported:
-    // - `function`: execute a function.
-    // - `exit`: Once this task is executed, the controller will exit the workflow, canceling all running tasks.
-    string type = 2;
+    // If there is a conflict the map key gets precendence over this field.
+    string id = 1;
 
     // Name/identifier of the function
     string name = 3;
@@ -130,6 +129,7 @@ message TaskDependencyParameters {
     enum DependencyType {
         DATA = 0;
         CONTROL = 1;
+        FUNKTOR_OUTPUT = 2;
     }
     DependencyType type = 1;
     string alias = 2;

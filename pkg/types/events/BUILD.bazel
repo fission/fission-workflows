@@ -4,10 +4,15 @@ go_library(
     name = "go_default_library",
     srcs = [
         "events.pb.go",
+        "fsm.go",
         "util.go",
     ],
     visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/golang/protobuf/proto:go_default_library"],
+    deps = [
+        "//pkg/types:go_default_library",
+        "//pkg/util/fsm:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+    ],
 )
 
 filegroup(

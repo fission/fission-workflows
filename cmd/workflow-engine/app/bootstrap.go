@@ -10,16 +10,18 @@ import (
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/api/workflow"
+	"github.com/fission/fission-workflow/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflow/pkg/apiserver"
-	"github.com/fission/fission-workflow/pkg/cache"
 	"github.com/fission/fission-workflow/pkg/controller"
 	"github.com/fission/fission-workflow/pkg/controller/query"
-	inats "github.com/fission/fission-workflow/pkg/eventstore/nats"
+	"github.com/fission/fission-workflow/pkg/fes"
+	"github.com/fission/fission-workflow/pkg/fes/eventstore/nats"
 	"github.com/fission/fission-workflow/pkg/fnenv/fission"
-	ip "github.com/fission/fission-workflow/pkg/projector/project/invocation"
-	wp "github.com/fission/fission-workflow/pkg/projector/project/workflow"
 	"github.com/fission/fission-workflow/pkg/scheduler"
+	"github.com/fission/fission-workflow/pkg/types/aggregates"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflow/pkg/util/labels"
+	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/nats-io/go-nats-streaming"
@@ -70,28 +72,51 @@ func Run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		panic(err)
 	}
-	natsClient := inats.New(inats.NewConn(stanConn))
-	cache := cache.NewMapCache()
+	//natsClient := inats.New(inats.NewConn(stanConn))
+	//cache := cache.NewMapCache()
 
-	workflowParser := workflow.NewParser(opts.FunctionRegistry)
-	workflowValidator := workflow.NewValidator()
-	invocationProjector := ip.NewInvocationProjector(natsClient, cache)
-	workflowProjector := wp.NewWorkflowProjector(natsClient, cache)
-	err = invocationProjector.Watch("invocation.>")
-	if err != nil {
-		panic(err)
+	workflowParser := parse.NewResolver(opts.FunctionRegistry)
+	workflowValidator := parse.NewValidator()
+
+	es := nats.NewEventStore(nats.NewWildcardConn(stanConn))
+	es.Watch(fes.Aggregate{Type: "workflow"})
+	es.Watch(fes.Aggregate{Type: "invocation"})
+	defer es.Close()
+
+	// Create updateble invocationCache
+	invokeSub := es.Subscribe(pubsub.SubscriptionOptions{
+		Buf: 50,
+		LabelSelector: labels.OrSelector(
+			labels.InSelector("aggregate.type", "invocation"),
+			labels.InSelector("parent.type", "invocation")),
+	})
+	wi := func() fes.Aggregator {
+		return aggregates.NewWorkflowInvocation("", nil)
 	}
+	invocationCache := fes.NewSubscribedCache(ctx, fes.NewMapCache(), wi, invokeSub)
+
+	// Create updateble workflowCache
+	wfSub := es.Subscribe(pubsub.SubscriptionOptions{
+		Buf:           10,
+		LabelSelector: labels.InSelector("aggregate.type", "workflow"),
+	})
+	wb := func() fes.Aggregator {
+		return aggregates.NewWorkflow("", nil)
+	}
+	wfCache := fes.NewSubscribedCache(ctx, fes.NewMapCache(), wb, wfSub)
+
 	// Setup API
-	workflowApi := workflow.NewApi(natsClient, workflowParser)
-	invocationApi := invocation.NewApi(natsClient, invocationProjector)
-	functionApi := function.NewFissionFunctionApi(opts.FunctionRuntimeEnv, natsClient)
-	err = workflowProjector.Watch("workflows.>")
-	if err != nil {
-		log.Warnf("Failed to watch for workflows, because '%v'.", err)
-	}
+	invocationApi := invocation.NewApi(es, invocationCache)
+
+	workflowApi := workflow.NewApi(es, workflowParser)
+	functionApi := function.NewFissionFunctionApi(opts.FunctionRuntimeEnv, es)
+	//err = workflowProjector.Watch("workflows.>")
+	//if err != nil {
+	//	log.Warnf("Failed to watch for workflows, because '%v'.", err)
+	//}
 
 	// API gRPC Server
-	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, workflowProjector)
+	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, wfCache)
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
 
@@ -132,9 +157,9 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Controller
 	s := &scheduler.WorkflowScheduler{}
-	pf := typedvalues.NewDefaultParserFormatter()
+	pf := typedvalues.DefaultParserFormatter
 	ep := query.NewJavascriptExpressionParser(pf)
-	ctr := controller.NewController(invocationProjector, workflowProjector, s, functionApi, invocationApi, ep)
+	ctr := controller.NewController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
 	defer ctr.Close()
 	go ctr.Run(ctx)
 

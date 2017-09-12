@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message Aggregate {
+    string id = 1;
+    string type = 2;
+}
+
+message Event {
+    string id = 1;
+    string type = 2;
+    Aggregate aggregate = 3;
+    google.protobuf.Timestamp timestamp = 4;
+    bytes data = 5;
+    Aggregate parent = 6;
+}

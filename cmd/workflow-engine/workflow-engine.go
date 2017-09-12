@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflow/cmd/workflow-engine/app"
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/fnenv/native"
+	"github.com/fission/fission-workflow/pkg/fnenv/native/builtin"
 	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -40,7 +41,10 @@ func main() {
 	//controllerClient := client.MakeClient("http://192.168.99.100:31313")
 	//fissionApi := fission.NewFunctionEnv(poolmgrClient, controllerClient)
 	//fissionResolver := fission.NewResolver(controllerClient)
-	nativeEnv := native.NewFunctionEnv()
+	nativeEnv := native.NewFunctionEnv(map[string]native.InternalFunction{
+		"if":   &builtin.FunctionIf{},
+		"noop": &builtin.FunctionNoop{},
+	})
 
 	cliApp.Action = func(c *cli.Context) error {
 		options := &app.Options{

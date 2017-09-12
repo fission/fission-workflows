@@ -3,10 +3,11 @@ package scheduler
 import (
 	"fmt"
 
+	"math"
+
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
-	"math"
 )
 
 type WorkflowScheduler struct {
@@ -20,15 +21,17 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}
 
 	ctxLog := log.WithFields(log.Fields{
-		"workflow": request.Workflow,
-		"invoke":   request.Invocation,
+		"workflow": request.Workflow.Metadata.Id,
+		"invoke":   request.Invocation.Metadata.Id,
 	})
 
 	ctxLog.Info("Scheduler evaluating...")
 
-	openTasks := map[string]*types.Task{} // bool = nothing
+	cwf := types.CalculateTaskDependencyGraph(request.Workflow, request.Invocation)
+
+	openTasks := map[string]*types.TaskStatus{} // bool = nothing
 	// Fill open tasks
-	for id, t := range request.Workflow.Spec.Tasks {
+	for id, t := range cwf {
 		invokedTask, ok := request.Invocation.Status.Tasks[id]
 		if !ok {
 			openTasks[id] = t
@@ -36,7 +39,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		}
 		if invokedTask.Status.Status == types.FunctionInvocationStatus_FAILED {
 			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
-				Reason: fmt.Sprintf("Task '%s' failed!", invokedTask),
+				Reason: fmt.Sprintf("TaskStatus '%s' failed!", invokedTask),
 			})
 
 			abortAction := &Action{
@@ -51,7 +54,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}
 
 	// Determine horizon (aka tasks that can be executed now)
-	horizon := map[string]*types.Task{}
+	horizon := map[string]*types.TaskStatus{}
 	for id, task := range openTasks {
 		if len(task.GetDependencies()) == 0 {
 			horizon[id] = task
@@ -62,9 +65,9 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		for depName := range task.GetDependencies() {
 			if _, ok := openTasks[depName]; !ok {
 				completedDeps = completedDeps + 1
-				break
 			}
 		}
+
 		log.WithFields(log.Fields{
 			"completedDeps": completedDeps,
 			"task":          id,
@@ -83,7 +86,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		inputs := taskDef.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
 			Id:     taskId,
-			Inputs: inputs, // TODO interpolated inputs
+			Inputs: inputs,
 		})
 
 		schedule.Actions = append(schedule.Actions, &Action{

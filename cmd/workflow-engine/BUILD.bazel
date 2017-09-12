@@ -8,6 +8,7 @@ go_library(
         "//cmd/workflow-engine/app:go_default_library",
         "//pkg/api/function:go_default_library",
         "//pkg/fnenv/native:go_default_library",
+        "//pkg/fnenv/native/builtin:go_default_library",
         "//vendor/github.com/nats-io/go-nats:go_default_library",
         "//vendor/github.com/sirupsen/logrus:go_default_library",
         "//vendor/github.com/urfave/cli:go_default_library",

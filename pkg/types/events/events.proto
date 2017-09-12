@@ -11,6 +11,12 @@ enum Workflow {
 }
 
 enum Invocation {
+    INVOCATION_CREATED = 0; // origin: User
+    INVOCATION_COMPLETED = 1; // origin: Engine
+    INVOCATION_CANCELED = 2; // origin: User
+}
+
+enum Function {
     TASK_STARTED = 0; // origin: Engine
     TASK_SKIPPED = 1; // origin: Engine
     TASK_HEARTBEAT_REQUEST = 2; // origin: Engine
@@ -18,8 +24,4 @@ enum Invocation {
     TASK_SUCCEEDED = 4; // origin: Task
     TASK_FAILED = 5; // origin: Task
     TASK_ABORTED = 6; // origin: Engine
-
-    INVOCATION_CREATED = 7; // origin: User
-    INVOCATION_COMPLETED = 8; // origin: Engine
-    INVOCATION_CANCELED = 9; // origin: User
 }

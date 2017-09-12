@@ -6,7 +6,11 @@ go_library(
         "json.go",
         "reserved.go",
         "types.go",
+        "util.go",
     ],
     visibility = ["//visibility:public"],
-    deps = ["//pkg/types:go_default_library"],
+    deps = [
+        "//pkg/types:go_default_library",
+        "//vendor/github.com/gogo/protobuf/proto:go_default_library",
+    ],
 )

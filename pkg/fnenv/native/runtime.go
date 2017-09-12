@@ -13,19 +13,16 @@ type InternalFunction interface {
 	Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error)
 }
 
-// Internal InternalFunction Environment for executing low overhead functions, such as control flow constructs
+// FunctionEnv for executing low overhead functions, such as control flow constructs, inside the workflow engine
 //
-// Currently this is golang only.
+// Note: This currently supports Golang only.
 type FunctionEnv struct {
 	fns map[string]InternalFunction // Name -> function
 }
 
-func NewFunctionEnv() *FunctionEnv {
+func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 	env := &FunctionEnv{
-		fns: map[string]InternalFunction{
-			"if":   &FunctionIf{},
-			"noop": &FunctionNoop{},
-		},
+		fns: fns,
 	}
 	log.WithField("fns", env.fns).Debugf("Internal function runtime installed.")
 	return env
@@ -35,7 +32,7 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 	fnId := spec.GetType().GetResolved()
 	fn, ok := fe.fns[fnId]
 	if !ok {
-		return nil, fmt.Errorf("Could not resolve internal function '%s'.", fnId)
+		return nil, fmt.Errorf("could not resolve internal function '%s'", fnId)
 	}
 
 	out, err := fn.Invoke(spec)
@@ -60,7 +57,7 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 func (fe *FunctionEnv) Resolve(fnName string) (string, error) {
 	_, ok := fe.fns[fnName]
 	if !ok {
-		return "", fmt.Errorf("Could not resolve internal function '%s'.", fnName)
+		return "", fmt.Errorf("could not resolve internal function '%s'", fnName)
 	}
 	return fnName, nil
 }

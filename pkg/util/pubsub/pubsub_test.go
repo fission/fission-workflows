@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fission/fission-workflow/pkg/util/labels/kubelabels"
 	"time"
+
+	"github.com/fission/fission-workflow/pkg/util/labels"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPublisherSubscribe(t *testing.T) {
@@ -13,9 +15,7 @@ func TestPublisherSubscribe(t *testing.T) {
 	defer pub.Close()
 	sub := pub.Subscribe()
 
-	if sub == nil {
-		t.Error("Empty subscription provided")
-	}
+	assert.NotNil(t, sub)
 }
 
 func TestPublish(t *testing.T) {
@@ -24,22 +24,14 @@ func TestPublish(t *testing.T) {
 		Buf: 1,
 	})
 
-	msg := NewGenericMsg(kubelabels.New(map[string]string{
-		"foo": "bar",
-	}), time.Now(), "TestMsg")
+	msg := NewGenericMsg(labels.SetLabels{"foo": "bar"}, time.Now(), "TestMsg")
 
 	err := pub.Publish(msg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	pub.Close()
 
-	err = expectMsgs(sub, []Msg{
-		msg,
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	err = expectMsgs(sub, msg)
+	assert.NoError(t, err)
 }
 
 func TestPublishBufferOverflow(t *testing.T) {
@@ -51,54 +43,37 @@ func TestPublishBufferOverflow(t *testing.T) {
 		Buf: 10,
 	})
 
-	firstMsg := NewGenericMsg(kubelabels.New(map[string]string{
-		"foo": "bar",
-	}), time.Now(), "TestMsg1")
-
-	secondMsg := NewGenericMsg(kubelabels.New(map[string]string{
-		"foo": "bar",
-	}), time.Now(), "TestMsg2")
+	firstMsg := NewGenericMsg(labels.SetLabels(map[string]string{"foo": "bar"}), time.Now(), "TestMsg1")
+	secondMsg := NewGenericMsg(labels.SetLabels(map[string]string{"foo": "bar"}), time.Now(), "TestMsg2")
 
 	err := pub.Publish(firstMsg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
+
 	err = pub.Publish(secondMsg)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	pub.Close()
 
-	err = expectMsgs(sub, []Msg{
-		firstMsg,
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	err = expectMsgs(sub, firstMsg)
+	assert.NoError(t, err)
 
-	err = expectMsgs(sub2, []Msg{
-		firstMsg,
-		secondMsg,
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	err = expectMsgs(sub2, firstMsg, secondMsg)
+	assert.NoError(t, err)
 }
 
 // Note ensure that subscriptions are closed before this check
-func expectMsgs(sub *Subscription, expectedMsgs []Msg) error {
+func expectMsgs(sub *Subscription, expectedMsgs ...Msg) error {
 	i := 0
 	for msg := range sub.Ch {
 		if i > len(expectedMsgs) {
-			return fmt.Errorf("Received unexpected msg '%v'", msg)
+			return fmt.Errorf("received unexpected msg '%v'", msg)
 		}
 		if msg != expectedMsgs[i] {
-			return fmt.Errorf("Received msg '%v' does not equal send msg '%v'", msg, expectedMsgs[i])
+			return fmt.Errorf("received msg '%v' does not equal send msg '%v'", msg, expectedMsgs[i])
 		}
 		i = i + 1
 	}
 	if i != len(expectedMsgs) {
-		return fmt.Errorf("Did not receive expected msgs: %v", expectedMsgs[i+1:])
+		return fmt.Errorf("did not receive expected msgs: %v", expectedMsgs[i+1:])
 	}
 	return nil
 }
