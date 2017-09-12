@@ -37,7 +37,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 			openTasks[id] = t
 			continue
 		}
-		if invokedTask.Status.Status == types.FunctionInvocationStatus_FAILED {
+		if invokedTask.Status.Status == types.TaskInvocationStatus_FAILED {
 			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
 				Reason: fmt.Sprintf("TaskStatus '%s' failed!", invokedTask),
 			})
@@ -56,13 +56,13 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	// Determine horizon (aka tasks that can be executed now)
 	horizon := map[string]*types.TaskStatus{}
 	for id, task := range openTasks {
-		if len(task.GetDependencies()) == 0 {
+		if len(task.Requires) == 0 {
 			horizon[id] = task
 			break
 		}
 
 		completedDeps := 0
-		for depName := range task.GetDependencies() {
+		for depName := range task.Requires {
 			if _, ok := openTasks[depName]; !ok {
 				completedDeps = completedDeps + 1
 			}
@@ -71,9 +71,9 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		log.WithFields(log.Fields{
 			"completedDeps": completedDeps,
 			"task":          id,
-			"max":           int(math.Max(float64(task.DependenciesAwait), float64(len(task.GetDependencies())-1))),
+			"max":           int(math.Max(float64(task.Await), float64(len(task.Requires)-1))),
 		}).Infof("Checking if dependencies have been satisfied")
-		if completedDeps > int(math.Max(float64(task.DependenciesAwait), float64(len(task.GetDependencies())-1))) {
+		if completedDeps > int(math.Max(float64(task.Await), float64(len(task.Requires)-1))) {
 			horizon[id] = task
 		}
 	}

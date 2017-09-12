@@ -59,9 +59,9 @@ tasks:
 	assert.Equal(t, wf.ApiVersion, wfd.ApiVersion)
 	for id, task := range wfd.Tasks {
 		if len(task.Run) == 0 {
-			assert.Equal(t, wf.Tasks[id].Name, "noop")
+			assert.Equal(t, wf.Tasks[id].FunctionRef, "noop")
 		} else {
-			assert.Equal(t, wf.Tasks[id].Name, task.Run)
+			assert.Equal(t, wf.Tasks[id].FunctionRef, task.Run)
 		}
 
 		expectedInputLength := 1
@@ -74,7 +74,7 @@ tasks:
 		assert.Equal(t, len(wf.Tasks[id].Inputs), expectedInputLength, fmt.Sprintf("was: %v", task.Inputs))
 
 		assert.Equal(t, wf.Tasks[id].Id, id)
-		assert.Equal(t, len(wf.Tasks[id].Dependencies), len(task.Requires))
-		assert.Equal(t, int(wf.Tasks[id].DependenciesAwait), len(task.Requires))
+		assert.Equal(t, len(wf.Tasks[id].Requires), len(task.Requires))
+		assert.Equal(t, int(wf.Tasks[id].Await), len(task.Requires))
 	}
 }

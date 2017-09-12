@@ -263,22 +263,22 @@
     }
   },
   "definitions": {
-    "FunctionInvocation": {
+    "TaskInvocation": {
       "type": "object",
       "properties": {
         "metadata": {
           "$ref": "#/definitions/ObjectMetadata"
         },
         "spec": {
-          "$ref": "#/definitions/FunctionInvocationSpec"
+          "$ref": "#/definitions/TaskInvocationSpec"
         },
         "status": {
-          "$ref": "#/definitions/FunctionInvocationStatus"
+          "$ref": "#/definitions/TaskInvocationStatus"
         }
       },
       "title": "Function Invocation Model"
     },
-    "FunctionInvocationSpec": {
+    "TaskInvocationSpec": {
       "type": "object",
       "properties": {
         "type": {
@@ -296,11 +296,11 @@
         }
       }
     },
-    "FunctionInvocationStatus": {
+    "TaskInvocationStatus": {
       "type": "object",
       "properties": {
         "status": {
-          "$ref": "#/definitions/FunctionInvocationStatusStatus"
+          "$ref": "#/definitions/TaskInvocationStatusStatus"
         },
         "updatedAt": {
           "type": "string",
@@ -311,7 +311,7 @@
         }
       }
     },
-    "FunctionInvocationStatusStatus": {
+    "TaskInvocationStatusStatus": {
       "type": "string",
       "enum": [
         "UNKNOWN",
@@ -474,7 +474,7 @@
         "tasks": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/FunctionInvocation"
+            "$ref": "#/definitions/TaskInvocation"
           }
         },
         "output": {

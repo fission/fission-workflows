@@ -8,11 +8,11 @@ import (
 
 func TestFunctionIfConsequentFlow(t *testing.T) {
 	expectedTask := &types.Task{
-		Name: "DoThisTask",
+		FunctionRef: "DoThisTask",
 	}
 	internalFunctionTest(t,
 		&FunctionIf{},
-		&types.FunctionInvocationSpec{
+		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
 				IF_INPUT_CONDITION:  parseUnsafe(true),
 				IF_INPUT_CONSEQUENT: parseUnsafe(expectedTask),
@@ -23,14 +23,14 @@ func TestFunctionIfConsequentFlow(t *testing.T) {
 
 func TestFunctionIfAlternativeFlow(t *testing.T) {
 	task := &types.Task{
-		Name: "DoThisTask",
+		FunctionRef: "DoThisTask",
 	}
 	alternativeTask := &types.Task{
-		Name: "DoThisOtherTask",
+		FunctionRef: "DoThisOtherTask",
 	}
 	internalFunctionTest(t,
 		&FunctionIf{},
-		&types.FunctionInvocationSpec{
+		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
 				IF_INPUT_CONDITION:   parseUnsafe(false),
 				IF_INPUT_CONSEQUENT:  parseUnsafe(task),

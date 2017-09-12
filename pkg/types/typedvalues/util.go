@@ -17,7 +17,7 @@ func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.Ty
 
 	if output.Type == TYPE_FLOW {
 		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
-			if dep, ok := outputTask.Dependencies[taskId]; ok && dep.Type == types.TaskDependencyParameters_FUNKTOR_OUTPUT {
+			if dep, ok := outputTask.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
 				return ResolveTaskOutput(outputTaskId, invoc)
 			}
 		}

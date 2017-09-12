@@ -22,14 +22,14 @@ func NewFissionFunctionApi(runtime map[string]Runtime, esClient fes.EventStore) 
 	}
 }
 
-func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec) (*types.FunctionInvocation, error) {
-	id := fnSpec.TaskId // assumption: 1 task == 1 FunctionInvocation (How to deal with retries? Same invocation?)
-	fn := &types.FunctionInvocation{
+func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+	id := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	fn := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        id,
 			CreatedAt: ptypes.TimestampNow(),
 		},
-		Spec: fnSpec,
+		Spec: spec,
 	}
 
 	fnAny, err := proto.Marshal(fn)
@@ -40,7 +40,7 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 	err = ap.es.HandleEvent(&fes.Event{
 		Type:      events.Function_TASK_STARTED.String(),
 		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
-		Aggregate: aggregates.NewFunctionInvocationAggregate(id),
+		Aggregate: aggregates.NewTaskInvocationAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      fnAny,
 	})
@@ -48,13 +48,13 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 		return nil, err
 	}
 
-	fnResult, err := ap.runtime[fnSpec.Type.Runtime].Invoke(fnSpec)
+	fnResult, err := ap.runtime[spec.Type.Runtime].Invoke(spec)
 	if err != nil {
 		// TODO record error message
 		esErr := ap.es.HandleEvent(&fes.Event{
 			Type:      events.Function_TASK_FAILED.String(),
 			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
-			Aggregate: aggregates.NewFunctionInvocationAggregate(id),
+			Aggregate: aggregates.NewTaskInvocationAggregate(id),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnAny,
 		})
@@ -72,7 +72,7 @@ func (ap *Api) Invoke(invocationId string, fnSpec *types.FunctionInvocationSpec)
 	err = ap.es.HandleEvent(&fes.Event{
 		Type:      events.Function_TASK_SUCCEEDED.String(),
 		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
-		Aggregate: aggregates.NewFunctionInvocationAggregate(id),
+		Aggregate: aggregates.NewTaskInvocationAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      fnStatusAny,
 	})

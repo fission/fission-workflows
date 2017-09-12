@@ -28,7 +28,7 @@ func TestResolve(t *testing.T) {
 	task1Name := "lowercase"
 	tasks := map[string]*types.Task{
 		task1: {
-			Name: task1Name,
+			FunctionRef: task1Name,
 		},
 	}
 	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
@@ -56,7 +56,7 @@ func TestResolveForced(t *testing.T) {
 	task1Name := "foo:lowercase"
 	tasks := map[string]*types.Task{
 		task1: {
-			Name: task1Name,
+			FunctionRef: task1Name,
 		},
 	}
 	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
@@ -85,13 +85,13 @@ func TestResolveInputs(t *testing.T) {
 	nestedNestedTaskName := "nestedLowercase"
 	tasks := map[string]*types.Task{
 		task1: {
-			Name: task1Name,
+			FunctionRef: task1Name,
 			Inputs: map[string]*types.TypedValue{
 				"nested": typedvalues.Flow(&types.Task{
-					Name: nestedTaskName,
+					FunctionRef: nestedTaskName,
 					Inputs: map[string]*types.TypedValue{
 						"nested2": typedvalues.Flow(&types.Task{
-							Name: nestedNestedTaskName,
+							FunctionRef: nestedNestedTaskName,
 						}),
 					},
 				}),
@@ -123,7 +123,7 @@ func TestResolveNotFound(t *testing.T) {
 	task1Name := "foo:lowercase"
 	tasks := map[string]*types.Task{
 		task1: {
-			Name: task1Name,
+			FunctionRef: task1Name,
 		},
 	}
 	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})

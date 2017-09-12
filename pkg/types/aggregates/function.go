@@ -14,29 +14,29 @@ const (
 	TYPE_FUNCTION_INVOCATION = "function"
 )
 
-type FunctionInvocation struct {
+type TaskInvocation struct {
 	*fes.AggregatorMixin
-	*types.FunctionInvocation
+	*types.TaskInvocation
 }
 
-func NewFunctionInvocation(id string, fi *types.FunctionInvocation) *FunctionInvocation {
-	fia := &FunctionInvocation{
-		FunctionInvocation: fi,
+func NewTaskInvocation(id string, fi *types.TaskInvocation) *TaskInvocation {
+	tia := &TaskInvocation{
+		TaskInvocation: fi,
 	}
 
-	fia.AggregatorMixin = fes.NewAggregatorMixin(fia, *NewFunctionInvocationAggregate(id))
+	tia.AggregatorMixin = fes.NewAggregatorMixin(tia, *NewTaskInvocationAggregate(id))
 
-	return fia
+	return tia
 }
 
-func NewFunctionInvocationAggregate(id string) *fes.Aggregate {
+func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 	return &fes.Aggregate{
 		Id:   id,
 		Type: TYPE_FUNCTION_INVOCATION,
 	}
 }
 
-func (fi *FunctionInvocation) ApplyEvent(event *fes.Event) error {
+func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 
 	eventType, err := events.ParseFunction(event.Type)
 	if err != nil {
@@ -45,39 +45,39 @@ func (fi *FunctionInvocation) ApplyEvent(event *fes.Event) error {
 
 	switch eventType {
 	case events.Function_TASK_STARTED:
-		fn := &types.FunctionInvocation{}
+		fn := &types.TaskInvocation{}
 		err = proto.Unmarshal(event.Data, fn)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
 
-		fi.FunctionInvocation = &types.FunctionInvocation{
+		ti.TaskInvocation = &types.TaskInvocation{
 			Metadata: fn.Metadata,
 			Spec:     fn.Spec,
-			Status: &types.FunctionInvocationStatus{
-				Status:    types.FunctionInvocationStatus_SCHEDULED,
+			Status: &types.TaskInvocationStatus{
+				Status:    types.TaskInvocationStatus_SCHEDULED,
 				UpdatedAt: event.Timestamp,
 			},
 		}
 	case events.Function_TASK_SUCCEEDED:
-		fn := &types.FunctionInvocation{}
-		err = proto.Unmarshal(event.Data, fn)
+		invoc := &types.TaskInvocation{}
+		err = proto.Unmarshal(event.Data, invoc)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
 
-		fi.Status.Output = fn.Status.Output
-		fi.Status.Status = types.FunctionInvocationStatus_SUCCEEDED
-		fi.Status.UpdatedAt = event.Timestamp
+		ti.Status.Output = invoc.Status.Output
+		ti.Status.Status = types.TaskInvocationStatus_SUCCEEDED
+		ti.Status.UpdatedAt = event.Timestamp
 	case events.Function_TASK_ABORTED:
-		fi.Status.Status = types.FunctionInvocationStatus_ABORTED
-		fi.Status.UpdatedAt = event.Timestamp
+		ti.Status.Status = types.TaskInvocationStatus_ABORTED
+		ti.Status.UpdatedAt = event.Timestamp
 	case events.Function_TASK_FAILED:
-		fi.Status.Status = types.FunctionInvocationStatus_FAILED
-		fi.Status.UpdatedAt = event.Timestamp
+		ti.Status.Status = types.TaskInvocationStatus_FAILED
+		ti.Status.UpdatedAt = event.Timestamp
 	case events.Function_TASK_SKIPPED:
-		fi.Status.Status = types.FunctionInvocationStatus_SKIPPED
-		fi.Status.UpdatedAt = event.Timestamp
+		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
+		ti.Status.UpdatedAt = event.Timestamp
 	case events.Function_TASK_HEARTBEAT_REQUEST:
 		panic("NA")
 	case events.Function_TASK_HEARTBEAT_RESPONSE:

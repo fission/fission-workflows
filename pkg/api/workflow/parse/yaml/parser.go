@@ -11,6 +11,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const (
+	DEFAULT_FUNCTIONREF = "noop"
+)
+
 func Parse(r io.Reader) (*WorkflowDef, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -74,7 +78,7 @@ func parseInput(i interface{}) (map[string]*types.TypedValue, error) {
 func parseSingleInput(i interface{}) (*types.TypedValue, error) {
 	switch v := i.(type) {
 	case map[string]interface{}:
-		return nil, errors.New("Unexpected collection")
+		return nil, errors.New("unexpected collection")
 	case *TaskDef: // Handle TaskDef because it cannot be parsed by standard parser
 		p, err := parseTask("", v)
 		if err != nil {
@@ -106,15 +110,15 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 
 	fn := t.Run
 	if len(fn) == 0 {
-		fn = "noop" // TODO extract default
+		fn = DEFAULT_FUNCTIONREF
 	}
 
 	return &types.Task{
-		Id:                id,
-		Name:              fn,
-		Dependencies:      deps,
-		DependenciesAwait: int32(len(deps)),
-		Inputs:            inputs,
+		Id:          id,
+		FunctionRef: fn,
+		Requires:    deps,
+		Await:       int32(len(deps)),
+		Inputs:      inputs,
 	}, nil
 }
 

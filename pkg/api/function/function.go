@@ -5,15 +5,15 @@ import (
 )
 
 type Runtime interface {
-	Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error)
+	Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error)
 }
 
 type AsyncRuntime interface {
-	InvokeAsync(spec *types.FunctionInvocationSpec) (string, error)
+	InvokeAsync(spec *types.TaskInvocationSpec) (string, error)
 
 	Cancel(fnInvocationId string) error
 
-	Status(fnInvocationId string) (*types.FunctionInvocationStatus, error)
+	Status(fnInvocationId string) (*types.TaskInvocationStatus, error)
 }
 
 type Resolver interface {

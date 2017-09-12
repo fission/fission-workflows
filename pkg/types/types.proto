@@ -19,21 +19,21 @@ message Workflow {
     WorkflowStatus status = 3;
 }
 
-// Function Invocation Model
-message FunctionInvocation {
+// Task Invocation Model
+message TaskInvocation {
     ObjectMetadata metadata = 1;
-    FunctionInvocationSpec spec = 2;
-    FunctionInvocationStatus status = 3;
+    TaskInvocationSpec spec = 2;
+    TaskInvocationStatus status = 3;
 }
 
-message FunctionInvocationSpec {
-    // Id of the function to be invoked (no ambiguatity at this point
+message TaskInvocationSpec {
+    // Id of the task to be invoked (no ambiguatity at this point
     TaskTypeDef type = 1;
     string taskId = 2; // task in workflow
     map<string, TypedValue> inputs = 3;
 }
 
-message FunctionInvocationStatus {
+message TaskInvocationStatus {
     enum Status {
         UNKNOWN = 0;
         SCHEDULED = 1; // Arrived at engine, but not yet schedu
@@ -66,7 +66,7 @@ message WorkflowInvocationStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    map<string, FunctionInvocation> tasks = 3;
+    map<string, TaskInvocation> tasks = 3;
     TypedValue output = 4;
     map<string, Task> dynamicTasks = 5;
 }
@@ -113,15 +113,15 @@ message Task {
     string id = 1;
 
     // Name/identifier of the function
-    string name = 3;
+    string functionRef = 3; // TODO allow fission.FunctionRef struct here
 
     map<string, TypedValue> inputs = 4;
 
     // Dependencies for this task to execute
-    map<string, TaskDependencyParameters> dependencies = 5;
+    map<string, TaskDependencyParameters> requires = 5;
 
     // Number of dependencies to wait for
-    int32 dependencies_await = 6;
+    int32 await = 6;
 }
 
 message TaskDependencyParameters {
@@ -129,7 +129,7 @@ message TaskDependencyParameters {
     enum DependencyType {
         DATA = 0;
         CONTROL = 1;
-        FUNKTOR_OUTPUT = 2;
+        DYNAMIC_OUTPUT = 2;
     }
     DependencyType type = 1;
     string alias = 2;
@@ -150,8 +150,8 @@ message WorkflowStatus {
 }
 
 message TaskTypeDef {
-    string src = 1; // Orginal
-    string runtime = 2; // Function Runtime
+    string src = 1; // TODO allow fission.FunctionRef struct here
+    string runtime = 2; // Function Execution Runtime
     string resolved = 3; // Address (Uid) to the function
 }
 

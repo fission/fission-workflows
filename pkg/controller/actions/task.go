@@ -22,9 +22,9 @@ func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *t
 	}
 
 	// Resolve type of the task
-	taskDef, ok := wf.Status.ResolvedTasks[task.Name]
+	taskDef, ok := wf.Status.ResolvedTasks[task.FunctionRef]
 	if !ok {
-		return fmt.Errorf("no resolved task could be found for task '%v'", task.Name)
+		return fmt.Errorf("no resolved task could be found for task '%v'", task.FunctionRef)
 	}
 
 	// Resolve the inputs
@@ -49,7 +49,7 @@ func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *t
 	}
 
 	// Invoke
-	fnSpec := &types.FunctionInvocationSpec{
+	fnSpec := &types.TaskInvocationSpec{
 		TaskId: action.Id,
 		Type:   taskDef,
 		Inputs: inputs,

@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	IF_INPUT_CONDITION   = "condition"
-	IF_INPUT_ALTERNATIVE = "alternative"
-	IF_INPUT_CONSEQUENT  = "consequent"
+	IF_INPUT_CONDITION   = "if"
+	IF_INPUT_CONSEQUENT  = "then"
+	IF_INPUT_ALTERNATIVE = "else"
 )
 
 type FunctionIf struct{}
 
-func (fn *FunctionIf) Invoke(spec *types.FunctionInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 
 	expr, err := verifyInput(spec.GetInputs(), IF_INPUT_CONDITION, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_BOOL)) // TODO Is already resolved?
 	if err != nil {

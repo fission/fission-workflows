@@ -68,7 +68,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			Spec: spec,
 			Status: &types.WorkflowInvocationStatus{
 				Status:       types.WorkflowInvocationStatus_IN_PROGRESS,
-				Tasks:        map[string]*types.FunctionInvocation{},
+				Tasks:        map[string]*types.TaskInvocation{},
 				UpdatedAt:    event.GetTimestamp(),
 				DynamicTasks: map[string]*types.Task{},
 			},
@@ -105,24 +105,24 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	taskId := event.Aggregate.Id
 	task, ok := wi.Status.Tasks[taskId]
 	if !ok {
-		task = &types.FunctionInvocation{}
+		task = &types.TaskInvocation{}
 	}
-	fi := NewFunctionInvocation(taskId, task)
-	err := fi.ApplyEvent(event)
+	ti := NewTaskInvocation(taskId, task)
+	err := ti.ApplyEvent(event)
 	if err != nil {
 		return err
 	}
-	wi.Status.Tasks[taskId] = fi.FunctionInvocation
+	wi.Status.Tasks[taskId] = ti.TaskInvocation
 
 	// Handle dynamic tasks
-	output := fi.FunctionInvocation.Status.Output
+	output := ti.TaskInvocation.Status.Output
 	if output != nil && output.Type == typedvalues.TYPE_FLOW {
 		i, _ := typedvalues.Format(output)
 		dynamicTask := i.(*types.Task)
 		id := util.CreateScopeId(taskId, dynamicTask.Id) // TODO Support alias
 		dynamicTask.Id = id
-		if dynamicTask.Dependencies == nil {
-			dynamicTask.Dependencies = map[string]*types.TaskDependencyParameters{}
+		if dynamicTask.Requires == nil {
+			dynamicTask.Requires = map[string]*types.TaskDependencyParameters{}
 		}
 
 		if dynamicTask.Inputs == nil {
@@ -130,13 +130,13 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 		}
 
 		// Ensure that the outputted task depends on the creating task
-		dynamicTask.Dependencies[taskId] = &types.TaskDependencyParameters{
-			Type: types.TaskDependencyParameters_FUNKTOR_OUTPUT, // Marks this task as the output of the
+		dynamicTask.Requires[taskId] = &types.TaskDependencyParameters{
+			Type: types.TaskDependencyParameters_DYNAMIC_OUTPUT, // Marks this task as the output of the
 		}
 
 		log.WithFields(log.Fields{
-			"id":   dynamicTask.Id,
-			"name": dynamicTask.Name,
+			"id":          dynamicTask.Id,
+			"functionRef": dynamicTask.FunctionRef,
 		}).Info("Adding dynamic task.")
 
 		wi.Status.DynamicTasks[id] = dynamicTask

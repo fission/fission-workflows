@@ -34,7 +34,7 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 			return errors.New("Task requires an id")
 		}
 
-		if len(task.Name) == 0 {
+		if len(task.FunctionRef) == 0 {
 			return errors.New("Task requires a function name")
 		}
 
@@ -52,11 +52,11 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 	// Dependency testing
 	startTasks := []*types.Task{}
 	for taskId, task := range spec.GetTasks() {
-		if len(task.GetDependencies()) == 0 {
+		if len(task.Requires) == 0 {
 			startTasks = append(startTasks, task)
 		}
 
-		for depName := range task.GetDependencies() {
+		for depName := range task.Requires {
 			if _, ok := refTable[depName]; !ok {
 				return fmt.Errorf("Task '%s' ocntains undefined dependency '%s'", taskId, depName)
 			}

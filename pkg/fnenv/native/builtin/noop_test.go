@@ -10,7 +10,7 @@ func TestFunctionNoopPassInput(t *testing.T) {
 	expected := "noopnoop"
 	internalFunctionTest(t,
 		&FunctionNoop{},
-		&types.FunctionInvocationSpec{
+		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
 				NOOP_INPUT: parseUnsafe(expected),
 			},
@@ -21,7 +21,7 @@ func TestFunctionNoopPassInput(t *testing.T) {
 func TestFunctionNoopEmpty(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionNoop{},
-		&types.FunctionInvocationSpec{
+		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{},
 		},
 		nil)

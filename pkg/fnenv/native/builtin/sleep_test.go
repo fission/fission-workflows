@@ -13,7 +13,7 @@ func TestSleepFunction(t *testing.T) {
 	start := time.Now()
 	internalFunctionTest(t,
 		&FunctionSleep{},
-		&types.FunctionInvocationSpec{
+		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
 				SLEEP_INPUT_MS: parseUnsafe("1000"),
 			},

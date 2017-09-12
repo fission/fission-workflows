@@ -34,7 +34,7 @@ func NewFunctionEnv(poolmgr *poolmgr.Client, controller *controller.Client, pf t
 	}
 }
 
-func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.FunctionInvocationStatus, error) {
+func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
 	meta := &api.ObjectMeta{
 		Name: spec.GetType().GetSrc(),
 		UID:  k8stypes.UID(spec.GetType().GetResolved()),
@@ -75,8 +75,8 @@ func (fe *FunctionEnv) Invoke(spec *types.FunctionInvocationSpec) (*types.Functi
 	output := fe.ct.ToTypedValue(resp)
 	logrus.Infof("[%s][output]: %v", meta.Name, output)
 
-	return &types.FunctionInvocationStatus{
-		Status: types.FunctionInvocationStatus_SUCCEEDED,
+	return &types.TaskInvocationStatus{
+		Status: types.TaskInvocationStatus_SUCCEEDED,
 		Output: output,
 	}, nil
 }
