@@ -58,13 +58,8 @@ func Run(ctx context.Context, opts *Options) error {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	conn, err := grpc.Dial(opts.GrpcApiServerAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
 	grpcServer := grpc.NewServer()
 	defer grpcServer.GracefulStop()
-	defer conn.Close()
 	defer lis.Close()
 
 	// EventStore
@@ -109,7 +104,7 @@ func Run(ctx context.Context, opts *Options) error {
 	invocationApi := invocation.NewApi(es, invocationCache)
 
 	workflowApi := workflow.NewApi(es, workflowParser)
-	functionApi := function.NewFissionFunctionApi(opts.FunctionRuntimeEnv, es)
+	functionApi := function.NewApi(opts.FunctionRuntimeEnv, es)
 	//err = workflowProjector.Watch("workflows.>")
 	//if err != nil {
 	//	log.Warnf("Failed to watch for workflows, because '%v'.", err)

@@ -22,15 +22,13 @@ import (
 // FunctionEnv adapts the Fission platform to the function execution runtime.
 type FunctionEnv struct {
 	poolmgr    *poolmgr.Client
-	controller *controller.Client
 	ct         *ContentTypeMapper
 }
 
-func NewFunctionEnv(poolmgr *poolmgr.Client, controller *controller.Client, pf typedvalues.ParserFormatter) function.Runtime {
+func NewFunctionEnv(poolmgr *poolmgr.Client) *FunctionEnv {
 	return &FunctionEnv{
 		poolmgr:    poolmgr,
-		controller: controller,
-		ct:         &ContentTypeMapper{pf},
+		ct:         &ContentTypeMapper{typedvalues.DefaultParserFormatter},
 	}
 }
 
@@ -69,7 +67,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(fmt.Errorf("Error for url '%s': %v", serviceUrl, err))
+		panic(fmt.Errorf("error for url '%s': %v", serviceUrl, err))
 	}
 
 	output := fe.ct.ToTypedValue(resp)

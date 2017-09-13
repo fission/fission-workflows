@@ -15,7 +15,7 @@ type Api struct {
 	es      fes.EventStore
 }
 
-func NewFissionFunctionApi(runtime map[string]Runtime, esClient fes.EventStore) *Api {
+func NewApi(runtime map[string]Runtime, esClient fes.EventStore) *Api {
 	return &Api{
 		runtime: runtime,
 		es:      esClient,
