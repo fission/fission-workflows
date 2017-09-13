@@ -1,7 +1,6 @@
 package fission
 
 import (
-	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission/controller/client"
 	"k8s.io/client-go/1.5/pkg/api"
 )

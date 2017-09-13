@@ -12,15 +12,29 @@ spec:
     spec:
       containers:
       - name: workflow-engine
-        image: fission/fission-workflow
-        command: ["/workflow-engine"]
+        image: fission/fission-workflow-bundle
         imagePullPolicy: IfNotPresent
+        command: ["/fission-workflow-bundle"]
+        args: [
+          "--nats",
+          "--fission",
+          "--controller",
+          "--api-http",
+          "--api-workflow-invocation",
+          "--api-workflow",
+          "--api-admin",
+        ]
         env:
-        - name: EVENT_STORE_URL
+        - name: ES_NATS_URL
           value: nats://nats-streaming:4222
-        - name: EVENT_STORE_CLUSTER
+        - name: ES_NATS_CLUSTER
           value: fissionMQTrigger
+        - name: FNENV_FISSION_POOLMGR
+          value: http://poolmgr.fission
+        - name: FNENV_FISSION_CONTROLLER
+          value: http://controller.fission
 ---
+# TODO Remove this temporary node ports
 apiVersion: v1
 kind: Service
 metadata:

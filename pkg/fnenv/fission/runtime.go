@@ -8,10 +8,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	controller "github.com/fission/fission/controller/client"
 	poolmgr "github.com/fission/fission/poolmgr/client"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"
@@ -21,14 +19,14 @@ import (
 
 // FunctionEnv adapts the Fission platform to the function execution runtime.
 type FunctionEnv struct {
-	poolmgr    *poolmgr.Client
-	ct         *ContentTypeMapper
+	poolmgr *poolmgr.Client
+	ct      *ContentTypeMapper
 }
 
 func NewFunctionEnv(poolmgr *poolmgr.Client) *FunctionEnv {
 	return &FunctionEnv{
-		poolmgr:    poolmgr,
-		ct:         &ContentTypeMapper{typedvalues.DefaultParserFormatter},
+		poolmgr: poolmgr,
+		ct:      &ContentTypeMapper{typedvalues.DefaultParserFormatter},
 	}
 }
 

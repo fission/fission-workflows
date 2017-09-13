@@ -1,4 +1,4 @@
-package app
+package bundle
 
 import (
 	"context"
@@ -14,10 +14,7 @@ import (
 	"io"
 	"net"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/apiserver"
-	"github.com/fission/fission-workflow/pkg/fnenv/native/builtin"
-	"github.com/fission/fission-workflow/pkg/fnenv/test"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -28,30 +25,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-var env *Options
-
-const (
-	UID_FUNC_NOOP  = "FuncUid1"
-	UID_FUNC_IF    = "FuncUid2"
-	UID_FUNC_SLEEP = "FuncUid3"
-)
-
-var mockFuncResolves = map[string]string{
-	"noop":  UID_FUNC_NOOP,
-	"if":    UID_FUNC_IF,
-	"sleep": UID_FUNC_SLEEP,
-}
-
-var mockFuncs = map[string]test.MockFunc{
-	UID_FUNC_NOOP:  (&builtin.FunctionNoop{}).Invoke,
-	UID_FUNC_IF:    (&builtin.FunctionIf{}).Invoke,
-	UID_FUNC_SLEEP: (&builtin.FunctionSleep{}).Invoke,
-}
-
 func TestMain(m *testing.M) {
 
 	ctx, cancelFn := context.WithCancel(context.Background())
-	env = setup(ctx)
+	setup(ctx)
+
+	time.Sleep(time.Duration(4) * time.Second)
+
 	exitCode := m.Run()
 	defer os.Exit(exitCode)
 	// Teardown
@@ -62,7 +42,10 @@ func TestMain(m *testing.M) {
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
 	ctx := context.Background()
-	conn, _ := grpc.Dial(env.GrpcApiServerAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
 	cl := apiserver.NewWorkflowAPIClient(conn)
 
 	// Test workflow creation
@@ -96,7 +79,10 @@ func TestWorkflowCreate(t *testing.T) {
 
 func TestWorkflowInvocation(t *testing.T) {
 	ctx := context.Background()
-	conn, _ := grpc.Dial(env.GrpcApiServerAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
 	cl := apiserver.NewWorkflowAPIClient(conn)
 	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
 
@@ -172,7 +158,10 @@ func TestWorkflowInvocation(t *testing.T) {
 
 func TestDynamicWorkflowInvocation(t *testing.T) {
 	ctx := context.Background()
-	conn, _ := grpc.Dial(env.GrpcApiServerAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
 	cl := apiserver.NewWorkflowAPIClient(conn)
 	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
 
@@ -237,31 +226,24 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	typedvalues.Format(result.Status.Output)
 }
 
-func setup(ctx context.Context) *Options {
-	// TODO Maybe replace with actual Fission deployment
-	mockFunctionResolver := &test.MockFunctionResolver{mockFuncResolves}
-	mockFunctionRuntime := &test.MockRuntimeEnv{Functions: mockFuncs, Results: map[string]*types.TaskInvocation{}}
+func setup(ctx context.Context) {
 
-	esOpts := setupEventStore(ctx)
-	opts := &Options{
-		FunctionRegistry: map[string]function.Resolver{
-			"mock": mockFunctionResolver,
-		},
-		FunctionRuntimeEnv: map[string]function.Runtime{
-			"mock": mockFunctionRuntime,
-		},
-		EventStore:           esOpts,
-		GrpcApiServerAddress: GRPC_ADDRESS,
-		HttpApiServerAddress: API_GATEWAY_ADDRESS,
-		FissionProxyAddress:  FISSION_PROXY_ADDRESS,
-	}
-	go Run(ctx, opts)
+	natsOptions := setupEventStore(ctx)
 
-	return opts
+	go Run(ctx, &Options{
+		// No fission for now
+		InternalRuntime:       true,
+		Controller:            true,
+		ApiHttp:               true,
+		ApiWorkflowInvocation: true,
+		ApiWorkflow:           true,
+		ApiAdmin:              true,
+		Nats:                  natsOptions,
+	})
 }
 
-func setupEventStore(ctx context.Context) *EventStoreOptions {
-	clusterId := fmt.Sprintf("fission-workflow-e2e-%d", time.Now().UnixNano())
+func setupEventStore(ctx context.Context) *NatsOptions {
+	clusterId := fmt.Sprintf("fission-workflow-tests-%d", time.Now().UnixNano())
 	port, err := findFreePort()
 	if err != nil {
 		panic(err)
@@ -278,9 +260,9 @@ func setupEventStore(ctx context.Context) *EventStoreOptions {
 	if err != nil {
 		panic(err)
 	}
-	esOpts := &EventStoreOptions{
+	esOpts := &NatsOptions{
 		Cluster: clusterId,
-		Type:    "NATS",
+		Client:  "someClient",
 		Url:     fmt.Sprintf("nats://%s:%d", address, port),
 	}
 
