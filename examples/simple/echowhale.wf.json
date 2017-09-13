@@ -7,7 +7,7 @@
         "type" : "expr",
         "value" : "$.invocation.inputs.default"
       },
-      "name": "whalesay",
+      "functionRef": "whalesay",
     }
   }
 }

@@ -3,16 +3,16 @@
   "outputTask": "makeWhaleSayFortune",
   "tasks": {
     "internalFuncShowoff": {
-      "name": "noop"
+      "functionRef": "noop"
     },
     "ifLongInput" : {
-      "name" : "if",
+      "functionRef" : "if",
       "inputs" : {
-        "condition" : {
+        "if" : {
           "type" : "expr",
           "value" : "$.invocation.inputs.default.length() < 10"
         },
-        "consequent" : {
+        "then" : {
           "type" : "flow",
           "value" : {
             "id" : "capitalize",
@@ -25,7 +25,7 @@
             }
           }
         },
-        "alternative" : {
+        "else" : {
           "type" : "flow",
           "value" : {
             "id" : "makeItLong",
@@ -41,14 +41,14 @@
       }
     },
     "makeWhaleSayFortune": {
-      "name": "whalesay",
+      "functionRef": "whalesay",
       "inputs" : {
         "default" : {
           "type" : "expr",
           "value" : "$.tasks.ifLongInput.output"
         }
       },
-      "dependencies": {
+      "requires": {
         "ifLongInput" : {},
         "internalFuncShowoff" : {}
       }
