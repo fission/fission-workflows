@@ -3,27 +3,27 @@
   "outputTask": "makeWhaleSayFortune",
   "tasks": {
     "internalFuncShowoff": {
-      "name": "noop"
+      "functionRef": "noop"
     },
     "generateFortune": {
-      "name": "fortune",
+      "functionRef": "fortune",
       "inputs" : {
         "type" : "expr",
         "value" : "$.invocation.inputs.default"
       },
-      "dependencies": {
+      "requires": {
         "internalFuncShowoff" : {}
       }
     },
     "makeWhaleSayFortune": {
-      "name": "whalesay",
+      "functionRef": "whalesay",
       "inputs" : {
         "default" : {
           "type" : "expr",
           "value" : "$.tasks.generateFortune.output"
         }
       },
-      "dependencies": {
+      "requires": {
         "generateFortune" : {}
       }
     }
