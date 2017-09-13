@@ -98,15 +98,15 @@ func createCli() *cli.App {
 			EnvVar: "FNENV_FISSION_POOLMGR",
 		},
 		cli.StringFlag{
-			Name:  "fission-controller",
-			Usage: "Address of the controller for resolving functions",
-			Value: "http://controller.fission",
+			Name:   "fission-controller",
+			Usage:  "Address of the controller for resolving functions",
+			Value:  "http://controller.fission",
 			EnvVar: "FNENV_FISSION_CONTROLLER",
 		},
 
 		// Components
 		cli.BoolFlag{
-			Name: "internal",
+			Name:  "internal",
 			Usage: "Use internal function runtime",
 		},
 		cli.BoolFlag{

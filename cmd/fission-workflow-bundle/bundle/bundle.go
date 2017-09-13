@@ -113,7 +113,7 @@ func Run(ctx context.Context, opts *Options) error {
 	if opts.Fission != nil {
 		proxySrv := http.Server{Addr: FISSION_PROXY_ADDRESS}
 		defer proxySrv.Shutdown(ctx)
-		runFissionEnvironmentProxy(proxySrv, es, wfiCache())
+		runFissionEnvironmentProxy(proxySrv, es, wfiCache(), wfCache(), resolvers)
 	}
 
 	if opts.ApiAdmin != nil {
@@ -271,11 +271,17 @@ func runHttpGateway(ctx context.Context, gwSrv http.Server) {
 	log.Info("Serving HTTP API gateway at: ", gwSrv.Addr)
 }
 
-func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCache fes.CacheReader) {
+func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCache fes.CacheReader,
+	wfCache fes.CacheReader, resolvers map[string]function.Resolver) {
+
+	workflowParser := parse.NewResolver(resolvers)
+	workflowValidator := parse.NewValidator()
+	workflowApi := workflow.NewApi(es, workflowParser)
+	wfServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, wfCache)
 	wfiApi := invocation.NewApi(es, wfiCache)
 	wfiServer := apiserver.NewGrpcInvocationApiServer(wfiApi)
 	proxyMux := http.NewServeMux()
-	fissionProxyServer := fission.NewFissionProxyServer(wfiServer)
+	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
 
 	proxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
