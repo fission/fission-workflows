@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
-set -e
-set -x
+set -ex
 
-if [ ! -f ./workflow-engine-bundle ]; then
-    echo "Executable './workflow-engine-bundle' not found!"
+if [ ! -f ./fission-workflow-bundle ]; then
+    echo "Executable './fission-workflow-bundle' not found!"
     exit 1;
 fi
 
-docker build --tag="fission/fission-workflow-bundle" .
+chmod +x fission-workflow-bundle
+yes | cp fission-workflow-bundle bundle/
+yes | cp fission-workflow-bundle env/
+
+docker build --tag="fission/fission-workflow-bundle" bundle/
+docker build --tag="fission/workflow-env" env/
