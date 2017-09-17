@@ -32,8 +32,9 @@ func NewFunctionEnv(poolmgr *poolmgr.Client) *FunctionEnv {
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
 	meta := &api.ObjectMeta{
-		Name: spec.GetType().GetSrc(),
-		UID:  k8stypes.UID(spec.GetType().GetResolved()),
+		Name:      spec.GetType().GetSrc(),
+		UID:       k8stypes.UID(spec.GetType().GetResolved()),
+		Namespace: api.NamespaceDefault,
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
@@ -51,11 +52,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 	// Map input parameters to actual Fission function parameters
 
-	mainInput := spec.Inputs[types.INPUT_MAIN]
-	input := bytes.NewReader(mainInput.Value)
+	var input []byte
+	mainInput, ok := spec.Inputs[types.INPUT_MAIN]
+	if ok {
+		input = mainInput.Value
+	}
 	// TODO map other parameters as well (to params)
 
-	req, err := http.NewRequest("GET", url, input) // TODO allow change of method
+	req, err := http.NewRequest("GET", url, bytes.NewReader(input)) // TODO allow change of method
 	if err != nil {
 		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}
@@ -86,9 +90,14 @@ var formatMapping = map[string]string{
 }
 
 func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
-	contentType, ok := formatMapping[val.Type]
+	contentType := "text/plain"
+	if val == nil {
+		return contentType
+	}
+
+	actualType, ok := formatMapping[val.Type]
 	if !ok {
-		contentType = "text/plain"
+		contentType = actualType
 	}
 	return contentType
 }

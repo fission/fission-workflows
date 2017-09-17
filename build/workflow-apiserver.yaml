@@ -1,24 +1,23 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: workflow-engine
+  name: workflow-apiserver
   namespace: fission
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        svc: workflow-engine
+        svc: workflow-apiserver
     spec:
       containers:
-      - name: workflow-engine
+      - name: workflow-apiserver
         image: fission/fission-workflow-bundle
         imagePullPolicy: IfNotPresent
         command: ["/fission-workflow-bundle"]
         args: [
+        # Only run apiserver components
           "--nats",
-          "--fission",
-          "--controller",
           "--api-http",
           "--api-workflow-invocation",
           "--api-workflow",
@@ -26,9 +25,11 @@ spec:
         ]
         env:
         - name: ES_NATS_URL
-          value: nats://nats-streaming:4222
+          value: nats://defaultFissionAuthToken@nats-streaming:4222
         - name: ES_NATS_CLUSTER
           value: fissionMQTrigger
+        - name: ES_NATS_CLIENT
+          value: foo
         - name: FNENV_FISSION_POOLMGR
           value: http://poolmgr.fission
         - name: FNENV_FISSION_CONTROLLER
@@ -38,10 +39,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: workflow-engine
+  name: workflow-apiserver
   namespace: fission
   labels:
-    svc: workflow-engine
+    svc: workflow-apiserver
 spec:
   type: NodePort
   ports:
@@ -58,6 +59,6 @@ spec:
     nodePort: 31321
     name: http-proxy
   selector:
-    svc: workflow-engine
+    svc: workflow-apiserver
   selector:
-    svc: workflow-engine
+    svc: workflow-apiserver

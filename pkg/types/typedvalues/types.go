@@ -57,6 +57,10 @@ func Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 }
 
 func Format(v *types.TypedValue) (interface{}, error) {
+	if v == nil || (v.Value == nil && v.Type == "") {
+		return nil, nil
+	}
+
 	return DefaultParserFormatter.Format(v)
 }
 
@@ -65,21 +69,21 @@ func newDefaultParserFormatter() ParserFormatter {
 	jsPf := &JsonParserFormatter{}
 	return NewComposedParserFormatter(map[string]ParserFormatter{
 		// TODO remove types ? not needed
+		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
 		FormatType(FORMAT_JSON, TYPE_BOOL):   jsPf,
 		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
 		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
 		FormatType(TYPE_FLOW):                &ControlFlowParserFormatter{},
-		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
 		FormatType(TYPE_NIL):                 &NilParserFormatter{},
 		FormatType(TYPE_RAW):                 &RawParserFormatter{},
 	}, []string{
+		FormatType(TYPE_EXPRESSION),
 		FormatType(FORMAT_JSON, TYPE_BOOL),
 		FormatType(FORMAT_JSON, TYPE_STRING),
 		FormatType(FORMAT_JSON, TYPE_ARRAY),
 		FormatType(FORMAT_JSON, TYPE_OBJECT),
 		FormatType(TYPE_FLOW),
-		FormatType(TYPE_EXPRESSION),
 		FormatType(TYPE_NIL),
 		FormatType(TYPE_RAW),
 	}...)
