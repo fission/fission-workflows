@@ -7,6 +7,7 @@ import (
 
 	"strings"
 
+	"fmt"
 	"github.com/fission/fission-workflow/pkg/api/workflow/parse/yaml"
 	"github.com/gogo/protobuf/jsonpb"
 )
@@ -18,7 +19,8 @@ func main() {
 		panic("Need a path to a .yaml")
 	}
 
-	fnName := os.Args[1]
+	fnName := strings.TrimSpace(os.Args[1])
+	fmt.Printf("Formatting: '%s'\n", fnName)
 
 	if !strings.HasSuffix(fnName, "yaml") {
 		panic("Only YAML workflow definitions are supported")
@@ -39,7 +41,9 @@ func main() {
 		panic(err)
 	}
 
-	marshal := jsonpb.Marshaler{}
+	marshal := jsonpb.Marshaler{
+		Indent: "  ",
+	}
 	jsonWf, err := marshal.MarshalToString(wfSpec)
 	if err != nil {
 		panic(err)

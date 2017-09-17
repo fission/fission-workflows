@@ -1,1 +1,45 @@
-{"tasks":{"GenerateFortune":{"id":"GenerateFortune","functionRef":"fortune","inputs":{"default":{"type":"expr","value":"JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"}},"requires":{"InternalFuncShowoff":{}},"await":1},"InternalFuncShowoff":{"id":"InternalFuncShowoff","functionRef":"noop","inputs":{},"requires":{}},"WhaleWithFortune":{"id":"WhaleWithFortune","functionRef":"whalesay","inputs":{"default":{"type":"expr","value":"JC5UYXNrcy5HZW5lcmF0ZUZvcnR1bmUuT3V0cHV0"}},"requires":{"GenerateFortune":{}},"await":1}},"outputTask":"WhaleWithFortune"}
+{
+  "tasks": {
+    "GenerateFortune": {
+      "id": "GenerateFortune",
+      "functionRef": "fortune",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+        }
+      },
+      "requires": {
+        "InternalFuncShowoff": {
+
+        }
+      },
+      "await": 1
+    },
+    "InternalFuncShowoff": {
+      "id": "InternalFuncShowoff",
+      "functionRef": "noop",
+      "inputs": {
+      },
+      "requires": {
+      }
+    },
+    "WhaleWithFortune": {
+      "id": "WhaleWithFortune",
+      "functionRef": "whalesay",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5HZW5lcmF0ZUZvcnR1bmUuT3V0cHV0"
+        }
+      },
+      "requires": {
+        "GenerateFortune": {
+
+        }
+      },
+      "await": 1
+    }
+  },
+  "outputTask": "WhaleWithFortune"
+}

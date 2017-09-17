@@ -26,23 +26,22 @@ git checkout <remote> fission-workflow-integration
 (cd fission-bundle/ && bash ./push.sh)
 ```
 
-After either pulling the custom image or building it yourself, deploy the bundle like usual:
+After either pulling the custom image or building it yourself, deploy the bundle as specified in [Fission's install guide](http://fission.io/docs/v0.2.1/install/).
 
-```bash
-# Deploy fission (assuming that a cluster is available) including the NATS plugin
-kubectl create -f fission.yaml fission-nodeport.yaml fission-nats.yaml
-
-# Setup the Fission env (assuming Minikube)
-export FISSION_URL=http://$(minikube ip):31313
-export FISSION_ROUTER=$(minikube ip):31314
-```
 
 ## Installing Fission Workflow
-Currently, the only way of deploying Fission Workflow is by [compiling it yourself](./Docs/compiling.md).
-The remainder of this section assumes that Fission Workflow has been compiled and is available in the local Docker registry.
-
+Fission Workflow is just another Fission environment.
+The environment requires only a single additional property `allowedFunctionsPerContainer` to be set to infinite, to ensure that workflows do not require a workflow environment each.
+To deploy the environment run the following:
 ```bash
-(cd ./build/ && kubectl create -f fission-workflow.yaml)
+kubectl -f https://github.com/fission/fission-workflow/tree/master/build/env/workflow-env.yaml
+```
+
+Optionally, you can add the workflow apiserver to the fission deployment. 
+This will enable components such as the ui and cli to have a complete view of the workflows and their invocations.
+To deploy the apiserver use the following template: 
+```bash
+kubectl -f https://github.com/fission/fission-workflow/tree/master/build/workflow-apiserver.yaml
 ```
 
 You're good to go! Check out the [examples](./examples/).

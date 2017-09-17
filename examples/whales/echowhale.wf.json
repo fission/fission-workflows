@@ -1,13 +1,17 @@
 {
-  "apiVersion": "v1",
-  "outputTask" : "whaleEcho",
   "tasks": {
-    "whaleEcho": {
-      "inputs" : {
-        "type" : "expr",
-        "value" : "$.invocation.inputs.default"
-      },
+    "echowhale": {
+      "id": "echowhale",
       "functionRef": "whalesay",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+        }
+      },
+      "requires": {
+      }
     }
-  }
+  },
+  "outputTask": "echowhale"
 }
