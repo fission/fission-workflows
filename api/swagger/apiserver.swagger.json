@@ -263,6 +263,72 @@
     }
   },
   "definitions": {
+    "ObjectMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "title": "string namespace = 2;\n   string name = 3;"
+        }
+      },
+      "title": "Common"
+    },
+    "Task": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Same as the string in the map\u003cstring, Task\u003e definition. One needs to be set.\n\nIf there is a conflict the map key gets precendence over this field."
+        },
+        "functionRef": {
+          "type": "string",
+          "title": "Name/identifier of the function"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TypedValue"
+          }
+        },
+        "requires": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/TaskDependencyParameters"
+          },
+          "title": "Dependencies for this task to execute"
+        },
+        "await": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of dependencies to wait for"
+        }
+      },
+      "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of task"
+    },
+    "TaskDependencyParameters": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/TaskDependencyParametersDependencyType"
+        },
+        "alias": {
+          "type": "string"
+        }
+      }
+    },
+    "TaskDependencyParametersDependencyType": {
+      "type": "string",
+      "enum": [
+        "DATA",
+        "CONTROL",
+        "DYNAMIC_OUTPUT"
+      ],
+      "default": "DATA"
+    },
     "TaskInvocation": {
       "type": "object",
       "properties": {
@@ -276,14 +342,14 @@
           "$ref": "#/definitions/TaskInvocationStatus"
         }
       },
-      "title": "Function Invocation Model"
+      "title": "Task Invocation Model"
     },
     "TaskInvocationSpec": {
       "type": "object",
       "properties": {
         "type": {
           "$ref": "#/definitions/TaskTypeDef",
-          "title": "Id of the function to be invoked (no ambiguatity at this point"
+          "title": "Id of the task to be invoked (no ambiguatity at this point"
         },
         "taskId": {
           "type": "string"
@@ -323,72 +389,6 @@
         "SKIPPED"
       ],
       "default": "UNKNOWN"
-    },
-    "ObjectMetadata": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "title": "string namespace = 2;\n   string name = 3;"
-        }
-      },
-      "title": "Common"
-    },
-    "Task": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "By default the following types are supported:\n- `function`: execute a function.\n- `exit`: Once this task is executed, the controller will exit the workflow, canceling all running tasks.",
-          "title": "Type defines the type of the task that needs to be performed"
-        },
-        "name": {
-          "type": "string",
-          "title": "Name/identifier of the function"
-        },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TypedValue"
-          }
-        },
-        "dependencies": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TaskDependencyParameters"
-          },
-          "title": "Dependencies for this task to execute"
-        },
-        "dependencies_await": {
-          "type": "integer",
-          "format": "int32",
-          "title": "Number of dependencies to wait for"
-        }
-      },
-      "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of task"
-    },
-    "TaskDependencyParameters": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/TaskDependencyParametersDependencyType"
-        },
-        "alias": {
-          "type": "string"
-        }
-      }
-    },
-    "TaskDependencyParametersDependencyType": {
-      "type": "string",
-      "enum": [
-        "DATA",
-        "CONTROL"
-      ],
-      "default": "DATA"
     },
     "TaskTypeDef": {
       "type": "object",
@@ -479,6 +479,12 @@
         },
         "output": {
           "$ref": "#/definitions/TypedValue"
+        },
+        "dynamicTasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Task"
+          }
         }
       }
     },

@@ -1,0 +1,25 @@
+apiVersion: 1
+output: PassAlong
+tasks:
+  InternalFuncShowoff:
+    run: noop
+    inputs: $.Invocation.Inputs.default
+
+  IfShortEnough:
+    run: if
+    inputs:
+      if: "$.Invocation.Inputs.default.length < 20"
+      then:
+        run: whalesay
+        inputs: $.Tasks.InternalFuncShowoff.Output
+      else:
+        run: noop
+        inputs: $.Tasks.InternalFuncShowoff.Output
+    requires:
+    - InternalFuncShowoff
+
+  PassAlong:
+    run: noop
+    inputs: $.Tasks.IfShortEnough.Output
+    requires:
+    - IfShortEnough

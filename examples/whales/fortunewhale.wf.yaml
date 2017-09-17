@@ -1,0 +1,15 @@
+apiVersion: 1
+output: WhaleWithFortune
+tasks:
+  InternalFuncShowoff:
+    run: noop
+  GenerateFortune:
+    run: fortune
+    inputs: $.Invocation.Inputs.default
+    requires:
+    - InternalFuncShowoff
+  WhaleWithFortune:
+    run: whalesay
+    inputs: $.Tasks.GenerateFortune.Output
+    requires:
+    - GenerateFortune
