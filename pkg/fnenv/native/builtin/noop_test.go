@@ -26,3 +26,20 @@ func TestFunctionNoopEmpty(t *testing.T) {
 		},
 		nil)
 }
+
+func TestFunctionNoopObject(t *testing.T) {
+	internalFunctionTest(t,
+		&FunctionNoop{},
+		&types.TaskInvocationSpec{
+			Inputs: map[string]*types.TypedValue{
+				"foo": parseUnsafe(true),
+				"bar": parseUnsafe(false),
+				"default": parseUnsafe("hello"),
+			},
+		},
+		map[string]interface{}{
+			"foo" : true,
+			"bar": false,
+			"default" : "hello",
+		})
+}
