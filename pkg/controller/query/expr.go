@@ -7,7 +7,6 @@ import (
 
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
 )
@@ -29,13 +28,15 @@ type JavascriptExpressionParser struct {
 
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
 	vm := otto.New()
-	// Uid serves mostly as an example of how to add functions to the Otto runtime.
-	err := vm.Set("uid", func(call otto.FunctionCall) otto.Value {
-		uid, _ := vm.ToValue(util.Uid())
-		return uid
-	})
-	if err != nil {
-		panic(err)
+
+	// Load builtin functions into Otto
+	for varName, fn := range BuiltinFunctions {
+		err := vm.Set(varName, func(call otto.FunctionCall) otto.Value {
+			return fn.Apply(vm, call)
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 	return &JavascriptExpressionParser{
 		vm:     vm,
