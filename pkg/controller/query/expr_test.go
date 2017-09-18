@@ -21,7 +21,7 @@ func TestResolveTestRootScopePath(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, rootscope, typedvalues.Expr("$.currentScope.bit"))
+	resolved, err := exprParser.Resolve(rootscope, rootscope, nil, typedvalues.Expr("$.currentScope.bit"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestResolveTestScopePath(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, scope, typedvalues.Expr("task.bit"))
+	resolved, err := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr("task.bit"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,7 +62,21 @@ func TestResolveLiteral(t *testing.T) {
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
 	expected := "foobar"
-	resolved, _ := exprParser.Resolve(rootscope, scope, typedvalues.Expr(fmt.Sprintf("'%s'", expected)))
+	resolved, _ := exprParser.Resolve(rootscope, scope, "output", typedvalues.Expr(fmt.Sprintf("'%s'", expected)))
+
+	resolvedString, _ := typedvalues.Format(resolved)
+	if resolvedString != expected {
+		t.Errorf("Expected value '%v' does not match '%v'", expected, resolved)
+	}
+}
+
+func TestResolveOutput(t *testing.T) {
+	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+
+	expected := "expected"
+	resolved, _ := exprParser.Resolve(rootscope, scope, map[string]string{
+		"acme" : expected,
+	}, typedvalues.Expr("output.acme"))
 
 	resolvedString, _ := typedvalues.Format(resolved)
 	if resolvedString != expected {
@@ -75,7 +89,7 @@ func TestResolveTransformation(t *testing.T) {
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
 	src := "foobar"
-	resolved, _ := exprParser.Resolve(rootscope, scope, typedvalues.Expr(fmt.Sprintf("'%s'.toUpperCase()", src)))
+	resolved, _ := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr(fmt.Sprintf("'%s'.toUpperCase()", src)))
 	expected := strings.ToUpper(src)
 
 	resolvedString, _ := typedvalues.Format(resolved)
@@ -88,7 +102,7 @@ func TestResolveInjectedFunction(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, scope, typedvalues.Expr("uid()"))
+	resolved, err := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr("uid()"))
 
 	if err != nil {
 		t.Error(err)

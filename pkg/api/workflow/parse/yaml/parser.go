@@ -155,9 +155,10 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 //
 
 type WorkflowDef struct {
-	ApiVersion string
-	Output     string
-	Tasks      map[string]*TaskDef
+	ApiVersion  string
+	Description string
+	Output      string
+	Tasks       map[string]*TaskDef
 }
 
 type TaskDef struct {

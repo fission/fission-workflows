@@ -99,6 +99,8 @@ message WorkflowSpec {
 
     // From which task should the workflow return the output? Future: multiple? Implicit?
     string outputTask = 3;
+
+    string description = 4;
 }
 
 // A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
@@ -122,6 +124,9 @@ message Task {
 
     // Number of dependencies to wait for
     int32 await = 6;
+
+    // Transform the output, or override the output with a literal
+    TypedValue output = 7;
 }
 
 message TaskDependencyParameters {

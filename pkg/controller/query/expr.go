@@ -13,7 +13,7 @@ import (
 )
 
 type ExpressionParser interface {
-	Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error)
+	Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error)
 }
 
 var (
@@ -43,7 +43,7 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 	}
 }
 
-func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
+func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
 	if !typedvalues.IsExpression(expr) {
 		return expr, nil
 	}
@@ -57,8 +57,15 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, scope inter
 	}()
 
 	scoped := oe.vm.Copy()
-	scoped.Set("$", rootScope)
-	scoped.Set("task", scope)
+	err := scoped.Set("$", rootScope)
+	err = scoped.Set("task", currentScope)
+	if output != nil {
+		err = scoped.Set("output", output)
+	}
+	if err != nil {
+		// Failed to set some variable
+		return nil, err
+	}
 
 	go func() {
 		<-time.After(RESOLVING_TIMEOUT)

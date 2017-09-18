@@ -31,7 +31,7 @@ func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *t
 	inputs := map[string]*types.TypedValue{}
 	queryScope := query.NewScope(wf, invoc)
 	for inputKey, val := range action.Inputs {
-		resolvedInput, err := queryParser.Resolve(queryScope, queryScope.Tasks[action.Id], val)
+		resolvedInput, err := queryParser.Resolve(queryScope, queryScope.Tasks[action.Id], nil, val)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"val":      val,
