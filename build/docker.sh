@@ -7,6 +7,8 @@ if [ ! -f ./fission-workflow-bundle ]; then
     exit 1;
 fi
 
+rm -f bundle/fission-workflow-bundle
+rm -f env/fission-workflow-bundle
 chmod +x fission-workflow-bundle
 yes | cp fission-workflow-bundle bundle/
 yes | cp fission-workflow-bundle env/

@@ -1,13 +1,15 @@
 package yaml
 
 import (
-	"errors"
-
 	"io"
 	"io/ioutil"
 
+	"encoding/json"
+	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -54,19 +56,20 @@ func parseInput(i interface{}) (map[string]*types.TypedValue, error) {
 	}
 
 	switch v := i.(type) {
-	case map[string]interface{}:
+	case map[interface{}]interface{}:
+		//case map[string]interface{}:
 		result := map[string]*types.TypedValue{}
 		for inputKey, inputVal := range v {
-
-			typedVal, err := parseSingleInput(inputVal)
+			k := fmt.Sprintf("%v", inputKey)
+			typedVal, err := parseSingleInput(k, inputVal)
 			if err != nil {
 				return nil, err
 			}
-			result[inputKey] = typedVal
+			result[k] = typedVal
 		}
 		return result, nil
 	}
-	p, err := parseSingleInput(i)
+	p, err := parseSingleInput("default", i)
 	if err != nil {
 		return nil, err
 	}
@@ -75,21 +78,43 @@ func parseInput(i interface{}) (map[string]*types.TypedValue, error) {
 	}, nil
 }
 
-func parseSingleInput(i interface{}) (*types.TypedValue, error) {
-	switch v := i.(type) {
-	case map[string]interface{}:
-		return nil, errors.New("unexpected collection")
+func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
+	// Handle special cases
+	switch t := i.(type) {
+	case map[interface{}]interface{}:
+		res := map[string]interface{}{}
+		for k, v := range t {
+			res[fmt.Sprintf("%v", k)] = v
+		}
+		bs, err := json.Marshal(res)
+		if err != nil {
+			panic(err)
+		}
+		td := &TaskDef{}
+		err = json.Unmarshal(bs, td)
+		if err != nil {
+			panic(err)
+		}
+		p, err := parseTask(id, td)
+		if err != nil {
+			i = res
+		} else {
+			i = p
+		}
 	case *TaskDef: // Handle TaskDef because it cannot be parsed by standard parser
-		p, err := parseTask("", v)
+		p, err := parseTask(id, t)
 		if err != nil {
 			return nil, err
 		}
 		i = p
 	}
+
 	p, err := typedvalues.Parse(i)
 	if err != nil {
 		return nil, err
 	}
+
+	logrus.WithField("in", i).WithField("out", p).Infof("parsed input")
 	return p, nil
 }
 
@@ -113,14 +138,21 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 		fn = DEFAULT_FUNCTIONREF
 	}
 
-	return &types.Task{
+	result := &types.Task{
 		Id:          id,
 		FunctionRef: fn,
 		Requires:    deps,
 		Await:       int32(len(deps)),
 		Inputs:      inputs,
-	}, nil
+	}
+
+	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Infof("parsed task")
+	return result, nil
 }
+
+//
+// YAML data structures
+//
 
 type WorkflowDef struct {
 	ApiVersion string

@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/sirupsen/logrus"
 )
 
 // Scope is a custom view of the data, which can be queried by the user.
@@ -76,6 +77,7 @@ func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interfa
 	for k, v := range values {
 		i, err := typedvalues.Format(v)
 		if err != nil {
+			logrus.Errorf("Failed to format: %s=%v", k, v)
 			panic(err)
 		}
 		result[k] = i

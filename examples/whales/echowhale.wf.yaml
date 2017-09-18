@@ -1,0 +1,6 @@
+apiVersion: 1
+output: echowhale
+tasks:
+  echowhale:
+    run: whalesay
+    inputs: $.Invocation.Inputs.default

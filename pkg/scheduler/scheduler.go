@@ -73,7 +73,8 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 			"task":          id,
 			"max":           int(math.Max(float64(task.Await), float64(len(task.Requires)-1))),
 		}).Infof("Checking if dependencies have been satisfied")
-		if completedDeps > int(math.Max(float64(task.Await), float64(len(task.Requires)-1))) {
+		if completedDeps >= int(math.Max(float64(task.Await), float64(len(task.Requires)))) {
+			log.WithField("task", task.Id).Info("task found on horizon")
 			horizon[id] = task
 		}
 	}

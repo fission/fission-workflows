@@ -19,3 +19,9 @@ eval $(minikube docker-env)
 # Build the docker image
 bash ./docker.sh
 ```
+
+Although this will be integrated in the fission CLI, currently in order to write workflows, you will need the `wfparser` to manually convert your yaml workflow definitions to json.
+To build the `wfparser` tool:
+```bash
+go install github.com/fission/fission-workflow/cmd/wfparser/
+``` 

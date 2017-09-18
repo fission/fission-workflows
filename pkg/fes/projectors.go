@@ -1,5 +1,7 @@
 package fes
 
+import "github.com/sirupsen/logrus"
+
 var DefaultProjector = SimpleProjector{}
 
 func Project(target Aggregator, events ...*Event) error {
@@ -20,5 +22,13 @@ func (rp *SimpleProjector) Project(target Aggregator, events ...*Event) error {
 }
 
 func (rp *SimpleProjector) project(target Aggregator, event *Event) error {
+	if event == nil {
+		logrus.WithField("target", target).Warn("Empty event received")
+		return nil
+	}
+	if target == nil {
+		logrus.WithField("target", target).Warn("Empty target")
+		return nil
+	}
 	return target.ApplyEvent(event)
 }

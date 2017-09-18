@@ -9,8 +9,6 @@ import (
 
 	"net"
 
-	"fmt"
-
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/api/workflow"
@@ -26,8 +24,10 @@ import (
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types/aggregates"
 	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflow/pkg/util"
 	"github.com/fission/fission-workflow/pkg/util/labels"
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
+	"github.com/fission/fission-workflow/pkg/version"
 	controllerc "github.com/fission/fission/controller/client"
 	poolmgrc "github.com/fission/fission/poolmgr/client"
 	"github.com/gorilla/handlers"
@@ -40,7 +40,7 @@ import (
 const (
 	GRPC_ADDRESS          = ":5555"
 	API_GATEWAY_ADDRESS   = ":8080"
-	FISSION_PROXY_ADDRESS = ":8090"
+	FISSION_PROXY_ADDRESS = ":8888"
 )
 
 type Options struct {
@@ -67,6 +67,7 @@ type NatsOptions struct {
 
 // Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
+	log.WithField("version", version.VERSION).Info("Starting bundle")
 
 	var es fes.EventStore
 	var esPub pubsub.Publisher
@@ -81,7 +82,6 @@ func Run(ctx context.Context, opts *Options) error {
 		esPub = natsEs
 	}
 	if es == nil {
-		fmt.Println(es)
 		panic("no event store provided")
 	}
 
@@ -128,12 +128,6 @@ func Run(ctx context.Context, opts *Options) error {
 		runWorkflowInvocationApiServer(grpcServer, es, wfiCache())
 	}
 
-	if opts.ApiHttp != nil {
-		apiSrv := http.Server{Addr: API_GATEWAY_ADDRESS}
-		defer apiSrv.Shutdown(ctx)
-		runHttpGateway(ctx, apiSrv)
-	}
-
 	if opts.ApiAdmin != nil || opts.ApiWorkflow != nil || opts.ApiWorkflowInvocation != nil {
 		lis, err := net.Listen("tcp", GRPC_ADDRESS)
 		if err != nil {
@@ -142,6 +136,22 @@ func Run(ctx context.Context, opts *Options) error {
 		defer lis.Close()
 		log.Info("Serving gRPC services at: ", lis.Addr())
 		go grpcServer.Serve(lis)
+	}
+
+	if opts.ApiHttp != nil {
+		apiSrv := http.Server{Addr: API_GATEWAY_ADDRESS}
+		defer apiSrv.Shutdown(ctx)
+		var admin, wf, wfi string
+		if opts.ApiAdmin != nil {
+			admin = GRPC_ADDRESS
+		}
+		if opts.ApiWorkflow != nil {
+			wf = GRPC_ADDRESS
+		}
+		if opts.ApiWorkflowInvocation != nil {
+			wfi = GRPC_ADDRESS
+		}
+		runHttpGateway(ctx, apiSrv, admin, wf, wfi)
 	}
 
 	<-ctx.Done()
@@ -192,11 +202,19 @@ func setupFissionFunctionResolver(controllerAddr string) *fission.Resolver {
 }
 
 func setupNatsEventStoreClient(url string, cluster string, clientId string) *nats.EventStore {
+	if clientId == "" {
+		clientId = util.Uid()
+	}
+
 	conn, err := stan.Connect(cluster, clientId, stan.NatsURL(url))
 	if err != nil {
 		panic(err)
 	}
 
+	log.WithField("cluster", cluster).
+		WithField("url", "!redacted!").
+		WithField("client", clientId).
+		Info("connected to NATS")
 	es := nats.NewEventStore(nats.NewWildcardConn(conn))
 	es.Watch(fes.Aggregate{Type: "invocation"})
 	es.Watch(fes.Aggregate{Type: "workflow"})
@@ -231,7 +249,7 @@ func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) 
 func runAdminApiServer(s *grpc.Server) {
 	adminServer := &apiserver.GrpcAdminApiServer{}
 	apiserver.RegisterAdminAPIServer(s, adminServer)
-	log.Info("Serving admin API.")
+	log.Infof("Serving admin gRPC API at %s.", GRPC_ADDRESS)
 }
 
 func runWorkflowApiServer(s *grpc.Server, es fes.EventStore, resolvers map[string]function.Resolver, wfCache fes.CacheReader) {
@@ -240,34 +258,46 @@ func runWorkflowApiServer(s *grpc.Server, es fes.EventStore, resolvers map[strin
 	workflowApi := workflow.NewApi(es, workflowParser)
 	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, wfCache)
 	apiserver.RegisterWorkflowAPIServer(s, workflowServer)
-	log.Info("Serving workflow API.")
+	log.Infof("Serving workflow gRPC API at %s.", GRPC_ADDRESS)
 }
 
 func runWorkflowInvocationApiServer(s *grpc.Server, es fes.EventStore, invocationCache fes.CacheReader) {
 	invocationApi := invocation.NewApi(es, invocationCache)
 	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
-	log.Info("Serving workflow invocation API.")
+	log.Infof("Serving workflow invocation gRPC API at %s.", GRPC_ADDRESS)
 }
 
-func runHttpGateway(ctx context.Context, gwSrv http.Server) {
+func runHttpGateway(ctx context.Context, gwSrv http.Server, adminApiAddr string, wfApiAddr string, wfiApiAddr string) {
 	mux := grpcruntime.NewServeMux()
 	grpcOpts := []grpc.DialOption{grpc.WithInsecure()}
-	err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, gwSrv.Addr, grpcOpts)
-	if err != nil {
-		panic(err)
-	}
-	err = apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, gwSrv.Addr, grpcOpts)
-	if err != nil {
-		panic(err)
-	}
-	err = apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, gwSrv.Addr, grpcOpts)
-	if err != nil {
-		panic(err)
+	if adminApiAddr != "" {
+		err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, adminApiAddr, grpcOpts)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	gwSrv.Handler = mux //handlers.LoggingHandler(os.Stdout, mux)
-	go gwSrv.ListenAndServe()
+	if wfApiAddr != "" {
+		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, wfApiAddr, grpcOpts)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if wfiApiAddr != "" {
+		err := apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, wfiApiAddr, grpcOpts)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	gwSrv.Handler = handlers.LoggingHandler(os.Stdout, mux)
+	go func() {
+		err := gwSrv.ListenAndServe()
+		log.WithField("err", err).Info("HTTP Gateway exited")
+	}()
+
 	log.Info("Serving HTTP API gateway at: ", gwSrv.Addr)
 }
 

@@ -12,26 +12,32 @@ import (
 )
 
 func main() {
-	logrus.SetLevel(logrus.DebugLevel)
 	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	cliApp := createCli()
 	cliApp.Action = func(c *cli.Context) error {
+		setupLogging(c)
 
 		return bundle.Run(ctx, &bundle.Options{
 			Nats:                  parseNatsOptions(c),
 			Fission:               parseFissionOptions(c),
-			InternalRuntime:       c.Bool("internal"),
-			Controller:            c.Bool("controller"),
-			ApiAdmin:              c.Bool("api-admin"),
-			ApiWorkflow:           c.Bool("api-workflow"),
-			ApiWorkflowInvocation: c.Bool("api-workflow-invocation"),
-			ApiHttp:               c.Bool("api-http"),
+			InternalRuntime:       c.Generic("internal"),
+			Controller:            c.Generic("controller"),
+			ApiAdmin:              c.Generic("api-admin"),
+			ApiWorkflow:           c.Generic("api-workflow"),
+			ApiWorkflowInvocation: c.Generic("api-workflow-invocation"),
+			ApiHttp:               c.Generic("api-http"),
 		})
 	}
 	cliApp.Run(os.Args)
+}
+
+func setupLogging(c *cli.Context) {
+	if c.Bool("debug") {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.InfoLevel)
+	}
 }
 
 func parseFissionOptions(c *cli.Context) *bundle.FissionOptions {
@@ -62,6 +68,12 @@ func createCli() *cli.App {
 	cliApp := cli.NewApp()
 
 	cliApp.Flags = []cli.Flag{
+		// Generic
+		cli.BoolFlag{
+			Name:   "d, debug",
+			EnvVar: "WORKFLOW_DEBUG",
+		},
+
 		// NATS
 		cli.StringFlag{
 			Name:   "nats-url",

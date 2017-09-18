@@ -2,6 +2,7 @@ package fission
 
 import (
 	"github.com/fission/fission/controller/client"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"
 )
 
@@ -14,12 +15,16 @@ func NewResolver(controller *client.Client) *Resolver {
 }
 
 func (re *Resolver) Resolve(fnName string) (string, error) {
+	logrus.WithField("name", fnName).Info("Resolving function ")
 	fn, err := re.controller.FunctionGet(&api.ObjectMeta{
 		Name: fnName,
 	})
 	if err != nil {
 		return "", err
 	}
+	id := string(fn.Metadata.UID)
 
-	return string(fn.Metadata.UID), nil
+	logrus.WithField("name", fnName).WithField("uid", id).Info("Resolved fission function")
+
+	return id, nil
 }

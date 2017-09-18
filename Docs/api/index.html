@@ -358,21 +358,21 @@ font-style: italic;
     "outputTask" : "aeiou",
     "tasks" : {
       "key" : {
+        "functionRef" : "aeiou",
         "inputs" : {
           "key" : {
             "type" : "aeiou",
             "value" : "aeiou"
           }
         },
-        "name" : "aeiou",
-        "type" : "aeiou",
-        "dependencies" : {
+        "await" : 0,
+        "id" : "aeiou",
+        "requires" : {
           "key" : {
             "alias" : "aeiou",
             "type" : { }
           }
-        },
-        "dependencies_await" : 0
+        }
       }
     }
   },
@@ -600,6 +600,22 @@ To lighten the request load, consider using a more specific request.</div>
   },
   "status" : {
     "output" : "",
+    "dynamicTasks" : {
+      "key" : {
+        "functionRef" : "aeiou",
+        "inputs" : {
+          "key" : ""
+        },
+        "await" : 0,
+        "id" : "aeiou",
+        "requires" : {
+          "key" : {
+            "alias" : "aeiou",
+            "type" : { }
+          }
+        }
+      }
+    },
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -741,6 +757,22 @@ To lighten the request load, consider using a more specific request.</div>
   },
   "status" : {
     "output" : "",
+    "dynamicTasks" : {
+      "key" : {
+        "functionRef" : "aeiou",
+        "inputs" : {
+          "key" : ""
+        },
+        "await" : 0,
+        "id" : "aeiou",
+        "requires" : {
+          "key" : {
+            "alias" : "aeiou",
+            "type" : { }
+          }
+        }
+      }
+    },
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -831,6 +863,22 @@ To lighten the request load, consider using a more specific request.</div>
   },
   "status" : {
     "output" : "",
+    "dynamicTasks" : {
+      "key" : {
+        "functionRef" : "aeiou",
+        "inputs" : {
+          "key" : ""
+        },
+        "await" : 0,
+        "id" : "aeiou",
+        "requires" : {
+          "key" : {
+            "alias" : "aeiou",
+            "type" : { }
+          }
+        }
+      }
+    },
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -921,14 +969,14 @@ To lighten the request load, consider using a more specific request.</div>
 
   <h3>Table of Contents</h3>
   <ol>
-    <li><a href="#TaskInvocation"><code>TaskInvocation</code> - Function Invocation Model</a></li>
-    <li><a href="#TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a></li>
-    <li><a href="#TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a></li>
-    <li><a href="#TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a></li>
     <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
     <li><a href="#Task"><code>Task</code> - </a></li>
     <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
     <li><a href="#TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a></li>
+    <li><a href="#TaskInvocation"><code>TaskInvocation</code> - Task Invocation Model</a></li>
+    <li><a href="#TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a></li>
+    <li><a href="#TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a></li>
+    <li><a href="#TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a></li>
     <li><a href="#TaskTypeDef"><code>TaskTypeDef</code> - </a></li>
     <li><a href="#TypedValue"><code>TypedValue</code> - </a></li>
     <li><a href="#Workflow"><code>Workflow</code> - Workflow Model</a></li>
@@ -950,7 +998,45 @@ or the response type of an API method. For instance:</a></li>
   </ol>
 
   <div class="model">
-    <h3><a name="TaskInvocation"><code>TaskInvocation</code> - Function Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="ObjectMetadata"><code>ObjectMetadata</code> - Common</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">createdAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="Task"><code>Task</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
+<p>A task as a number of inputs and exactly two outputs
+Id is specified outside of task</p>
+</div>
+    <div class="field-items">
+      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>Same as the string in the map&lt;string, Task&gt; definition. One needs to be set.</p>
+<p>If there is a conflict the map key gets precendence over this field.</p>
+ </div>
+<div class="param">functionRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
+<div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
+<div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParametersDependencyType">TaskDependencyParametersDependencyType</a></span>  </div>
+<div class="param">alias (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskInvocation"><code>TaskInvocation</code> - Task Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
@@ -978,47 +1064,6 @@ or the response type of an API method. For instance:</a></li>
   </div>
   <div class="model">
     <h3><a name="TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-          </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="ObjectMetadata"><code>ObjectMetadata</code> - Common</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">createdAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="Task"><code>Task</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
-<p>A task as a number of inputs and exactly two outputs
-Id is specified outside of task</p>
-</div>
-    <div class="field-items">
-      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>By default the following types are supported:</p>
-<ul>
-<li><code>function</code>: execute a function.</li>
-<li><code>exit</code>: Once this task is executed, the controller will exit the workflow, canceling all running tasks.</li>
-</ul>
- </div>
-<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
-<div class="param">dependencies (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
-<div class="param">dependencies_await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParametersDependencyType">TaskDependencyParametersDependencyType</a></span>  </div>
-<div class="param">alias (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->
@@ -1074,6 +1119,7 @@ Id is specified outside of task</p>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocation">map[String, TaskInvocation]</a></span>  </div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
+<div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

@@ -5,8 +5,6 @@ import (
 
 	"context"
 
-	"fmt"
-
 	"github.com/fission/fission-workflow/pkg/api/function"
 	"github.com/fission/fission-workflow/pkg/api/invocation"
 	"github.com/fission/fission-workflow/pkg/controller/actions"
@@ -92,7 +90,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			cr.handleControlLoopTick()
+			//cr.handleControlLoopTick() // TODO remove finished workflows from cache (avoid clutter)
 		}
 	}
 }
@@ -158,7 +156,8 @@ func (cr *InvocationController) evaluateInvocation(invoc *types.WorkflowInvocati
 		if t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]; ok {
 			output = t.Status.Output
 		} else {
-			panic(fmt.Sprintf("Output task '%v' does not exist", wf.Spec.OutputTask))
+			logrus.Infof("Output task '%v' does not exist", wf.Spec.OutputTask)
+			return
 		}
 		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, output)
 		if err != nil {

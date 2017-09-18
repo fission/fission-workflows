@@ -1,0 +1,10 @@
+apiVersion: fission.io/v1
+kind: Environment
+metadata:
+  name: workflow
+  namespace: default
+spec:
+  version: 1
+  runtime:
+    image: fission/workflow-env:latest
+  allowedFunctionsPerContainer: infinite
