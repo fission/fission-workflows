@@ -1,5 +1,7 @@
 package fes
 
+import "github.com/fission/fission-workflow/pkg/util/pubsub"
+
 // Fast, minimal Event Sourcing
 type Aggregator interface {
 	// Entity-specific
@@ -24,7 +26,7 @@ type EventHandler interface {
 type EventStore interface {
 	EventHandler
 	Get(aggregate *Aggregate) ([]*Event, error)
-	List(matcher StringMatcher) ([]string, error)
+	List(matcher StringMatcher) ([]Aggregate, error)
 }
 
 // EventBus is the volatile reactive store that processes, stores events, and notifies subscribers
@@ -55,4 +57,19 @@ type CacheReaderWriter interface {
 
 type StringMatcher interface {
 	Match(target string) bool
+}
+
+
+type Notification struct {
+	*pubsub.EmptyMsg
+	Payload   Aggregator
+	EventType string
+}
+
+func newNotification(entity Aggregator, event *Event) *Notification {
+	return &Notification{
+		EmptyMsg:  pubsub.NewEmptyMsg(event.Labels(), event.CreatedAt()),
+		Payload:   entity,
+		EventType: event.Type,
+	}
 }

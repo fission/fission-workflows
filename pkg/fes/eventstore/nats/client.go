@@ -3,6 +3,8 @@ package nats
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/fission/fission-workflow/pkg/fes"
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
@@ -97,8 +99,29 @@ func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
 	return results, nil
 }
 
-func (es *EventStore) List(matcher fes.StringMatcher) ([]string, error) {
-	return es.conn.List(matcher)
+func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+	subjects, err := es.conn.List(matcher)
+	if err != nil {
+		return nil, err
+	}
+	results := []fes.Aggregate{}
+	for _, subject := range subjects {
+		a := toAggregate(subject)
+		results = append(results, *a)
+	}
+
+	return results, nil
+}
+
+func toAggregate(subject string) *fes.Aggregate {
+	parts := strings.SplitN(subject, ".", 2)
+	if len(parts) < 2 {
+		return nil
+	}
+	return &fes.Aggregate{
+		Type: parts[0],
+		Id:   parts[1],
+	}
 }
 
 func toSubject(a *fes.Aggregate) string {

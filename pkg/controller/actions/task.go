@@ -8,7 +8,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/sirupsen/logrus"
-	"reflect"
 )
 
 func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *types.WorkflowInvocation,
