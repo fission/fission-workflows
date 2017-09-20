@@ -356,9 +356,13 @@ font-style: italic;
   "spec" : {
     "apiVersion" : "aeiou",
     "outputTask" : "aeiou",
+    "name" : "aeiou",
+    "description" : "aeiou",
+    "id" : "aeiou",
     "tasks" : {
       "key" : {
         "functionRef" : "aeiou",
+        "output" : "",
         "inputs" : {
           "key" : {
             "type" : "aeiou",
@@ -603,6 +607,7 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "functionRef" : "aeiou",
+        "output" : "",
         "inputs" : {
           "key" : ""
         },
@@ -760,6 +765,7 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "functionRef" : "aeiou",
+        "output" : "",
         "inputs" : {
           "key" : ""
         },
@@ -866,6 +872,7 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "functionRef" : "aeiou",
+        "output" : "",
         "inputs" : {
           "key" : ""
         },
@@ -1019,6 +1026,7 @@ Id is specified outside of task</p>
 <div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
 <div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
 <div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1136,11 +1144,13 @@ Naming, triggers and versioning of the workflow itself is out of the scope of th
 to the user/system upon the creation of a workflow.</p>
 </div>
     <div class="field-items">
-      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>apiVersion describes what version is of the workflow definition.</p>
-<p>By default the workflow engine will assume the latest version to be used.</p>
- </div>
+      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> apiVersion describes what version is of the workflow definition.
+By default the workflow engine will assume the latest version to be used. </div>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> Dependency graph is build into the tasks </div>
 <div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">description (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
