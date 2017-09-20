@@ -46,12 +46,12 @@ const (
 type Options struct {
 	Nats                  *NatsOptions
 	Fission               *FissionOptions
-	InternalRuntime       interface{}
-	Controller            interface{}
-	ApiAdmin              interface{}
-	ApiWorkflow           interface{}
-	ApiHttp               interface{}
-	ApiWorkflowInvocation interface{}
+	InternalRuntime       bool
+	Controller            bool
+	ApiAdmin              bool
+	ApiWorkflow           bool
+	ApiHttp               bool
+	ApiWorkflowInvocation bool
 }
 
 type FissionOptions struct {
@@ -92,7 +92,7 @@ func Run(ctx context.Context, opts *Options) error {
 	// Resolvers and runtimes
 	resolvers := map[string]function.Resolver{}
 	runtimes := map[string]function.Runtime{}
-	if opts.InternalRuntime != nil {
+	if opts.InternalRuntime {
 		runtimes["internal"] = setupInternalFunctionRuntime()
 		resolvers["internal"] = setupInternalFunctionRuntime()
 	}
@@ -100,12 +100,9 @@ func Run(ctx context.Context, opts *Options) error {
 		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.PoolmgrAddr)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
-	if len(runtimes) == 0 || len(resolvers) == 0 {
-		panic("No runtimes or resolvers specified!")
-	}
 
 	// Controller
-	if opts.Controller != nil {
+	if opts.Controller {
 		runController(ctx, wfiCache(), wfCache(), es, runtimes)
 	}
 
@@ -116,19 +113,19 @@ func Run(ctx context.Context, opts *Options) error {
 		runFissionEnvironmentProxy(proxySrv, es, wfiCache(), wfCache(), resolvers)
 	}
 
-	if opts.ApiAdmin != nil {
+	if opts.ApiAdmin {
 		runAdminApiServer(grpcServer)
 	}
 
-	if opts.ApiWorkflow != nil {
+	if opts.ApiWorkflow {
 		runWorkflowApiServer(grpcServer, es, resolvers, wfCache())
 	}
 
-	if opts.ApiWorkflowInvocation != nil {
+	if opts.ApiWorkflowInvocation {
 		runWorkflowInvocationApiServer(grpcServer, es, wfiCache())
 	}
 
-	if opts.ApiAdmin != nil || opts.ApiWorkflow != nil || opts.ApiWorkflowInvocation != nil {
+	if opts.ApiAdmin || opts.ApiWorkflow || opts.ApiWorkflowInvocation {
 		lis, err := net.Listen("tcp", GRPC_ADDRESS)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
@@ -138,17 +135,17 @@ func Run(ctx context.Context, opts *Options) error {
 		go grpcServer.Serve(lis)
 	}
 
-	if opts.ApiHttp != nil {
+	if opts.ApiHttp {
 		apiSrv := http.Server{Addr: API_GATEWAY_ADDRESS}
 		defer apiSrv.Shutdown(ctx)
 		var admin, wf, wfi string
-		if opts.ApiAdmin != nil {
+		if opts.ApiAdmin {
 			admin = GRPC_ADDRESS
 		}
-		if opts.ApiWorkflow != nil {
+		if opts.ApiWorkflow {
 			wf = GRPC_ADDRESS
 		}
-		if opts.ApiWorkflowInvocation != nil {
+		if opts.ApiWorkflowInvocation {
 			wfi = GRPC_ADDRESS
 		}
 		runHttpGateway(ctx, apiSrv, admin, wf, wfi)

@@ -5,7 +5,10 @@ import (
 
 	"context"
 
+	"fmt"
+
 	"github.com/fission/fission-workflow/cmd/fission-workflow-bundle/bundle"
+	"github.com/fission/fission-workflow/pkg/util"
 	natsio "github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -21,12 +24,12 @@ func main() {
 		return bundle.Run(ctx, &bundle.Options{
 			Nats:                  parseNatsOptions(c),
 			Fission:               parseFissionOptions(c),
-			InternalRuntime:       c.Generic("internal"),
-			Controller:            c.Generic("controller"),
-			ApiAdmin:              c.Generic("api-admin"),
-			ApiWorkflow:           c.Generic("api-workflow"),
-			ApiWorkflowInvocation: c.Generic("api-workflow-invocation"),
-			ApiHttp:               c.Generic("api-http"),
+			InternalRuntime:       c.Bool("internal"),
+			Controller:            c.Bool("controller"),
+			ApiAdmin:              c.Bool("api-admin"),
+			ApiWorkflow:           c.Bool("api-workflow"),
+			ApiWorkflowInvocation: c.Bool("api-workflow-invocation"),
+			ApiHttp:               c.Bool("api-http"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -56,10 +59,15 @@ func parseNatsOptions(c *cli.Context) *bundle.NatsOptions {
 		return nil
 	}
 
+	client := c.String("nats-client")
+	if client == "" {
+		client = fmt.Sprintf("workflow-bundle-%s", util.Uid())
+	}
+
 	return &bundle.NatsOptions{
 		Url:     c.String("nats-url"),
 		Cluster: c.String("nats-cluster"),
-		Client:  c.String("nats-client"),
+		Client:  client,
 	}
 }
 
@@ -89,8 +97,7 @@ func createCli() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   "nats-client",
-			Usage:  "Client name used for the NATS event store",
-			Value:  "undefined-client",
+			Usage:  "Client name used for the NATS event store. By default it will generate a unique clientID.",
 			EnvVar: "ES_NATS_CLIENT",
 		},
 		cli.BoolFlag{
