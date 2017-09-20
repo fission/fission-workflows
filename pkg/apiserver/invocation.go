@@ -36,7 +36,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		return nil, err
 	}
 
-	timeout := time.After(time.Duration(10) * time.Second)
+	timeout := time.After(time.Duration(60) * time.Second)
 	var result *types.WorkflowInvocation
 	for {
 		wi, err := gi.api.Get(eventId)

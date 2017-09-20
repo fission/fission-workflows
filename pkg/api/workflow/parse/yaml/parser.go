@@ -82,23 +82,29 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 	// Handle special cases
 	switch t := i.(type) {
 	case map[interface{}]interface{}:
-		res := map[string]interface{}{}
-		for k, v := range t {
-			res[fmt.Sprintf("%v", k)] = v
-		}
-		bs, err := json.Marshal(res)
-		if err != nil {
-			panic(err)
-		}
-		td := &TaskDef{}
-		err = json.Unmarshal(bs, td)
-		if err != nil {
-			panic(err)
-		}
-		p, err := parseTask(id, td)
-		if err != nil {
-			i = res
+		res := convertInterfaceMaps(t)
+
+		if _, ok := res["run"]; ok {
+			bs, err := json.Marshal(res)
+			if err != nil {
+				panic(err)
+			}
+			td := &TaskDef{}
+			err = json.Unmarshal(bs, td)
+			if err != nil {
+				panic(err)
+			}
+			p, err := parseTask(id, td)
+			if err != nil {
+				i = res
+			} else {
+				i = p
+			}
 		} else {
+			p, err := typedvalues.Parse(res)
+			if err != nil {
+				return nil, err
+			}
 			i = p
 		}
 	case *TaskDef: // Handle TaskDef because it cannot be parsed by standard parser
@@ -116,6 +122,17 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 
 	logrus.WithField("in", i).WithField("out", p).Infof("parsed input")
 	return p, nil
+}
+
+func convertInterfaceMaps(src map[interface{}]interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	for k, v := range src {
+		if ii, ok := v.(map[interface{}]interface{}); ok {
+			v = convertInterfaceMaps(ii)
+		}
+		res[fmt.Sprintf("%v", k)] = v
+	}
+	return res
 }
 
 func parseTask(id string, t *TaskDef) (*types.Task, error) {

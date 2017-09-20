@@ -99,7 +99,11 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 		go func(cName string) {
 			def, err := ps.resolveForRuntime(t, cName)
 			if err != nil {
-				logrus.Error(err)
+				logrus.WithFields(logrus.Fields{
+					"err" : err,
+					"runtime" : cName,
+					"fn" : t,
+				}).Info("Failed to retrieve function.")
 				lastErr = err
 			} else {
 				resolved <- def
