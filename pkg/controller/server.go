@@ -68,7 +68,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 		for {
 			select {
 			case notification := <-cr.invocSub.Ch:
-				logrus.WithField("notification", notification).Info("Handling invocation notification.")
+				logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
 				switch n := notification.(type) {
 				case *fes.Notification:
 					cr.handleNotification(n)

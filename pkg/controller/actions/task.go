@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflow/pkg/scheduler"
 	"github.com/fission/fission-workflow/pkg/types"
 	"github.com/sirupsen/logrus"
+	"reflect"
 )
 
 func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *types.WorkflowInvocation,
@@ -36,8 +37,8 @@ func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *t
 			logrus.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
-			}).Warnf("Failed to parse input: %v", err)
-			continue
+			}).Errorf("Failed to parse input: %v", err)
+			return fmt.Errorf("failed to parse input '%v'", val)
 		}
 
 		inputs[inputKey] = resolvedInput

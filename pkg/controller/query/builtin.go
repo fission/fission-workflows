@@ -17,10 +17,10 @@ type QueryFn interface {
 }
 
 var BuiltinFunctions = map[string]QueryFn{
-	"uid":   &UidFn{},
-	"input": &InputFn{},
+	"uid":    &UidFn{},
+	"input":  &InputFn{},
 	"output": &OutputFn{},
-	"param": &ParamFn{},
+	"param":  &ParamFn{},
 }
 
 type UidFn struct{}
@@ -92,6 +92,3 @@ func (qf *ParamFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		return result
 	}
 }
-
-
-
