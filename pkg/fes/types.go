@@ -59,7 +59,6 @@ type StringMatcher interface {
 	Match(target string) bool
 }
 
-
 type Notification struct {
 	*pubsub.EmptyMsg
 	Payload   Aggregator

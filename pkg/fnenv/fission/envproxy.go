@@ -26,9 +26,9 @@ const userFunc = "/userfunc/user"
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
 type Proxy struct {
-	invocationServer        apiserver.WorkflowInvocationAPIServer
-	workflowServer          apiserver.WorkflowAPIServer
-	fissionIds              map[string]bool
+	invocationServer apiserver.WorkflowInvocationAPIServer
+	workflowServer   apiserver.WorkflowAPIServer
+	fissionIds       map[string]bool
 }
 
 func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
