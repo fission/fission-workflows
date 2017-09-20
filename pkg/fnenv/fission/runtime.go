@@ -14,6 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"
 
+	"strings"
+
 	k8stypes "k8s.io/client-go/1.5/pkg/types"
 )
 
@@ -95,9 +97,9 @@ func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
 		return contentType
 	}
 
-	actualType, ok := formatMapping[val.Type]
-	if !ok {
-		contentType = actualType
+	// Temporary solution
+	if strings.HasPrefix(val.Type, "json") {
+		contentType = "application/json"
 	}
 	return contentType
 }

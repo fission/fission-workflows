@@ -58,8 +58,8 @@ func TestFunctionIfMissingAlternative(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IF_INPUT_CONDITION:   parseUnsafe(false),
-				IF_INPUT_CONSEQUENT:  parseUnsafe("then"),
+				IF_INPUT_CONDITION:  parseUnsafe(false),
+				IF_INPUT_CONSEQUENT: parseUnsafe("then"),
 			},
 		},
 		nil)

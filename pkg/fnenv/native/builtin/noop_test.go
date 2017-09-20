@@ -32,14 +32,14 @@ func TestFunctionNoopObject(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo": parseUnsafe(true),
-				"bar": parseUnsafe(false),
+				"foo":     parseUnsafe(true),
+				"bar":     parseUnsafe(false),
 				"default": parseUnsafe("hello"),
 			},
 		},
 		map[string]interface{}{
-			"foo" : true,
-			"bar": false,
-			"default" : "hello",
+			"foo":     true,
+			"bar":     false,
+			"default": "hello",
 		})
 }

@@ -15,6 +15,7 @@ const (
 	FORMAT_JSON = "json"
 	TYPE_STRING = "string"
 	TYPE_OBJECT = "object"
+	TYPE_INT    = "int"
 	TYPE_ARRAY  = "array"
 	TYPE_BOOL   = "bool"
 )
@@ -24,6 +25,7 @@ var JSON_TYPES = []string{
 	TYPE_OBJECT,
 	TYPE_ARRAY,
 	TYPE_BOOL,
+	TYPE_INT,
 }
 
 func isJsonValue(val *types.TypedValue) bool {
@@ -48,8 +50,10 @@ func (jp *JsonParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 		tp = TYPE_OBJECT
 	case []interface{}:
 		tp = TYPE_ARRAY
+	case int:
+		tp = TYPE_INT
 	default:
-		return nil, fmt.Errorf("Value '%v' cannot be parsed to json", i)
+		return nil, fmt.Errorf("value '%v' cannot be parsed to json", i)
 	}
 
 	bs, err := json.Marshal(i)
@@ -65,7 +69,7 @@ func (jp *JsonParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 
 func (jp *JsonParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
 	if !isJsonValue(v) {
-		return nil, fmt.Errorf("Value '%v' is not a JSON type", v)
+		return nil, fmt.Errorf("value '%v' is not a JSON type", v)
 	}
 
 	var i interface{}
