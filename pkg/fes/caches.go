@@ -5,8 +5,11 @@ import (
 	"errors"
 
 	"fmt"
+
 	"github.com/fission/fission-workflow/pkg/util/pubsub"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 // MapCache provides a simple map-based CacheReaderWriter implementation
@@ -140,6 +143,7 @@ func (c *FallbackCache) Get(entity Aggregator) error {
 type SubscribedCache struct {
 	pubsub.Publisher
 	CacheReaderWriter
+	ts     time.Time
 	target func() Aggregator // TODO extract to a TypedSubscription
 }
 
@@ -148,6 +152,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 		Publisher:         pubsub.NewPublisher(),
 		CacheReaderWriter: cache,
 		target:            target,
+		ts:                time.Now(),
 	}
 
 	go func() {
@@ -155,8 +160,17 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 			select {
 			case <-ctx.Done():
 				return
-			case event := <-sub.Ch:
-				c.HandleEvent(event.(*Event))
+			case msg := <-sub.Ch:
+				// Discard invalid messages
+				event, ok := msg.(*Event)
+				if !ok {
+					logrus.WithField("msg", msg).Error("Received a malformed message")
+					continue
+				}
+				err := c.HandleEvent(event)
+				if err != nil {
+					logrus.WithField("err", err).Error("Failed to handle event")
+				}
 			}
 		}
 	}()
@@ -186,6 +200,10 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 		} else {
 			cached = uc.target()
 		}
+
+		if cached == nil {
+			return errors.New("could not find aggregate")
+		}
 	}
 
 	err = Project(cached, event)
@@ -197,14 +215,21 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 	if err != nil {
 		return err
 	}
-	n := newNotification(cached, event)
-	logrus.WithFields(logrus.Fields{
-		"event.id":          event.Id,
-		"aggregate.id":      event.Aggregate.Id,
-		"aggregate.type":    event.Aggregate.Type,
-		"notification.type": n.EventType,
-	}).Info("Cache handling done. Sending out Notification.")
-	return uc.Publisher.Publish(n)
+
+	// Do not publish old events
+	ets, _ := ptypes.Timestamp(event.Timestamp) // TODO replace with a token or flag that cache has cached up.
+	if ets.After(uc.ts) {
+		n := newNotification(cached, event)
+		logrus.WithFields(logrus.Fields{
+			"event.id":          event.Id,
+			"aggregate.id":      event.Aggregate.Id,
+			"aggregate.type":    event.Aggregate.Type,
+			"notification.type": n.EventType,
+		}).Info("Cache handling done. Sending out Notification.")
+		return uc.Publisher.Publish(n)
+	} else {
+		return nil
+	}
 }
 
 type Notification struct {

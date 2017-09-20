@@ -64,7 +64,11 @@ func (es *EventStore) HandleEvent(event *fes.Event) error {
 		"aggregate.type": event.Aggregate.Type,
 	}).Info("EventStore client appending event.")
 
+	// TODO make generic / configurable whether to fold into parent
 	subject := toSubject(event.Aggregate)
+	if event.Parent != nil {
+		subject = toSubject(event.Parent)
+	}
 	data, err := proto.Marshal(event)
 	if err != nil {
 		return err
