@@ -139,7 +139,7 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
 		"event.type":     event.Type,
-	}).Info("Handling event for subscribed cache.")
+	}).Debug("Handling event for subscribed cache.")
 
 	cached, err := uc.GetAggregate(*event.GetAggregate())
 	if err != nil {
@@ -181,7 +181,7 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 			"aggregate.id":      event.Aggregate.Id,
 			"aggregate.type":    event.Aggregate.Type,
 			"notification.type": n.EventType,
-		}).Info("Cache handling done. Sending out Notification.")
+		}).Debug("Cache handling done. Sending out Notification.")
 		return uc.Publisher.Publish(n)
 	} else {
 		return nil

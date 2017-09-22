@@ -6,6 +6,7 @@ import (
 
 	"fmt"
 
+	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +45,11 @@ tasks:
   bar:
     run: bla
     inputs: $.invocation.inputs 		# Inputs takes a map or literal, when inputs are referenced it defaults to the 'default' key
+  acme:
+    run: abc
+    inputs:
+      default:
+        a: b
 `
 	wfd, err := Parse(strings.NewReader(strings.TrimSpace(data)))
 	if err != nil {
@@ -76,5 +82,15 @@ tasks:
 		assert.Equal(t, wf.Tasks[id].Id, id)
 		assert.Equal(t, len(wf.Tasks[id].Requires), len(task.Requires))
 		assert.Equal(t, int(wf.Tasks[id].Await), len(task.Requires))
+
+		//assert.IsType(t, wf.Tasks["acme"].Inputs, map[string]interface{}{})
+		//acmeInputs := wf.Tasks["acme"].Inputs.(map[string]interface{})
+		acmeDefaultInput := wf.Tasks["acme"].Inputs["default"]
+		assert.Equal(t, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_OBJECT), acmeDefaultInput.Type)
+		i, err := typedvalues.Format(acmeDefaultInput)
+		assert.NoError(t, err)
+		assert.Equal(t, i, map[string]interface{}{
+			"a": "b",
+		})
 	}
 }

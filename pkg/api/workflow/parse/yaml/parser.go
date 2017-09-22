@@ -120,7 +120,7 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 		return nil, err
 	}
 
-	logrus.WithField("in", i).WithField("out", p).Infof("parsed input")
+	logrus.WithField("in", i).WithField("out", p).Debugf("parsed input")
 	return p, nil
 }
 
@@ -163,7 +163,7 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 		Inputs:      inputs,
 	}
 
-	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Infof("parsed task")
+	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Debugf("parsed task")
 	return result, nil
 }
 
