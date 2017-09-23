@@ -32,16 +32,14 @@ After either pulling the custom image or building it yourself, deploy the bundle
 ## Installing Fission Workflow
 Fission Workflow is just another Fission environment.
 The environment requires only a single additional property `allowedFunctionsPerContainer` to be set to infinite, to ensure that workflows do not require a workflow environment each.
-To deploy the environment run the following:
+To deploy the environment run install the helm chart:
 ```bash
-kubectl -f https://github.com/fission/fission-workflows/tree/master/build/env/workflow-env.yaml
-```
-
-Optionally, you can add the workflow apiserver to the fission deployment. 
-This will enable components such as the ui and cli to have a complete view of the workflows and their invocations.
-To deploy the apiserver use the following template: 
-```bash
-kubectl -f https://github.com/fission/fission-workflows/tree/master/build/workflow-apiserver.yaml
+# Create Helm package
+helm package charts/fission-workflows
+mv ./fission-workflows-* fission-workflows.tgz
+ 
+# Install Helm package
+helm install -n fission-workflow ./fission-workflows.tgz
 ```
 
 You're good to go! Check out the [examples](./examples/).
