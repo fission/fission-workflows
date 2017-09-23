@@ -19,7 +19,7 @@ type ParserFormatter interface {
 	Formatter
 }
 
-// Splits valueTypes of format '<language>/<type>' into (format, type)
+// ParseType splits valueTypes of format '<language>/<type>' into (format, type)
 func ParseType(valueType string) (format string, subType string) {
 	parts := strings.SplitN(valueType, "/", 2)
 
@@ -71,8 +71,8 @@ func newDefaultParserFormatter() ParserFormatter {
 		// TODO remove types ? not needed
 		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
 		FormatType(FORMAT_JSON, TYPE_BOOL):   jsPf,
-		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_INT):    jsPf,
+		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
 		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
 		FormatType(TYPE_FLOW):                &ControlFlowParserFormatter{},
@@ -81,8 +81,8 @@ func newDefaultParserFormatter() ParserFormatter {
 	}, []string{
 		FormatType(TYPE_EXPRESSION),
 		FormatType(FORMAT_JSON, TYPE_BOOL),
-		FormatType(FORMAT_JSON, TYPE_STRING),
 		FormatType(FORMAT_JSON, TYPE_INT),
+		FormatType(FORMAT_JSON, TYPE_STRING),
 		FormatType(FORMAT_JSON, TYPE_ARRAY),
 		FormatType(FORMAT_JSON, TYPE_OBJECT),
 		FormatType(TYPE_FLOW),

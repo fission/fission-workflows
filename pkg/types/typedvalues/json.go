@@ -40,6 +40,10 @@ func isJsonValue(val *types.TypedValue) bool {
 type JsonParserFormatter struct{}
 
 func (jp *JsonParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
+	return jp.parsePrimitives(i, allowedTypes...)
+}
+
+func (jp *JsonParserFormatter) parsePrimitives(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	var tp string
 	switch i.(type) {
 	case bool:
@@ -50,6 +54,10 @@ func (jp *JsonParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 		tp = TYPE_OBJECT
 	case []interface{}:
 		tp = TYPE_ARRAY
+	case float64:
+		tp = TYPE_INT
+	case int64:
+		tp = TYPE_INT
 	case int:
 		tp = TYPE_INT
 	default:

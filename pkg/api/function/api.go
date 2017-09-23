@@ -83,3 +83,12 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 	fn.Status = fnResult
 	return fn, nil
 }
+
+func (ap *Api) Fail(invocationId string, taskId string) error {
+	return ap.es.HandleEvent(&fes.Event{
+		Type:      events.Function_TASK_FAILED.String(),
+		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+		Timestamp: ptypes.TimestampNow(),
+	})
+}
