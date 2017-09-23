@@ -40,7 +40,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
-	}).Debug("Invoking Fission function.")
+	}).Info("Invoking Fission function.")
 	serviceUrl, err := fe.poolmgr.GetServiceForFunction(meta)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -59,14 +59,17 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	if ok {
 		input = mainInput.Value
 	}
+	r := bytes.NewReader(input)
 	// TODO map other parameters as well (to params)
 
-	req, err := http.NewRequest("GET", url, bytes.NewReader(input)) // TODO allow change of method
+	req, err := http.NewRequest("POST", url, r)
 	if err != nil {
 		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}
+	defer req.Body.Close()
 
 	reqContentType := fe.ct.ToContentType(mainInput)
+	logrus.Infof("[request][Content-Type]: %v", reqContentType)
 	req.Header.Set("Content-Type", reqContentType)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -74,6 +77,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		panic(fmt.Errorf("error for url '%s': %v", serviceUrl, err))
 	}
 
+	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
 	output := fe.ct.ToTypedValue(resp)
 	logrus.Infof("[%s][output]: %v", meta.Name, output)
 
@@ -105,7 +109,7 @@ func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
 }
 
 func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue {
-	contentType := resp.Header.Get("Content-Type")
+	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -113,11 +117,12 @@ func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue
 	}
 
 	var i interface{} = body
-	switch contentType {
-	case "application/json":
-		fallthrough
-	case "text/json":
-		json.Unmarshal(body, &i)
+	if strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/json") {
+		logrus.Info("Assuming JSON")
+		err := json.Unmarshal(body, &i)
+		if err != nil {
+			logrus.Warnf("Expected JSON response could not be parsed: %v", err)
+		}
 	}
 
 	tv, err := ct.parserFormatter.Parse(i)

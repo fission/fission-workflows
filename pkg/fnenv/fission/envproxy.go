@@ -16,7 +16,6 @@ import (
 	"github.com/fission/fission-workflow/pkg/apiserver"
 	"github.com/fission/fission-workflow/pkg/fnenv/fission/router"
 	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"
@@ -56,11 +55,6 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Fission function name is missing", 400)
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		panic(err)
-	}
 
 	// Map fission function name to workflow id
 	_, ok := fp.fissionIds[fnId]
@@ -82,12 +76,12 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Map Inputs to function parameters
-	parsedInput, err := typedvalues.Parse(string(body))
+	inputs := map[string]*types.TypedValue{}
+	err := ParseRequest(r, inputs)
 	if err != nil {
-		http.Error(w, "Unknown fission function name", 400)
-	}
-	inputs := map[string]*types.TypedValue{
-		types.INPUT_MAIN: parsedInput,
+		logrus.Errorf("Failed to parse inputs: %v", err)
+		http.Error(w, "Failed to parse inputs", 400)
+		return
 	}
 
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
@@ -107,7 +101,12 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO determine header based on the output value
-	resp := invocation.Status.Output.Value
+	var resp []byte
+	if invocation.Status.Output != nil {
+		resp = invocation.Status.Output.Value
+	} else {
+		logrus.Infof("Invocation '%v' has no output.", fnId)
+	}
 	w.WriteHeader(200)
 	w.Write(resp)
 }
@@ -134,7 +133,6 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	wfId, err := fp.specialize(ctx, metadata, userFunc)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
-		// TODO differentiate between not found and internal error
 		if os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
