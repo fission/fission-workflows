@@ -8,14 +8,12 @@ The workflow engine interprets the dependency graph, notices that a certain func
 - **Error handling in workflows**: Exception Handling, allowing users to deal with errors in functions. 
 For example, users could provide a fallback function that is executed when the first function fails.
 - **Observability**: Add initial telemetry support, measuring function runtime, workflow engine overhead.
-- **Function Versioning**: provide support for dealing with versions of functions. Users can indicate how to workflow should deal with new versions. 
+- **Function versioning**: provide support for dealing with versions of functions. Users can indicate how to workflow should deal with new versions. 
 Examples of strategies for dealing with versioning: never upgrade, canary deployment, blue/green deployment...
-- Build a user-friendly GUI.
-- Add support for passing around data ‘by reference’. 
+- **GUI**: Build a user-friendly GUI.
+- **Data/Control flow split**: Add support for passing around data ‘by reference’. 
 Currently, all data passes through. the workflow engine, which can be costly for data-intensive tasks. 
 Support can be added to allow functions to pass data to each other directly.
-- Create an online ‘catalog’ of functions, such that users can re-use functions created by others.
-- Inline data transformation, the ability to perform some basic data transformations without having to specify a task for it. (e.g. transform data to uppercase, remove whitespace).
-- Extract components of the engine in order to improve the scalability. 
-- Improve structure of scheduler to enable smarter scheduling.
-- Create benchmark that measures the performance of Fission Workflow.
+- **Catalog**: Create an online ‘catalog’ of functions, such that users can re-use functions created by others. 
+- **Non-functional requirements**: Improve scheduling decission
+- **Benchmark**: Create benchmark that measures the performance of Fission Workflow.
