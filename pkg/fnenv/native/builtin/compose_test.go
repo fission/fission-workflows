@@ -6,30 +6,30 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 )
 
-func TestFunctionNoopPassInput(t *testing.T) {
-	expected := "noopnoop"
+func TestFunctionComposePassInput(t *testing.T) {
+	expected := "ComposeCompose"
 	internalFunctionTest(t,
-		&FunctionNoop{},
+		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				NOOP_INPUT: parseUnsafe(expected),
+				COMPOSE_INPUT: parseUnsafe(expected),
 			},
 		},
 		expected)
 }
 
-func TestFunctionNoopEmpty(t *testing.T) {
+func TestFunctionComposeEmpty(t *testing.T) {
 	internalFunctionTest(t,
-		&FunctionNoop{},
+		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{},
 		},
 		nil)
 }
 
-func TestFunctionNoopObject(t *testing.T) {
+func TestFunctionComposeObject(t *testing.T) {
 	internalFunctionTest(t,
-		&FunctionNoop{},
+		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
 				"foo":     parseUnsafe(true),
@@ -37,5 +37,9 @@ func TestFunctionNoopObject(t *testing.T) {
 				"default": parseUnsafe("hello"),
 			},
 		},
-		"hello")
+		map[string]interface{}{
+			"foo":     true,
+			"bar":     false,
+			"default": "hello",
+		})
 }
