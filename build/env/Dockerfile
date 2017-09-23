@@ -1,6 +1,6 @@
 FROM alpine
 
-ADD fission-workflow-bundle /
+ADD fission-workflows-bundle /
 
 EXPOSE 8888
 
@@ -10,4 +10,4 @@ ENV ES_NATS_URL nats://defaultFissionAuthToken@nats-streaming.fission:4222
 ENV ES_NATS_CLUSTER fissionMQTrigger
 
 # Remove APIs when components stabilize
-ENTRYPOINT ["/fission-workflow-bundle", "--nats", "--fission", "--internal", "--controller", "--api-http", "--api-workflow-invocation", "--api-workflow", "--api-admin"]
+ENTRYPOINT ["/fission-workflows-bundle", "--nats", "--fission", "--internal", "--controller", "--api-http", "--api-workflow-invocation", "--api-workflow", "--api-admin"]

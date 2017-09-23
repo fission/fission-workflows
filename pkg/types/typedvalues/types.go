@@ -3,7 +3,7 @@ package typedvalues
 import (
 	"strings"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 type Parser interface {

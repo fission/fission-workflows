@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/robertkrimen/otto"
 	"github.com/sirupsen/logrus"
 )

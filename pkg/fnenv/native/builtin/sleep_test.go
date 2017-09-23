@@ -5,7 +5,7 @@ import (
 
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 

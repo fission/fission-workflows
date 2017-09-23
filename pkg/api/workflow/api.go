@@ -3,12 +3,12 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/api/workflow/parse"
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/aggregates"
-	"github.com/fission/fission-workflow/pkg/types/events"
-	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 )

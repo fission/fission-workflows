@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "github.com/fission/fission-workflow/pkg/types/types.proto";
+import "github.com/fission/fission-workflows/pkg/types/types.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"fmt"
-	"github.com/fission/fission-workflow/pkg/api/workflow/parse/yaml"
+	"github.com/fission/fission-workflows/pkg/api/workflow/parse/yaml"
 	"github.com/gogo/protobuf/jsonpb"
 )
 

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/api/invocation"
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"

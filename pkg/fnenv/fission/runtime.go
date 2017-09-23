@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	poolmgr "github.com/fission/fission/poolmgr/client"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"

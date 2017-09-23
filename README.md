@@ -1,6 +1,6 @@
 # Fission Workflow
-[![Build Status](https://travis-ci.org/fission/fission-workflow.svg?branch=master)](https://travis-ci.org/fission/fission-workflow)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fission/fission-workflow)](https://goreportcard.com/report/github.com/fission/fission-workflow)
+[![Build Status](https://travis-ci.org/fission/fission-workflows.svg?branch=master)](https://travis-ci.org/fission/fission-workflows)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fission/fission-workflows)](https://goreportcard.com/report/github.com/fission/fission-workflows)
 [![Fission Slack](http://slack.fission.io/badge.svg)](http://slack.fission.io)
 
 [fission.io](http://fission.io)  [@fissionio](http://twitter.com/fissionio)

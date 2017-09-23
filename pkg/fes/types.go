@@ -1,6 +1,6 @@
 package fes
 
-import "github.com/fission/fission-workflow/pkg/util/pubsub"
+import "github.com/fission/fission-workflows/pkg/util/pubsub"
 
 // Fast, minimal Event Sourcing
 type Aggregator interface {

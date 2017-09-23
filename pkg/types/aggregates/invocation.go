@@ -5,11 +5,11 @@ import (
 
 	"errors"
 
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/events"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/gogo/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 )

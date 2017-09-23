@@ -1,7 +1,7 @@
 package typedvalues
 
 import (
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.TypedValue {

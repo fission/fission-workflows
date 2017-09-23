@@ -6,7 +6,7 @@ import (
 
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/util/labels"
+	"github.com/fission/fission-workflows/pkg/util/labels"
 )
 
 // A simple PubSub implementation

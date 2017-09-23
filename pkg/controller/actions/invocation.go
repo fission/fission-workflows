@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"github.com/fission/fission-workflow/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/sirupsen/logrus"
 )
 

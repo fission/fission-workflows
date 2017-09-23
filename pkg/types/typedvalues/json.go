@@ -5,7 +5,7 @@ import (
 
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 type Object map[string]interface{}

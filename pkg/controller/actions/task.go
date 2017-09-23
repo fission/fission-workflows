@@ -3,10 +3,10 @@ package actions
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
-	"github.com/fission/fission-workflow/pkg/controller/query"
-	"github.com/fission/fission-workflow/pkg/scheduler"
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/controller/query"
+	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 

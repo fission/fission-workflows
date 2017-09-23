@@ -13,9 +13,9 @@ import (
 
 	"encoding/json"
 
-	"github.com/fission/fission-workflow/pkg/apiserver"
-	"github.com/fission/fission-workflow/pkg/fnenv/fission/router"
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"

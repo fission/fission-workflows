@@ -6,7 +6,7 @@ import (
 
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/util/pubsub"
+	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
