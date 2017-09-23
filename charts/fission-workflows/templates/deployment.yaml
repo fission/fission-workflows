@@ -1,0 +1,49 @@
+{{ if .Values.apiserver }}
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: workflow-apiserver
+  namespace: fission
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        svc: workflow-apiserver
+    spec:
+      containers:
+      - name: workflow-apiserver
+        image: {{ .Values.bundleImage }}
+        imagePullPolicy: IfNotPresent
+        command: ["/fission-workflows-bundle"]
+        args: [
+        # Only run apiserver components
+          "--nats",
+          "--api-http",
+          "--api-workflow-invocation",
+          "--api-workflow",
+          "--api-admin",
+        ]
+        env:
+        - name: ES_NATS_URL
+#          value: nats://defaultFissionAuthToken@nats-streaming:4222
+          value: nats://{{ .Values.nats.authToken }}@{{ .Values.nats.location }}
+        - name: ES_NATS_CLUSTER
+          value: "{{ .Values.nats.cluster }}"
+        - name: FNENV_FISSION_POOLMGR
+          value: "{{ .Values.fnenv.fission.poolmgr }}"
+        - name: FNENV_FISSION_CONTROLLER
+          value: "{{ .Values.fnenv.fission.controller }}"
+---
+{{ end }}
+apiVersion: fission.io/v1
+kind: Environment
+metadata:
+  name: workflow
+  namespace: default
+spec:
+  version: 1
+  runtime:
+  # TODO allow environment variables for environment
+    image: "{{ .Values.envImage }}"
+  allowedFunctionsPerContainer: infinite

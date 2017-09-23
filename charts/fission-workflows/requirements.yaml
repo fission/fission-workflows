@@ -1,0 +1,6 @@
+# TODO enable when fission-charts is properly setup
+#dependencies:
+#  - name: fission-all
+#    version: ^0.2.1
+#    repository: https://raw.githubusercontent.com/fission/fission-charts/master/
+
