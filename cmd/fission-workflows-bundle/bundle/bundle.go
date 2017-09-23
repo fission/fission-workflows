@@ -182,9 +182,10 @@ func getWorkflowInvocationCache(ctx context.Context, eventPub pubsub.Publisher) 
 
 func setupInternalFunctionRuntime() *native.FunctionEnv {
 	return native.NewFunctionEnv(map[string]native.InternalFunction{
-		"if":    &builtin.FunctionIf{},
-		"noop":  &builtin.FunctionNoop{},
-		"sleep": &builtin.FunctionSleep{},
+		"if":      &builtin.FunctionIf{},
+		"noop":    &builtin.FunctionNoop{},
+		"compose": &builtin.FunctionCompose{},
+		"sleep":   &builtin.FunctionSleep{},
 	})
 }
 

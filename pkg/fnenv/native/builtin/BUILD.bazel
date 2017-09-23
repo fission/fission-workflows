@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "compose.go",
         "if.go",
         "noop.go",
         "sleep.go",
@@ -20,6 +21,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "compose_test.go",
         "if_test.go",
         "noop_test.go",
         "sleep_test.go",
