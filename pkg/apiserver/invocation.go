@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fission/fission-workflow/pkg/api/invocation"
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -36,7 +36,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		return nil, err
 	}
 
-	timeout := time.After(time.Duration(10) * time.Second)
+	timeout := time.After(time.Duration(60) * time.Second)
 	var result *types.WorkflowInvocation
 	for {
 		wi, err := gi.api.Get(eventId)

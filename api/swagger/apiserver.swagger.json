@@ -305,6 +305,10 @@
           "type": "integer",
           "format": "int32",
           "title": "Number of dependencies to wait for"
+        },
+        "output": {
+          "$ref": "#/definitions/TypedValue",
+          "title": "Transform the output, or override the output with a literal"
         }
       },
       "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of task"
@@ -505,7 +509,7 @@
       "properties": {
         "apiVersion": {
           "type": "string",
-          "description": "apiVersion describes what version is of the workflow definition.\n\nBy default the workflow engine will assume the latest version to be used."
+          "description": "apiVersion describes what version is of the workflow definition.\nBy default the workflow engine will assume the latest version to be used."
         },
         "tasks": {
           "type": "object",
@@ -518,6 +522,15 @@
         "outputTask": {
           "type": "string",
           "title": "From which task should the workflow return the output? Future: multiple? Implicit?"
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
         }
       },
       "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow.",

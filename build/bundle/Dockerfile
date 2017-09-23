@@ -1,2 +1,2 @@
 FROM alpine
-ADD fission-workflow-bundle /
+ADD fission-workflows-bundle /

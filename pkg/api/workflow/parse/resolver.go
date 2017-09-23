@@ -6,9 +6,9 @@ import (
 
 	"sync"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
 )
 
@@ -99,7 +99,11 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 		go func(cName string) {
 			def, err := ps.resolveForRuntime(t, cName)
 			if err != nil {
-				logrus.Error(err)
+				logrus.WithFields(logrus.Fields{
+					"err":     err,
+					"runtime": cName,
+					"fn":      t,
+				}).Info("Failed to retrieve function.")
 				lastErr = err
 			} else {
 				resolved <- def

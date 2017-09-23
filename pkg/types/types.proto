@@ -86,8 +86,8 @@ message WorkflowInvocation {
 // Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
 // to the user/system upon the creation of a workflow.
 message WorkflowSpec {
+
     // apiVersion describes what version is of the workflow definition.
-    //
     // By default the workflow engine will assume the latest version to be used.
     string apiVersion = 1;
 
@@ -99,6 +99,15 @@ message WorkflowSpec {
 
     // From which task should the workflow return the output? Future: multiple? Implicit?
     string outputTask = 3;
+
+    string description = 4;
+
+    // TODO move
+    // The UID that the workflow should have. Only use this in case you want to force a specific UID.
+    string id = 5;
+
+    // Name is solely for human-readablity
+    string name = 6;
 }
 
 // A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
@@ -122,6 +131,9 @@ message Task {
 
     // Number of dependencies to wait for
     int32 await = 6;
+
+    // Transform the output, or override the output with a literal
+    TypedValue output = 7;
 }
 
 message TaskDependencyParameters {

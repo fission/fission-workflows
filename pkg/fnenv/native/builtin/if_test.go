@@ -3,7 +3,7 @@ package builtin
 import (
 	"testing"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 func TestFunctionIfConsequentFlow(t *testing.T) {
@@ -38,4 +38,29 @@ func TestFunctionIfAlternativeFlow(t *testing.T) {
 			},
 		},
 		alternativeTask)
+}
+
+func TestFunctionIfLiteral(t *testing.T) {
+	internalFunctionTest(t,
+		&FunctionIf{},
+		&types.TaskInvocationSpec{
+			Inputs: map[string]*types.TypedValue{
+				IF_INPUT_CONDITION:   parseUnsafe(true),
+				IF_INPUT_CONSEQUENT:  parseUnsafe("foo"),
+				IF_INPUT_ALTERNATIVE: parseUnsafe("bar"),
+			},
+		},
+		"foo")
+}
+
+func TestFunctionIfMissingAlternative(t *testing.T) {
+	internalFunctionTest(t,
+		&FunctionIf{},
+		&types.TaskInvocationSpec{
+			Inputs: map[string]*types.TypedValue{
+				IF_INPUT_CONDITION:  parseUnsafe(false),
+				IF_INPUT_CONSEQUENT: parseUnsafe("then"),
+			},
+		},
+		nil)
 }

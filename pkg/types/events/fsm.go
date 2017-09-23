@@ -1,8 +1,8 @@
 package events
 
 import (
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/util/fsm"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/util/fsm"
 )
 
 var WorkflowInvocationFsm *fsm.Fsm = fsm.New(

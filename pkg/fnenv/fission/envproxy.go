@@ -11,24 +11,31 @@ import (
 
 	"bytes"
 
-	"github.com/fission/fission-workflow/pkg/apiserver"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"encoding/json"
+
+	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/1.5/pkg/api"
 )
 
 const userFunc = "/userfunc/user"
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
 type Proxy struct {
-	invocationServer          apiserver.WorkflowInvocationAPIServer
-	workflowServer            apiserver.WorkflowAPIServer
-	fissionNameWorkflowUidMap map[string]string // TODO replace this with better solution
+	invocationServer apiserver.WorkflowInvocationAPIServer
+	workflowServer   apiserver.WorkflowAPIServer
+	fissionIds       map[string]bool
 }
 
 func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
-	return &Proxy{wfiSrv, wfSrv, map[string]string{}}
+	return &Proxy{
+		invocationServer: wfiSrv,
+		workflowServer:   wfSrv,
+		fissionIds:       map[string]bool{},
+	}
 }
 
 func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
@@ -37,39 +44,48 @@ func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
 }
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
-	fnName := r.Header.Get("X-Fission-Function-Name")
-	if len(fnName) == 0 {
-		logrus.Error("Fission function name is missing")
+
+	meta, _ := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
+
+	fnId := string(meta.UID)
+	if len(meta.UID) == 0 {
+		logrus.WithField("meta", meta).Error("Fission function name is missing")
 		http.Error(w, "Fission function name is missing", 400)
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		panic(err)
-	}
 
 	// Map fission function name to workflow id
-	id, ok := fp.fissionNameWorkflowUidMap[fnName]
+	_, ok := fp.fissionIds[fnId]
+
 	if !ok {
-		logrus.WithField("fnName", fnName).WithField("map", fp.fissionNameWorkflowUidMap).
-			Error("Unknown fission function name")
-		http.Error(w, "Unknown fission function name", 400)
-		return
+		// Fallback 1 : check if it is in the event store somewhere
+		wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{fnId})
+		if err != nil || wf == nil {
+			logrus.WithField("fnId", fnId).
+				WithField("err", err).
+				WithField("map", fp.fissionIds).
+				Error("Unknown fission function name")
+
+			logrus.Warn(fp.fissionIds)
+			http.Error(w, "Unknown fission function name", 400)
+			return
+		}
+		fp.fissionIds[fnId] = true
 	}
 
 	// Map Inputs to function parameters
-	inputs := map[string]*types.TypedValue{
-		types.INPUT_MAIN: {
-			Type:  typedvalues.FormatType(typedvalues.TYPE_RAW),
-			Value: body,
-		},
+	inputs := map[string]*types.TypedValue{}
+	err := ParseRequest(r, inputs)
+	if err != nil {
+		logrus.Errorf("Failed to parse inputs: %v", err)
+		http.Error(w, "Failed to parse inputs", 400)
+		return
 	}
 
-	ctx := context.Background()
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
-		WorkflowId: id,
+		WorkflowId: fnId,
 		Inputs:     inputs,
 	})
 	if err != nil {
@@ -85,14 +101,19 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO determine header based on the output value
-	resp := invocation.Status.Output.Value
+	var resp []byte
+	if invocation.Status.Output != nil {
+		resp = invocation.Status.Output.Value
+	} else {
+		logrus.Infof("Invocation '%v' has no output.", fnId)
+	}
 	w.WriteHeader(200)
 	w.Write(resp)
 }
 
 func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	logrus.Info("Specializing...")
-
 	body := r.Body
 	bs, err := ioutil.ReadAll(body)
 	if err != nil {
@@ -100,13 +121,18 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("failed to read body: " + err.Error()))
 		return
 	}
-	fnName := string(bs)
-	logrus.Infof("Fission function name: %s", fnName)
 
-	wfId, err := fp.specialize(fnName, userFunc)
+	metadata := &api.ObjectMeta{}
+	err = json.Unmarshal(bs, metadata)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Failed to parse body: " + err.Error()))
+		return
+	}
+
+	wfId, err := fp.specialize(ctx, metadata, userFunc)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
-		// TODO differentiate between not found and internal error
 		if os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
@@ -115,13 +141,12 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-
 	logrus.Infof("Specialized successfully wf '%s'", wfId)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(wfId))
 }
 
-func (fp *Proxy) specialize(name string, fnPath string) (string, error) {
+func (fp *Proxy) specialize(ctx context.Context, fissionMetadata *api.ObjectMeta, fnPath string) (string, error) {
 	_, err := os.Stat(fnPath)
 	if err != nil {
 		return "", err
@@ -144,15 +169,18 @@ func (fp *Proxy) specialize(name string, fnPath string) (string, error) {
 	}
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
-	ctx := context.Background()
+	// Synchronize the workflow ID with the fission ID
+	wfSpec.Id = string(fissionMetadata.GetUID())
+	wfSpec.Name = fissionMetadata.Name
+
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
 	if err != nil {
 		return "", err
 	}
 	wfId := resp.Id
 
-	// Map fission function name to generated workflow id
-	fp.fissionNameWorkflowUidMap[name] = wfId
+	// Cache the ID so we don't have to check whether the workflow engine already has it.
+	fp.fissionIds[wfSpec.Id] = true
 
 	// Cleanup
 	err = os.Remove(userFunc)

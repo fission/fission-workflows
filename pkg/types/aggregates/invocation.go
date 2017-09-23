@@ -5,11 +5,11 @@ import (
 
 	"errors"
 
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/events"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/gogo/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 )
@@ -137,7 +137,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 		log.WithFields(log.Fields{
 			"id":          dynamicTask.Id,
 			"functionRef": dynamicTask.FunctionRef,
-		}).Info("Adding dynamic task.")
+		}).Debug("Adding dynamic task.")
 
 		wi.Status.DynamicTasks[id] = dynamicTask
 	}

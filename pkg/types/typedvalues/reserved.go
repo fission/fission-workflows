@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -66,14 +66,14 @@ func (ep *ExprParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 	s, ok := i.(string)
 
 	if !ok {
-		return nil, errors.New("Provided value is not of type 'string'")
+		return nil, errors.New("provided value is not of type 'string'")
 	}
 	// Normalize
 	ns := strings.TrimSpace(s)
 
 	// Check if the string is an expression
 	if !strings.HasPrefix(ns, "$") { // TODO add support for expressions other than selectors
-		return nil, errors.New("Provided value is not of type 'expression string'")
+		return nil, errors.New("provided value is not of type 'expression string'")
 	}
 
 	return &types.TypedValue{
@@ -84,13 +84,14 @@ func (ep *ExprParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 
 func (ep *ExprParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
 	if IsFormat(v.Type, TYPE_EXPRESSION) {
-		return nil, fmt.Errorf("Value '%v' is not of type 'expr'", v)
+		return nil, fmt.Errorf("value '%v' is not of type 'expr'", v)
 	}
 
 	return string(v.Value), nil
 }
 
-// Used to group multiple ParserFormatters together (e.g. RefParserFormatter + JsonParserFormatter + XmlParserFormatter)
+// ComposedParserFormatter is used to group multiple ParserFormatters together (e.g. RefParserFormatter +
+// JsonParserFormatter + XmlParserFormatter)
 type ComposedParserFormatter struct {
 	pfs        map[string]ParserFormatter // Language : ParserFormatter
 	priorities []string
@@ -141,7 +142,7 @@ func (cp *ComposedParserFormatter) Parse(i interface{}, allowedTypes ...string) 
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse value '%v'", i)
+		return nil, fmt.Errorf("failed to parse value '%v'", i)
 	}
 	return result, nil
 }
@@ -165,7 +166,7 @@ func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...strin
 	// TODO allow scope too
 	t, ok := i.(*types.Task)
 	if !ok {
-		return nil, errors.New("Provided value is not of type 'task'")
+		return nil, errors.New("provided value is not of type 'task'")
 	}
 
 	bs, err := proto.Marshal(t)
@@ -202,7 +203,7 @@ func (NilParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.T
 			Type: TYPE_NIL,
 		}, nil
 	}
-	return nil, errors.New("Value not nil")
+	return nil, errors.New("value not nil")
 }
 
 func (NilParserFormatter) Format(v *types.TypedValue) (interface{}, error) {

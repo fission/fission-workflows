@@ -3,10 +3,10 @@ package actions
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
-	"github.com/fission/fission-workflow/pkg/controller/query"
-	"github.com/fission/fission-workflow/pkg/scheduler"
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/controller/query"
+	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,13 +31,13 @@ func InvokeTask(action *scheduler.InvokeTaskAction, wf *types.Workflow, invoc *t
 	inputs := map[string]*types.TypedValue{}
 	queryScope := query.NewScope(wf, invoc)
 	for inputKey, val := range action.Inputs {
-		resolvedInput, err := queryParser.Resolve(queryScope, queryScope.Tasks[action.Id], val)
+		resolvedInput, err := queryParser.Resolve(queryScope, queryScope.Tasks[action.Id], nil, val)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
-			}).Warnf("Failed to parse input: %v", err)
-			continue
+			}).Errorf("Failed to parse input: %v", err)
+			return fmt.Errorf("failed to parse input '%v'", val)
 		}
 
 		inputs[inputKey] = resolvedInput

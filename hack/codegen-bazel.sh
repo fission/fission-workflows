@@ -2,5 +2,5 @@
 
 set -ex
 
-gazelle -external vendored -go_prefix github.com/fission/fission-workflow ./pkg ./cmd
+gazelle -external vendored -go_prefix github.com/fission/fission-workflows ./pkg ./cmd
 

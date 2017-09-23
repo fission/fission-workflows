@@ -12,7 +12,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"

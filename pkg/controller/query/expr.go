@@ -5,15 +5,14 @@ import (
 
 	"errors"
 
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
-	"github.com/fission/fission-workflow/pkg/util"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
 )
 
 type ExpressionParser interface {
-	Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error)
+	Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error)
 }
 
 var (
@@ -29,13 +28,15 @@ type JavascriptExpressionParser struct {
 
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
 	vm := otto.New()
-	// Uid serves mostly as an example of how to add functions to the Otto runtime.
-	err := vm.Set("uid", func(call otto.FunctionCall) otto.Value {
-		uid, _ := vm.ToValue(util.Uid())
-		return uid
-	})
-	if err != nil {
-		panic(err)
+
+	// Load builtin functions into Otto
+	for varName, fn := range BuiltinFunctions {
+		err := vm.Set(varName, func(call otto.FunctionCall) otto.Value {
+			return fn.Apply(vm, call)
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 	return &JavascriptExpressionParser{
 		vm:     vm,
@@ -43,7 +44,7 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 	}
 }
 
-func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, scope interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
+func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
 	if !typedvalues.IsExpression(expr) {
 		return expr, nil
 	}
@@ -57,8 +58,15 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, scope inter
 	}()
 
 	scoped := oe.vm.Copy()
-	scoped.Set("$", rootScope)
-	scoped.Set("task", scope)
+	err := scoped.Set("$", rootScope)
+	err = scoped.Set("task", currentScope)
+	if output != nil {
+		err = scoped.Set("output", output)
+	}
+	if err != nil {
+		// Failed to set some variable
+		return nil, err
+	}
 
 	go func() {
 		<-time.After(RESOLVING_TIMEOUT)

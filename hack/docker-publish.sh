@@ -23,8 +23,8 @@ fi
 TAG=$2
 NS=$1
 echo "Using tag: ${TAG} and org ${NS}"
-BUNDLE_IMAGE=${NS}/fission-workflow-bundle
-ENV_IMAGE=${NS}/fission-workflow-bundle
+BUNDLE_IMAGE=${NS}/fission-workflows-bundle
+ENV_IMAGE=${NS}/workflow-env
 
 # Check if images with tags exist
 local_image_exists ${BUNDLE_IMAGE} ${TAG}

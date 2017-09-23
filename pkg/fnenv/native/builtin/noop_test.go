@@ -3,7 +3,7 @@ package builtin
 import (
 	"testing"
 
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 func TestFunctionNoopPassInput(t *testing.T) {
@@ -25,4 +25,21 @@ func TestFunctionNoopEmpty(t *testing.T) {
 			Inputs: map[string]*types.TypedValue{},
 		},
 		nil)
+}
+
+func TestFunctionNoopObject(t *testing.T) {
+	internalFunctionTest(t,
+		&FunctionNoop{},
+		&types.TaskInvocationSpec{
+			Inputs: map[string]*types.TypedValue{
+				"foo":     parseUnsafe(true),
+				"bar":     parseUnsafe(false),
+				"default": parseUnsafe("hello"),
+			},
+		},
+		map[string]interface{}{
+			"foo":     true,
+			"bar":     false,
+			"default": "hello",
+		})
 }

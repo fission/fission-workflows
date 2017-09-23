@@ -3,11 +3,11 @@ package apiserver
 import (
 	"errors"
 
-	"github.com/fission/fission-workflow/pkg/api/workflow"
-	"github.com/fission/fission-workflow/pkg/api/workflow/parse"
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
 )

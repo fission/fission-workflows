@@ -1,8 +1,10 @@
 package query
 
 import (
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,22 +16,36 @@ type Scope struct {
 }
 
 type WorkflowScope struct {
-	*types.ObjectMetadata
-	*types.WorkflowStatus
+	*ObjectMetadata
+	UpdatedAt     int64  // unix timestamp
+	Status        string // workflow status
+	ResolvedTasks map[string]*TaskDefScope
+}
+
+type TaskDefScope struct {
+	Runtime  string
+	Src      string
+	Resolved string
 }
 
 type InvocationScope struct {
-	*types.ObjectMetadata
+	*ObjectMetadata
 	Inputs map[string]interface{}
 }
 
+type ObjectMetadata struct {
+	Id        string
+	CreatedAt int64 // unix timestamp
+}
+
 type TaskScope struct {
-	*types.ObjectMetadata
-	*types.TaskInvocationStatus
-	Inputs   map[string]interface{}
-	Requires map[string]*types.TaskDependencyParameters
-	Name     string
-	Output   interface{}
+	*ObjectMetadata
+	Status    string // TaskInvocation status
+	UpdatedAt int64  // unix timestamp
+	Inputs    map[string]interface{}
+	Requires  map[string]*types.TaskDependencyParameters
+	Name      string
+	Output    interface{}
 }
 
 func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
@@ -50,26 +66,41 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 		}
 
 		tasks[taskId] = &TaskScope{
-			ObjectMetadata:       fn.Metadata,
-			TaskInvocationStatus: fn.Status,
-			Inputs:               formatTypedValueMap(fn.Spec.Inputs),
-			Requires:             taskDef.Requires,
-			Name:                 taskDef.FunctionRef,
-			Output:               output,
+			ObjectMetadata: formatMetadata(fn.Metadata),
+			Status:         fn.Status.Status.String(),
+			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
+			Inputs:         formatTypedValueMap(fn.Spec.Inputs),
+			Requires:       taskDef.Requires,
+			Name:           taskDef.FunctionRef,
+			Output:         output,
 		}
 	}
 
 	return &Scope{
 		Workflow: &WorkflowScope{
-			ObjectMetadata: wf.Metadata,
-			WorkflowStatus: wf.Status,
+			ObjectMetadata: formatMetadata(wf.Metadata),
+			UpdatedAt:      formatTimestamp(wf.Status.UpdatedAt),
+			Status:         wf.Status.Status.String(),
+			ResolvedTasks:  formatResolvedTask(wf.Status.ResolvedTasks),
 		},
 		Invocation: &InvocationScope{
-			ObjectMetadata: invoc.Metadata,
+			ObjectMetadata: formatMetadata(invoc.Metadata),
 			Inputs:         formatTypedValueMap(invoc.Spec.Inputs),
 		},
 		Tasks: tasks,
 	}
+}
+
+func formatResolvedTask(resolved map[string]*types.TaskTypeDef) map[string]*TaskDefScope {
+	results := map[string]*TaskDefScope{}
+	for k, v := range resolved {
+		results[k] = &TaskDefScope{
+			Src:      v.Src,
+			Runtime:  v.Runtime,
+			Resolved: v.Resolved,
+		}
+	}
+	return results
 }
 
 func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {
@@ -83,4 +114,19 @@ func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interfa
 		result[k] = i
 	}
 	return result
+}
+
+func formatMetadata(meta *types.ObjectMetadata) *ObjectMetadata {
+	if meta == nil {
+		return nil
+	}
+	return &ObjectMetadata{
+		Id:        meta.Id,
+		CreatedAt: formatTimestamp(meta.CreatedAt),
+	}
+}
+
+func formatTimestamp(pts *timestamp.Timestamp) int64 {
+	ts, _ := ptypes.Timestamp(pts)
+	return ts.UnixNano()
 }

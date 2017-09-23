@@ -12,9 +12,9 @@ spec:
     spec:
       containers:
       - name: workflow-apiserver
-        image: fission/fission-workflow-bundle
+        image: fission/fission-workflows-bundle
         imagePullPolicy: IfNotPresent
-        command: ["/fission-workflow-bundle"]
+        command: ["/fission-workflows-bundle"]
         args: [
         # Only run apiserver components
           "--nats",

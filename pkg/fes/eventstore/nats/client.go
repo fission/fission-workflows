@@ -3,8 +3,10 @@ package nats
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/util/pubsub"
+	"strings"
+
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
@@ -38,7 +40,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"aggregate.id":   event.Aggregate.Id,
 			"event.type":     event.Type,
 			"event.id":       event.Id,
-		}).Infof("Publishing aggregate event to subscribers.")
+		}).Debugf("Publishing aggregate event to subscribers.")
 
 		err = es.Publisher.Publish(event)
 		if err != nil {
@@ -64,7 +66,11 @@ func (es *EventStore) HandleEvent(event *fes.Event) error {
 		"aggregate.type": event.Aggregate.Type,
 	}).Info("EventStore client appending event.")
 
+	// TODO make generic / configurable whether to fold into parent
 	subject := toSubject(event.Aggregate)
+	if event.Parent != nil {
+		subject = toSubject(event.Parent)
+	}
 	data, err := proto.Marshal(event)
 	if err != nil {
 		return err
@@ -93,8 +99,29 @@ func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
 	return results, nil
 }
 
-func (es *EventStore) List(matcher fes.StringMatcher) ([]string, error) {
-	return es.conn.List(matcher)
+func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+	subjects, err := es.conn.List(matcher)
+	if err != nil {
+		return nil, err
+	}
+	results := []fes.Aggregate{}
+	for _, subject := range subjects {
+		a := toAggregate(subject)
+		results = append(results, *a)
+	}
+
+	return results, nil
+}
+
+func toAggregate(subject string) *fes.Aggregate {
+	parts := strings.SplitN(subject, ".", 2)
+	if len(parts) < 2 {
+		return nil
+	}
+	return &fes.Aggregate{
+		Type: parts[0],
+		Id:   parts[1],
+	}
 }
 
 func toSubject(a *fes.Aggregate) string {

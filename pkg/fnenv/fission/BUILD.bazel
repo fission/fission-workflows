@@ -4,12 +4,14 @@ go_library(
     name = "go_default_library",
     srcs = [
         "envproxy.go",
+        "http.go",
         "resolver.go",
         "runtime.go",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apiserver:go_default_library",
+        "//pkg/fnenv/fission/router:go_default_library",
         "//pkg/types:go_default_library",
         "//pkg/types/typedvalues:go_default_library",
         "//vendor/github.com/fission/fission/controller/client:go_default_library",

@@ -1,7 +1,7 @@
 package function
 
 import (
-	"github.com/fission/fission-workflow/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types"
 )
 
 type Runtime interface {

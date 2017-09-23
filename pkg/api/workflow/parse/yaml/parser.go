@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -82,23 +82,29 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 	// Handle special cases
 	switch t := i.(type) {
 	case map[interface{}]interface{}:
-		res := map[string]interface{}{}
-		for k, v := range t {
-			res[fmt.Sprintf("%v", k)] = v
-		}
-		bs, err := json.Marshal(res)
-		if err != nil {
-			panic(err)
-		}
-		td := &TaskDef{}
-		err = json.Unmarshal(bs, td)
-		if err != nil {
-			panic(err)
-		}
-		p, err := parseTask(id, td)
-		if err != nil {
-			i = res
+		res := convertInterfaceMaps(t)
+
+		if _, ok := res["run"]; ok {
+			bs, err := json.Marshal(res)
+			if err != nil {
+				panic(err)
+			}
+			td := &TaskDef{}
+			err = json.Unmarshal(bs, td)
+			if err != nil {
+				panic(err)
+			}
+			p, err := parseTask(id, td)
+			if err != nil {
+				i = res
+			} else {
+				i = p
+			}
 		} else {
+			p, err := typedvalues.Parse(res)
+			if err != nil {
+				return nil, err
+			}
 			i = p
 		}
 	case *TaskDef: // Handle TaskDef because it cannot be parsed by standard parser
@@ -114,8 +120,19 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 		return nil, err
 	}
 
-	logrus.WithField("in", i).WithField("out", p).Infof("parsed input")
+	logrus.WithField("in", i).WithField("out", p).Debugf("parsed input")
 	return p, nil
+}
+
+func convertInterfaceMaps(src map[interface{}]interface{}) map[string]interface{} {
+	res := map[string]interface{}{}
+	for k, v := range src {
+		if ii, ok := v.(map[interface{}]interface{}); ok {
+			v = convertInterfaceMaps(ii)
+		}
+		res[fmt.Sprintf("%v", k)] = v
+	}
+	return res
 }
 
 func parseTask(id string, t *TaskDef) (*types.Task, error) {
@@ -146,7 +163,7 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 		Inputs:      inputs,
 	}
 
-	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Infof("parsed task")
+	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Debugf("parsed task")
 	return result, nil
 }
 
@@ -155,9 +172,10 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 //
 
 type WorkflowDef struct {
-	ApiVersion string
-	Output     string
-	Tasks      map[string]*TaskDef
+	ApiVersion  string
+	Description string
+	Output      string
+	Tasks       map[string]*TaskDef
 }
 
 type TaskDef struct {

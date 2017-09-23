@@ -5,17 +5,17 @@ import (
 
 	"context"
 
-	"github.com/fission/fission-workflow/pkg/api/function"
-	"github.com/fission/fission-workflow/pkg/api/invocation"
-	"github.com/fission/fission-workflow/pkg/controller/actions"
-	"github.com/fission/fission-workflow/pkg/controller/query"
-	"github.com/fission/fission-workflow/pkg/fes"
-	"github.com/fission/fission-workflow/pkg/scheduler"
-	"github.com/fission/fission-workflow/pkg/types"
-	"github.com/fission/fission-workflow/pkg/types/aggregates"
-	"github.com/fission/fission-workflow/pkg/types/events"
-	"github.com/fission/fission-workflow/pkg/util/labels"
-	"github.com/fission/fission-workflow/pkg/util/pubsub"
+	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/controller/actions"
+	"github.com/fission/fission-workflows/pkg/controller/query"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/util/labels"
+	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -68,7 +68,7 @@ func (cr *InvocationController) Run(ctx context.Context) error {
 		for {
 			select {
 			case notification := <-cr.invocSub.Ch:
-				logrus.WithField("notification", notification).Info("Handling invocation notification.")
+				logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
 				switch n := notification.(type) {
 				case *fes.Notification:
 					cr.handleNotification(n)
