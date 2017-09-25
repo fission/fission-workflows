@@ -5,11 +5,12 @@ import (
 
 	"errors"
 
+	"strings"
+
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
-	"strings"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,7 +59,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 
 		result := map[string]interface{}{}
 		obj := i.(map[string]interface{})
-		for k, v  := range obj {
+		for k, v := range obj {
 			field, err := typedvalues.Parse(v)
 			if err != nil {
 				return nil, err

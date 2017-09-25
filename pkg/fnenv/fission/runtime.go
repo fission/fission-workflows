@@ -16,6 +16,7 @@ import (
 
 	"strings"
 
+	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
 	k8stypes "k8s.io/client-go/1.5/pkg/types"
 )
 
@@ -60,6 +61,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		input = mainInput.Value
 	}
 	r := bytes.NewReader(input)
+	logrus.Infof("[request][body]: %v", string(input))
 	// TODO map other parameters as well (to params)
 
 	req, err := http.NewRequest("POST", url, r)
@@ -67,6 +69,11 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}
 	defer req.Body.Close()
+
+	err = router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
+	if err != nil {
+		panic(err)
+	}
 
 	reqContentType := fe.ct.ToContentType(mainInput)
 	logrus.Infof("[request][Content-Type]: %v", reqContentType)
