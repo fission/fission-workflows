@@ -9,6 +9,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
+	"strings"
+	"github.com/sirupsen/logrus"
 )
 
 type ExpressionParser interface {
@@ -45,6 +47,37 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 }
 
 func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
+	// TODO fix and add array
+	// Handle composites
+	if strings.HasSuffix(expr.Type, "object") {
+		logrus.WithField("expr", expr).Info("Resolving object...")
+		i, err := typedvalues.Format(expr)
+		if err != nil {
+			return nil, err
+		}
+
+		result := map[string]interface{}{}
+		obj := i.(map[string]interface{})
+		for k, v  := range obj {
+			field, err := typedvalues.Parse(v)
+			if err != nil {
+				return nil, err
+			}
+
+			resolved, err := oe.Resolve(rootScope, currentScope, output, field)
+			if err != nil {
+				return nil, err
+			}
+
+			actualVal, err := typedvalues.Format(resolved)
+			if err != nil {
+				return nil, err
+			}
+			result[k] = actualVal
+		}
+		return typedvalues.Parse(result)
+	}
+
 	if !typedvalues.IsExpression(expr) {
 		return expr, nil
 	}
