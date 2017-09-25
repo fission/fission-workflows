@@ -1,0 +1,49 @@
+{
+  "tasks": {
+    "RespondToUser": {
+      "id": "RespondToUser",
+      "functionRef": "slack-post-message",
+      "inputs": {
+        "default": {
+          "type": "json/object",
+          "value": "eyJtZXNzYWdlIjoiJC5UYXNrcy5TbGFja1dlYXRoZXIuT3V0cHV0LmNlbHNpdXMgKyBcIiBDIC8gXCIgKyAkLlRhc2tzLlNsYWNrV2VhdGhlci5PdXRwdXQuZmFocmVuaGVpdCArIFwiIEZcIiIsInBhdGgiOiIkLlRhc2tzLlRyYW5zZm9ybVNsYXNoQ21kT3V0cHV0Lk91dHB1dC5yZXNwb25zZV91cmwifQ=="
+        }
+      },
+      "requires": {
+        "SlackWeather": {
+
+        }
+      },
+      "await": 1
+    },
+    "SlackWeather": {
+      "id": "SlackWeather",
+      "functionRef": "slackweather",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5UcmFuc2Zvcm1TbGFzaENtZE91dHB1dC5PdXRwdXQudGV4dA=="
+        }
+      },
+      "requires": {
+        "TransformSlashCmdOutput": {
+
+        }
+      },
+      "await": 1
+    },
+    "TransformSlashCmdOutput": {
+      "id": "TransformSlashCmdOutput",
+      "functionRef": "formdata2json",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+        }
+      },
+      "requires": {
+      }
+    }
+  },
+  "outputTask": "RespondToUser"
+}
