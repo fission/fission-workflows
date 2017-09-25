@@ -23,7 +23,7 @@ func TestResolveTestRootScopePath(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, rootscope, nil, typedvalues.Expr("$.currentScope.bit"))
+	resolved, err := exprParser.Resolve(rootscope, rootscope, nil, typedvalues.Expr("{$.currentScope.bit}"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -170,7 +170,7 @@ func TestScope(t *testing.T) {
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
 	resolved, _ := exprParser.Resolve(actualScope, actualScope.Tasks["fooTask"], nil,
-		typedvalues.Expr("$.Tasks.fooTask.Output"))
+		typedvalues.Expr("{$.Tasks.fooTask.Output}"))
 
 	resolvedString, _ := typedvalues.Format(resolved)
 	if resolvedString != expected {

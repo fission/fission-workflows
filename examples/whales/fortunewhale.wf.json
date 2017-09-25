@@ -6,7 +6,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+          "value": "eyQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdH0="
         }
       },
       "requires": {
@@ -30,7 +30,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5UYXNrcy5HZW5lcmF0ZUZvcnR1bmUuT3V0cHV0"
+          "value": "eyQuVGFza3MuR2VuZXJhdGVGb3J0dW5lLk91dHB1dH0="
         }
       },
       "requires": {
