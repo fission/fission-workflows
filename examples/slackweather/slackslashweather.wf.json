@@ -6,7 +6,7 @@
       "inputs": {
         "default": {
           "type": "json/object",
-          "value": "eyJtZXNzYWdlIjoiJC5UYXNrcy5TbGFja1dlYXRoZXIuT3V0cHV0LmNlbHNpdXMgKyBcIiBDIC8gXCIgKyAkLlRhc2tzLlNsYWNrV2VhdGhlci5PdXRwdXQuZmFocmVuaGVpdCArIFwiIEZcIiIsInBhdGgiOiIkLlRhc2tzLlRyYW5zZm9ybVNsYXNoQ21kT3V0cHV0Lk91dHB1dC5yZXNwb25zZV91cmwifQ=="
+          "value": "eyJtZXNzYWdlIjoieyQuVGFza3MuU2xhY2tXZWF0aGVyLk91dHB1dC5jZWxzaXVzICsgJyBDIC8gJyArICQuVGFza3MuU2xhY2tXZWF0aGVyLk91dHB1dC5mYWhyZW5oZWl0ICsgJyBGJ30iLCJwYXRoIjoieyQuVGFza3MuVHJhbnNmb3JtU2xhc2hDbWRPdXRwdXQuT3V0cHV0LnJlc3BvbnNlX3VybH0ifQ=="
         }
       },
       "requires": {
@@ -22,7 +22,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5UYXNrcy5UcmFuc2Zvcm1TbGFzaENtZE91dHB1dC5PdXRwdXQudGV4dA=="
+          "value": "eyQuVGFza3MuVHJhbnNmb3JtU2xhc2hDbWRPdXRwdXQuT3V0cHV0LnRleHR9"
         }
       },
       "requires": {
@@ -38,7 +38,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+          "value": "eyQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdH0="
         }
       },
       "requires": {

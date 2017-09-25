@@ -74,8 +74,17 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			},
 		}
 	case events.Invocation_INVOCATION_CANCELED:
+		ivErr := &types.Error{}
+		err := proto.Unmarshal(event.Data, ivErr)
+		if err != nil {
+			ivErr.Code = "error"
+			ivErr.Message = err.Error()
+			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+		}
+
 		wi.Status.Status = types.WorkflowInvocationStatus_ABORTED
 		wi.Status.UpdatedAt = event.GetTimestamp()
+		wi.Status.Error = ivErr
 	case events.Invocation_INVOCATION_COMPLETED: // TODO isn't this an status rather than an event
 		status := &types.WorkflowInvocationStatus{}
 		err = proto.Unmarshal(event.Data, status)

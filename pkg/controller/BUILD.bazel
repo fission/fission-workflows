@@ -2,11 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["server.go"],
+    srcs = [
+        "controller.go",
+        "invocation.go",
+        "workflow.go",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/function:go_default_library",
         "//pkg/api/invocation:go_default_library",
+        "//pkg/api/workflow:go_default_library",
         "//pkg/controller/actions:go_default_library",
         "//pkg/controller/query:go_default_library",
         "//pkg/fes:go_default_library",
@@ -14,6 +19,7 @@ go_library(
         "//pkg/types:go_default_library",
         "//pkg/types/aggregates:go_default_library",
         "//pkg/types/events:go_default_library",
+        "//pkg/util/backoff:go_default_library",
         "//pkg/util/labels:go_default_library",
         "//pkg/util/pubsub:go_default_library",
         "//vendor/github.com/golang/protobuf/ptypes:go_default_library",

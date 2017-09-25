@@ -28,10 +28,5 @@ var WorkflowInvocationFsm *fsm.Fsm = fsm.New(
 			Src:   types.WorkflowInvocationStatus_IN_PROGRESS,
 			Dst:   types.WorkflowInvocationStatus_SUCCEEDED,
 		},
-		{
-			Event: Invocation_INVOCATION_COMPLETED,
-			Src:   types.WorkflowInvocationStatus_IN_PROGRESS,
-			Dst:   types.WorkflowStatus_PARSING,
-		},
 	},
 )

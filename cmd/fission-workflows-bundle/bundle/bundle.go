@@ -103,7 +103,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Controller
 	if opts.Controller {
-		runController(ctx, wfiCache(), wfCache(), es, runtimes)
+		runController(ctx, wfiCache(), wfCache(), es, runtimes, resolvers)
 	}
 
 	// Http servers
@@ -318,15 +318,20 @@ func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCach
 }
 
 func runController(ctx context.Context, invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.EventStore,
-	fnRuntimes map[string]function.Runtime) {
+	fnRuntimes map[string]function.Runtime, fnResolvers map[string]function.Resolver) {
 
+	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
 	functionApi := function.NewApi(fnRuntimes, es)
 	invocationApi := invocation.NewApi(es, invocationCache)
 	s := &scheduler.WorkflowScheduler{}
 	pf := typedvalues.DefaultParserFormatter
 	ep := query.NewJavascriptExpressionParser(pf)
-	ctr := controller.NewController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
-	go ctr.Run(ctx)
+	invocationCtrl := controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
+	workflowCtrl := controller.NewWorkflowController(wfCache, workflowApi)
+
+	ctrl := controller.NewMetaController(invocationCtrl, workflowCtrl)
+
+	go ctrl.Run(ctx)
 	log.Info("Setup controller component.")
 
 	// TODO properly shutdown

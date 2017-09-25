@@ -23,6 +23,7 @@ func NewApi(esClient fes.EventStore, parser *parse.Resolver) *Api {
 }
 
 func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
+	// If no id is provided generate an id
 	id := workflow.Id
 	if len(id) == 0 {
 		id = fmt.Sprintf("wf-%s", util.Uid())
@@ -33,35 +34,11 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 		return "", err
 	}
 
-	event := &fes.Event{
+	err = wa.es.HandleEvent(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_CREATED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
-	}
-
-	err = wa.es.HandleEvent(event)
-	if err != nil {
-		return "", err
-	}
-
-	// TODO move this to controller or separate service or fission function, in order to make it more reliable
-	// TODO more FT
-	parsed, err := wa.Resolver.Resolve(workflow)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse workflow: %v", err)
-	}
-
-	parsedData, err := proto.Marshal(parsed)
-	if err != nil {
-		return "", err
-	}
-
-	err = wa.es.HandleEvent(&fes.Event{
-		Type:      events.Workflow_WORKFLOW_PARSED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(id),
-		Timestamp: ptypes.TimestampNow(),
-		Data:      parsedData,
 	})
 	if err != nil {
 		return "", err
@@ -76,4 +53,28 @@ func (wa *Api) Delete(id string) error {
 		Aggregate: aggregates.NewWorkflowAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 	})
+}
+
+func (wa *Api) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
+	parsed, err := wa.Resolver.Resolve(workflow.Spec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse workflow: %v", err)
+	}
+
+	parsedData, err := proto.Marshal(parsed)
+	if err != nil {
+		return nil, err
+	}
+
+	err = wa.es.HandleEvent(&fes.Event{
+		Type:      events.Workflow_WORKFLOW_PARSED.String(),
+		Aggregate: aggregates.NewWorkflowAggregate(workflow.Metadata.Id),
+		Timestamp: ptypes.TimestampNow(),
+		Data:      parsedData,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return parsed, nil
 }

@@ -58,7 +58,7 @@ func (eb *ExponentialBackoff) Backoff(context ...Context) Context {
 	min := eb.MinBackoff.Nanoseconds()
 	step := eb.MinBackoff.Nanoseconds()
 	if max == 0 {
-		max = math.MaxFloat64
+		max = math.MaxInt64
 	}
 
 	d := (0.5 * (math.Pow(float64(2), float64(c)) - 1.0)) * float64(step)
