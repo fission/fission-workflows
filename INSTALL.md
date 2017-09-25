@@ -1,8 +1,8 @@
 # Installation
 
 ## Setting up Fission (temporary)
-As of the moment of writing, the prototype of the Fission Workflow engine has been implemented in Fission using a couple of shortcuts.
-In the coming weeks, Fission Workflow will be implemented to fully conform to the Fission Environment API, removing the need for any special modifications to Fission.
+As of the moment of writing, the prototype of the Fission Workflows engine has been implemented in Fission using a couple of shortcuts.
+In the coming weeks, Fission Workflows will be implemented to fully conform to the Fission Environment API, removing the need for any special modifications to Fission.
 
 To deploy the augmented version of fission, either pull the image:
 ```bash
@@ -17,7 +17,7 @@ Or, manually build:
 # clone or add a remote to git@github.com:erwinvaneyk/fission.git
 git clone git@github.com:erwinvaneyk/fission.git
 
-# Switch to the branch that contains the Fission Workflow integration
+# Switch to the branch that contains the Fission Workflows integration
 git checkout <remote> fission-workflows-integration
 
 # Follow the [guide on compiling Fission](https://github.com/fission/fission/blob/master/Compiling.md)
@@ -30,7 +30,7 @@ After either pulling the custom image or building it yourself, deploy the bundle
 
 
 ## Installing Fission Workflow
-Fission Workflow is just another Fission environment.
+Fission Workflows is just another Fission environment.
 The environment requires only a single additional property `allowedFunctionsPerContainer` to be set to infinite, to ensure that workflows do not require a workflow environment each.
 To deploy the environment run install the helm chart:
 ```bash

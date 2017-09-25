@@ -1,12 +1,12 @@
 # System Architecture
 
-This document describes the high-level architecture of the Fission Workflow system.
+This document describes the high-level architecture of Fission Workflows.
 
 ![System Architecture](./assets/sysarch.png)
-*System Architecture of Fission Workflow*
+*System Architecture of Fission Workflows*
 
 ### API (Server)
-The API is the central component of the Fission Workflow system.
+The API is the central component of the Fission Workflows system.
 It is responsible for exposing all actionable aspects of the system.
 The API is the only component that should deal with appending events to the event stores.
 Any other component wishing to add an event should do this using the API.
@@ -16,7 +16,7 @@ The API Server is nothing more than a subset of the API exposed over HTTP/gRPC t
 This allows systems such as UIs and CLIs to access and manipulate the workflow and their invocations.
 
 ### Fission Proxy / API
-In order to interact with the function execution layer, Fission Workflow contains a concise API to interface with Fission.
+In order to interact with the function execution layer, Fission Workflows contains a concise API to interface with Fission.
 For the engine itself, a Fission Function Invocation API implements the Function Invocation API interface, allowing the engine to interact with Fission in a consistent way.
 This API currently consists out of the ability to lookup functions from the Fission controller, and the ability to invoke Fission functions. 
 
@@ -63,7 +63,7 @@ The scheduler is completely stateless, so the controller can at any time request
 More details on the scheduler will follow...
 
 ### Dependencies
-This section contains an summary of the dependencies of the Fission Workflow system. 
+This section contains an summary of the dependencies of the Fission Workflows system. 
 Currently, the dependencies consist of Fission, as the Function Execution layer, and NATS, as the event store implementation.
 
 #### Fission FaaS Platform
