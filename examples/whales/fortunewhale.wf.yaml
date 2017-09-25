@@ -6,12 +6,12 @@ tasks:
 
   GenerateFortune:
     run: fortune
-    inputs: $.Invocation.Inputs.default
+    inputs: "{$.Invocation.Inputs.default}"
     requires:
     - InternalFuncShowoff
 
   WhaleWithFortune:
     run: whalesay
-    inputs: $.Tasks.GenerateFortune.Output
+    inputs: "{$.Tasks.GenerateFortune.Output}"
     requires:
     - GenerateFortune

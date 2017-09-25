@@ -3,23 +3,21 @@ output: PassAlong
 tasks:
   InternalFuncShowoff:
     run: noop
-    inputs: $.Invocation.Inputs.default
+    inputs: "{$.Invocation.Inputs.default}"
 
   IfShortEnough:
     run: if
     inputs:
-      if: "$.Invocation.Inputs.default.length < 20"
+      if: "{$.Invocation.Inputs.default.length < 20}"
       then:
         run: whalesay
-        inputs: $.Tasks.InternalFuncShowoff.Output
-      else:
-        run: noop
-        inputs: $.Tasks.InternalFuncShowoff.Output
+        inputs: "{$.Tasks.InternalFuncShowoff.Output}"
+      else: "{$.Tasks.InternalFuncShowoff.Output}"
     requires:
     - InternalFuncShowoff
 
   PassAlong:
-    run: noop
-    inputs: $.Tasks.IfShortEnough.Output
+    run: compose
+    inputs: "{$.Tasks.IfShortEnough.Output}"
     requires:
     - IfShortEnough

@@ -6,7 +6,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+          "value": "eyQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdH0="
         }
       },
       "requires": {

@@ -5,16 +5,16 @@
       "functionRef": "if",
       "inputs": {
         "else": {
-          "type": "flow",
-          "value": "CgRlbHNlGgRub29wIjUKB2RlZmF1bHQSKgoEZXhwchIiJC5UYXNrcy5JbnRlcm5hbEZ1bmNTaG93b2ZmLk91dHB1dDAA"
+          "type": "expr",
+          "value": "eyQuVGFza3MuSW50ZXJuYWxGdW5jU2hvd29mZi5PdXRwdXR9"
         },
         "if": {
           "type": "expr",
-          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0Lmxlbmd0aCA8IDIw"
+          "value": "eyQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdC5sZW5ndGggPCAyMH0="
         },
         "then": {
           "type": "flow",
-          "value": "CgR0aGVuGgh3aGFsZXNheSI1CgdkZWZhdWx0EioKBGV4cHISIiQuVGFza3MuSW50ZXJuYWxGdW5jU2hvd29mZi5PdXRwdXQwAA=="
+          "value": "CgR0aGVuGgh3aGFsZXNheSI3CgdkZWZhdWx0EiwKBGV4cHISJHskLlRhc2tzLkludGVybmFsRnVuY1Nob3dvZmYuT3V0cHV0fTAA"
         }
       },
       "requires": {
@@ -30,7 +30,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+          "value": "eyQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdH0="
         }
       },
       "requires": {
@@ -38,11 +38,11 @@
     },
     "PassAlong": {
       "id": "PassAlong",
-      "functionRef": "noop",
+      "functionRef": "compose",
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "JC5UYXNrcy5JZlNob3J0RW5vdWdoLk91dHB1dA=="
+          "value": "eyQuVGFza3MuSWZTaG9ydEVub3VnaC5PdXRwdXR9"
         }
       },
       "requires": {

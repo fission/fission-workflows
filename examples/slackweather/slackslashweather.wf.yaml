@@ -4,11 +4,11 @@ output: RespondToUser
 tasks:
   TransformSlashCmdOutput:
     run: formdata2json
-    inputs: $.Invocation.Inputs.default
+    inputs: "{$.Invocation.Inputs.default}"
 
   SlackWeather:
     run: slackweather
-    inputs: $.Tasks.TransformSlashCmdOutput.Output.text
+    inputs: "{$.Tasks.TransformSlashCmdOutput.Output.text}"
     requires:
     - TransformSlashCmdOutput
 
@@ -16,7 +16,7 @@ tasks:
     run: slack-post-message
     inputs:
       default:
-        message: $.Tasks.SlackWeather.Output.celsius + " C / " + $.Tasks.SlackWeather.Output.fahrenheit + " F"
-        path: $.Tasks.TransformSlashCmdOutput.Output.response_url
+        message: "{$.Tasks.SlackWeather.Output.celsius + ' C / ' + $.Tasks.SlackWeather.Output.fahrenheit + ' F'}"
+        path: "{$.Tasks.TransformSlashCmdOutput.Output.response_url}"
     requires:
     - SlackWeather

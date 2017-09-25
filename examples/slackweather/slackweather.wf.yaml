@@ -9,14 +9,14 @@ tasks:
     inputs:
       default:
         apiKey: <API_KEY>
-        state: $.Invocation.Inputs.default.substring($.Invocation.Inputs.default.indexOf(',') + 1).trim()
-        city: $.Invocation.Inputs.default.substring(0, $.Invocation.Inputs.default.indexOf(',')).trim()
+        state: "{$.Invocation.Inputs.default.substring($.Invocation.Inputs.default.indexOf(',') + 1).trim()}"
+        city: "{$.Invocation.Inputs.default.substring(0, $.Invocation.Inputs.default.indexOf(',')).trim()}"
 
   ToCelsius:
     run: tempconv
     inputs:
       default:
-        temperature: $.Tasks.FetchWeather.Output.current_observation.temp_f
+        temperature: "{$.Tasks.FetchWeather.Output.current_observation.temp_f}"
         format: F
         target: C
     requires:
@@ -31,7 +31,7 @@ tasks:
         run: slack-post-message
         inputs:
           default:
-            message: $.Tasks.ToCelsius.Output.temperature + 'C in ' + $.Invocation.Inputs.default + '... it\'s hot! :fire:'
+            message: "{$.Tasks.ToCelsius.Output.temperature + 'C in ' + $.Invocation.Inputs.default + '... it\'s hot! :fire:'}"
             path:
             path: <HOOK_URL>
     requires:
@@ -41,10 +41,10 @@ tasks:
   CreateResult:
     run: compose
     inputs:
-      celsius: $.Tasks.ToCelsius.Output.temperature
-      fahrenheit: $.Tasks.FetchWeather.Output.current_observation.temp_f
-      location: $.Invocation.Inputs.default
-      sentSlackMsg: $.Tasks.CheckTemperatureThreshold.Output
+      celsius: "{$.Tasks.ToCelsius.Output.temperature}"
+      fahrenheit: "{$.Tasks.FetchWeather.Output.current_observation.temp_f}"
+      location: "{$.Invocation.Inputs.default}"
+      sentSlackMsg: "{$.Tasks.CheckTemperatureThreshold.Output}"
     requires:
     - ToCelsius
     - CheckTemperatureThreshold

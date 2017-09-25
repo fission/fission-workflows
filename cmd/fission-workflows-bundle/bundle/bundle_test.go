@@ -94,7 +94,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.FirstTask.Output"),
+					types.INPUT_MAIN: typedvalues.Expr("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -103,7 +103,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
+					types.INPUT_MAIN: typedvalues.Expr("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 		},
@@ -173,7 +173,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("$.Tasks.someConditionalTask.Output"),
+					types.INPUT_MAIN: typedvalues.Expr("{$.Tasks.someConditionalTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask":           {},
@@ -183,13 +183,13 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.Expr("$.Invocation.Inputs.default.toUpperCase()"),
+					types.INPUT_MAIN: typedvalues.Expr("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 			"someConditionalTask": {
 				FunctionRef: "if",
 				Inputs: map[string]*types.TypedValue{
-					"condition": typedvalues.Expr("$.Invocation.Inputs.default == 'FOO'"),
+					"condition": typedvalues.Expr("{$.Invocation.Inputs.default == 'FOO'}"),
 					"consequent": typedvalues.Flow(&types.Task{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{

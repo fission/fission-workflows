@@ -72,7 +72,7 @@ func (ep *ExprParserFormatter) Parse(i interface{}, allowedTypes ...string) (*ty
 	ns := strings.TrimSpace(s)
 
 	// Check if the string is an expression
-	if !strings.HasPrefix(ns, "$") { // TODO add support for expressions other than selectors
+	if !strings.HasPrefix(ns, "{") || !strings.HasSuffix(ns, "}") {
 		return nil, errors.New("provided value is not of type 'expression string'")
 	}
 
