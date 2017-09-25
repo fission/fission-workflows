@@ -1,0 +1,22 @@
+apiVersion: 1
+# Input: slack slash-command output
+output: RespondToUser
+tasks:
+  TransformSlashCmdOutput:
+    run: formdata2json
+    inputs: $.Invocation.Inputs.default
+
+  SlackWeather:
+    run: slackweather
+    inputs: $.Tasks.TransformSlashCmdOutput.Output.text
+    requires:
+    - TransformSlashCmdOutput
+
+  RespondToUser:
+    run: slack-post-message
+    inputs:
+      default:
+        message: $.Tasks.SlackWeather.Output.celsius + " C / " + $.Tasks.SlackWeather.Output.fahrenheit + " F"
+        path: $.Tasks.TransformSlashCmdOutput.Output.response_url
+    requires:
+    - SlackWeather

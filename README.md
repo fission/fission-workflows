@@ -1,17 +1,17 @@
-# Fission Workflow
+# Fission Workflows
 [![Build Status](https://travis-ci.org/fission/fission-workflows.svg?branch=master)](https://travis-ci.org/fission/fission-workflows)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fission/fission-workflows)](https://goreportcard.com/report/github.com/fission/fission-workflows)
 [![Fission Slack](http://slack.fission.io/badge.svg)](http://slack.fission.io)
 
 [fission.io](http://fission.io)  [@fissionio](http://twitter.com/fissionio)
 
-Fission Workflow is a workflow-based serverless function composition framework built on top of the [Fission](https://github.com/fission/fission) Function-as-a-Service (FaaS) platform.
+Fission Workflows is a workflow-based serverless function composition framework built on top of the [Fission](https://github.com/fission/fission) Function-as-a-Service (FaaS) platform.
 
 ### Highlights
 - **Lightweight**: With just the need for a single data store (NATS Streaming) and a FaaS platform (Fission), the engine consumes minimal resources.
-- **Fault-Tolerant**: Fission Workflow engine keeps track of state, re-tries, handling of errors, etc. By internally utilizing event sourcing, it allows the engine to recover from failures and continue exactly were it left off.   
+- **Fault-Tolerant**: Fission Workflows engine keeps track of state, re-tries, handling of errors, etc. By internally utilizing event sourcing, it allows the engine to recover from failures and continue exactly were it left off.   
 - **Scalable**: Other than a backing data store, the workflow system is stateless and can easily be scaled. The independent nature of workflows allows for relatively straightforward sharding of workloads over multiple workflow engines.
-- **High Performance**: In contrast to existing workflow engines targeting other domains, Fission Workflow is designed from the ground up for low overhead, low latency workflow executions.
+- **High Performance**: In contrast to existing workflow engines targeting other domains, Fission Workflows is designed from the ground up for low overhead, low latency workflow executions.
 - **Extensible**: All main aspects of the engine are extensible. For example, you can even define your own control flow constructs.
 
 ### Philosophy
@@ -23,8 +23,8 @@ Function orchestration using functions that internally call other functions, or 
 Additionally, FaaS platforms lack a clear view of the dependencies between functions, making it harder to optimize performance, upgrade versions, etc.
 
 Workflows have been popular in other domains, such as data processing and scientific applications, and recently got introduced into the serverless paradigm by AWS Step Functions and Azure Logic Apps.
-Fission Workflow is an open-source alternative to these workflow systems, which both constrains the functionality in some areas, while extending it in others.
-In contrast to others Fission Workflow is purely focused on function composition, excluding events and other integrations from the workflow.
+Fission Workflows is an open-source alternative to these workflow systems, which both constrains the functionality in some areas, while extending it in others.
+In contrast to others Fission Workflows is purely focused on function composition, excluding events and other integrations from the workflow.
 On the other hand the system is more flexible, by allowing users to define their own control flow constructs, which in most other workflow engines are part of the internal API.
 
 ### Concepts

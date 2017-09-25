@@ -1,0 +1,84 @@
+{
+  "tasks": {
+    "CheckTemperatureThreshold": {
+      "id": "CheckTemperatureThreshold",
+      "functionRef": "if",
+      "inputs": {
+        "if": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5Ub0NlbHNpdXMuT3V0cHV0LnRlbXBlcmF0dXJlID4gMjU="
+        },
+        "then": {
+          "type": "flow",
+          "value": "CgR0aGVuGhJzbGFjay1wb3N0LW1lc3NhZ2UiuwEKB2RlZmF1bHQSrwEKC2pzb24vb2JqZWN0Ep8BeyJkZWZhdWx0Ijp7Im1lc3NhZ2UiOiIkLlRhc2tzLlRvQ2Vsc2l1cy5PdXRwdXQudGVtcGVyYXR1cmUgKyAnQyBpbiAnICsgJC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0ICsgJy4uLiBpdFxcJ3MgaG90ISA6ZmlyZTonIiwicGF0aCI6Ilx1MDAzY0hPT0tfVVJMXHUwMDNlIn19MAA="
+        }
+      },
+      "requires": {
+        "ToCelsius": {
+
+        }
+      },
+      "await": 1
+    },
+    "CreateResult": {
+      "id": "CreateResult",
+      "functionRef": "compose",
+      "inputs": {
+        "celsius": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5Ub0NlbHNpdXMuT3V0cHV0LnRlbXBlcmF0dXJl"
+        },
+        "fahrenheit": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5GZXRjaFdlYXRoZXIuT3V0cHV0LmN1cnJlbnRfb2JzZXJ2YXRpb24udGVtcF9m"
+        },
+        "location": {
+          "type": "expr",
+          "value": "JC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0"
+        },
+        "sentSlackMsg": {
+          "type": "expr",
+          "value": "JC5UYXNrcy5DaGVja1RlbXBlcmF0dXJlVGhyZXNob2xkLk91dHB1dA=="
+        }
+      },
+      "requires": {
+        "CheckTemperatureThreshold": {
+
+        },
+        "ToCelsius": {
+
+        }
+      },
+      "await": 2
+    },
+    "FetchWeather": {
+      "id": "FetchWeather",
+      "functionRef": "wunderground-conditions",
+      "inputs": {
+        "default": {
+          "type": "json/object",
+          "value": "eyJhcGlLZXkiOiJcdTAwM2NBUElfS0VZXHUwMDNlIiwiY2l0eSI6IiQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdC5zdWJzdHJpbmcoMCwgJC5JbnZvY2F0aW9uLklucHV0cy5kZWZhdWx0LmluZGV4T2YoJywnKSkudHJpbSgpIiwic3RhdGUiOiIkLkludm9jYXRpb24uSW5wdXRzLmRlZmF1bHQuc3Vic3RyaW5nKCQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdC5pbmRleE9mKCcsJykgKyAxKS50cmltKCkifQ=="
+        }
+      },
+      "requires": {
+      }
+    },
+    "ToCelsius": {
+      "id": "ToCelsius",
+      "functionRef": "tempconv",
+      "inputs": {
+        "default": {
+          "type": "json/object",
+          "value": "eyJmb3JtYXQiOiJGIiwidGFyZ2V0IjoiQyIsInRlbXBlcmF0dXJlIjoiJC5UYXNrcy5GZXRjaFdlYXRoZXIuT3V0cHV0LmN1cnJlbnRfb2JzZXJ2YXRpb24udGVtcF9mIn0="
+        }
+      },
+      "requires": {
+        "FetchWeather": {
+
+        }
+      },
+      "await": 1
+    }
+  },
+  "outputTask": "CreateResult"
+}

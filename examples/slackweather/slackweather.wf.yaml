@@ -1,0 +1,51 @@
+apiVersion: 1
+description: Send a message to a slack channel when the temperature exceeds a certain threshold
+output: CreateResult
+# Input: 'San Fransisco, CA'
+tasks:
+  # Fetch weather for input
+  FetchWeather:
+    run: wunderground-conditions
+    inputs:
+      default:
+        apiKey: <API_KEY>
+        state: $.Invocation.Inputs.default.substring($.Invocation.Inputs.default.indexOf(',') + 1).trim()
+        city: $.Invocation.Inputs.default.substring(0, $.Invocation.Inputs.default.indexOf(',')).trim()
+
+  ToCelsius:
+    run: tempconv
+    inputs:
+      default:
+        temperature: $.Tasks.FetchWeather.Output.current_observation.temp_f
+        format: F
+        target: C
+    requires:
+    - FetchWeather
+
+  # Send a slack message if the temperature threshold has been exceeded
+  CheckTemperatureThreshold:
+    run: if
+    inputs:
+      if: $.Tasks.ToCelsius.Output.temperature > 25
+      then:
+        run: slack-post-message
+        inputs:
+          default:
+            message: $.Tasks.ToCelsius.Output.temperature + 'C in ' + $.Invocation.Inputs.default + '... it\'s hot! :fire:'
+            path:
+            path: <HOOK_URL>
+    requires:
+    - ToCelsius
+
+    # Besides the potential Slack message, compose the response of this workflow {location, celsius, fahrenheit}
+  CreateResult:
+    run: compose
+    inputs:
+      celsius: $.Tasks.ToCelsius.Output.temperature
+      fahrenheit: $.Tasks.FetchWeather.Output.current_observation.temp_f
+      location: $.Invocation.Inputs.default
+      sentSlackMsg: $.Tasks.CheckTemperatureThreshold.Output
+    requires:
+    - ToCelsius
+    - CheckTemperatureThreshold
+
