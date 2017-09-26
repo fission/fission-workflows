@@ -3,9 +3,10 @@ package controller
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
-	"github.com/fission/fission-workflows/pkg/controller/actions"
 	"github.com/fission/fission-workflows/pkg/controller/query"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -28,9 +29,10 @@ type InvocationController struct {
 	functionApi   *function.Api
 	invocationApi *invocation.Api
 	scheduler     *scheduler.WorkflowScheduler
-	invocSub      *pubsub.Subscription
+	sub           *pubsub.Subscription
 	exprParser    query.ExpressionParser
 	cancelFn      context.CancelFunc
+	workQueue     chan Action
 	// TODO add active cache
 }
 
@@ -44,6 +46,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		functionApi:   functionApi,
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
+		workQueue:     make(chan Action, 50),
 	}
 }
 
@@ -55,7 +58,7 @@ func (cr *InvocationController) Init() error {
 	selector := labels.InSelector("aggregate.type", "invocation", "function")
 
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
-		cr.invocSub = invokePub.Subscribe(pubsub.SubscriptionOptions{
+		cr.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
 			Buf:           NOTIFICATION_BUFFER,
 			LabelSelector: selector,
 		})
@@ -65,7 +68,7 @@ func (cr *InvocationController) Init() error {
 	go func(ctx context.Context) {
 		for {
 			select {
-			case notification := <-cr.invocSub.Ch:
+			case notification := <-cr.sub.Ch:
 				logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
 				switch n := notification.(type) {
 				case *fes.Notification:
@@ -79,6 +82,23 @@ func (cr *InvocationController) Init() error {
 			}
 		}
 	}(ctx)
+
+	// workQueue loop
+	go func(ctx context.Context) {
+		for {
+			select {
+			case action := <-cr.workQueue:
+				err := action.Apply()
+				if err != nil {
+					logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+				}
+			case <-ctx.Done():
+				logrus.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
+				return
+			}
+		}
+	}(ctx)
+
 	return nil
 }
 
@@ -160,31 +180,135 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	for _, action := range schedule.Actions {
 		switch action.Type {
 		case scheduler.ActionType_ABORT:
-			err := actions.Abort(invoc.Metadata.Id, cr.invocationApi)
-			if err != nil {
-				logrus.Error(err)
-			}
+			cr.submit(&abortAction{
+				api:          cr.invocationApi,
+				invocationId: invoc.Metadata.Id,
+			})
 		case scheduler.ActionType_INVOKE_TASK:
 			invokeAction := &scheduler.InvokeTaskAction{}
 			ptypes.UnmarshalAny(action.Payload, invokeAction)
-			err := actions.InvokeTask(invokeAction, wf.Workflow, invoc, cr.exprParser, cr.functionApi)
-			if err != nil {
-				logrus.Error(err)
-			}
+			cr.submit(&invokeTaskAction{
+				wf:   wf.Workflow,
+				wfi:  invoc,
+				expr: cr.exprParser,
+				api:  cr.functionApi,
+				task: invokeAction,
+			})
 		}
 	}
+}
+
+func (cr *InvocationController) submit(action Action) (submitted bool) {
+	select {
+	case cr.workQueue <- action:
+		// Ok
+		submitted = true
+	default:
+		// Action overflow
+	}
+	return submitted
 }
 
 func (cr *InvocationController) Close() error {
 	logrus.Debug("Closing controller...")
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
-		err := invokePub.Unsubscribe(cr.invocSub)
+		err := invokePub.Unsubscribe(cr.sub)
 		if err != nil {
 			return err
 		}
 	}
 
 	cr.cancelFn()
+
+	return nil
+}
+
+//
+// Actions
+//
+
+// abortAction aborts an invocation
+type abortAction struct {
+	api          *invocation.Api
+	invocationId string
+}
+
+func (a *abortAction) Id() string {
+	return a.invocationId
+}
+
+func (a *abortAction) Apply() error {
+	logrus.Infof("aborting: '%v'", a.invocationId)
+	return a.api.Cancel(a.invocationId)
+}
+
+// invokeTaskAction invokes a function
+type invokeTaskAction struct {
+	wf   *types.Workflow
+	wfi  *types.WorkflowInvocation
+	expr query.ExpressionParser
+	api  *function.Api
+	task *scheduler.InvokeTaskAction
+}
+
+func (a *invokeTaskAction) Id() string {
+	return a.task.Id
+}
+
+func (a *invokeTaskAction) Apply() error {
+	// Find task (static or dynamic)
+	task, ok := a.wfi.Status.DynamicTasks[a.task.Id]
+	if !ok {
+		task, ok = a.wf.Spec.Tasks[a.task.Id]
+		if !ok {
+			return fmt.Errorf("unknown task '%v'", a.task.Id)
+		}
+	}
+	logrus.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
+
+	// Resolve type of the task
+	taskDef, ok := a.wf.Status.ResolvedTasks[task.FunctionRef]
+	if !ok {
+		return fmt.Errorf("no resolved task could be found for FunctionRef'%v'", task.FunctionRef)
+	}
+
+	// Resolve the inputs
+	inputs := map[string]*types.TypedValue{}
+	queryScope := query.NewScope(a.wf, a.wfi)
+	for inputKey, val := range a.task.Inputs {
+		resolvedInput, err := a.expr.Resolve(queryScope, queryScope.Tasks[a.task.Id], nil, val)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"val":      val,
+				"inputKey": inputKey,
+			}).Errorf("Failed to parse input: %v", err)
+			return fmt.Errorf("failed to parse input '%v'", val)
+		}
+
+		inputs[inputKey] = resolvedInput
+		logrus.WithFields(logrus.Fields{
+			"val":      val,
+			"key":      inputKey,
+			"resolved": resolvedInput,
+		}).Infof("Resolved expression")
+	}
+
+	// Invoke
+	fnSpec := &types.TaskInvocationSpec{
+		TaskId: a.task.Id,
+		Type:   taskDef,
+		Inputs: inputs,
+	}
+
+	// TODO concurrent invocations
+	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"id":  a.wfi.Metadata.Id,
+			"err": err,
+		}).Errorf("Failed to execute task")
+		return err
+	}
 
 	return nil
 }

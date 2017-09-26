@@ -91,3 +91,12 @@ func (mc *MetaController) Close() error {
 	logrus.Info("Closed MetaController")
 	return err
 }
+
+//
+// Actions
+//
+
+type Action interface {
+	Id() string
+	Apply() error
+}

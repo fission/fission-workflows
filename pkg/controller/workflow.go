@@ -22,7 +22,7 @@ import (
 type WorkflowController struct {
 	wfCache   fes.CacheReader
 	api       *workflow.Api
-	queue     chan WorkflowAction
+	workQueue chan Action
 	wfBackoff backoff.Map // Specifies the time after which the wf is allowed to be reevaluated again
 
 	wfSub    *pubsub.Subscription
@@ -33,7 +33,7 @@ func NewWorkflowController(wfCache fes.CacheReader, wfApi *workflow.Api) *Workfl
 	return &WorkflowController{
 		wfCache:   wfCache,
 		api:       wfApi,
-		queue:     make(chan WorkflowAction, NOTIFICATION_BUFFER),
+		workQueue: make(chan Action, 50),
 		wfBackoff: backoff.NewMap(),
 	}
 }
@@ -71,17 +71,17 @@ func (ctr *WorkflowController) Init() error {
 		}
 	}(ctx)
 
-	// Action queue
+	// Action workQueue
 	go func(ctx context.Context) {
 		for {
 			select {
-			case action := <-ctr.queue:
+			case action := <-ctr.workQueue:
 				err := action.Apply()
 				if err != nil {
 					logrus.WithField("action", action).Error("Workflow action failed")
 				}
 			case <-ctx.Done():
-				logrus.WithField("ctx.err", ctx.Err()).Debug("Action queue worker closed.")
+				logrus.WithField("ctx.err", ctx.Err()).Debug("Action workQueue worker closed.")
 				return
 			}
 		}
@@ -150,7 +150,7 @@ func (ctr *WorkflowController) evaluate(wf *types.Workflow) error {
 	case types.WorkflowStatus_UNKNOWN:
 		fallthrough
 	case types.WorkflowStatus_FAILED:
-		ctr.submit(&ActionParseWorkflow{
+		ctr.submit(&parseWorkflowAction{
 			wfApi: ctr.api,
 			wf:    wf,
 		})
@@ -158,9 +158,9 @@ func (ctr *WorkflowController) evaluate(wf *types.Workflow) error {
 	return nil
 }
 
-func (ctr *WorkflowController) submit(action WorkflowAction) (submitted bool) {
+func (ctr *WorkflowController) submit(action Action) (submitted bool) {
 	select {
-	case ctr.queue <- action:
+	case ctr.workQueue <- action:
 		// Ok
 		submitted = true
 	default:
@@ -169,7 +169,7 @@ func (ctr *WorkflowController) submit(action WorkflowAction) (submitted bool) {
 	return submitted
 }
 
-func (ctr *WorkflowController) HandleAction(action WorkflowAction) {
+func (ctr *WorkflowController) HandleAction(action Action) {
 	err := action.Apply()
 	if err != nil {
 		logrus.Errorf("Failed to perform action: %v", err)
@@ -194,21 +194,16 @@ func (ctr *WorkflowController) Close() error {
 // Actions
 //
 
-type WorkflowAction interface {
-	Id() string
-	Apply() error
-}
-
-type ActionParseWorkflow struct {
+type parseWorkflowAction struct {
 	wfApi *workflow.Api
 	wf    *types.Workflow
 }
 
-func (ac *ActionParseWorkflow) Id() string {
+func (ac *parseWorkflowAction) Id() string {
 	return ac.wf.Metadata.Id
 }
 
-func (ac *ActionParseWorkflow) Apply() error {
+func (ac *parseWorkflowAction) Apply() error {
 	_, err := ac.wfApi.Parse(ac.wf)
 	return err
 }
