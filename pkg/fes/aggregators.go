@@ -18,7 +18,10 @@ func (am *AggregatorMixin) Aggregate() Aggregate {
 	return am.aggregate
 }
 
-// For improved performance override this method with a aggregate-specific one
+// UpdateState mutates the current Aggregator to the new provided Aggregator.
+//
+// By default it uses reflection to update the fields. For improved performance override this method with a
+// aggregate-specific one.
 func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
 	if newState.Aggregate() != am.Aggregate() {
 		return errors.New("invalid newState")

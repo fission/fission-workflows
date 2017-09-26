@@ -123,6 +123,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 					logrus.WithField("msg", msg).Error("Received a malformed message")
 					continue
 				}
+				logrus.WithField("msg", msg.Labels()).Info("Cache received new event.")
 				err := c.HandleEvent(event)
 				if err != nil {
 					logrus.WithField("err", err).Error("Failed to handle event")
@@ -173,7 +174,7 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 		return err
 	}
 
-	// Do not publish old events
+	// Do not publish replayed events as notifications
 	ets, _ := ptypes.Timestamp(event.Timestamp) // TODO replace with a token or flag that cache has cached up.
 	if ets.After(uc.ts) {
 		n := newNotification(cached, event)
@@ -274,7 +275,7 @@ func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Aggregator
 	}
 
 	// Cache target
-	err = c.cache.Put(target) // TODO ensure copy
+	err = c.cache.Put(target) // TODO ensure target is a copy
 	if err != nil {
 		logrus.WithField("target", target).WithField("err", err).Warn("Failed to cache fetched target")
 	}

@@ -37,7 +37,6 @@ func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 				mapping[depId] = id
 			}
 		}
-		// TODO Amend static task if it exists instead of overriding it completely.
 	}
 
 	// Reroute dependencies to also depend on the outputted task of dynamic tasks.

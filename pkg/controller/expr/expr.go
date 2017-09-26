@@ -1,4 +1,4 @@
-package query
+package expr
 
 import (
 	"time"
@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ExpressionParser interface {
+type Resolver interface {
 	Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error)
 }
 
@@ -32,7 +32,7 @@ type JavascriptExpressionParser struct {
 func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
 	vm := otto.New()
 
-	// Load builtin functions into Otto
+	// Load expression functions into Otto
 	for varName, fn := range BuiltinFunctions {
 		err := vm.Set(varName, func(call otto.FunctionCall) otto.Value {
 			return fn.Apply(vm, call)
@@ -48,6 +48,14 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 }
 
 func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
+	defer func() {
+		if caught := recover(); caught != nil {
+			if ErrTimeOut != caught {
+				panic(caught)
+			}
+		}
+	}()
+
 	// TODO fix and add array
 	// Handle composites
 	if strings.HasSuffix(expr.Type, "object") {
@@ -82,14 +90,6 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 	if !typedvalues.IsExpression(expr) {
 		return expr, nil
 	}
-
-	defer func() {
-		if caught := recover(); caught != nil {
-			if ErrTimeOut != caught {
-				panic(caught)
-			}
-		}
-	}()
 
 	scoped := oe.vm.Copy()
 	err := scoped.Set("$", rootScope)

@@ -11,7 +11,7 @@ go_library(
         "//pkg/api/workflow/parse:go_default_library",
         "//pkg/apiserver:go_default_library",
         "//pkg/controller:go_default_library",
-        "//pkg/controller/query:go_default_library",
+        "//pkg/controller/expr:go_default_library",
         "//pkg/fes:go_default_library",
         "//pkg/fes/eventstore/nats:go_default_library",
         "//pkg/fnenv/fission:go_default_library",

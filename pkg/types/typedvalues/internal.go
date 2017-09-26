@@ -163,7 +163,7 @@ type ControlFlowParserFormatter struct {
 }
 
 func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
-	// TODO allow scope too
+	// TODO allow scope / inline workflow too
 	t, ok := i.(*types.Task)
 	if !ok {
 		return nil, errors.New("provided value is not of type 'task'")
@@ -185,7 +185,7 @@ func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, 
 	//	return nil, fmt.Errorf("Value '%v' is not of type 'flow'", v)
 	//}
 
-	// TODO allow scope too
+	// TODO allow scope / inline workflow too
 	t := &types.Task{}
 	err := proto.Unmarshal(v.Value, t)
 	if err != nil {

@@ -2,17 +2,17 @@ package fes
 
 import "github.com/fission/fission-workflows/pkg/util/pubsub"
 
-// Fast, minimal Event Sourcing
+// Aggregator is a entity that can be update
 type Aggregator interface {
 	// Entity-specific
 	ApplyEvent(event *Event) error
 
-	// The aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
+	// Aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
 	//
 	// Implemented by AggregatorMixin
 	Aggregate() Aggregate
 
-	// Update entity to the provided target state
+	// UpdateState mutates the current entity to the provided target state
 	//
 	// This is implemented by AggregatorMixin, can be overridden for performance approach
 	UpdateState(targetState Aggregator) error

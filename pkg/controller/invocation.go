@@ -7,7 +7,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
-	"github.com/fission/fission-workflows/pkg/controller/query"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -30,7 +30,7 @@ type InvocationController struct {
 	invocationApi *invocation.Api
 	scheduler     *scheduler.WorkflowScheduler
 	sub           *pubsub.Subscription
-	exprParser    query.ExpressionParser
+	exprParser    expr.Resolver
 	cancelFn      context.CancelFunc
 	workQueue     chan Action
 	// TODO add active cache
@@ -38,7 +38,7 @@ type InvocationController struct {
 
 func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReader,
 	workflowScheduler *scheduler.WorkflowScheduler, functionApi *function.Api, invocationApi *invocation.Api,
-	exprParser query.ExpressionParser) *InvocationController {
+	exprParser expr.Resolver) *InvocationController {
 	return &InvocationController{
 		invokeCache:   invokeCache,
 		wfCache:       wfCache,
@@ -246,7 +246,7 @@ func (a *abortAction) Apply() error {
 type invokeTaskAction struct {
 	wf   *types.Workflow
 	wfi  *types.WorkflowInvocation
-	expr query.ExpressionParser
+	expr expr.Resolver
 	api  *function.Api
 	task *scheduler.InvokeTaskAction
 }
@@ -274,7 +274,7 @@ func (a *invokeTaskAction) Apply() error {
 
 	// Resolve the inputs
 	inputs := map[string]*types.TypedValue{}
-	queryScope := query.NewScope(a.wf, a.wfi)
+	queryScope := expr.NewScope(a.wf, a.wfi)
 	for inputKey, val := range a.task.Inputs {
 		resolvedInput, err := a.expr.Resolve(queryScope, queryScope.Tasks[a.task.Id], nil, val)
 		if err != nil {

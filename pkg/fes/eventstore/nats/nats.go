@@ -13,9 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Wrapper of 'stan.Conn' struct to augment the API with bounded subscriptions and channel-based subscriptions
-//
-//
+// Conn is a wrapper of 'stan.Conn' struct to augment the API with bounded subscriptions and channel-based subscriptions
 type Conn struct {
 	stan.Conn
 }
@@ -24,7 +22,6 @@ func NewConn(conn stan.Conn) *Conn {
 	return &Conn{conn}
 }
 
-// Augmented functions
 func (cn *Conn) SubscribeChan(subject string, msgChan chan *stan.Msg, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
 	return cn.Subscribe(subject, func(msg *stan.Msg) {
 		msgChan <- msg
@@ -35,11 +32,10 @@ const (
 	SUBJECT_ACTIVITY = "_activity"
 )
 
-// Python style element selector (-1 = len(events)-1)
 const MOST_RECENT_MSG uint64 = 0
 const FIRST_MSG uint64 = 1
 
-// 0 == current
+// Msg has a python style element selector (-1 = len(events)-1)
 func (cn *Conn) Msg(subject string, seqId uint64) (*stan.Msg, error) {
 	msgRange, err := cn.MsgSeqRange(subject, seqId, seqId)
 	if err != nil {
@@ -68,12 +64,12 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		select {
 		case seqEnd = <-rightBound:
 		case <-time.After(time.Duration(10) * time.Second):
-			return nil, fmt.Errorf("MsgSeqRange timed out while finding boundary for subject '%s'", subject)
+			return nil, fmt.Errorf("timed out while finding boundary for subject '%s'", subject)
 		}
 	}
 
 	if seqStart > seqEnd {
-		return nil, fmt.Errorf("seqStart '%v' can not be larger than seqEnd '%v'.", seqStart, seqEnd)
+		return nil, fmt.Errorf("seqStart '%v' can not be larger than seqEnd '%v'", seqStart, seqEnd)
 	}
 
 	// Subscribe until boundary
@@ -88,7 +84,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 	c := make(chan *stan.Msg)
 	sub, err := cn.Subscribe(subject, func(msg *stan.Msg) {
 		defer msg.Ack()
-		// TODO add a timeout here too?
+		// TODO add a timeout here
 		c <- msg
 		if msg.Sequence == seqEnd {
 			msg.Sub.Close()
@@ -107,8 +103,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 	return result, nil
 }
 
-// Abstraction on top of Conn that provides wildcard support
-//
+// WildcardConn is an abstraction on top of Conn that provides wildcard support
 type WildcardConn struct {
 	*Conn
 	activitySub stan.Subscription
@@ -146,9 +141,8 @@ func (wc *WildcardConn) Subscribe(subject string, cb stan.MsgHandler, opts ...st
 			"event":   subjectEvent,
 		}).Debug("NatsClient received activity.")
 
-		subject := subjectEvent.Subject
 		// Although the activity channel should be specific to one query, recheck if subject falls in range of query.
-		if !queryMatches(subject, subject) {
+		if !queryMatches(subject, subjectEvent.Subject) {
 			return
 		}
 
@@ -163,7 +157,7 @@ func (wc *WildcardConn) Subscribe(subject string, cb stan.MsgHandler, opts ...st
 				ws.sources[subject] = sub
 			}
 		default:
-			// TODO notify subscription that subject has been closed, close channel...
+			// TODO notify subscription that subject has been closed and close channel
 			panic(fmt.Sprintf("Unknown ActivityEvent: %v", subjectEvent))
 		}
 	}, stan.DeliverAllAvailable())

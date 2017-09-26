@@ -12,6 +12,8 @@ const (
 	HEADERS_FISSION_FUNCTION_PREFIX = "Fission-Function"
 )
 
+// TODO remove once these functions are in Fission
+
 func MetadataToHeaders(prefix string, meta *api.ObjectMeta, request *http.Request) error {
 	request.Header.Add(fmt.Sprintf("X-%s-Uid", prefix), string(meta.UID))
 	request.Header.Add(fmt.Sprintf("X-%s-Name", prefix), meta.Name)

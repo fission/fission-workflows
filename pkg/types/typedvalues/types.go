@@ -68,7 +68,6 @@ func newDefaultParserFormatter() ParserFormatter {
 	// TODO Less verbose
 	jsPf := &JsonParserFormatter{}
 	return NewComposedParserFormatter(map[string]ParserFormatter{
-		// TODO remove types ? not needed
 		FormatType(TYPE_EXPRESSION):          &ExprParserFormatter{},
 		FormatType(FORMAT_JSON, TYPE_BOOL):   jsPf,
 		FormatType(FORMAT_JSON, TYPE_INT):    jsPf,

@@ -9,13 +9,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSleepFunction(t *testing.T) {
+func TestSleepFunctionString(t *testing.T) {
 	start := time.Now()
 	internalFunctionTest(t,
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				SLEEP_INPUT_MS: parseUnsafe("1000"),
+				SLEEP_INPUT_MS: parseUnsafe("1000ms"),
+			},
+		},
+		nil)
+	end := time.Now()
+	assert.True(t, (end.UnixNano()-start.UnixNano()) > (time.Duration(900)*time.Millisecond).Nanoseconds())
+}
+
+func TestSleepFunctionInt(t *testing.T) {
+	start := time.Now()
+	internalFunctionTest(t,
+		&FunctionSleep{},
+		&types.TaskInvocationSpec{
+			Inputs: map[string]*types.TypedValue{
+				SLEEP_INPUT_MS: parseUnsafe(1000),
 			},
 		},
 		nil)

@@ -104,7 +104,7 @@ message WorkflowSpec {
 
     string description = 4;
 
-    // TODO move
+    // TODO move outside of spec
     // The UID that the workflow should have. Only use this in case you want to force a specific UID.
     string id = 5;
 
@@ -124,7 +124,7 @@ message Task {
     string id = 1;
 
     // Name/identifier of the function
-    string functionRef = 3; // TODO allow fission.FunctionRef struct here
+    string functionRef = 3; // TODO refactor to fission.FunctionRef struct here
 
     map<string, TypedValue> inputs = 4;
 

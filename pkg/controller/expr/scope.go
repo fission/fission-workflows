@@ -1,4 +1,4 @@
-package query
+package expr
 
 import (
 	"github.com/fission/fission-workflows/pkg/types"

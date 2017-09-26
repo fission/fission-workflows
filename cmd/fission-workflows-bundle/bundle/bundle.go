@@ -15,7 +15,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
-	"github.com/fission/fission-workflows/pkg/controller/query"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/eventstore/nats"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
@@ -153,6 +153,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	<-ctx.Done()
 	log.Info("Shutting down...")
+	// TODO properly shutdown components
 	return nil
 }
 
@@ -259,9 +260,9 @@ func runWorkflowApiServer(s *grpc.Server, es fes.EventStore, resolvers map[strin
 	log.Infof("Serving workflow gRPC API at %s.", GRPC_ADDRESS)
 }
 
-func runWorkflowInvocationApiServer(s *grpc.Server, es fes.EventStore, invocationCache fes.CacheReader) {
-	invocationApi := invocation.NewApi(es, invocationCache)
-	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi)
+func runWorkflowInvocationApiServer(s *grpc.Server, es fes.EventStore, wfiCache fes.CacheReader) {
+	invocationApi := invocation.NewApi(es)
+	invocationServer := apiserver.NewGrpcInvocationApiServer(invocationApi, wfiCache)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
 	log.Infof("Serving workflow invocation gRPC API at %s.", GRPC_ADDRESS)
 }
@@ -306,8 +307,8 @@ func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCach
 	workflowValidator := parse.NewValidator()
 	workflowApi := workflow.NewApi(es, workflowParser)
 	wfServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, workflowValidator, wfCache)
-	wfiApi := invocation.NewApi(es, wfiCache)
-	wfiServer := apiserver.NewGrpcInvocationApiServer(wfiApi)
+	wfiApi := invocation.NewApi(es)
+	wfiServer := apiserver.NewGrpcInvocationApiServer(wfiApi, wfiCache)
 	proxyMux := http.NewServeMux()
 	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
@@ -322,10 +323,10 @@ func runController(ctx context.Context, invocationCache fes.CacheReader, wfCache
 
 	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
 	functionApi := function.NewApi(fnRuntimes, es)
-	invocationApi := invocation.NewApi(es, invocationCache)
+	invocationApi := invocation.NewApi(es)
 	s := &scheduler.WorkflowScheduler{}
 	pf := typedvalues.DefaultParserFormatter
-	ep := query.NewJavascriptExpressionParser(pf)
+	ep := expr.NewJavascriptExpressionParser(pf)
 	invocationCtrl := controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
 	workflowCtrl := controller.NewWorkflowController(wfCache, workflowApi)
 
@@ -333,6 +334,4 @@ func runController(ctx context.Context, invocationCache fes.CacheReader, wfCache
 
 	go ctrl.Run(ctx)
 	log.Info("Setup controller component.")
-
-	// TODO properly shutdown
 }

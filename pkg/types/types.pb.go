@@ -467,7 +467,7 @@ type WorkflowSpec struct {
 	// From which task should the workflow return the output? Future: multiple? Implicit?
 	OutputTask  string `protobuf:"bytes,3,opt,name=outputTask" json:"outputTask,omitempty"`
 	Description string `protobuf:"bytes,4,opt,name=description" json:"description,omitempty"`
-	// TODO move
+	// TODO move outside of spec
 	// The UID that the workflow should have. Only use this in case you want to force a specific UID.
 	Id string `protobuf:"bytes,5,opt,name=id" json:"id,omitempty"`
 	// Name is solely for human-readablity

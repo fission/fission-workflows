@@ -44,6 +44,6 @@ metadata:
 spec:
   version: 1
   runtime:
-  # TODO allow environment variables for environment
+  # TODO Add environment variables for environment once supported by Fission
     image: "{{ .Values.envImage }}"
   allowedFunctionsPerContainer: infinite

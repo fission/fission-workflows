@@ -3,7 +3,7 @@
 #
 
 # Bundle image
-bundleImage: fission/fission-workflow-bundle:latest
+bundleImage: fission/fission-workflows-bundle:latest
 
 # Image of the Fission environment for Fission Workflows
 envImage: fission/workflow-env:latest

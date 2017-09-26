@@ -1,4 +1,4 @@
-package query
+package expr
 
 import (
 	"fmt"
@@ -9,14 +9,16 @@ import (
 )
 
 //
-// Built-in functions in the query parser
+// Built-in functions for the expression parser
 //
 
-type QueryFn interface {
+// TODO change to plugins to allow user to add custom expression functions at runtime
+
+type Function interface {
 	Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value
 }
 
-var BuiltinFunctions = map[string]QueryFn{
+var BuiltinFunctions = map[string]Function{
 	"uid":    &UidFn{},
 	"input":  &InputFn{},
 	"output": &OutputFn{},
