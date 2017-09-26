@@ -52,7 +52,7 @@ func (ctr *WorkflowController) Init() error {
 		})
 	}
 
-	// Invocation Notification lane
+	// Workflow Notification lane
 	go func(ctx context.Context) {
 		for {
 			select {
@@ -71,11 +71,26 @@ func (ctr *WorkflowController) Init() error {
 		}
 	}(ctx)
 
+	// Action queue
+	go func(ctx context.Context) {
+		for {
+			select {
+			case action := <-ctr.queue:
+				err := action.Apply()
+				if err != nil {
+					logrus.WithField("action", action).Error("Workflow action failed")
+				}
+			case <-ctx.Done():
+				logrus.WithField("ctx.err", ctx.Err()).Debug("Action queue worker closed.")
+				return
+			}
+		}
+	}(ctx)
+
 	return nil
 }
 
 func (ctr *WorkflowController) HandleTick() {
-	logrus.Debug("Id controller tick...")
 	// Assume that all workflows are in cache
 	now := time.Now()
 	for _, a := range ctr.wfCache.List() {
@@ -129,7 +144,7 @@ func (ctr *WorkflowController) HandleNotification(msg *fes.Notification) {
 func (ctr *WorkflowController) evaluate(wf *types.Workflow) error {
 	switch wf.Status.Status {
 	case types.WorkflowStatus_READY:
-		logrus.WithField("wf", wf.Metadata.Id).Info("All good")
+		// Alright.
 	case types.WorkflowStatus_DELETED:
 		logrus.WithField("wf", wf.Metadata.Id).Warn("Should be removed")
 	case types.WorkflowStatus_UNKNOWN:
@@ -174,7 +189,6 @@ func (ctr *WorkflowController) Close() error {
 	ctr.cancelFn()
 	return nil
 }
-
 
 //
 // Actions

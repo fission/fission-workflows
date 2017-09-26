@@ -62,7 +62,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.AggregatorMixin = fes.NewAggregatorMixin(wf, *event.Aggregate)
 		wf.Workflow = &types.Workflow{
 			Metadata: &types.ObjectMetadata{
-				Id:        event.GetId(),
+				Id:        wf.Aggregate().Id,
 				CreatedAt: event.GetTimestamp(),
 			},
 			Spec: spec,

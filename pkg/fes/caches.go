@@ -136,6 +136,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 
 func (uc *SubscribedCache) HandleEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
+		"event.id":       event.Id,
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
 		"event.type":     event.Type,

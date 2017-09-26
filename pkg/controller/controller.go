@@ -20,7 +20,7 @@ type Controller interface {
 }
 
 const (
-	TICK_SPEED = time.Duration(5) * time.Second
+	TICK_SPEED = time.Duration(1) * time.Second
 )
 
 type MetaController struct {
@@ -47,6 +47,10 @@ func (mc *MetaController) Init() error {
 
 func (mc *MetaController) Run(ctx context.Context) error {
 	logrus.Debug("Running controller init...")
+	err := mc.Init()
+	if err != nil {
+		return err
+	}
 
 	// Control lane
 	ticker := time.NewTicker(TICK_SPEED)

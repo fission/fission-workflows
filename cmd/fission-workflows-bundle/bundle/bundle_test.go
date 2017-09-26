@@ -63,6 +63,7 @@ func TestWorkflowCreate(t *testing.T) {
 	assert.NotNil(t, wfId)
 	assert.NotEmpty(t, wfId.GetId())
 
+	time.Sleep(time.Duration(3) * time.Second)
 	// Test workflow list
 	l, err := cl.List(ctx, &empty.Empty{})
 	assert.NoError(t, err)

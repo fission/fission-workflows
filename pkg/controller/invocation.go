@@ -133,6 +133,11 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 		return
 	}
 
+	if wf.Status.Status != types.WorkflowStatus_READY {
+		logrus.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
+		return
+	}
+
 	schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
 		Invocation: invoc,
 		Workflow:   wf.Workflow,
