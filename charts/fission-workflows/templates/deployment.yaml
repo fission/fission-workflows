@@ -42,7 +42,7 @@ metadata:
   name: workflow
   namespace: default
 spec:
-  version: 1
+  version: 2
   runtime:
   # TODO Add environment variables for environment once supported by Fission
     image: "{{ .Values.envImage }}"

@@ -24,10 +24,12 @@ func ParseRequest(r *http.Request, target map[string]*types.TypedValue) error {
 	}
 
 	var i interface{} = body
-	err = json.Unmarshal(body, &i)
-	if err != nil {
-		logrus.Info("Input is not json: %v", err)
-		i = body
+	if len(body) > 0 {
+		err = json.Unmarshal(body, &i)
+		if err != nil {
+			logrus.WithField("body", len(body)).Infof("Input is not json: %v", err)
+			i = body
+		}
 	}
 
 	parsedInput, err := typedvalues.Parse(i)

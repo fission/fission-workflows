@@ -13,15 +13,13 @@ import (
 
 	"encoding/json"
 
+	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/1.5/pkg/api"
 )
-
-const userFunc = "/userfunc/user"
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
 type Proxy struct {
@@ -40,7 +38,7 @@ func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv a
 
 func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
 	mux.HandleFunc("/", fp.handleRequest)
-	mux.HandleFunc("/specialize", fp.handleSpecialize)
+	mux.HandleFunc("/v2/specialize", fp.handleSpecialize)
 }
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +59,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		// Fallback 1 : check if it is in the event store somewhere
-		wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{fnId})
+		wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{Id: fnId})
 		if err != nil || wf == nil {
 			logrus.WithField("fnId", fnId).
 				WithField("err", err).
@@ -117,20 +115,32 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	body := r.Body
 	bs, err := ioutil.ReadAll(body)
 	if err != nil {
+		logrus.Errorf("Failed to read body: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("failed to read body: " + err.Error()))
 		return
 	}
 
-	metadata := &api.ObjectMeta{}
-	err = json.Unmarshal(bs, metadata)
+	logrus.Info("Received specialization body:" , string(bs))
+
+	flr := &fission.FunctionLoadRequest{}
+	err = json.Unmarshal(bs, flr)
 	if err != nil {
+		logrus.Errorf("Failed to parse body: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Failed to parse body: " + err.Error()))
 		return
 	}
 
-	wfId, err := fp.specialize(ctx, metadata, userFunc)
+	metadata := flr.FunctionMetadata
+	if metadata == nil {
+		logrus.Errorf("No workflow metadata provided: %v", metadata)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("No workflow metadata provided."))
+		return
+	}
+
+	wfId, err := fp.specialize(ctx, flr)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
 		if os.IsNotExist(err) {
@@ -146,13 +156,13 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(wfId))
 }
 
-func (fp *Proxy) specialize(ctx context.Context, fissionMetadata *api.ObjectMeta, fnPath string) (string, error) {
-	_, err := os.Stat(fnPath)
+func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
+	_, err := os.Stat(flr.FilePath)
 	if err != nil {
 		return "", err
 	}
 
-	rdr, err := os.Open(userFunc)
+	rdr, err := os.Open(flr.FilePath)
 	if err != nil {
 		return "", err
 	}
@@ -170,8 +180,8 @@ func (fp *Proxy) specialize(ctx context.Context, fissionMetadata *api.ObjectMeta
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
 	// Synchronize the workflow ID with the fission ID
-	wfSpec.Id = string(fissionMetadata.GetUID())
-	wfSpec.Name = fissionMetadata.Name
+	wfSpec.Id = string(flr.FunctionMetadata.GetUID())
+	wfSpec.Name = flr.FunctionMetadata.Name
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
 	if err != nil {
@@ -183,7 +193,7 @@ func (fp *Proxy) specialize(ctx context.Context, fissionMetadata *api.ObjectMeta
 	fp.fissionIds[wfSpec.Id] = true
 
 	// Cleanup
-	err = os.Remove(userFunc)
+	err = os.Remove(flr.FilePath)
 	if err != nil {
 		logrus.Warnf("Failed to remove userFunc from fs: %v", err)
 	}

@@ -23,6 +23,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Flags = []cli.Flag{
+		// TODO use Fission controller instead (contains a proxy to workflow apiserver)
 		cli.StringFlag{
 			Name:   "url, u",
 			Value:  "192.168.99.100:31319",

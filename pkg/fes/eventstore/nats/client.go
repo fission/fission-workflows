@@ -40,7 +40,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"aggregate.id":   event.Aggregate.Id,
 			"event.type":     event.Type,
 			"event.id":       event.Id,
-		}).Debugf("Publishing aggregate event to subscribers.")
+		}).Info("Publishing aggregate event to subscribers.")
 
 		err = es.Publisher.Publish(event)
 		if err != nil {
