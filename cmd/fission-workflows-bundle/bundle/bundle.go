@@ -47,7 +47,8 @@ type Options struct {
 	Nats                  *NatsOptions
 	Fission               *FissionOptions
 	InternalRuntime       bool
-	Controller            bool
+	InvocationController  bool
+	WorkflowController    bool
 	ApiAdmin              bool
 	ApiWorkflow           bool
 	ApiHttp               bool
@@ -102,8 +103,17 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	// Controller
-	if opts.Controller {
-		runController(ctx, wfiCache(), wfCache(), es, runtimes, resolvers)
+	if opts.InvocationController || opts.WorkflowController {
+		ctrls := []controller.Controller{}
+		if opts.InvocationController {
+			ctrls = append(ctrls, setupWorkflowController(wfCache(), es, resolvers))
+		}
+
+		if opts.WorkflowController {
+			ctrls = append(ctrls, setupInvocationController(wfiCache(), wfCache(), es, runtimes))
+		}
+
+		runController(ctx, ctrls...)
 	}
 
 	// Http servers
@@ -215,8 +225,14 @@ func setupNatsEventStoreClient(url string, cluster string, clientId string) *nat
 		WithField("client", clientId).
 		Info("connected to NATS")
 	es := nats.NewEventStore(nats.NewWildcardConn(conn))
-	es.Watch(fes.Aggregate{Type: "invocation"})
-	es.Watch(fes.Aggregate{Type: "workflow"})
+	err = es.Watch(fes.Aggregate{Type: "invocation"})
+	if err != nil {
+		panic(err)
+	}
+	err = es.Watch(fes.Aggregate{Type: "workflow"})
+	if err != nil {
+		panic(err)
+	}
 	return es
 }
 
@@ -318,20 +334,22 @@ func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCach
 	log.Info("Serving HTTP Fission Proxy at: ", proxySrv.Addr)
 }
 
-func runController(ctx context.Context, invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.EventStore,
-	fnRuntimes map[string]function.Runtime, fnResolvers map[string]function.Resolver) {
-
-	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
+func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.EventStore,
+	fnRuntimes map[string]function.Runtime) *controller.InvocationController {
 	functionApi := function.NewApi(fnRuntimes, es)
 	invocationApi := invocation.NewApi(es)
 	s := &scheduler.WorkflowScheduler{}
-	pf := typedvalues.DefaultParserFormatter
-	ep := expr.NewJavascriptExpressionParser(pf)
-	invocationCtrl := controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
-	workflowCtrl := controller.NewWorkflowController(wfCache, workflowApi)
+	ep := expr.NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	return controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
+}
 
-	ctrl := controller.NewMetaController(invocationCtrl, workflowCtrl)
+func setupWorkflowController(wfCache fes.CacheReader, es fes.EventStore, fnResolvers map[string]function.Resolver) *controller.WorkflowController {
+	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
+	return controller.NewWorkflowController(wfCache, workflowApi)
+}
 
+func runController(ctx context.Context, ctrls ...controller.Controller) {
+	ctrl := controller.NewMetaController(ctrls...)
 	go ctrl.Run(ctx)
-	log.Info("Setup controller component.")
+	log.Info("Running controller.")
 }
