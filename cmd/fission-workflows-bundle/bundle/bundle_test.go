@@ -234,7 +234,8 @@ func setup(ctx context.Context) {
 	go Run(ctx, &Options{
 		// No fission for now
 		InternalRuntime:       true,
-		Controller:            true,
+		InvocationController:  true,
+		WorkflowController:    true,
 		ApiHttp:               true,
 		ApiWorkflowInvocation: true,
 		ApiWorkflow:           true,

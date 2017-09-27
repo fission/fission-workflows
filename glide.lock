@@ -1,5 +1,5 @@
-hash: 36990cabef07d2fb6e585429305e57fec218f03ebf3416f5bbfd865280d16d88
-updated: 2017-09-23T14:21:58.224050232-07:00
+hash: e080a001ab8b25e720985180f9b79e78a82c387730a5c5a7b8493189d644a887
+updated: 2017-09-27T16:53:38.02497576-07:00
 imports:
 - name: github.com/blang/semver
   version: 60ec3488bfea7cca02b021d106d9911120d25fe9
@@ -32,7 +32,7 @@ imports:
   - log
   - swagger
 - name: github.com/fission/fission
-  version: dc50ebb8898d5474012ff20e88834a5966a8830e
+  version: 52c77c5bf5b6b54249ab049c9035e3c16df53f25
   subpackages:
   - controller/client
   - poolmgr/client
