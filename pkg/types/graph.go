@@ -54,3 +54,15 @@ type TaskStatus struct {
 	// Invocation is nil if not yet invoked
 	Invocation *TaskInvocation
 }
+
+// Tasks gets both static as well as dynamic tasks of a workflow invocation.
+func Tasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
+	tasks := map[string]*Task{}
+	for id, task := range wf.Spec.Tasks {
+		tasks[id] = task
+	}
+	for id, task := range wfi.Status.DynamicTasks {
+		tasks[id] = task
+	}
+	return tasks
+}

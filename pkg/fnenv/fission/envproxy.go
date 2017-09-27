@@ -121,7 +121,7 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logrus.Info("Received specialization body:" , string(bs))
+	logrus.Info("Received specialization body:", string(bs))
 
 	flr := &fission.FunctionLoadRequest{}
 	err = json.Unmarshal(bs, flr)

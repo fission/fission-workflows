@@ -14,6 +14,7 @@ go_library(
         "//pkg/fnenv/fission/router:go_default_library",
         "//pkg/types:go_default_library",
         "//pkg/types/typedvalues:go_default_library",
+        "//vendor/github.com/fission/fission:go_default_library",
         "//vendor/github.com/fission/fission/controller/client:go_default_library",
         "//vendor/github.com/fission/fission/poolmgr/client:go_default_library",
         "//vendor/github.com/gogo/protobuf/jsonpb:go_default_library",

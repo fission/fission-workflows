@@ -48,6 +48,7 @@ type CacheReader interface {
 
 type CacheWriter interface {
 	Put(entity Aggregator) error
+	// TODO add an invalidate()
 }
 
 type CacheReaderWriter interface {

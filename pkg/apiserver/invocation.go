@@ -13,6 +13,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	INVOKE_SYNC_TIMEOUT = time.Duration(60) * time.Second
+)
+
 type grpcInvocationApiServer struct {
 	api      *invocation.Api
 	wfiCache fes.CacheReader
@@ -34,10 +38,11 @@ func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.Workf
 func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
 	eventId, err := gi.api.Invoke(spec)
 	if err != nil {
+		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
 	}
 
-	timeout := time.After(time.Duration(60) * time.Second)
+	timeout, _ := context.WithTimeout(ctx, INVOKE_SYNC_TIMEOUT)
 	var result *types.WorkflowInvocation
 	for {
 		wi := aggregates.NewWorkflowInvocation(eventId, &types.WorkflowInvocation{})
@@ -51,7 +56,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		}
 
 		select {
-		case <-timeout:
+		case <-timeout.Done():
 			return nil, errors.New("timeout occurred")
 		default:
 			// TODO polling is a temporary shortcut; needs optimizing.

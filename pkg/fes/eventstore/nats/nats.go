@@ -106,7 +106,6 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 // WildcardConn is an abstraction on top of Conn that provides wildcard support
 type WildcardConn struct {
 	*Conn
-	activitySub stan.Subscription
 }
 
 func NewWildcardConn(conn stan.Conn) *WildcardConn {
@@ -115,56 +114,57 @@ func NewWildcardConn(conn stan.Conn) *WildcardConn {
 	}
 }
 
-func (wc *WildcardConn) Subscribe(subject string, cb stan.MsgHandler, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
-	if !hasWildcard(subject) {
-		return wc.Conn.Subscribe(subject, cb, opts...)
+func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
+	if !hasWildcard(wildcardSubject) {
+		return wc.Conn.Subscribe(wildcardSubject, cb, opts...)
 	}
 
 	ws := &WildcardSub{
+		subject: wildcardSubject,
 		sources: map[string]stan.Subscription{},
 	}
-	if wc.activitySub != nil {
-		wc.activitySub.Close()
-	}
+
 	metaSub, err := wc.Conn.Subscribe(SUBJECT_ACTIVITY, func(msg *stan.Msg) {
 		subjectEvent := &SubjectEvent{}
 		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"msg":     subjectEvent,
-				"subject": subject,
+				"msg":             subjectEvent,
+				"wildcardSubject": wildcardSubject,
 			}).Warnf("Failed to parse subjectEvent.")
 			return
 		}
-		logrus.WithFields(logrus.Fields{
-			"subject": subject,
-			"event":   subjectEvent,
-		}).Debug("NatsClient received activity.")
+		subject := subjectEvent.Subject
 
-		// Although the activity channel should be specific to one query, recheck if subject falls in range of query.
-		if !queryMatches(subject, subjectEvent.Subject) {
+		// Although the activity channel should be specific to one query, recheck if wildcardSubject falls in range of query.
+		if !queryMatches(subject, wildcardSubject) {
 			return
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"wildcardSubject": wildcardSubject,
+			"event":           subjectEvent,
+		}).Debug("NatsClient received activity.")
 
 		switch subjectEvent.Type {
 		case ACTIVITY_CREATED:
 			if _, ok := ws.sources[subject]; !ok {
-
 				sub, err := wc.Subscribe(subject, cb, opts...)
 				if err != nil {
-					logrus.Errorf("Failed to subscribe to subject '%v': %v", subjectEvent, err)
+					logrus.Errorf("Failed to subscribe to wildcardSubject '%v': %v", subjectEvent, err)
 				}
 				ws.sources[subject] = sub
 			}
 		default:
-			// TODO notify subscription that subject has been closed and close channel
+			// TODO notify subscription that wildcardSubject has been closed and close channel
 			panic(fmt.Sprintf("Unknown ActivityEvent: %v", subjectEvent))
 		}
 	}, stan.DeliverAllAvailable())
 	if err != nil {
 		return nil, err
 	}
-	wc.activitySub = metaSub
+	ws.activitySub = metaSub
+	logrus.Infof("Subscribed to '%s'", wildcardSubject)
 
 	return ws, nil
 }
@@ -244,11 +244,14 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 }
 
 type WildcardSub struct {
-	sources map[string]stan.Subscription
+	subject     string
+	sources     map[string]stan.Subscription
+	activitySub stan.Subscription
 }
 
 func (ws *WildcardSub) Unsubscribe() error {
-	var err error
+	logrus.Infof("Unsubscribing wildcard subscription for '%v'", ws.subject)
+	err := ws.activitySub.Unsubscribe()
 	for id, source := range ws.sources {
 		err = source.Unsubscribe()
 		delete(ws.sources, id)

@@ -34,14 +34,12 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 		return "", err
 	}
 
-	event := &fes.Event{
+	err = ia.es.HandleEvent(&fes.Event{
 		Type:      events.Invocation_INVOCATION_CREATED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
-	}
-
-	err = ia.es.HandleEvent(event)
+	})
 	if err != nil {
 		return "", err
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/util/backoff"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -33,6 +34,7 @@ type InvocationController struct {
 	exprParser    expr.Resolver
 	cancelFn      context.CancelFunc
 	workQueue     chan Action
+	wfiBackoff    backoff.Map // Specifies the time after which the wfi is allowed to be reevaluated again
 	// TODO add active cache
 }
 
@@ -47,6 +49,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
 		workQueue:     make(chan Action, 50),
+		wfiBackoff:    backoff.NewMap(),
 	}
 }
 
@@ -131,7 +134,7 @@ func (cr *InvocationController) HandleTick() {
 	// Options: refresh projection, send ping, cancel invocation
 	// Short loop (invocations the controller is actively tracking) and long loop (to check if there are any orphans)
 
-	// Long loop
+	// Short control loop
 	entities := cr.invokeCache.List()
 	for _, entity := range entities {
 		wi := aggregates.NewWorkflowInvocation(entity.Id, nil)
@@ -141,42 +144,62 @@ func (cr *InvocationController) HandleTick() {
 			return
 		}
 
+		// Check if we actually need to evaluate
+		if wi.Status.Status.Finished() {
+			// TODO remove finished wfi from active cache
+			continue
+		}
+
+		// TODO check if workflow invocation is in a backoff
+
 		cr.evaluate(wi.WorkflowInvocation)
 	}
 }
 
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
+	// Fetch the workflow relevant to the invocation
 	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
 	err := cr.wfCache.Get(wf)
 	if err != nil {
-		logrus.Errorf("Failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
+		logrus.Errorf("Controller failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
 		return
 	}
 
+	// Check if workflow is in the right state to use.
 	if wf.Status.Status != types.WorkflowStatus_READY {
 		logrus.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
 		return
 	}
 
+	// Check if the workflow invocation is complete
+	tasks := types.Tasks(wf.Workflow, invoc)
+	finished := true
+	for id := range tasks {
+		t, ok := invoc.Status.Tasks[id]
+		if !ok || !t.Status.Status.Finished() {
+			finished = false
+			break
+		}
+	}
+	if finished {
+		t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
+		if !ok {
+			panic("Could not find output task status in completed invocation")
+		}
+		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, t.Status.Output)
+		if err != nil {
+			logrus.Errorf("failed to mark invocation as complete: %v", err)
+			return
+		}
+	}
+
+	// Request a execution plan from the scheduler
 	schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
 		Invocation: invoc,
 		Workflow:   wf.Workflow,
 	})
 
-	if len(schedule.Actions) == 0 { // TODO controller should verify (it is an invariant)
-		var output *types.TypedValue
-		if t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]; ok {
-			output = t.Status.Output
-		} else {
-			logrus.Infof("Output task '%v' does not exist", wf.Spec.OutputTask)
-			return
-		}
-		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, output)
-		if err != nil {
-			panic(err)
-		}
-	}
-
+	// Execute the actions as specified in the execution plan
 	for _, action := range schedule.Actions {
 		switch action.Type {
 		case scheduler.ActionType_ABORT:
