@@ -388,6 +388,10 @@ font-style: italic;
         "resolved" : "aeiou"
       }
     },
+    "error" : {
+      "code" : "aeiou",
+      "message" : "aeiou"
+    },
     "status" : { },
     "updatedAt" : "2000-01-23T04:56:07.000+00:00"
   }
@@ -621,6 +625,7 @@ To lighten the request load, consider using a more specific request.</div>
         }
       }
     },
+    "error" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -637,6 +642,10 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "output" : "",
+          "error" : {
+            "code" : "aeiou",
+            "message" : "aeiou"
+          },
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -779,6 +788,7 @@ To lighten the request load, consider using a more specific request.</div>
         }
       }
     },
+    "error" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -795,6 +805,10 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "output" : "",
+          "error" : {
+            "code" : "aeiou",
+            "message" : "aeiou"
+          },
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -886,6 +900,7 @@ To lighten the request load, consider using a more specific request.</div>
         }
       }
     },
+    "error" : "",
     "tasks" : {
       "key" : {
         "metadata" : "",
@@ -902,6 +917,10 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "output" : "",
+          "error" : {
+            "code" : "aeiou",
+            "message" : "aeiou"
+          },
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
@@ -976,6 +995,7 @@ To lighten the request load, consider using a more specific request.</div>
 
   <h3>Table of Contents</h3>
   <ol>
+    <li><a href="#Error"><code>Error</code> - </a></li>
     <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
     <li><a href="#Task"><code>Task</code> - </a></li>
     <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
@@ -993,7 +1013,10 @@ To lighten the request load, consider using a more specific request.</div>
     <li><a href="#WorkflowInvocationStatusStatus"><code>WorkflowInvocationStatusStatus</code> - </a></li>
     <li><a href="#WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a></li>
     <li><a href="#WorkflowStatus"><code>WorkflowStatus</code> - Internal</a></li>
-    <li><a href="#WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - </a></li>
+    <li><a href="#WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - <ul>
+<li>READY: PARSING = 1; // During validation/parsing</li>
+</ul>
+</a></li>
     <li><a href="#apiserverHealth"><code>apiserverHealth</code> - </a></li>
     <li><a href="#apiserverSearchWorkflowResponse"><code>apiserverSearchWorkflowResponse</code> - </a></li>
     <li><a href="#apiserverWorkflowIdentifier"><code>apiserverWorkflowIdentifier</code> - </a></li>
@@ -1004,6 +1027,14 @@ empty messages in your APIs. A typical example is to use it as the request
 or the response type of an API method. For instance:</a></li>
   </ol>
 
+  <div class="model">
+    <h3><a name="Error"><code>Error</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">code (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">message (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
   <div class="model">
     <h3><a name="ObjectMetadata"><code>ObjectMetadata</code> - Common</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
@@ -1068,6 +1099,7 @@ Id is specified outside of task</p>
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationStatusStatus">TaskInvocationStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1128,6 +1160,7 @@ Id is specified outside of task</p>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocation">map[String, TaskInvocation]</a></span>  </div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
 <div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1149,7 +1182,8 @@ By default the workflow engine will assume the latest version to be used. </div>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> Dependency graph is build into the tasks </div>
 <div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">description (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> TODO move outside of spec
+The UID that the workflow should have. Only use this in case you want to force a specific UID. </div>
 <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
@@ -1160,10 +1194,14 @@ By default the workflow engine will assume the latest version to be used. </div>
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowStatusStatus">WorkflowStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">resolvedTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskTypeDef">map[String, TaskTypeDef]</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - <ul>
+<li>READY: PARSING = 1; // During validation/parsing</li>
+</ul>
+</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
           </div>  <!-- field-items -->

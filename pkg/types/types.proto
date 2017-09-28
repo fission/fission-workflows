@@ -46,6 +46,7 @@ message TaskInvocationStatus {
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
     TypedValue output = 3;
+    Error error = 4; // Only set when status == failed
 }
 
 // Workflow Invocation Model
@@ -69,6 +70,7 @@ message WorkflowInvocationStatus {
     map<string, TaskInvocation> tasks = 3;
     TypedValue output = 4;
     map<string, Task> dynamicTasks = 5;
+    Error error = 6; // Only set when status == failed
 }
 
 
@@ -102,7 +104,7 @@ message WorkflowSpec {
 
     string description = 4;
 
-    // TODO move
+    // TODO move outside of spec
     // The UID that the workflow should have. Only use this in case you want to force a specific UID.
     string id = 5;
 
@@ -122,7 +124,7 @@ message Task {
     string id = 1;
 
     // Name/identifier of the function
-    string functionRef = 3; // TODO allow fission.FunctionRef struct here
+    string functionRef = 3; // TODO refactor to fission.FunctionRef struct here
 
     map<string, TypedValue> inputs = 4;
 
@@ -151,7 +153,7 @@ message TaskDependencyParameters {
 message WorkflowStatus {
     enum Status {
         UNKNOWN = 0;
-        PARSING = 1; // During validation/parsing
+//        PARSING = 1; // During validation/parsing
         READY = 2;
         FAILED = 3;
         DELETED = 4;
@@ -159,6 +161,7 @@ message WorkflowStatus {
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
     map<string, TaskTypeDef> resolvedTasks = 3; // Key = taskId
+    Error error = 4;
 }
 
 message TaskTypeDef {
@@ -169,6 +172,13 @@ message TaskTypeDef {
 
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
 message TypedValue {
-    string type = 1;
+    string type = 1; // (string, bool, int...)
     bytes value = 2;
+    // TODO encoding (json, xml, binary)
+    // TODO annotations (content-type: application/xml)
+}
+
+message Error {
+    string code = 1;
+    string message = 2;
 }

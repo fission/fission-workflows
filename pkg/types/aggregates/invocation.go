@@ -74,9 +74,18 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			},
 		}
 	case events.Invocation_INVOCATION_CANCELED:
+		ivErr := &types.Error{}
+		err := proto.Unmarshal(event.Data, ivErr)
+		if err != nil {
+			ivErr.Code = "error"
+			ivErr.Message = err.Error()
+			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+		}
+
 		wi.Status.Status = types.WorkflowInvocationStatus_ABORTED
 		wi.Status.UpdatedAt = event.GetTimestamp()
-	case events.Invocation_INVOCATION_COMPLETED: // TODO isn't this an status rather than an event
+		wi.Status.Error = ivErr
+	case events.Invocation_INVOCATION_COMPLETED:
 		status := &types.WorkflowInvocationStatus{}
 		err = proto.Unmarshal(event.Data, status)
 		if err != nil {
@@ -119,7 +128,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	if output != nil && output.Type == typedvalues.TYPE_FLOW {
 		i, _ := typedvalues.Format(output)
 		dynamicTask := i.(*types.Task)
-		id := util.CreateScopeId(taskId, dynamicTask.Id) // TODO Support alias
+		id := util.CreateScopeId(taskId, dynamicTask.Id)
 		dynamicTask.Id = id
 		if dynamicTask.Requires == nil {
 			dynamicTask.Requires = map[string]*types.TaskDependencyParameters{}

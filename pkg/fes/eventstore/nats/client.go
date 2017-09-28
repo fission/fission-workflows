@@ -29,7 +29,8 @@ func NewEventStore(conn *WildcardConn) *EventStore {
 // Watch a aggregate type
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 
-	sub, err := es.conn.Subscribe(fmt.Sprintf("%s.>", aggregate.Type), func(msg *stan.Msg) {
+	subject := fmt.Sprintf("%s.>", aggregate.Type)
+	sub, err := es.conn.Subscribe(subject, func(msg *stan.Msg) {
 		event, err := toEvent(msg)
 		if err != nil {
 			logrus.Error(err)
@@ -40,7 +41,8 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"aggregate.id":   event.Aggregate.Id,
 			"event.type":     event.Type,
 			"event.id":       event.Id,
-		}).Debugf("Publishing aggregate event to subscribers.")
+			"nats.subject":   msg.Subject,
+		}).Info("Publishing aggregate event to subscribers.")
 
 		err = es.Publisher.Publish(event)
 		if err != nil {
@@ -50,6 +52,8 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 	if err != nil {
 		return err
 	}
+
+	logrus.Infof("Eventstore client watches:' %s'", subject)
 	es.sub[aggregate] = sub
 	return nil
 }
@@ -59,14 +63,7 @@ func (es *EventStore) Close() error {
 }
 
 func (es *EventStore) HandleEvent(event *fes.Event) error {
-	logrus.WithFields(logrus.Fields{
-		"event.id":       event.Id,
-		"event.type":     event.Type,
-		"aggregate.id":   event.Aggregate.Id,
-		"aggregate.type": event.Aggregate.Type,
-	}).Info("EventStore client appending event.")
-
-	// TODO make generic / configurable whether to fold into parent
+	// TODO make generic / configurable whether to fold event into parent's subject
 	subject := toSubject(event.Aggregate)
 	if event.Parent != nil {
 		subject = toSubject(event.Parent)
@@ -75,6 +72,14 @@ func (es *EventStore) HandleEvent(event *fes.Event) error {
 	if err != nil {
 		return err
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"event.id":       event.Id,
+		"event.type":     event.Type,
+		"aggregate.id":   event.Aggregate.Id,
+		"aggregate.type": event.Aggregate.Type,
+		"nats.subject":   subject,
+	}).Info("EventStore client appending event.")
 
 	return es.conn.Publish(subject, data)
 }

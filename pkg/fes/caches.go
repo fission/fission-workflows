@@ -123,6 +123,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 					logrus.WithField("msg", msg).Error("Received a malformed message")
 					continue
 				}
+				logrus.WithField("msg", msg.Labels()).Info("Cache received new event.")
 				err := c.HandleEvent(event)
 				if err != nil {
 					logrus.WithField("err", err).Error("Failed to handle event")
@@ -136,6 +137,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 
 func (uc *SubscribedCache) HandleEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
+		"event.id":       event.Id,
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
 		"event.type":     event.Type,
@@ -172,7 +174,7 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 		return err
 	}
 
-	// Do not publish old events
+	// Do not publish replayed events as notifications
 	ets, _ := ptypes.Timestamp(event.Timestamp) // TODO replace with a token or flag that cache has cached up.
 	if ets.After(uc.ts) {
 		n := newNotification(cached, event)
@@ -188,15 +190,15 @@ func (uc *SubscribedCache) HandleEvent(event *Event) error {
 	}
 }
 
-// FallbackCache2 looks into a backing data store in case there is a cache miss
-type FallbackCache2 struct {
+// FallbackCache looks into a backing data store in case there is a cache miss
+type FallbackCache struct {
 	cache  CacheReaderWriter
 	client EventStore
 	domain StringMatcher
 	target func() Aggregator // TODO extract to a TypedSubscription
 }
 
-func (c *FallbackCache2) List() []Aggregate {
+func (c *FallbackCache) List() []Aggregate {
 	esAggregates, err := c.client.List(c.domain)
 	if err != nil {
 		logrus.WithField("matcher", c.domain).
@@ -227,7 +229,7 @@ func (c *FallbackCache2) List() []Aggregate {
 	return esAggregates
 }
 
-func (c *FallbackCache2) GetAggregate(a Aggregate) (Aggregator, error) {
+func (c *FallbackCache) GetAggregate(a Aggregate) (Aggregator, error) {
 	cached, err := c.cache.GetAggregate(a)
 	if err != nil {
 		if err == ErrNotFound {
@@ -243,7 +245,7 @@ func (c *FallbackCache2) GetAggregate(a Aggregate) (Aggregator, error) {
 	return cached, nil
 }
 
-func (c *FallbackCache2) Get(entity Aggregator) error {
+func (c *FallbackCache) Get(entity Aggregator) error {
 	err := c.cache.Get(entity)
 	if err != nil {
 		if err == ErrNotFound {
@@ -256,7 +258,7 @@ func (c *FallbackCache2) Get(entity Aggregator) error {
 	return nil
 }
 
-func (c *FallbackCache2) getFromEventStore(aggregate Aggregate, target Aggregator) error {
+func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Aggregator) error {
 	// Look up relevant events in event store
 	events, err := c.client.Get(&aggregate)
 	if err != nil {
@@ -273,7 +275,7 @@ func (c *FallbackCache2) getFromEventStore(aggregate Aggregate, target Aggregato
 	}
 
 	// Cache target
-	err = c.cache.Put(target) // TODO ensure copy
+	err = c.cache.Put(target) // TODO ensure target is a copy
 	if err != nil {
 		logrus.WithField("target", target).WithField("err", err).Warn("Failed to cache fetched target")
 	}

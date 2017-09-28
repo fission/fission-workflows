@@ -1,0 +1,29 @@
+{
+  "tasks": {
+    "GenerateFortune": {
+      "id": "GenerateFortune",
+      "functionRef": "fortune",
+      "inputs": {
+      },
+      "requires": {
+      }
+    },
+    "WhaleIt": {
+      "id": "WhaleIt",
+      "functionRef": "echowhale",
+      "inputs": {
+        "default": {
+          "type": "expr",
+          "value": "e3Rhc2soJ0dlbmVyYXRlRm9ydHVuZScpLk91dHB1dH0="
+        }
+      },
+      "requires": {
+        "GenerateFortune": {
+
+        }
+      },
+      "await": 1
+    }
+  },
+  "outputTask": "WhaleIt"
+}

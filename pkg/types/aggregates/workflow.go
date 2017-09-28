@@ -39,6 +39,18 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		return err
 	}
 	switch wfEvent {
+	case events.Workflow_WORKFLOW_PARSING_FAILED:
+		wfErr := &types.Error{}
+		err := proto.Unmarshal(event.Data, wfErr)
+		if err != nil {
+			wfErr.Code = "error"
+			wfErr.Message = err.Error()
+			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+		}
+
+		wf.Status.Error = wfErr
+		wf.Status.UpdatedAt = event.GetTimestamp()
+		wf.Status.Status = types.WorkflowStatus_FAILED
 	case events.Workflow_WORKFLOW_CREATED:
 		spec := &types.WorkflowSpec{}
 		err := proto.Unmarshal(event.Data, spec)
@@ -50,7 +62,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.AggregatorMixin = fes.NewAggregatorMixin(wf, *event.Aggregate)
 		wf.Workflow = &types.Workflow{
 			Metadata: &types.ObjectMetadata{
-				Id:        event.GetId(),
+				Id:        wf.Aggregate().Id,
 				CreatedAt: event.GetTimestamp(),
 			},
 			Spec: spec,

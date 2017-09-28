@@ -25,11 +25,12 @@ func main() {
 			Nats:                  parseNatsOptions(c),
 			Fission:               parseFissionOptions(c),
 			InternalRuntime:       c.Bool("internal"),
-			Controller:            c.Bool("controller"),
-			ApiAdmin:              c.Bool("api-admin"),
-			ApiWorkflow:           c.Bool("api-workflow"),
-			ApiWorkflowInvocation: c.Bool("api-workflow-invocation"),
-			ApiHttp:               c.Bool("api-http"),
+			InvocationController:  c.Bool("controller") || c.Bool("invocation-controller"),
+			WorkflowController:    c.Bool("controller") || c.Bool("workflow-controller"),
+			ApiAdmin:              c.Bool("api") || c.Bool("api-admin"),
+			ApiWorkflow:           c.Bool("api") || c.Bool("api-workflow"),
+			ApiWorkflowInvocation: c.Bool("api") || c.Bool("api-workflow-invocation"),
+			ApiHttp:               c.Bool("api") || c.Bool("api-http"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -130,7 +131,15 @@ func createCli() *cli.App {
 		},
 		cli.BoolFlag{
 			Name:  "controller",
-			Usage: "Run the controller",
+			Usage: "Run the controller with all components",
+		},
+		cli.BoolFlag{
+			Name:  "workflow-controller",
+			Usage: "Run the workflow controller",
+		},
+		cli.BoolFlag{
+			Name:  "invocation-controller",
+			Usage: "Run the invocation controller",
 		},
 		cli.BoolFlag{
 			Name:  "api-http",

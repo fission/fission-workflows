@@ -263,6 +263,17 @@
     }
   },
   "definitions": {
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
     "ObjectMetadata": {
       "type": "object",
       "properties": {
@@ -378,6 +389,9 @@
         },
         "output": {
           "$ref": "#/definitions/TypedValue"
+        },
+        "error": {
+          "$ref": "#/definitions/Error"
         }
       }
     },
@@ -489,6 +503,9 @@
           "additionalProperties": {
             "$ref": "#/definitions/Task"
           }
+        },
+        "error": {
+          "$ref": "#/definitions/Error"
         }
       }
     },
@@ -527,10 +544,12 @@
           "type": "string"
         },
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "TODO move outside of spec\nThe UID that the workflow should have. Only use this in case you want to force a specific UID."
         },
         "name": {
-          "type": "string"
+          "type": "string",
+          "title": "Name is solely for human-readablity"
         }
       },
       "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow.",
@@ -551,6 +570,9 @@
           "additionalProperties": {
             "$ref": "#/definitions/TaskTypeDef"
           }
+        },
+        "error": {
+          "$ref": "#/definitions/Error"
         }
       },
       "title": "Internal"
@@ -559,12 +581,12 @@
       "type": "string",
       "enum": [
         "UNKNOWN",
-        "PARSING",
         "READY",
         "FAILED",
         "DELETED"
       ],
-      "default": "UNKNOWN"
+      "default": "UNKNOWN",
+      "title": "- READY: PARSING = 1; // During validation/parsing"
     },
     "apiserverHealth": {
       "type": "object",

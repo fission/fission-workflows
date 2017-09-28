@@ -1,0 +1,11 @@
+apiVersion: 1
+output: WhaleIt
+tasks:
+  GenerateFortune:
+    run: fortune
+
+  WhaleIt:
+    run: echowhale
+    inputs: "{task('GenerateFortune').Output}"
+    requires:
+    - GenerateFortune

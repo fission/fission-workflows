@@ -59,12 +59,18 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	mainInput, ok := spec.Inputs[types.INPUT_MAIN]
 	if ok {
 		input = mainInput.Value
+	} else {
+		mainInput, ok := spec.Inputs["body"]
+		if ok {
+			input = mainInput.Value
+		}
 	}
+
 	r := bytes.NewReader(input)
 	logrus.Infof("[request][body]: %v", string(input))
 	// TODO map other parameters as well (to params)
 
-	req, err := http.NewRequest("POST", url, r)
+	req, err := http.NewRequest(http.MethodPost, url, r)
 	if err != nil {
 		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}

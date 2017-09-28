@@ -5,22 +5,27 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
-// Events all belong to the same invocation ID, but have different sequence numbers. EventID: <InvocationID>#<sequenceID>
+const (
+	INVOKE_SYNC_TIMEOUT = time.Duration(60) * time.Second
+)
+
 type grpcInvocationApiServer struct {
-	api *invocation.Api
+	api      *invocation.Api
+	wfiCache fes.CacheReader
 }
 
-func NewGrpcInvocationApiServer(api *invocation.Api) WorkflowInvocationAPIServer {
-	return &grpcInvocationApiServer{api}
+func NewGrpcInvocationApiServer(api *invocation.Api, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
+	return &grpcInvocationApiServer{api, wfiCache}
 }
 
-// TODO simplify inputs by allowing inputs without type (string vs. { type, value })
 func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
 	eventId, err := gi.api.Invoke(spec)
 	if err != nil {
@@ -33,26 +38,28 @@ func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.Workf
 func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
 	eventId, err := gi.api.Invoke(spec)
 	if err != nil {
+		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
 	}
 
-	timeout := time.After(time.Duration(60) * time.Second)
+	timeout, _ := context.WithTimeout(ctx, INVOKE_SYNC_TIMEOUT)
 	var result *types.WorkflowInvocation
 	for {
-		wi, err := gi.api.Get(eventId)
+		wi := aggregates.NewWorkflowInvocation(eventId, &types.WorkflowInvocation{})
+		err := gi.wfiCache.Get(wi)
 		if err != nil {
-			logrus.Warn(err)
+			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
 		}
 		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Status.Finished() {
-			result = wi
+			result = wi.WorkflowInvocation
 			break
 		}
 
 		select {
-		case <-timeout:
+		case <-timeout.Done():
 			return nil, errors.New("timeout occurred")
 		default:
-			// TODO temporary shortcut; needs optimizing.
+			// TODO polling is a temporary shortcut; needs optimizing.
 			time.Sleep(time.Duration(1) * time.Second)
 		}
 	}
@@ -70,13 +77,23 @@ func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *Wor
 }
 
 func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
-	return gi.api.Get(invocationId.GetId())
+	wi := aggregates.NewWorkflowInvocation(invocationId.GetId(), &types.WorkflowInvocation{})
+	err := gi.wfiCache.Get(wi)
+	if err != nil {
+		return nil, err
+	}
+	return wi.WorkflowInvocation, nil
 }
 
 func (gi *grpcInvocationApiServer) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
-	invocations, err := gi.api.List("*")
-	if err != nil {
-		return nil, err
+	invocations := []string{}
+	as := gi.wfiCache.List()
+	for _, a := range as {
+		if a.Type != aggregates.TYPE_WORKFLOW_INVOCATION {
+			return nil, errors.New("invalid type in invocation cache")
+		}
+
+		invocations = append(invocations, a.Id)
 	}
 	return &WorkflowInvocationList{invocations}, nil
 }

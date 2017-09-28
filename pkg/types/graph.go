@@ -37,7 +37,6 @@ func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 				mapping[depId] = id
 			}
 		}
-		// TODO Amend static task if it exists instead of overriding it completely.
 	}
 
 	// Reroute dependencies to also depend on the outputted task of dynamic tasks.
@@ -54,4 +53,16 @@ type TaskStatus struct {
 	*Task
 	// Invocation is nil if not yet invoked
 	Invocation *TaskInvocation
+}
+
+// Tasks gets both static as well as dynamic tasks of a workflow invocation.
+func Tasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
+	tasks := map[string]*Task{}
+	for id, task := range wf.Spec.Tasks {
+		tasks[id] = task
+	}
+	for id, task := range wfi.Status.DynamicTasks {
+		tasks[id] = task
+	}
+	return tasks
 }

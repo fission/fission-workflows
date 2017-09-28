@@ -5,8 +5,6 @@ import (
 
 	"fmt"
 
-	"strconv"
-
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
@@ -28,12 +26,14 @@ func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 		}
 
 		switch t := i.(type) {
-		case string: // TODO support ints at some point
-			ms, err := strconv.Atoi(t)
+		case string:
+			d, err := time.ParseDuration(t)
 			if err != nil {
 				return nil, err
 			}
-			duration = time.Duration(ms) * time.Millisecond
+			duration = d
+		case float64:
+			duration = time.Duration(t) * time.Millisecond
 		default:
 			return nil, fmt.Errorf("invalid input '%v'", input.Type)
 		}

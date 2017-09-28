@@ -63,6 +63,7 @@ func TestWorkflowCreate(t *testing.T) {
 	assert.NotNil(t, wfId)
 	assert.NotEmpty(t, wfId.GetId())
 
+	time.Sleep(time.Duration(10) * time.Second)
 	// Test workflow list
 	l, err := cl.List(ctx, &empty.Empty{})
 	assert.NoError(t, err)
@@ -233,7 +234,8 @@ func setup(ctx context.Context) {
 	go Run(ctx, &Options{
 		// No fission for now
 		InternalRuntime:       true,
-		Controller:            true,
+		InvocationController:  true,
+		WorkflowController:    true,
 		ApiHttp:               true,
 		ApiWorkflowInvocation: true,
 		ApiWorkflow:           true,
