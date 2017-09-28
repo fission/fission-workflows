@@ -1,45 +1,40 @@
 # Installation
 
-## Setting up Fission (temporary)
-As of the moment of writing, the prototype of the Fission Workflows engine has been implemented in Fission using a couple of shortcuts.
-In the coming weeks, Fission Workflows will be implemented to fully conform to the Fission Environment API, removing the need for any special modifications to Fission.
+This document covers the installation of fission workflows.
 
-To deploy the augmented version of fission, either pull the image:
-```bash
-docker pull erwinvaneyk/fission-workflows
+### Prerequisites
+Fission Workflows requires the following to be installed on the host machine:
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- [helm](https://github.com/kubernetes/helm)
+- [minikube](https://github.com/kubernetes/minikube) (in case of local deployments)
 
-# To install, update fission.yaml to point to the augmented image: "erwinvaneyk/fission-bundle"
-$EDITOR fission.yaml
-```
+Additionally, Fission Workflows requires a [Fission](https://github.com/fission/fission-workflows) deployment.
+If you do not have a deployment yet, follow [Fission's install guide](http://fission.io/docs/v0.2.1/install/) or follow the instructions below.
 
-Or, manually build:
-```bash
-# clone or add a remote to git@github.com:erwinvaneyk/fission.git
-git clone git@github.com:erwinvaneyk/fission.git
+Note that Fission Workflows requires Fission 0.3.0 or higher.
 
-# Switch to the branch that contains the Fission Workflows integration
-git checkout <remote> fission-workflows-integration
-
-# Follow the [guide on compiling Fission](https://github.com/fission/fission/blob/master/Compiling.md)
-
-# Compile and push the fission-bundle to the local Docker repo
-(cd fission-bundle/ && bash ./push.sh)
-```
-
-After either pulling the custom image or building it yourself, deploy the bundle as specified in [Fission's install guide](http://fission.io/docs/v0.2.1/install/).
-
-
-## Installing Fission Workflow
+### Installing Fission Workflow
 Fission Workflows is just another Fission environment.
 The environment requires only a single additional property `allowedFunctionsPerContainer` to be set to infinite, to ensure that workflows do not require a workflow environment each.
 To deploy the environment run install the helm chart:
 ```bash
-# Create Helm package
-helm package charts/fission-workflows
-mv ./fission-workflows-* fission-workflows.tgz
- 
+
+# If you haven't add the Fission repo
+helm repo add fission-charts https://fission.github.io/fission-charts/
+helm repo update
+
+# Optional: Install Fission
+helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --version 0.3.0-rc
+
 # Install Helm package
-helm install -n fission-workflow ./fission-workflows.tgz
+helm install fission-charts/fission-workflows
 ```
 
-You're good to go! Check out the [examples](./examples/).
+### Experimental: Automated Installation
+There is a deploy script that will manage setting up the deployment as long as the prerequisites are present on the host.
+It uses minikube to create the cluster.
+```bash
+curl -Ls https://raw.githubusercontent.com/fission/fission-workflows/master/hack/deploy.sh | bash
+```
+
+You're good to go! Check out the [examples](./examples/). 

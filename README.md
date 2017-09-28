@@ -39,22 +39,19 @@ In this graph there is a single _starting task_ A, a _scatter task_ B triggering
 Finally the graph concludes once _final task_ F has been completed.
 Although workflow engines, such as Fission Workflow, have various additional functionality, such as conditional branches, advanced data/control flow options, exception handling, all these workflow engines fundamentally consist of a dependency graph.
 
-```javascript
-{
-  "apiVersion": "alpha",
-  "outputTask": "echo",
-  "tasks" : {
-    "echo" : {
-      "name" : "noop",
-      "inputs" : {
-        "default" : {
-          "type" : "ref",
-          "value" : "$.invocation.inputs.default"
-        }
-      }
-    }
-  }
-}
+```yaml
+apiVersion: 1
+output: WhaleWithFortune
+tasks:
+  GenerateFortune:
+    run: fortune
+    inputs: "{$.Invocation.Inputs.default}"
+
+  WhaleWithFortune:
+    run: whalesay
+    inputs: "{$.Tasks.GenerateFortune.Output}"
+    requires:
+    - GenerateFortune
 ```
 **Task** (also called a function here) is an atomic task, the 'building block' of a workflows. 
 Currently there are two options of executing tasks. 
@@ -73,22 +70,22 @@ See the [docs](./Docs) for a more extensive, in-depth overview of the system.
 
 ### Usage
 ```bash
-# Setup functions
-$ fission env create --name nodejs --image fission/node-env
-$ fission fn create --name oauthenticator --env nodejs --code scraper/oauthenticator.js
-$ fission fn create --name scrape --env nodejs --code scraper/scrape.js
-$ fission fn create --name extractLinks --env nodejs --code scraper/extractLinks.js
+# Deploy functions
+fission env create --name binary --image fission/binary-env:v0.2.1
+fission fn create --name whalesay --env binary --code examples/whales/whalesay.sh
+fission fn create --name fortune --env binary --code examples/whales/fortune.sh
 
-# Setup workflow
-$ fission fn create --name scrapeForLinks --env workflow --code scraper/scrapeLinks.wf.json
+# Deploy workflows
+fission fn create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
 
-# Map POST /hello to your new function
-$ fission route create --method POST --url /scrapeLinks --function scrapeForLink
 
-$ curl -XPOST -d 'http://authenticationneeded.com' $FISSION_ROUTER/scrapeLinks
-```
-Currently, this example is solely explanatory and not functional. 
-See [examples](./examples) for actual functional workflow examples.
+# Map GET /hello to your new function
+$ fission route create --method GET --url /fortunewhale --function fortunewhale
+
+# Invoke the workflow just like a fission function
+curl -X GET $FISSION_ROUTER/fortunewhale
+``` 
+See [examples](./examples) for other workflow examples.
 
 ### Installation
 See the [installation guide](./INSTALL.md).
