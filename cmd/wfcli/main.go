@@ -23,6 +23,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/urfave/cli"
+	"sort"
 )
 
 // This is a prototype of the CLI (and will be integrated into the Fission CLI eventually).
@@ -69,48 +70,51 @@ func main() {
 			Description: "Parse YAML definitions to the executable JSON format",
 			Action: func(c *cli.Context) error {
 
-				if len(os.Args) == 0 {
+				if c.NArg() == 0 {
 					panic("Need a path to a .yaml")
 				}
 
-				fnName := strings.TrimSpace(os.Args[1])
-				fmt.Printf("Formatting: '%s'\n", fnName)
+				for _, path := range c.Args() {
 
-				if !strings.HasSuffix(fnName, "yaml") {
-					panic("Only YAML workflow definitions are supported")
+					fnName := strings.TrimSpace(path)
+					fmt.Printf("Formatting: '%s'\n", fnName)
+
+					if !strings.HasSuffix(fnName, "yaml") {
+						panic("Only YAML workflow definitions are supported")
+					}
+
+					f, err := os.Open(fnName)
+					if err != nil {
+						panic(err)
+					}
+
+					wfDef, err := yaml.Parse(f)
+					if err != nil {
+						panic(err)
+					}
+
+					wfSpec, err := yaml.Transform(wfDef)
+					if err != nil {
+						panic(err)
+					}
+
+					marshal := jsonpb.Marshaler{
+						Indent: "  ",
+					}
+					jsonWf, err := marshal.MarshalToString(wfSpec)
+					if err != nil {
+						panic(err)
+					}
+
+					outputFile := strings.Replace(fnName, "yaml", "json", -1)
+
+					err = ioutil.WriteFile(outputFile, []byte(jsonWf), 0644)
+					if err != nil {
+						panic(err)
+					}
+
+					println(outputFile)
 				}
-
-				f, err := os.Open(fnName)
-				if err != nil {
-					panic(err)
-				}
-
-				wfDef, err := yaml.Parse(f)
-				if err != nil {
-					panic(err)
-				}
-
-				wfSpec, err := yaml.Transform(wfDef)
-				if err != nil {
-					panic(err)
-				}
-
-				marshal := jsonpb.Marshaler{
-					Indent: "  ",
-				}
-				jsonWf, err := marshal.MarshalToString(wfSpec)
-				if err != nil {
-					panic(err)
-				}
-
-				outputFile := strings.Replace(fnName, "yaml", "json", -1)
-
-				err = ioutil.WriteFile(outputFile, []byte(jsonWf), 0644)
-				if err != nil {
-					panic(err)
-				}
-
-				println(outputFile)
 				return nil
 			},
 		},
@@ -133,8 +137,10 @@ func main() {
 							if err != nil {
 								panic(err)
 							}
+							wfs := resp.Payload.Workflows
+							sort.Strings(wfs)
 							rows := [][]string{}
-							for _, wfId := range resp.Payload.Workflows {
+							for _, wfId := range wfs {
 								resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
 								if err != nil {
 									panic(err)
@@ -208,6 +214,7 @@ func main() {
 								panic(err)
 							}
 							wis := resp.Payload
+							sort.Strings(wis.Invocations)
 							rows := [][]string{}
 							for _, wfiId := range wis.Invocations {
 								resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
@@ -312,8 +319,14 @@ func main() {
 	app.Run(os.Args)
 }
 func collectStatus(tasks map[string]models.Task, taskStatus map[string]models.TaskInvocation, rows [][]string) [][]string {
+	ids := []string{}
 	for id := range tasks {
-		status := types.TaskInvocationStatus_UNKNOWN.String()
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	for _, id := range ids {
+		status := types.TaskInvocationStatus_SCHEDULED.String()
 		updated := ""
 		started := ""
 
