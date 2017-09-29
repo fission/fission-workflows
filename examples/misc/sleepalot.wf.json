@@ -1,0 +1,134 @@
+{
+  "tasks": {
+    "A": {
+      "id": "A",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjEwcyI="
+        }
+      },
+      "requires": {
+      }
+    },
+    "B": {
+      "id": "B",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjVzIg=="
+        }
+      },
+      "requires": {
+        "A": {
+
+        }
+      },
+      "await": 1
+    },
+    "C": {
+      "id": "C",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjVzIg=="
+        }
+      },
+      "requires": {
+        "B": {
+
+        }
+      },
+      "await": 1
+    },
+    "D1": {
+      "id": "D1",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjVzIg=="
+        }
+      },
+      "requires": {
+        "C": {
+
+        }
+      },
+      "await": 1
+    },
+    "D2": {
+      "id": "D2",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjEwcyI="
+        }
+      },
+      "requires": {
+        "C": {
+
+        }
+      },
+      "await": 1
+    },
+    "D3": {
+      "id": "D3",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjIwcyI="
+        }
+      },
+      "requires": {
+        "C": {
+
+        }
+      },
+      "await": 1
+    },
+    "E": {
+      "id": "E",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjVzIg=="
+        }
+      },
+      "requires": {
+        "D1": {
+
+        },
+        "D2": {
+
+        },
+        "D3": {
+
+        }
+      },
+      "await": 3
+    },
+    "F": {
+      "id": "F",
+      "functionRef": "sleep",
+      "inputs": {
+        "default": {
+          "type": "json/string",
+          "value": "IjVzIg=="
+        }
+      },
+      "requires": {
+        "E": {
+
+        }
+      },
+      "await": 1
+    }
+  }
+}

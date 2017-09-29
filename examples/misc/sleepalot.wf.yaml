@@ -1,0 +1,46 @@
+#
+# The purpose of this workflow is to show task dependencies in action
+#
+apiVersion: 1
+# No output expected, so no need to add 'output'
+tasks:
+  A:
+    run: sleep
+    inputs: 10s
+  B:
+    run: sleep
+    inputs: 5s
+    requires:
+    - A
+  C:
+    run: sleep
+    inputs: 5s
+    requires:
+    - B
+  D1:
+    run: sleep
+    inputs: 5s
+    requires:
+    - C
+  D2:
+    run: sleep
+    inputs: 10s
+    requires:
+    - C
+  D3:
+    run: sleep
+    inputs: 20s
+    requires:
+    - C
+  E:
+    run: sleep
+    inputs: 5s
+    requires:
+    - D1
+    - D2
+    - D3
+  F:
+    run: sleep
+    inputs: 5s
+    requires:
+    - E
