@@ -6,6 +6,7 @@ go_library(
         "compose.go",
         "if.go",
         "noop.go",
+        "scope.go",
         "sleep.go",
         "util.go",
     ],
