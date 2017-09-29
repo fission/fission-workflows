@@ -119,6 +119,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	var resp []byte
 	if invocation.Status.Output != nil {
 		resp = invocation.Status.Output.Value
+		w.Header().Add("Content-Type", ToContentType(invocation.Status.Output))
 	} else {
 		logrus.Infof("Invocation '%v' has no output.", fnId)
 	}

@@ -92,6 +92,10 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
 
+		if wi.Status == nil {
+			wi.Status = &types.WorkflowInvocationStatus{}
+		}
+
 		wi.Status.Status = types.WorkflowInvocationStatus_SUCCEEDED
 		wi.Status.Output = status.Output
 		wi.Status.UpdatedAt = event.GetTimestamp()

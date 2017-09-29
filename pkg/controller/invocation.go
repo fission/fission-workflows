@@ -24,6 +24,7 @@ import (
 const (
 	NOTIFICATION_BUFFER = 100
 	INVOCATION_TIMEOUT  = time.Duration(10) * time.Minute
+	MAX_ERROR_COUNT     = 3
 )
 
 type InvocationController struct {
@@ -63,7 +64,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 
 		// States maintains an active cache of currently running invocations, with execution related data.
 		// This state information is considered preemptable and can be removed or lost at any time.
-		states:        map[string]ControlState{},
+		states: map[string]ControlState{},
 	}
 }
 
@@ -85,7 +86,7 @@ func (cr *InvocationController) Init() error {
 			for {
 				select {
 				case notification := <-cr.sub.Ch:
-					logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
+					logrus.WithField("labels", notification.Labels()).Debug("Handling invocation notification.")
 					switch n := notification.(type) {
 					case *fes.Notification:
 						cr.HandleNotification(n)
@@ -195,7 +196,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 
 	// Check if the graph has been failing too often
-	if state.errorCount > 5 {
+	if state.errorCount > MAX_ERROR_COUNT {
 		logrus.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
 		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
 		if err != nil {
@@ -394,7 +395,6 @@ func (a *invokeTaskAction) Apply() error {
 		Inputs: inputs,
 	}
 
-	// TODO concurrent invocations
 	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{

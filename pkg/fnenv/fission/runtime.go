@@ -81,7 +81,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		panic(err)
 	}
 
-	reqContentType := fe.ct.ToContentType(mainInput)
+	reqContentType := ToContentType(mainInput)
 	logrus.Infof("[request][Content-Type]: %v", reqContentType)
 	req.Header.Set("Content-Type", reqContentType)
 
@@ -91,7 +91,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 
 	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
-	output := fe.ct.ToTypedValue(resp)
+	output := ToTypedValue(resp)
 	logrus.Infof("[%s][output]: %v", meta.Name, output)
 
 	return &types.TaskInvocationStatus{
@@ -108,7 +108,7 @@ var formatMapping = map[string]string{
 	typedvalues.FORMAT_JSON: "application/json",
 }
 
-func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
+func ToContentType(val *types.TypedValue) string {
 	contentType := "text/plain"
 	if val == nil {
 		return contentType
@@ -121,7 +121,7 @@ func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
 	return contentType
 }
 
-func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue {
+func ToTypedValue(resp *http.Response) *types.TypedValue {
 	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -138,7 +138,7 @@ func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue
 		}
 	}
 
-	tv, err := ct.parserFormatter.Parse(i)
+	tv, err := typedvalues.Parse(i)
 	if err != nil {
 		panic(err)
 	}
