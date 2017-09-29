@@ -5,14 +5,17 @@ go_library(
     srcs = ["main.go"],
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/apiserver:go_default_library",
+        "//cmd/wfcli/swagger-client/client/admin_api:go_default_library",
+        "//cmd/wfcli/swagger-client/client/workflow_api:go_default_library",
+        "//cmd/wfcli/swagger-client/client/workflow_invocation_api:go_default_library",
+        "//cmd/wfcli/swagger-client/models:go_default_library",
+        "//pkg/api/workflow/parse/yaml:go_default_library",
         "//pkg/types:go_default_library",
         "//pkg/version:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
-        "//vendor/github.com/golang/protobuf/ptypes/empty:go_default_library",
+        "//vendor/github.com/go-openapi/runtime/client:go_default_library",
+        "//vendor/github.com/go-openapi/strfmt:go_default_library",
+        "//vendor/github.com/golang/protobuf/jsonpb:go_default_library",
         "//vendor/github.com/urfave/cli:go_default_library",
-        "//vendor/google.golang.org/grpc:go_default_library",
-        "//vendor/gopkg.in/yaml.v2:go_default_library",
     ],
 )
 

@@ -4,62 +4,113 @@ import (
 	"fmt"
 	"os"
 
-	"context"
 	"io"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/fission/fission-workflows/pkg/apiserver"
+	"io/ioutil"
+
+	"net/url"
+
+	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/admin_api"
+	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/workflow_api"
+	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/workflow_invocation_api"
+	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/models"
+	"github.com/fission/fission-workflows/pkg/api/workflow/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/version"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/urfave/cli"
-	"google.golang.org/grpc"
-	"gopkg.in/yaml.v2"
 )
 
-// This is a prototype of the CLI (standalone or integrated into Fission).
+// This is a prototype of the CLI (and will be integrated into the Fission CLI eventually).
 func main() {
 	app := cli.NewApp()
+	app.Version = version.VERSION
+	app.Author = "Erwin van Eyk"
+	app.Email = "erwin@platform9.com"
+	app.EnableBashCompletion = true
+	app.Usage = "Fission Workflows CLI"
+	app.Description = "CLI for Fission Workflows"
 	app.Flags = []cli.Flag{
-		// TODO use Fission controller instead (contains a proxy to workflow apiserver)
 		cli.StringFlag{
 			Name:   "url, u",
 			Value:  "192.168.99.100:31319",
-			EnvVar: "FISSION_WORKFLOW_APISERVER_URL",
-			Usage:  "Url to workflow engine gRPC API",
+			EnvVar: "FISSION_URL",
+			Usage:  "Url to the Fission apiserver",
 		},
 	}
 	app.Commands = []cli.Command{
-		{
-			Name:    "version",
-			Aliases: []string{"v"},
-			Usage:   "Version of this workflow CLI",
-			Action: func(c *cli.Context) error {
-				fmt.Printf("%s", version.VERSION)
-				return nil
-			},
-		},
 		{
 			Name:    "status",
 			Aliases: []string{"s"},
 			Usage:   "Check cluster",
 			Action: func(c *cli.Context) error {
-				ctx := context.Background()
-				url := c.GlobalString("url")
-				fmt.Printf("Using url: '%s'\n", url)
-				conn, err := grpc.Dial(url, grpc.WithInsecure())
-				if err != nil {
-					panic(err)
-				}
-				adminApi := apiserver.NewAdminAPIClient(conn)
-				resp, err := adminApi.Status(ctx, &empty.Empty{})
-				if err != nil {
-					panic(err)
-				}
-				fmt.Printf(resp.Status)
+				u := parseUrl(c.GlobalString("url"))
+				client := createTransportClient(u)
+				adminApi := admin_api.New(client, strfmt.Default)
 
+				resp, err := adminApi.Status(admin_api.NewStatusParams())
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf(resp.Payload.Status)
+
+				return nil
+			},
+		},
+
+		{
+			Name:        "parse",
+			Aliases:     []string{"p"},
+			Usage:       "parse <path-to-yaml> ",
+			Description: "Parse YAML definitions to the executable JSON format",
+			Action: func(c *cli.Context) error {
+
+				if len(os.Args) == 0 {
+					panic("Need a path to a .yaml")
+				}
+
+				fnName := strings.TrimSpace(os.Args[1])
+				fmt.Printf("Formatting: '%s'\n", fnName)
+
+				if !strings.HasSuffix(fnName, "yaml") {
+					panic("Only YAML workflow definitions are supported")
+				}
+
+				f, err := os.Open(fnName)
+				if err != nil {
+					panic(err)
+				}
+
+				wfDef, err := yaml.Parse(f)
+				if err != nil {
+					panic(err)
+				}
+
+				wfSpec, err := yaml.Transform(wfDef)
+				if err != nil {
+					panic(err)
+				}
+
+				marshal := jsonpb.Marshaler{
+					Indent: "  ",
+				}
+				jsonWf, err := marshal.MarshalToString(wfSpec)
+				if err != nil {
+					panic(err)
+				}
+
+				outputFile := strings.Replace(fnName, "yaml", "json", -1)
+
+				err = ioutil.WriteFile(outputFile, []byte(jsonWf), 0644)
+				if err != nil {
+					panic(err)
+				}
+
+				println(outputFile)
 				return nil
 			},
 		},
@@ -72,41 +123,39 @@ func main() {
 					Name:  "get",
 					Usage: "get <workflow-id> <task-id>",
 					Action: func(c *cli.Context) error {
-						ctx := context.Background()
-						conn, err := grpc.Dial(c.GlobalString("url"), grpc.WithInsecure())
-						if err != nil {
-							panic(err)
-						}
-						wfApi := apiserver.NewWorkflowAPIClient(conn)
+						u := parseUrl(c.GlobalString("url"))
+						client := createTransportClient(u)
+						wfApi := workflow_api.New(client, strfmt.Default)
 						switch c.NArg() {
 						case 0:
 							// List workflows
-							resp, err := wfApi.List(ctx, &empty.Empty{})
+							resp, err := wfApi.List0(workflow_api.NewList0Params())
 							if err != nil {
 								panic(err)
 							}
 							rows := [][]string{}
-							for _, wfId := range resp.Workflows {
-								wf, err := wfApi.Get(ctx, &apiserver.WorkflowIdentifier{wfId})
+							for _, wfId := range resp.Payload.Workflows {
+								resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
 								if err != nil {
 									panic(err)
 								}
-								updated, _ := ptypes.Timestamp(wf.Status.UpdatedAt)
-								created, _ := ptypes.Timestamp(wf.Metadata.CreatedAt)
+								wf := resp.Payload
+								updated := wf.Status.UpdatedAt.String()
+								created := wf.Metadata.CreatedAt.String()
 
-								rows = append(rows, []string{wfId, wf.Spec.Name, wf.Status.Status.String(),
-									created.String(), updated.String()})
+								rows = append(rows, []string{wfId, wf.Spec.Name, string(wf.Status.Status),
+									created, updated})
 							}
 							table(os.Stdout, []string{"ID", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
 						case 1:
 							// Get Workflow
 							wfId := c.Args().Get(0)
 							println(wfId)
-							wf, err := wfApi.Get(ctx, &apiserver.WorkflowIdentifier{wfId})
+							resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
 							if err != nil {
 								panic(err)
 							}
-							b, err := yaml.Marshal(wf)
+							b, err := yaml.Marshal(resp.Payload)
 							if err != nil {
 								panic(err)
 							}
@@ -117,10 +166,11 @@ func main() {
 						default:
 							wfId := c.Args().Get(0)
 							taskId := c.Args().Get(1)
-							wf, err := wfApi.Get(ctx, &apiserver.WorkflowIdentifier{wfId})
+							resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
 							if err != nil {
 								panic(err)
 							}
+							wf := resp.Payload
 							task, ok := wf.Spec.Tasks[taskId]
 							if !ok {
 								fmt.Println("Task not found.")
@@ -147,39 +197,39 @@ func main() {
 					Name:  "get",
 					Usage: "get <workflow-invocation-id> <task-invocation-id>",
 					Action: func(c *cli.Context) error {
-						ctx := context.Background()
-						conn, err := grpc.Dial(c.GlobalString("url"), grpc.WithInsecure())
-						if err != nil {
-							panic(err)
-						}
-						wfiApi := apiserver.NewWorkflowInvocationAPIClient(conn)
+						u := parseUrl(c.GlobalString("url"))
+						client := createTransportClient(u)
+						wfiApi := workflow_invocation_api.New(client, strfmt.Default)
 						switch c.NArg() {
 						case 0:
 							// List workflows invocations
-							wis, err := wfiApi.List(ctx, &empty.Empty{})
+							resp, err := wfiApi.List(workflow_invocation_api.NewListParams())
 							if err != nil {
 								panic(err)
 							}
+							wis := resp.Payload
 							rows := [][]string{}
-							for _, wiId := range wis.Invocations {
-								wi, err := wfiApi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{wiId})
+							for _, wfiId := range wis.Invocations {
+								resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
 								if err != nil {
 									panic(err)
 								}
-								updated, _ := ptypes.Timestamp(wi.Status.UpdatedAt)
-								created, _ := ptypes.Timestamp(wi.Metadata.CreatedAt)
+								wi := resp.Payload
+								updated := wi.Status.UpdatedAt.String()
+								created := wi.Metadata.CreatedAt.String()
 
-								rows = append(rows, []string{wiId, wi.Spec.WorkflowId, wi.Status.Status.String(),
-									created.String(), updated.String()})
+								rows = append(rows, []string{wfiId, wi.Spec.WorkflowID, string(wi.Status.Status),
+									created, updated})
 							}
 							table(os.Stdout, []string{"ID", "WORKFLOW", "STATUS", "CREATED", "UPDATED"}, rows)
 						case 1:
 							// Get Workflow invocation
 							wfiId := c.Args().Get(0)
-							wfi, err := wfiApi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{wfiId})
+							resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
 							if err != nil {
 								panic(err)
 							}
+							wfi := resp.Payload
 							b, err := yaml.Marshal(wfi)
 							if err != nil {
 								panic(err)
@@ -190,10 +240,11 @@ func main() {
 						default:
 							wfiId := c.Args().Get(0)
 							taskId := c.Args().Get(1)
-							wfi, err := wfiApi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{wfiId})
+							resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
 							if err != nil {
 								panic(err)
 							}
+							wfi := resp.Payload
 							ti, ok := wfi.Status.Tasks[taskId]
 							if !ok {
 								fmt.Println("Task invocation not found.")
@@ -218,32 +269,31 @@ func main() {
 							return nil
 						}
 						wfiId := c.Args().Get(0)
-						ctx := context.Background()
-						conn, err := grpc.Dial(c.GlobalString("url"), grpc.WithInsecure())
+						u := parseUrl(c.GlobalString("url"))
+						client := createTransportClient(u)
+						wfApi := workflow_api.New(client, strfmt.Default)
+						wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+
+						wfiResp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
 						if err != nil {
 							panic(err)
 						}
-						wfiApi := apiserver.NewWorkflowInvocationAPIClient(conn)
-						wfApi := apiserver.NewWorkflowAPIClient(conn)
+						wfi := wfiResp.Payload
 
-						wfi, err := wfiApi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{wfiId})
+						wfResp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfi.Spec.WorkflowID))
 						if err != nil {
 							panic(err)
 						}
+						wf := wfResp.Payload
 
-						wf, err := wfApi.Get(ctx, &apiserver.WorkflowIdentifier{wfi.Spec.WorkflowId})
-						if err != nil {
-							panic(err)
-						}
-
-						wfiUpdated, _ := ptypes.Timestamp(wfi.Status.UpdatedAt)
-						wfiCreated, _ := ptypes.Timestamp(wfi.Metadata.CreatedAt)
+						wfiUpdated := wfi.Status.UpdatedAt.String()
+						wfiCreated := wfi.Metadata.CreatedAt.String()
 						table(os.Stdout, nil, [][]string{
-							{"ID", wfi.Metadata.Id},
-							{"WORKFLOW_ID", wfi.Spec.WorkflowId},
-							{"CREATED", wfiCreated.String()},
-							{"UPDATED", wfiUpdated.String()},
-							{"STATUS", wfi.Status.Status.String()},
+							{"ID", wfi.Metadata.ID},
+							{"WORKFLOW_ID", wfi.Spec.WorkflowID},
+							{"CREATED", wfiCreated},
+							{"UPDATED", wfiUpdated},
+							{"STATUS", string(wfi.Status.Status)},
 						})
 						fmt.Println()
 
@@ -261,7 +311,7 @@ func main() {
 
 	app.Run(os.Args)
 }
-func collectStatus(tasks map[string]*types.Task, taskStatus map[string]*types.TaskInvocation, rows [][]string) [][]string {
+func collectStatus(tasks map[string]models.Task, taskStatus map[string]models.TaskInvocation, rows [][]string) [][]string {
 	for id := range tasks {
 		status := types.TaskInvocationStatus_UNKNOWN.String()
 		updated := ""
@@ -269,11 +319,9 @@ func collectStatus(tasks map[string]*types.Task, taskStatus map[string]*types.Ta
 
 		taskStatus, ok := taskStatus[id]
 		if ok {
-			status = taskStatus.Status.Status.String()
-			tca, _ := ptypes.Timestamp(taskStatus.Metadata.CreatedAt)
-			started = tca.String()
-			tua, _ := ptypes.Timestamp(taskStatus.Metadata.CreatedAt)
-			updated = tua.String()
+			status = string(taskStatus.Status.Status)
+			started = taskStatus.Metadata.CreatedAt.String()
+			updated = taskStatus.Metadata.CreatedAt.String()
 		}
 
 		rows = append(rows, []string{id, status, started, updated})
@@ -293,4 +341,21 @@ func table(writer io.Writer, headings []string, rows [][]string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
+	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
+}
+
+func fatal(msg interface{}) {
+	fmt.Fprintln(os.Stderr, msg)
+	os.Exit(1)
+}
+
+func parseUrl(rawUrl string) *url.URL {
+	u, err := url.Parse(rawUrl)
+	if err != nil {
+		fatal(fmt.Sprintf("Invalid url '%s': %v", rawUrl, err))
+	}
+	return u
 }
