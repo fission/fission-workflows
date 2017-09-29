@@ -2,17 +2,19 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: workflow-apiserver
+  name: workflows-apiserver
   namespace: fission
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        svc: workflow-apiserver
+        svc: workflows-apiserver
     spec:
       containers:
-      - name: workflow-apiserver
+      - name: workflows-apiserver
         image: {{ .Values.bundleImage }}
         imagePullPolicy: IfNotPresent
         command: ["/fission-workflows-bundle"]
@@ -34,6 +36,21 @@ spec:
           value: "{{ .Values.fnenv.fission.poolmgr }}"
         - name: FNENV_FISSION_CONTROLLER
           value: "{{ .Values.fnenv.fission.controller }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflows-apiserver
+  labels:
+    svc: workflows-apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    svc: workflows-apiserver
 ---
 {{ end }}
 apiVersion: fission.io/v1
