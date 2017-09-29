@@ -11,6 +11,14 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
 
+var DefaultBuiltinFunctions = map[string]native.InternalFunction{
+	"if":      &FunctionIf{},
+	"noop":    &FunctionNoop{},
+	"compose": &FunctionCompose{},
+	"sleep":   &FunctionSleep{},
+	"scope":   &FunctionScope{},
+}
+
 // Utils
 func verifyInput(inputs map[string]*types.TypedValue, key string, expType string) (*types.TypedValue, error) {
 
