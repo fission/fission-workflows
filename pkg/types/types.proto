@@ -7,8 +7,6 @@ import "google/protobuf/timestamp.proto";
 // Common
 message ObjectMetadata {
     string id = 1;
-    //    string namespace = 2;
-    //    string name = 3;
     google.protobuf.Timestamp createdAt = 3;
 }
 
@@ -94,8 +92,6 @@ message WorkflowSpec {
     string apiVersion = 1;
 
     // TODO Parameters
-    // Actions
-    //
     // Dependency graph is build into the tasks
     map<string, Task> tasks = 2; // key = taskId
 

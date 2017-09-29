@@ -59,7 +59,7 @@
     },
     "/invocation/sync": {
       "get": {
-        "operationId": "InvokeSync",
+        "operationId": "InvokeSync_0",
         "responses": {
           "200": {
             "description": "",
@@ -173,7 +173,7 @@
     },
     "/workflow": {
       "get": {
-        "operationId": "List",
+        "operationId": "List_0",
         "responses": {
           "200": {
             "description": "",
@@ -239,7 +239,7 @@
     },
     "/workflow/{id}": {
       "get": {
-        "operationId": "Get",
+        "operationId": "Get_0",
         "responses": {
           "200": {
             "description": "",
@@ -283,7 +283,6 @@
         "createdAt": {
           "type": "string",
           "format": "date-time",
-          "title": "string namespace = 2;\n   string name = 3;"
         }
       },
       "title": "Common"
@@ -637,7 +636,7 @@
     "protobufEmpty": {
       "type": "object",
       "description": "service Foo {\n      rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n    }\n\nThe JSON representation for `Empty` is empty JSON object `{}`.",
-      "title": "A generic empty message that you can re-use to avoid defining duplicated\nempty messages in your APIs. A typical example is to use it as the request\nor the response type of an API method. For instance:"
+      "title": ""
     }
   }
 }

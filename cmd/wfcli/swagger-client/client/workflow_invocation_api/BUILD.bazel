@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "cancel_parameters.go",
+        "cancel_responses.go",
+        "get_parameters.go",
+        "get_responses.go",
+        "invoke_parameters.go",
+        "invoke_responses.go",
+        "invoke_sync0_parameters.go",
+        "invoke_sync0_responses.go",
+        "invoke_sync_parameters.go",
+        "invoke_sync_responses.go",
+        "list_parameters.go",
+        "list_responses.go",
+        "workflow_invocation_api_client.go",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/wfcli/swagger-client/models:go_default_library",
+        "//vendor/github.com/go-openapi/errors:go_default_library",
+        "//vendor/github.com/go-openapi/runtime:go_default_library",
+        "//vendor/github.com/go-openapi/runtime/client:go_default_library",
+        "//vendor/github.com/go-openapi/strfmt:go_default_library",
+        "//vendor/golang.org/x/net/context:go_default_library",
+    ],
+)
