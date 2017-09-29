@@ -171,9 +171,7 @@ func (WorkflowStatus_Status) EnumDescriptor() ([]byte, []int) { return fileDescr
 
 // Common
 type ObjectMetadata struct {
-	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	//    string namespace = 2;
-	//    string name = 3;
+	Id        string                     `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	CreatedAt *google_protobuf.Timestamp `protobuf:"bytes,3,opt,name=createdAt" json:"createdAt,omitempty"`
 }
 
@@ -460,8 +458,6 @@ type WorkflowSpec struct {
 	// By default the workflow engine will assume the latest version to be used.
 	ApiVersion string `protobuf:"bytes,1,opt,name=apiVersion" json:"apiVersion,omitempty"`
 	// TODO Parameters
-	// Actions
-	//
 	// Dependency graph is build into the tasks
 	Tasks map[string]*Task `protobuf:"bytes,2,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// From which task should the workflow return the output? Future: multiple? Implicit?

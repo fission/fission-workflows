@@ -1,6 +1,8 @@
-hash: e080a001ab8b25e720985180f9b79e78a82c387730a5c5a7b8493189d644a887
-updated: 2017-09-27T16:53:38.02497576-07:00
+hash: 863a199251414af3e7e772b08ad8123799eb145fe9a039652e7777930bda8b1d
+updated: 2017-09-28T18:45:33.89626923-07:00
 imports:
+- name: github.com/asaskevich/govalidator
+  version: 6fcd5b427f532a5d13738b27415e00a49e36ceef
 - name: github.com/blang/semver
   version: 60ec3488bfea7cca02b021d106d9911120d25fe9
 - name: github.com/coreos/go-oidc
@@ -39,14 +41,28 @@ imports:
   - tpr
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+- name: github.com/go-openapi/analysis
+  version: 7222828b8ce19afee3c595aef6643b9e42150120
+- name: github.com/go-openapi/errors
+  version: 49fe8b3a0e0d32a617d8d50c67f856ad6e45b28b
 - name: github.com/go-openapi/jsonpointer
   version: 8d96a2dc61536b690bd36b2e9df0b3c0b62825b2
 - name: github.com/go-openapi/jsonreference
   version: 36d33bfe519efae5632669801b180bf1a245da3b
+- name: github.com/go-openapi/loads
+  version: 315567415dfd74b651f7a62cabfc82a57ed7b9ad
+- name: github.com/go-openapi/runtime
+  version: bf2ff8f7150788b1c7256abb0805ba0410cbbabb
+  subpackages:
+  - client
 - name: github.com/go-openapi/spec
   version: d1c18b339aece4b16ead6d253b85b6ad7180ea54
+- name: github.com/go-openapi/strfmt
+  version: 610b6cacdcde6852f4de68998bd20ce1dac85b22
 - name: github.com/go-openapi/swag
   version: 3b6d86cd965820f968760d5d419cb4add096bdd7
+- name: github.com/go-openapi/validate
+  version: 2c997e169d705fe1e4235c9c1d62a7e704a84290
 - name: github.com/go-sourcemap/sourcemap
   version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b5
   subpackages:
@@ -100,6 +116,8 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/mitchellh/mapstructure
+  version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/nats-io/go-nats
   version: 29f9728a183bf3fa7e809e14edac00b33be72088
   subpackages:
@@ -147,6 +165,7 @@ imports:
   version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
   subpackages:
   - context
+  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
@@ -220,6 +239,11 @@ imports:
   - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/mgo.v2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
+  subpackages:
+  - bson
+  - internal/json
 - name: gopkg.in/sourcemap.v1
   version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b5
 - name: gopkg.in/yaml.v2

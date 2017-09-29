@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["pkg_apiserver_apiserver_proto_client.go"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/wfcli/swagger-client/client/admin_api:go_default_library",
+        "//cmd/wfcli/swagger-client/client/workflow_api:go_default_library",
+        "//cmd/wfcli/swagger-client/client/workflow_invocation_api:go_default_library",
+        "//vendor/github.com/go-openapi/runtime:go_default_library",
+        "//vendor/github.com/go-openapi/runtime/client:go_default_library",
+        "//vendor/github.com/go-openapi/strfmt:go_default_library",
+    ],
+)
