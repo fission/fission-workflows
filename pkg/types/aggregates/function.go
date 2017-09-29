@@ -55,7 +55,7 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 			Metadata: fn.Metadata,
 			Spec:     fn.Spec,
 			Status: &types.TaskInvocationStatus{
-				Status:    types.TaskInvocationStatus_SCHEDULED,
+				Status:    types.TaskInvocationStatus_IN_PROGRESS,
 				UpdatedAt: event.Timestamp,
 			},
 		}

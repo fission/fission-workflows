@@ -82,6 +82,23 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Temporary: in case of query header 'X-Async' being present, make request async
+	if len(r.Header.Get("X-Async")) > 0 {
+		invocatinId, err := fp.invocationServer.Invoke(ctx, &types.WorkflowInvocationSpec{
+			WorkflowId: fnId,
+			Inputs:     inputs,
+		})
+		if err != nil {
+			logrus.Errorf("Failed to invoke: %v", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.WriteHeader(200)
+		w.Write([]byte(invocatinId.Id))
+		return
+	}
+
+	// Otherwise, the request synchronous like other Fission functions
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
 		WorkflowId: fnId,
 		Inputs:     inputs,

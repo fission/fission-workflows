@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	INVOKE_SYNC_TIMEOUT = time.Duration(60) * time.Second
+	INVOKE_SYNC_TIMEOUT          = time.Duration(10) * time.Minute
+	INVOKE_SYNC_POLLING_INTERVAL = time.Duration(1) * time.Second
 )
 
 type grpcInvocationApiServer struct {
@@ -36,7 +37,7 @@ func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.Workf
 }
 
 func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	eventId, err := gi.api.Invoke(spec)
+	wfiId, err := gi.api.Invoke(spec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -45,7 +46,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 	timeout, _ := context.WithTimeout(ctx, INVOKE_SYNC_TIMEOUT)
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(eventId, &types.WorkflowInvocation{})
+		wi := aggregates.NewWorkflowInvocation(wfiId, &types.WorkflowInvocation{})
 		err := gi.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
@@ -57,10 +58,14 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 
 		select {
 		case <-timeout.Done():
+			err := gi.api.Cancel(wfiId)
+			if err != nil {
+				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
+			}
 			return nil, errors.New("timeout occurred")
 		default:
 			// TODO polling is a temporary shortcut; needs optimizing.
-			time.Sleep(time.Duration(1) * time.Second)
+			time.Sleep(INVOKE_SYNC_POLLING_INTERVAL)
 		}
 	}
 

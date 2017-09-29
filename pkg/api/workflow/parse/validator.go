@@ -68,10 +68,5 @@ func (vl *Validator) Validate(spec *types.WorkflowSpec) error {
 		return errors.New("Workflow does not contain any start tasks (tasks with no dependencies)")
 	}
 
-	// Check output task
-	if _, ok := spec.GetTasks()[spec.OutputTask]; !ok {
-		return fmt.Errorf("Invalid outputTask '%s'", spec.OutputTask)
-	}
-
 	return nil
 }

@@ -5,6 +5,8 @@ import (
 
 	"fmt"
 
+	"time"
+
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -13,7 +15,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
-	"github.com/fission/fission-workflows/pkg/util/backoff"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -22,6 +23,7 @@ import (
 
 const (
 	NOTIFICATION_BUFFER = 100
+	INVOCATION_TIMEOUT  = time.Duration(10) * time.Minute
 )
 
 type InvocationController struct {
@@ -33,8 +35,11 @@ type InvocationController struct {
 	sub           *pubsub.Subscription
 	exprParser    expr.Resolver
 	cancelFn      context.CancelFunc
-	workQueue     chan Action
-	wfiBackoff    backoff.Map // Specifies the time after which the wfi is allowed to be reevaluated again
+
+	workQueue chan Action
+
+	// Queued keeps track of which invocations still have actions in the workQueue
+	queued map[string]int
 	// TODO add active cache
 }
 
@@ -49,7 +54,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
 		workQueue:     make(chan Action, 50),
-		wfiBackoff:    backoff.NewMap(),
+		queued:        map[string]int{},
 	}
 }
 
@@ -91,10 +96,16 @@ func (cr *InvocationController) Init() error {
 		for {
 			select {
 			case action := <-cr.workQueue:
-				err := action.Apply()
-				if err != nil {
-					logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+				cr.queued[action.Id()] -= 1
+				if cr.queued[action.Id()] <= 0 {
+					delete(cr.queued, action.Id())
 				}
+				go func() { // TODO limit goroutine pool size
+					err := action.Apply()
+					if err != nil {
+						logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+					}
+				}()
 			case <-ctx.Done():
 				logrus.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
 				return
@@ -157,6 +168,29 @@ func (cr *InvocationController) HandleTick() {
 }
 
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
+	// Check if there are still open actions
+	if queue, ok := cr.queued[invoc.Metadata.Id]; ok {
+		if queue > 0 {
+			return
+		}
+	}
+
+	// Check if the workflow invocation is in the right state
+	if invoc.Status.Status.Finished() {
+		logrus.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
+		return
+	}
+
+	// For now: kill after 10 min
+	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(INVOCATION_TIMEOUT.Seconds()) {
+		logrus.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
+		err := cr.invocationApi.Cancel(invoc.Metadata.Id)
+		if err != nil {
+			logrus.Errorf("failed to cancel timed out invocation: %v", err)
+		}
+		return
+	}
+
 	// Fetch the workflow relevant to the invocation
 	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
 	err := cr.wfCache.Get(wf)
@@ -230,6 +264,11 @@ func (cr *InvocationController) submit(action Action) (submitted bool) {
 	select {
 	case cr.workQueue <- action:
 		// Ok
+		_, ok := cr.queued[action.Id()]
+		if !ok {
+			cr.queued[action.Id()] = 0
+		}
+		cr.queued[action.Id()] += 1
 		submitted = true
 	default:
 		// Action overflow
