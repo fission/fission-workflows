@@ -11,3 +11,4 @@ fission fn create --name fortune --env binary --code ./fortune.sh
 fission fn create --name fortunewhale --env workflow --code ./fortunewhale.wf.json
 fission fn create --name echowhale --env workflow --code ./echowhale.wf.json
 fission fn create --name maybewhale --env workflow --code ./maybewhale.wf.json
+fission fn create --name nestedwhale --env workflow --code ./nestedwhale.wf.json

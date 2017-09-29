@@ -6,6 +6,6 @@ tasks:
 
   WhaleIt:
     run: echowhale
-    inputs: "{task('GenerateFortune').Output}"
+    inputs: "{output('GenerateFortune')}"
     requires:
     - GenerateFortune
