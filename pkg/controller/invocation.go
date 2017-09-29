@@ -39,8 +39,14 @@ type InvocationController struct {
 	workQueue chan Action
 
 	// Queued keeps track of which invocations still have actions in the workQueue
-	queued map[string]int
+	states map[string]ControlState
 	// TODO add active cache
+}
+
+type ControlState struct {
+	errorCount  int
+	recentError error
+	inQueue     int
 }
 
 func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReader,
@@ -54,7 +60,10 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
 		workQueue:     make(chan Action, 50),
-		queued:        map[string]int{},
+
+		// States maintains an active cache of currently running invocations, with execution related data.
+		// This state information is considered preemptable and can be removed or lost at any time.
+		states:        map[string]ControlState{},
 	}
 }
 
@@ -96,16 +105,26 @@ func (cr *InvocationController) Init() error {
 		for {
 			select {
 			case action := <-cr.workQueue:
-				cr.queued[action.Id()] -= 1
-				if cr.queued[action.Id()] <= 0 {
-					delete(cr.queued, action.Id())
+				state := cr.states[action.Id()]
+
+				if state.inQueue > 0 {
+					state.inQueue -= 1
 				}
+				cr.states[action.Id()] = state
+
 				go func() { // TODO limit goroutine pool size
 					err := action.Apply()
+					state := cr.states[action.Id()]
 					if err != nil {
 						logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+						state.recentError = err
+						state.errorCount += 1
+					} else {
+						state.errorCount = 0
 					}
+					cr.states[action.Id()] = state
 				}()
+
 			case <-ctx.Done():
 				logrus.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
 				return
@@ -168,11 +187,21 @@ func (cr *InvocationController) HandleTick() {
 }
 
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
+	state := cr.states[invoc.Metadata.Id]
+
 	// Check if there are still open actions
-	if queue, ok := cr.queued[invoc.Metadata.Id]; ok {
-		if queue > 0 {
-			return
+	if state.inQueue > 0 {
+		return
+	}
+
+	// Check if the graph has been failing too often
+	if state.errorCount > 5 {
+		logrus.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
+		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
+		if err != nil {
+			logrus.Errorf("failed to cancel timed out invocation: %v", err)
 		}
+		return
 	}
 
 	// Check if the workflow invocation is in the right state
@@ -184,7 +213,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	// For now: kill after 10 min
 	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(INVOCATION_TIMEOUT.Seconds()) {
 		logrus.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
-		err := cr.invocationApi.Cancel(invoc.Metadata.Id)
+		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
 		if err != nil {
 			logrus.Errorf("failed to cancel timed out invocation: %v", err)
 		}
@@ -225,7 +254,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 			finalOutput = t.Status.Output
 		}
 
-		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput)
+		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput) // TODO just submit?
 		if err != nil {
 			logrus.Errorf("failed to mark invocation as complete: %v", err)
 			return
@@ -264,11 +293,9 @@ func (cr *InvocationController) submit(action Action) (submitted bool) {
 	select {
 	case cr.workQueue <- action:
 		// Ok
-		_, ok := cr.queued[action.Id()]
-		if !ok {
-			cr.queued[action.Id()] = 0
-		}
-		cr.queued[action.Id()] += 1
+		state := cr.states[action.Id()]
+		state.inQueue += 1
+		cr.states[action.Id()] = state
 		submitted = true
 	default:
 		// Action overflow
@@ -301,7 +328,7 @@ type abortAction struct {
 }
 
 func (a *abortAction) Id() string {
-	return a.invocationId
+	return a.invocationId // Invocation
 }
 
 func (a *abortAction) Apply() error {
@@ -319,7 +346,7 @@ type invokeTaskAction struct {
 }
 
 func (a *invokeTaskAction) Id() string {
-	return a.task.Id
+	return a.wfi.Metadata.Id // Invocation
 }
 
 func (a *invokeTaskAction) Apply() error {
@@ -349,7 +376,7 @@ func (a *invokeTaskAction) Apply() error {
 				"val":      val,
 				"inputKey": inputKey,
 			}).Errorf("Failed to parse input: %v", err)
-			return fmt.Errorf("failed to parse input '%v'", val)
+			return err
 		}
 
 		inputs[inputKey] = resolvedInput

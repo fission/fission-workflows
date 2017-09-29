@@ -5,8 +5,8 @@
 #
 
 # Configs
-FISSION_VERSION=0.3.0-rc
-FISSION_WORKFLOWS_VERSION=0.1.0
+FISSION_VERSION=0.3.0
+FISSION_WORKFLOWS_VERSION=0.1.1
 
 echo "Fission Workflows Deploy Script v1"
 
