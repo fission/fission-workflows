@@ -16,7 +16,7 @@ import (
 
 	"strings"
 
-	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
+	"github.com/fission/fission/router"
 	k8stypes "k8s.io/client-go/1.5/pkg/types"
 )
 
@@ -76,10 +76,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 	defer req.Body.Close()
 
-	err = router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
-	if err != nil {
-		panic(err)
-	}
+	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
 
 	reqContentType := ToContentType(mainInput)
 	logrus.Infof("[request][Content-Type]: %v", reqContentType)
@@ -87,12 +84,26 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(fmt.Errorf("error for url '%s': %v", serviceUrl, err))
+		return nil, fmt.Errorf("error for url '%s': %v", serviceUrl, err)
 	}
 
 	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
 	output := ToTypedValue(resp)
 	logrus.Infof("[%s][output]: %v", meta.Name, output)
+	logrus.Infof("[%s][status]: %v", meta.Name, resp.StatusCode)
+
+	// Determine status of the task invocation
+	if resp.StatusCode >= 400 {
+		msg, _ := typedvalues.Format(output)
+		logrus.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
+		return &types.TaskInvocationStatus{
+			Status: types.TaskInvocationStatus_FAILED,
+			Error: &types.Error{
+				Code:    fmt.Sprintf("%v", resp.StatusCode),
+				Message: fmt.Sprintf("%s", msg),
+			},
+		}, nil
+	}
 
 	return &types.TaskInvocationStatus{
 		Status: types.TaskInvocationStatus_SUCCEEDED,

@@ -29,7 +29,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 
 	cwf := types.CalculateTaskDependencyGraph(request.Workflow, request.Invocation)
 
-	openTasks := map[string]*types.TaskStatus{} // bool = nothing
+	openTasks := map[string]*types.TaskStatus{}
 	// Fill open tasks
 	for id, t := range cwf {
 		if t.Invocation == nil {
@@ -64,10 +64,10 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		for depName := range task.Requires {
 			t, ok := cwf[depName]
 			if !ok {
-				panic(fmt.Sprintf("Unknown task dependency: %v", depName))
+				log.Warnf("Unknown task dependency: %v", depName)
 			}
 
-			if t.Invocation != nil && t.Invocation.Status.Status.Finished() {
+			if ok && t.Invocation != nil && t.Invocation.Status.Status.Finished() {
 				completedDeps = completedDeps + 1
 			}
 		}
@@ -100,9 +100,10 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		})
 	}
 
-	ctxLog.WithField("schedule", len(schedule.Actions)).
-		WithField("invocation", schedule.InvocationId).
-		Info("Determined schedule")
-
+	if len(schedule.Actions) > 0 {
+		ctxLog.WithField("schedule", len(schedule.Actions)).
+			WithField("invocation", schedule.InvocationId).
+			Info("Determined schedule")
+	}
 	return schedule, nil
 }

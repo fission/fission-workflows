@@ -69,13 +69,23 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 		return nil, err
 	}
 
-	err = ap.es.HandleEvent(&fes.Event{
-		Type:      events.Function_TASK_SUCCEEDED.String(),
-		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
-		Aggregate: aggregates.NewTaskInvocationAggregate(id),
-		Timestamp: ptypes.TimestampNow(),
-		Data:      fnStatusAny,
-	})
+	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
+		err = ap.es.HandleEvent(&fes.Event{
+			Type:      events.Function_TASK_SUCCEEDED.String(),
+			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+			Aggregate: aggregates.NewTaskInvocationAggregate(id),
+			Timestamp: ptypes.TimestampNow(),
+			Data:      fnStatusAny,
+		})
+	} else {
+		err = ap.es.HandleEvent(&fes.Event{
+			Type:      events.Function_TASK_FAILED.String(),
+			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+			Aggregate: aggregates.NewTaskInvocationAggregate(id),
+			Timestamp: ptypes.TimestampNow(),
+			Data:      fnStatusAny,
+		})
+	}
 	if err != nil {
 		return nil, err
 	}

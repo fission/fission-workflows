@@ -13,10 +13,12 @@ import (
 
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
-	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 )
@@ -45,7 +47,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
-	meta, _ := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
+	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
 
 	fnId := string(meta.UID)
 	if len(meta.UID) == 0 {
@@ -177,23 +179,23 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
 	_, err := os.Stat(flr.FilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("no file present at '%v", flr.FilePath)
 	}
 
 	rdr, err := os.Open(flr.FilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to open file '%v': %v", flr.FilePath, err)
 	}
 	raw, err := ioutil.ReadAll(rdr)
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("failed to read file '%v': %v", flr.FilePath, err)
 	}
 	logrus.Infof("received definition: %s", string(raw))
 
 	wfSpec := &types.WorkflowSpec{}
 	err = jsonpb.Unmarshal(bytes.NewReader(raw), wfSpec)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse bytes into WorkflowSpec: %v", err)
 	}
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
@@ -203,7 +205,7 @@ func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadReques
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to store workflow internally: %v", err)
 	}
 	wfId := resp.Id
 
