@@ -65,26 +65,26 @@ func (cr *InvocationController) Init() error {
 			Buf:           NOTIFICATION_BUFFER,
 			LabelSelector: selector,
 		})
-	}
 
-	// Invocation Notification lane
-	go func(ctx context.Context) {
-		for {
-			select {
-			case notification := <-cr.sub.Ch:
-				logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
-				switch n := notification.(type) {
-				case *fes.Notification:
-					cr.HandleNotification(n)
-				default:
-					logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+		// Invocation Notification lane
+		go func(ctx context.Context) {
+			for {
+				select {
+				case notification := <-cr.sub.Ch:
+					logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
+					switch n := notification.(type) {
+					case *fes.Notification:
+						cr.HandleNotification(n)
+					default:
+						logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+					}
+				case <-ctx.Done():
+					logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+					return
 				}
-			case <-ctx.Done():
-				logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
-				return
 			}
-		}
-	}(ctx)
+		}(ctx)
+	}
 
 	// workQueue loop
 	go func(ctx context.Context) {
@@ -182,11 +182,16 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 		}
 	}
 	if finished {
-		t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
-		if !ok {
-			panic("Could not find output task status in completed invocation")
+		var finalOutput *types.TypedValue
+		if len(wf.Spec.OutputTask) != 0 {
+			t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
+			if !ok {
+				panic("Could not find output task status in completed invocation")
+			}
+			finalOutput = t.Status.Output
 		}
-		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, t.Status.Output)
+
+		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput)
 		if err != nil {
 			logrus.Errorf("failed to mark invocation as complete: %v", err)
 			return

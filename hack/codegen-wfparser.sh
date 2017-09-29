@@ -10,5 +10,5 @@ wfs=`find . -type f -name "*.wf.yaml"`
 
 while read -r wf; do
     echo ${wf}
-    wfparser ${wf}
+    wfcli parse ${wf}
 done <<< "$wfs"
