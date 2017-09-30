@@ -8,7 +8,7 @@
 FISSION_VERSION=0.3.0
 FISSION_WORKFLOWS_VERSION=0.1.1
 
-echo "Fission Workflows Deploy Script v1"
+echo "Fission Workflows Deploy Script v1.1"
 
 # Check if kubectl is installed
 if ! command -v kubectl >/dev/null 2>&1; then
@@ -71,21 +71,27 @@ echo "---------------------------"
 if ! helm repo list | grep fission-charts >/dev/null 2>&1 ; then
     echo "Setting up fission-charts Helm repo..."
     helm repo add fission-charts https://fission.github.io/fission-charts/
-    helm repo update
+    prinf "Updating repo"
+    until helm fetch fission-charts/fission-all >/dev/null 2>&1
+    do
+        printf "."
+        helm repo update
+    done
+    printf "\n"
 fi
 
 # Install Fission
 if ! fission fn list >/dev/null 2>&1 ; then
-    echo "Installing Fission..."
+    echo "Installing Fission ${FISSION_VERSION}..."
     helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --wait --version ${FISSION_VERSION}
 fi
 
 # Install Fission Workflows
 if ! fission env get --name workflow >/dev/null 2>&1 ; then
-    echo "Installing Fission Workflows..."
+    echo "Installing Fission Workflows ${FISSION_WORKFLOWS_VERSION}..."
     if [[ -z "${FISSION_WORKFLOWS_VERSION// }" ]] ; then
-        helm install -n fission-workflows fission-charts/fission-workflows --wait --version ${FISSION_WORKFLOWS_VERSION}
+        helm install --namespace fission -n fission-workflows fission-charts/fission-workflows --version ${FISSION_WORKFLOWS_VERSION} --wait
     else
-        helm install -n fission-workflows fission-charts/fission-workflows --wait
+        helm install --namespace fission -n fission-workflows fission-charts/fission-workflows --wait
     fi
 fi

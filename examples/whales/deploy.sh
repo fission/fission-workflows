@@ -3,7 +3,7 @@
 set -x
 
 # Deploy functions
-fission env create --name binary --image fission/binary-env:v0.2.1
+fission env create --name binary --image fission/binary-env:v0.3.0
 fission fn create --name whalesay --env binary --code ./whalesay.sh
 fission fn create --name fortune --env binary --code ./fortune.sh
 
