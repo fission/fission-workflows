@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/golang/protobuf/proto"
 )
 
@@ -32,7 +30,6 @@ func addStaticTasks(wf *Workflow, invoc *WorkflowInvocation, target map[string]*
 func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 	mapping := map[string]string{}
 	for id, task := range invoc.Status.DynamicTasks {
-		fmt.Println("dynamic", id, task)
 		taskStatus := invoc.Status.Tasks[id]
 		target[id] = &TaskStatus{
 			Task:       task,
@@ -46,12 +43,9 @@ func addDynamicTasks(invoc *WorkflowInvocation, target map[string]*TaskStatus) {
 		}
 	}
 
-	fmt.Println(mapping)
 	// Reroute dependencies to also depend on the outputted task of dynamic tasks.
 	for taskId, task := range target {
-		fmt.Println(task)
 		for depId, depParams := range task.Requires {
-			fmt.Println("depid", depId)
 			if outputTask, ok := mapping[depId]; ok && depParams.Type != TaskDependencyParameters_DYNAMIC_OUTPUT {
 				cloned := proto.Clone(task.Task) // TODO maybe clone all the things
 				t, ok := cloned.(*Task)
