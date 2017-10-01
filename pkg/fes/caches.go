@@ -123,7 +123,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 					logrus.WithField("msg", msg).Error("Received a malformed message")
 					continue
 				}
-				logrus.WithField("msg", msg.Labels()).Info("Cache received new event.")
+				logrus.WithField("msg", msg.Labels()).Debug("Cache received new event.")
 				err := c.HandleEvent(event)
 				if err != nil {
 					logrus.WithField("err", err).Error("Failed to handle event")

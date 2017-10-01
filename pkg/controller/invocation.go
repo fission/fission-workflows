@@ -5,6 +5,10 @@ import (
 
 	"fmt"
 
+	"time"
+
+	"sync"
+
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -13,7 +17,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
-	"github.com/fission/fission-workflows/pkg/util/backoff"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -22,6 +25,8 @@ import (
 
 const (
 	NOTIFICATION_BUFFER = 100
+	INVOCATION_TIMEOUT  = time.Duration(10) * time.Minute
+	MAX_ERROR_COUNT     = 3
 )
 
 type InvocationController struct {
@@ -33,9 +38,19 @@ type InvocationController struct {
 	sub           *pubsub.Subscription
 	exprParser    expr.Resolver
 	cancelFn      context.CancelFunc
-	workQueue     chan Action
-	wfiBackoff    backoff.Map // Specifies the time after which the wfi is allowed to be reevaluated again
+
+	workQueue chan Action
+
+	// Queued keeps track of which invocations still have actions in the workQueue
+	states    map[string]ControlState
+	evalMutex sync.Mutex
 	// TODO add active cache
+}
+
+type ControlState struct {
+	errorCount  int
+	recentError error
+	inQueue     int
 }
 
 func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReader,
@@ -49,7 +64,10 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
 		workQueue:     make(chan Action, 50),
-		wfiBackoff:    backoff.NewMap(),
+
+		// States maintains an active cache of currently running invocations, with execution related data.
+		// This state information is considered preemptable and can be removed or lost at any time.
+		states: map[string]ControlState{},
 	}
 }
 
@@ -65,36 +83,52 @@ func (cr *InvocationController) Init() error {
 			Buf:           NOTIFICATION_BUFFER,
 			LabelSelector: selector,
 		})
-	}
 
-	// Invocation Notification lane
-	go func(ctx context.Context) {
-		for {
-			select {
-			case notification := <-cr.sub.Ch:
-				logrus.WithField("labels", notification.Labels()).Info("Handling invocation notification.")
-				switch n := notification.(type) {
-				case *fes.Notification:
-					cr.HandleNotification(n)
-				default:
-					logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+		// Invocation Notification lane
+		go func(ctx context.Context) {
+			for {
+				select {
+				case notification := <-cr.sub.Ch:
+					logrus.WithField("labels", notification.Labels()).Debug("Handling invocation notification.")
+					switch n := notification.(type) {
+					case *fes.Notification:
+						cr.HandleNotification(n)
+					default:
+						logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+					}
+				case <-ctx.Done():
+					logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+					return
 				}
-			case <-ctx.Done():
-				logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
-				return
 			}
-		}
-	}(ctx)
+		}(ctx)
+	}
 
 	// workQueue loop
 	go func(ctx context.Context) {
 		for {
 			select {
 			case action := <-cr.workQueue:
-				err := action.Apply()
-				if err != nil {
-					logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+				state := cr.states[action.Id()]
+
+				if state.inQueue > 0 {
+					state.inQueue -= 1
 				}
+				cr.states[action.Id()] = state
+
+				go func() { // TODO limit goroutine pool size & atomic integer
+					err := action.Apply()
+					state := cr.states[action.Id()]
+					if err != nil {
+						logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+						state.recentError = err
+						state.errorCount += 1
+					} else {
+						state.errorCount = 0
+					}
+					cr.states[action.Id()] = state
+				}()
+
 			case <-ctx.Done():
 				logrus.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
 				return
@@ -157,6 +191,43 @@ func (cr *InvocationController) HandleTick() {
 }
 
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
+	// TODO lock on invocation-level
+	cr.evalMutex.Lock()
+	defer cr.evalMutex.Unlock()
+
+	state := cr.states[invoc.Metadata.Id]
+
+	// Check if there are still open actions
+	if state.inQueue > 0 {
+		return
+	}
+
+	// Check if the graph has been failing too often
+	if state.errorCount > MAX_ERROR_COUNT {
+		logrus.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
+		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
+		if err != nil {
+			logrus.Errorf("failed to cancel timed out invocation: %v", err)
+		}
+		return
+	}
+
+	// Check if the workflow invocation is in the right state
+	if invoc.Status.Status.Finished() {
+		logrus.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
+		return
+	}
+
+	// For now: kill after 10 min
+	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(INVOCATION_TIMEOUT.Seconds()) {
+		logrus.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
+		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
+		if err != nil {
+			logrus.Errorf("failed to cancel timed out invocation: %v", err)
+		}
+		return
+	}
+
 	// Fetch the workflow relevant to the invocation
 	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
 	err := cr.wfCache.Get(wf)
@@ -182,11 +253,16 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 		}
 	}
 	if finished {
-		t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
-		if !ok {
-			panic("Could not find output task status in completed invocation")
+		var finalOutput *types.TypedValue
+		if len(wf.Spec.OutputTask) != 0 {
+			t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
+			if !ok {
+				panic("Could not find output task status in completed invocation")
+			}
+			finalOutput = t.Status.Output
 		}
-		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, t.Status.Output)
+
+		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput) // TODO just submit?
 		if err != nil {
 			logrus.Errorf("failed to mark invocation as complete: %v", err)
 			return
@@ -225,6 +301,9 @@ func (cr *InvocationController) submit(action Action) (submitted bool) {
 	select {
 	case cr.workQueue <- action:
 		// Ok
+		state := cr.states[action.Id()]
+		state.inQueue += 1
+		cr.states[action.Id()] = state
 		submitted = true
 	default:
 		// Action overflow
@@ -257,7 +336,7 @@ type abortAction struct {
 }
 
 func (a *abortAction) Id() string {
-	return a.invocationId
+	return a.invocationId // Invocation
 }
 
 func (a *abortAction) Apply() error {
@@ -275,7 +354,7 @@ type invokeTaskAction struct {
 }
 
 func (a *invokeTaskAction) Id() string {
-	return a.task.Id
+	return a.wfi.Metadata.Id // Invocation
 }
 
 func (a *invokeTaskAction) Apply() error {
@@ -305,7 +384,7 @@ func (a *invokeTaskAction) Apply() error {
 				"val":      val,
 				"inputKey": inputKey,
 			}).Errorf("Failed to parse input: %v", err)
-			return fmt.Errorf("failed to parse input '%v'", val)
+			return err
 		}
 
 		inputs[inputKey] = resolvedInput
@@ -323,7 +402,6 @@ func (a *invokeTaskAction) Apply() error {
 		Inputs: inputs,
 	}
 
-	// TODO concurrent invocations
 	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{

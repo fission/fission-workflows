@@ -33,14 +33,6 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 	vm := otto.New()
 
 	// Load expression functions into Otto
-	for varName, fn := range BuiltinFunctions {
-		err := vm.Set(varName, func(call otto.FunctionCall) otto.Value {
-			return fn.Apply(vm, call)
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
 	return &JavascriptExpressionParser{
 		vm:     vm,
 		parser: parser,
@@ -92,6 +84,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 	}
 
 	scoped := oe.vm.Copy()
+	injectFunctions(scoped, BuiltinFunctions)
 	err := scoped.Set("$", rootScope)
 	err = scoped.Set("task", currentScope)
 	if output != nil {
@@ -116,4 +109,17 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 
 	i, _ := jsResult.Export() // Err is always nil
 	return oe.parser.Parse(i)
+}
+
+func injectFunctions(vm *otto.Otto, fns map[string]Function) {
+	for varName := range fns {
+		func(fnName string) {
+			err := vm.Set(fnName, func(call otto.FunctionCall) otto.Value {
+				return fns[fnName].Apply(vm, call)
+			})
+			if err != nil {
+				panic(err)
+			}
+		}(varName)
+	}
 }

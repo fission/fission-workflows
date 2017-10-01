@@ -14,7 +14,7 @@
       "inputs": {
         "default": {
           "type": "expr",
-          "value": "e3Rhc2soJ0dlbmVyYXRlRm9ydHVuZScpLk91dHB1dH0="
+          "value": "e291dHB1dCgnR2VuZXJhdGVGb3J0dW5lJyl9"
         }
       },
       "requires": {

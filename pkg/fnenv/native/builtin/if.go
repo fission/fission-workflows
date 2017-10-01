@@ -5,6 +5,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,10 +35,11 @@ func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue,
 	}
 	condition, ok := i.(bool)
 	if !ok {
-		return nil, fmt.Errorf("condition needs to be a bool, but was '%v'", i)
+		return nil, fmt.Errorf("condition '%v' needs to be a 'bool', but was '%v'", i, expr.Type)
 	}
 
 	// Output consequent or alternative based on condition
+	logrus.Infof("If-task has evaluated to '%b''", condition)
 	if condition {
 		return consequent, nil
 	} else {

@@ -16,7 +16,7 @@ import (
 
 	"strings"
 
-	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
+	"github.com/fission/fission/router"
 	k8stypes "k8s.io/client-go/1.5/pkg/types"
 )
 
@@ -76,23 +76,34 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 	defer req.Body.Close()
 
-	err = router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
-	if err != nil {
-		panic(err)
-	}
+	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
 
-	reqContentType := fe.ct.ToContentType(mainInput)
+	reqContentType := ToContentType(mainInput)
 	logrus.Infof("[request][Content-Type]: %v", reqContentType)
 	req.Header.Set("Content-Type", reqContentType)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(fmt.Errorf("error for url '%s': %v", serviceUrl, err))
+		return nil, fmt.Errorf("error for url '%s': %v", serviceUrl, err)
 	}
 
 	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
-	output := fe.ct.ToTypedValue(resp)
+	output := ToTypedValue(resp)
 	logrus.Infof("[%s][output]: %v", meta.Name, output)
+	logrus.Infof("[%s][status]: %v", meta.Name, resp.StatusCode)
+
+	// Determine status of the task invocation
+	if resp.StatusCode >= 400 {
+		msg, _ := typedvalues.Format(output)
+		logrus.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
+		return &types.TaskInvocationStatus{
+			Status: types.TaskInvocationStatus_FAILED,
+			Error: &types.Error{
+				Code:    fmt.Sprintf("%v", resp.StatusCode),
+				Message: fmt.Sprintf("%s", msg),
+			},
+		}, nil
+	}
 
 	return &types.TaskInvocationStatus{
 		Status: types.TaskInvocationStatus_SUCCEEDED,
@@ -108,7 +119,7 @@ var formatMapping = map[string]string{
 	typedvalues.FORMAT_JSON: "application/json",
 }
 
-func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
+func ToContentType(val *types.TypedValue) string {
 	contentType := "text/plain"
 	if val == nil {
 		return contentType
@@ -121,7 +132,7 @@ func (ct *ContentTypeMapper) ToContentType(val *types.TypedValue) string {
 	return contentType
 }
 
-func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue {
+func ToTypedValue(resp *http.Response) *types.TypedValue {
 	contentType := strings.ToLower(resp.Header.Get("Content-Type"))
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -138,7 +149,7 @@ func (ct *ContentTypeMapper) ToTypedValue(resp *http.Response) *types.TypedValue
 		}
 	}
 
-	tv, err := ct.parserFormatter.Parse(i)
+	tv, err := typedvalues.Parse(i)
 	if err != nil {
 		panic(err)
 	}

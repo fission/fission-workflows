@@ -23,6 +23,7 @@ var BuiltinFunctions = map[string]Function{
 	"input":  &InputFn{},
 	"output": &OutputFn{},
 	"param":  &ParamFn{},
+	"task":   &TaskFn{},
 }
 
 type UidFn struct{}
@@ -86,6 +87,24 @@ func (qf *ParamFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 	default:
 		param := call.Argument(0).String()
 		lookup := fmt.Sprintf("$.Invocation.Inputs.%s", param)
+		result, err := vm.Eval(lookup)
+		if err != nil {
+			logrus.Warnf("Failed to lookup param: %s", lookup)
+			return otto.UndefinedValue()
+		}
+		return result
+	}
+}
+
+type TaskFn struct{}
+
+func (qf *TaskFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
+	switch len(call.ArgumentList) {
+	case 0:
+		return otto.UndefinedValue()
+	default:
+		param := call.Argument(0).String()
+		lookup := fmt.Sprintf("$.Tasks.%s", param)
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup param: %s", lookup)

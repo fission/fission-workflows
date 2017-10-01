@@ -50,12 +50,22 @@ func Transform(def *WorkflowDef) (*types.WorkflowSpec, error) {
 	}, nil
 }
 
-func parseInput(i interface{}) (map[string]*types.TypedValue, error) {
+func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 	if i == nil {
 		return map[string]*types.TypedValue{}, nil
 	}
 
 	switch v := i.(type) {
+	case map[string]interface{}:
+		result := map[string]*types.TypedValue{}
+		for inputKey, inputVal := range v {
+			typedVal, err := parseSingleInput(inputKey, inputVal)
+			if err != nil {
+				return nil, err
+			}
+			result[inputKey] = typedVal
+		}
+		return result, nil
 	case map[interface{}]interface{}:
 		//case map[string]interface{}:
 		result := map[string]*types.TypedValue{}
@@ -145,7 +155,7 @@ func parseTask(id string, t *TaskDef) (*types.Task, error) {
 		id = t.Id
 	}
 
-	inputs, err := parseInput(t.Inputs)
+	inputs, err := parseInputs(t.Inputs)
 	if err != nil {
 		return nil, err
 	}

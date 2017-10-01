@@ -13,10 +13,12 @@ import (
 
 	"encoding/json"
 
+	"fmt"
+
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
-	"github.com/fission/fission-workflows/pkg/fnenv/fission/router"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 )
@@ -45,7 +47,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
-	meta, _ := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
+	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
 
 	fnId := string(meta.UID)
 	if len(meta.UID) == 0 {
@@ -82,6 +84,23 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Temporary: in case of query header 'X-Async' being present, make request async
+	if len(r.Header.Get("X-Async")) > 0 {
+		invocatinId, err := fp.invocationServer.Invoke(ctx, &types.WorkflowInvocationSpec{
+			WorkflowId: fnId,
+			Inputs:     inputs,
+		})
+		if err != nil {
+			logrus.Errorf("Failed to invoke: %v", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.WriteHeader(200)
+		w.Write([]byte(invocatinId.Id))
+		return
+	}
+
+	// Otherwise, the request synchronous like other Fission functions
 	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
 		WorkflowId: fnId,
 		Inputs:     inputs,
@@ -102,6 +121,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	var resp []byte
 	if invocation.Status.Output != nil {
 		resp = invocation.Status.Output.Value
+		w.Header().Add("Content-Type", ToContentType(invocation.Status.Output))
 	} else {
 		logrus.Infof("Invocation '%v' has no output.", fnId)
 	}
@@ -159,23 +179,23 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
 	_, err := os.Stat(flr.FilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("no file present at '%v", flr.FilePath)
 	}
 
 	rdr, err := os.Open(flr.FilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to open file '%v': %v", flr.FilePath, err)
 	}
 	raw, err := ioutil.ReadAll(rdr)
 	if err != nil {
-		panic(err)
+		return "", fmt.Errorf("failed to read file '%v': %v", flr.FilePath, err)
 	}
 	logrus.Infof("received definition: %s", string(raw))
 
 	wfSpec := &types.WorkflowSpec{}
 	err = jsonpb.Unmarshal(bytes.NewReader(raw), wfSpec)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse bytes into WorkflowSpec: %v", err)
 	}
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
@@ -185,7 +205,7 @@ func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadReques
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to store workflow internally: %v", err)
 	}
 	wfId := resp.Id
 

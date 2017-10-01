@@ -12,7 +12,7 @@ module.exports = async function (context) {
         result = b
     } else {
         // We need to parse the formdata it ourselves
-        let data = decodeURIComponent(b.toString());
+        let data = decodeURIComponent(b.toString()).replace(/\+/g, " ");
         let dataParts = data.split('&');
         for (let i = 0; i < dataParts.length; i++) {
             let kv = dataParts[i].split("=");

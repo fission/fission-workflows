@@ -26,13 +26,12 @@ tasks:
   CheckTemperatureThreshold:
     run: if
     inputs:
-      if: $.Tasks.ToCelsius.Output.temperature > 25
+      if: "{$.Tasks.ToCelsius.Output.temperature > 25}"
       then:
         run: slack-post-message
         inputs:
           default:
-            message: "{$.Tasks.ToCelsius.Output.temperature + 'C in ' + $.Invocation.Inputs.default + '... it\'s hot! :fire:'}"
-            path:
+            message: "{'It is ' + $.Tasks.ToCelsius.Output.temperature + 'C in ' + $.Invocation.Inputs.default + ' :fire:'}"
             path: <HOOK_URL>
     requires:
     - ToCelsius

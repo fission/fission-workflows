@@ -5,12 +5,12 @@
       "functionRef": "if",
       "inputs": {
         "if": {
-          "type": "json/string",
-          "value": "IiQuVGFza3MuVG9DZWxzaXVzLk91dHB1dC50ZW1wZXJhdHVyZSBcdTAwM2UgMjUi"
+          "type": "expr",
+          "value": "eyQuVGFza3MuVG9DZWxzaXVzLk91dHB1dC50ZW1wZXJhdHVyZSA+IDI1fQ=="
         },
         "then": {
           "type": "flow",
-          "value": "CgR0aGVuGhJzbGFjay1wb3N0LW1lc3NhZ2UiuwEKB2RlZmF1bHQSrwEKC2pzb24vb2JqZWN0Ep8BeyJkZWZhdWx0Ijp7Im1lc3NhZ2UiOiJ7JC5UYXNrcy5Ub0NlbHNpdXMuT3V0cHV0LnRlbXBlcmF0dXJlICsgJ0MgaW4gJyArICQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdCArICcuLi4gaXQncyBob3QhIDpmaXJlOid9IiwicGF0aCI6Ilx1MDAzY0hPT0tfVVJMXHUwMDNlIn19MAA="
+          "value": "CgR0aGVuGhJzbGFjay1wb3N0LW1lc3NhZ2UirQEKB2RlZmF1bHQSoQEKC2pzb24vb2JqZWN0EpEBeyJtZXNzYWdlIjoieydJdCBpcyAnICsgJC5UYXNrcy5Ub0NlbHNpdXMuT3V0cHV0LnRlbXBlcmF0dXJlICsgJ0MgaW4gJyArICQuSW52b2NhdGlvbi5JbnB1dHMuZGVmYXVsdCArICcgOmZpcmU6J30iLCJwYXRoIjoiXHUwMDNjSE9PS19VUkxcdTAwM2UifTAA"
         }
       },
       "requires": {
