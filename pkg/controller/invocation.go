@@ -7,6 +7,8 @@ import (
 
 	"time"
 
+	"sync"
+
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -41,6 +43,7 @@ type InvocationController struct {
 
 	// Queued keeps track of which invocations still have actions in the workQueue
 	states map[string]ControlState
+	evalMutex sync.Mutex
 	// TODO add active cache
 }
 
@@ -113,7 +116,7 @@ func (cr *InvocationController) Init() error {
 				}
 				cr.states[action.Id()] = state
 
-				go func() { // TODO limit goroutine pool size
+				go func() { // TODO limit goroutine pool size & atomic integer
 					err := action.Apply()
 					state := cr.states[action.Id()]
 					if err != nil {
@@ -188,6 +191,10 @@ func (cr *InvocationController) HandleTick() {
 }
 
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
+	// TODO lock on invocation-level
+	cr.evalMutex.Lock()
+	defer cr.evalMutex.Unlock()
+
 	state := cr.states[invoc.Metadata.Id]
 
 	// Check if there are still open actions
