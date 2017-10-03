@@ -40,7 +40,7 @@ helm install fission-charts/fission-workflows
 ### Creating your first workflow
 
 After installing Fission and Workflows, you're ready to run a simple
-test workflow.
+test workflow.  Clone this repository, and from its root directory, run:
 
 ```bash
 #
