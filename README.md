@@ -107,20 +107,28 @@ See the [docs](./Docs) for a more extensive, in-depth overview of the system.
 
 ### Usage
 ```bash
-# Deploy functions
+#
+# Add binary environment and create two test function on your Fission setup 
+#
 fission env create --name binary --image fission/binary-env:v0.2.1
-fission fn create --name whalesay --env binary --code examples/whales/whalesay.sh
-fission fn create --name fortune --env binary --code examples/whales/fortune.sh
+fission function create --name whalesay --env binary --code examples/whales/whalesay.sh
+fission function create --name fortune --env binary --code examples/whales/fortune.sh
 
-# Deploy workflows
-fission fn create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
+#
+# Create a workflow that uses those two functions; a workflow
+# is just a function that uses the special "workflow" environment.
+#
+fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
 
-
-# Map GET /hello to your new function
+#
+# Map a HTTP GET to your new workflow function
+#
 $ fission route create --method GET --url /fortunewhale --function fortunewhale
 
-# Invoke the workflow just like a fission function
-curl -X GET $FISSION_ROUTER/fortunewhale
+#
+# Invoke the workflow with an HTTP request
+#
+curl $FISSION_ROUTER/fortunewhale
 ``` 
 See [examples](./examples) for other workflow examples.
 
