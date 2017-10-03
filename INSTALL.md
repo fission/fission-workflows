@@ -44,25 +44,25 @@ test workflow.
 
 ```bash
 #
-# Add binary environment and create two test function on your Fission setup 
+# Add binary environment and create two test functions on your Fission setup:
 #
 fission env create --name binary --image fission/binary-env:v0.2.1
 fission function create --name whalesay --env binary --code examples/whales/whalesay.sh
 fission function create --name fortune --env binary --code examples/whales/fortune.sh
 
 #
-# Create a workflow that uses those two functions; a workflow
-# is just a function that uses the special "workflow" environment.
+# Create a workflow that uses those two functions. A workflow is just
+# a function that uses the special "workflow" environment.
 #
 fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
 
 #
-# Map a HTTP GET to your new workflow function
+# Map an HTTP GET to your new workflow function:
 #
 $ fission route create --method GET --url /fortunewhale --function fortunewhale
 
 #
-# Invoke the workflow with an HTTP request
+# Invoke the workflow with an HTTP request:
 #
 curl $FISSION_ROUTER/fortunewhale
 ``` 
