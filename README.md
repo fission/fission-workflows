@@ -16,10 +16,14 @@ Fission Workflows is a workflow-based serverless function composition framework 
 
 ### Philosophy
 
-The Fission Functions as a Service framework provides simplicity and
-quick time-to-value.  For many relatively simple applications this is
-good enough.  But a more complex application that uses serverless
-functions must, in some way, _compose_ functions together.
+The Fission Functions-as-a-Service framework provides simplicity and
+quick time-to-value for functions on any infrastructure using
+Kubernetes.  
+
+Functions tend to do one logically separate task, and they're usually
+short-lived.  For many relatively simple applications this is good
+enough.  But a more complex application that uses serverless functions
+must, in some way, _compose_ functions together.
 
 There are several ways to compose functions.  A function could invoke
 another function using the Fission API or HTTP.  But this requires the
