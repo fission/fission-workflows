@@ -1,10 +1,12 @@
 # Compiling
 
 ## Requirements
-- [glide](http://glide.sh/)
+- go >1.8
+- docker
+- [glide](http://glide.sh/) package manager
 
 ## Compilation
-Ensure that all requirements are present, and checkout the repo from github.
+Ensure that all requirements are met, and checkout the repo from github.
 
 ```bash
 # Install dependencies
@@ -19,13 +21,6 @@ eval $(minikube docker-env)
 # Build the docker image
 bash ./docker.sh
 ```
-
-### Workflow Parser
-Although this will be integrated in the fission CLI, currently in order to write workflows, you will need the `wfparser` to manually convert your yaml workflow definitions to json.
-To build the `wfparser` tool:
-```bash
-go install github.com/fission/fission-workflows/cmd/wfparser/
-``` 
 
 ### CLI
 There is an experimental CLI available, called `wfcli`.

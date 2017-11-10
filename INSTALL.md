@@ -25,16 +25,15 @@ Assuming you have a Kubernetes cluster, run the following commands:
 
 ```bash
 
-# Add the Fission repo
+# Add the Fission charts repo
 helm repo add fission-charts https://fission.github.io/fission-charts/
 helm repo update
 
-# Install Fission (unless you already have)
+# Install Fission (if you do not have a Fission deployment yet)
 helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --version 0.3.0
 
 # Install Fission Workflows
 helm install fission-charts/fission-workflows
-
 ```
 
 ### Creating your first workflow
