@@ -18,7 +18,7 @@ Kubernetes cluster.  If you do not have a Fission deployment, follow
 
 ### Installing Fission Workflows
 
-Fission Workflows is an add-on to Fission.  You can install both
+Fission Workflows is an add-on to Fission. You can install both
 Fission and Workflows using helm charts.
 
 Assuming you have a Kubernetes cluster, run the following commands:
@@ -53,7 +53,7 @@ fission function create --name fortune --env binary --code examples/whales/fortu
 # Create a workflow that uses those two functions. A workflow is just
 # a function that uses the special "workflow" environment.
 #
-fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
+fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.yaml
 
 #
 # Map an HTTP GET to your new workflow function:

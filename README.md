@@ -118,7 +118,7 @@ fission function create --name fortune --env binary --code examples/whales/fortu
 # Create a workflow that uses those two functions; a workflow
 # is just a function that uses the special "workflow" environment.
 #
-fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
+fission function create --name fortunewhale --env workflow --src examples/whales/fortunewhale.wf.yaml
 
 #
 # Map a HTTP GET to your new workflow function

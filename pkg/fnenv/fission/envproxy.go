@@ -21,6 +21,8 @@ import (
 	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
+	"path"
+	"strings"
 )
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
@@ -160,7 +162,7 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wfId, err := fp.specialize(ctx, flr)
+	wfId, err := fp.specializePackage(ctx, flr)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
 		if os.IsNotExist(err) {
@@ -176,19 +178,50 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(wfId))
 }
 
-func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
-	_, err := os.Stat(flr.FilePath)
+func (fp *Proxy) specializePackage(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
+	fi, err := os.Stat(flr.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("no file present at '%v", flr.FilePath)
 	}
 
-	rdr, err := os.Open(flr.FilePath)
+	if fi.IsDir() {
+		// User provided a package
+		contents, err := ioutil.ReadDir(flr.FilePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read package: '%v", flr.FilePath)
+		}
+
+		if len(contents) == 0 {
+			return "", fmt.Errorf("package is empty")
+		}
+
+		var wfIds []string
+		for _, n := range contents {
+			file := path.Join(flr.FilePath, n.Name())
+			wfId, err := fp.specialize(ctx, flr, file)
+			if err != nil {
+				return "", fmt.Errorf("failed to specialize package: %v", err)
+			}
+			wfIds = append(wfIds, wfId)
+		}
+
+		// TODO maybe change to []string to provide all generated ids
+		return strings.Join(wfIds, ";"), nil
+	} else {
+		// Provided workflow is a file
+		return fp.specialize(ctx, flr, flr.FilePath)
+	}
+}
+
+func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest, filePath string) (string, error) {
+
+	rdr, err := os.Open(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file '%v': %v", flr.FilePath, err)
+		return "", fmt.Errorf("failed to open file '%v': %v", filePath, err)
 	}
 	raw, err := ioutil.ReadAll(rdr)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file '%v': %v", flr.FilePath, err)
+		return "", fmt.Errorf("failed to read file '%v': %v", filePath, err)
 	}
 	logrus.Infof("received definition: %s", string(raw))
 
@@ -211,12 +244,6 @@ func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadReques
 
 	// Cache the ID so we don't have to check whether the workflow engine already has it.
 	fp.fissionIds[wfSpec.Id] = true
-
-	// Cleanup
-	err = os.Remove(flr.FilePath)
-	if err != nil {
-		logrus.Warnf("Failed to remove userFunc from fs: %v", err)
-	}
 
 	return wfId, nil
 }

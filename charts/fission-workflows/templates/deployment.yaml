@@ -63,4 +63,7 @@ spec:
   runtime:
   # TODO Add environment variables for environment once supported by Fission
     image: "{{ .Values.envImage }}"
+  builder:
+    image: "{{ .Values.buildEnvImage }}"
+    command: "defaultBuild"
   allowedFunctionsPerContainer: infinite

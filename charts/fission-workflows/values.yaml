@@ -3,10 +3,13 @@
 #
 
 # Bundle image
-bundleImage: fission/fission-workflows-bundle:0.1.1
+bundleImage: fission/fission-workflows-bundle:0.1.2
 
 # Image of the Fission environment for Fission Workflows
-envImage: fission/workflow-env:0.1.1
+envImage: fission/workflow-env:0.1.2
+
+# Image of the Fission build environment for Fission Workflows
+buildEnvImage: fission/workflow-build-env:0.1.2
 
 # Deploy optional Workflow api-server?
 apiserver: true

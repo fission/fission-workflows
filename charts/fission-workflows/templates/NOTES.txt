@@ -11,9 +11,9 @@ fission fn create --name whalesay --env binary --code ./whalesay.sh
 fission fn create --name fortune --env binary --code ./fortune.sh
 
 # Setup a workflow using the workflow environment
-curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortunewhale.wf.json > fortunewhale.wf.json
+curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortunewhale.wf.yaml > fortunewhale.wf.yaml
 
-fission fn create --name fortunewhale --code ./fortunewhale.wf.json --env workflow
+fission fn create --name fortunewhale --env workflow --code ./fortunewhale.wf.yaml
 
 # Invoke the workflow just like any other Fission function
 
