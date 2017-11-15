@@ -18,23 +18,22 @@ Kubernetes cluster.  If you do not have a Fission deployment, follow
 
 ### Installing Fission Workflows
 
-Fission Workflows is an add-on to Fission.  You can install both
+Fission Workflows is an add-on to Fission. You can install both
 Fission and Workflows using helm charts.
 
 Assuming you have a Kubernetes cluster, run the following commands:
 
 ```bash
 
-# Add the Fission repo
+# Add the Fission charts repo
 helm repo add fission-charts https://fission.github.io/fission-charts/
 helm repo update
 
-# Install Fission (unless you already have)
+# Install Fission (if you do not have a Fission deployment yet)
 helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --version 0.3.0
 
 # Install Fission Workflows
 helm install fission-charts/fission-workflows
-
 ```
 
 ### Creating your first workflow
@@ -46,15 +45,15 @@ test workflow.  Clone this repository, and from its root directory, run:
 #
 # Add binary environment and create two test functions on your Fission setup:
 #
-fission env create --name binary --image fission/binary-env:v0.2.1
-fission function create --name whalesay --env binary --code examples/whales/whalesay.sh
-fission function create --name fortune --env binary --code examples/whales/fortune.sh
+fission env create --name binary --image fission/binary-env:v0.3.0
+fission function create --name whalesay --env binary --deploy examples/whales/whalesay.sh
+fission function create --name fortune --env binary --deploy examples/whales/fortune.sh
 
 #
 # Create a workflow that uses those two functions. A workflow is just
 # a function that uses the special "workflow" environment.
 #
-fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
+fission function create --name fortunewhale --env workflow --src examples/whales/fortunewhale.wf.yaml
 
 #
 # Map an HTTP GET to your new workflow function:

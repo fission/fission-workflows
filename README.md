@@ -110,15 +110,15 @@ See the [docs](./Docs) for a more extensive, in-depth overview of the system.
 #
 # Add binary environment and create two test function on your Fission setup 
 #
-fission env create --name binary --image fission/binary-env:v0.2.1
-fission function create --name whalesay --env binary --code examples/whales/whalesay.sh
-fission function create --name fortune --env binary --code examples/whales/fortune.sh
+fission env create --name binary --image fission/binary-env:v0.3.0
+fission function create --name whalesay --env binary --deploy examples/whales/whalesay.sh
+fission function create --name fortune --env binary --deploy examples/whales/fortune.sh
 
 #
 # Create a workflow that uses those two functions; a workflow
 # is just a function that uses the special "workflow" environment.
 #
-fission function create --name fortunewhale --env workflow --code examples/whales/fortunewhale.wf.json
+fission function create --name fortunewhale --env workflow --src examples/whales/fortunewhale.wf.yaml
 
 #
 # Map a HTTP GET to your new workflow function
