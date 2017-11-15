@@ -8,8 +8,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"io/ioutil"
-
 	"net/url"
 
 	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/admin_api"
@@ -71,17 +69,12 @@ func main() {
 			Action: func(c *cli.Context) error {
 
 				if c.NArg() == 0 {
-					panic("Need a path to a .yaml")
+					panic("Need a path to a yaml workflow definition")
 				}
 
 				for _, path := range c.Args() {
 
 					fnName := strings.TrimSpace(path)
-					fmt.Printf("Formatting: '%s'\n", fnName)
-
-					if !strings.HasSuffix(fnName, "yaml") {
-						panic("Only YAML workflow definitions are supported")
-					}
 
 					f, err := os.Open(fnName)
 					if err != nil {
@@ -106,14 +99,16 @@ func main() {
 						panic(err)
 					}
 
-					outputFile := strings.Replace(fnName, "yaml", "json", -1)
+					//outputFile := strings.Replace(fnName, "yaml", "json", -1)
+					//
+					//err = ioutil.WriteFile(outputFile, []byte(jsonWf), 0644)
+					//if err != nil {
+					//	panic(err)
+					//}
+					//
+					//println(outputFile)
 
-					err = ioutil.WriteFile(outputFile, []byte(jsonWf), 0644)
-					if err != nil {
-						panic(err)
-					}
-
-					println(outputFile)
+					fmt.Println(jsonWf)
 				}
 				return nil
 			},

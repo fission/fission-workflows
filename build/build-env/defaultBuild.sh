@@ -1,19 +1,31 @@
 #!/bin/sh
 #
 # Build command run by default.
-# TODO allow parsing of multiple workflow definitions
 #
 
-# TODO loop through directory to support arbitrary filenames
-# TODO check if fission builder supports single files
-echo "Parsing ${SRC_PKG}/wf.yaml to ${DEPLOY_PKG}/wf.json"
+parse() {
+    src=$1
+    dst=$2
+    echo "Parsing ${src} to ${dst}"
+    if ! wfcli parse ${src} > ${dst} ; then
+        echo "Failed to parse ${SRC_PKG}"
+        exit 12
+    fi
+}
 
-if ! wfcli parse ${SRC_PKG}/wf.yaml ; then
-    echo "Failed to parse ${SRC_PKG}/wf.yaml"
-    exit 12
+echo  "Building with v$(wfcli --version)..."
+if [[ -f $SRC_PKG ]] ; then
+    # Package is a single file
+    parse ${SRC_PKG} ${DEPLOY_PKG}
+elif [[ -d ${SRC_PKG} ]] ; then
+    # Package is an archive
+    mkdir -p ${DEPLOY_PKG}
+    for wf in ${SRC_PKG}/*.yaml ; do
+        dst=$(basename wf)
+        parse ${wf} > ${DEPLOY_PKG}/dst
+    done
+else
+    echo "Unknown file type: '${SRC_PKG}'"
+    exit 11
 fi
-
-mkdir -p ${DEPLOY_PKG}
-cp -r ${SRC_PKG}/wf.json ${DEPLOY_PKG}/wf.json
-
-echo "Finished build."
+echo "Build succeeded."
