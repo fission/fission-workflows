@@ -1,0 +1,48 @@
+apiVersion: 1
+output: ComposeResult
+# Input: url
+tasks:
+  FetchWebPage:
+    run: http
+    inputs: "{$.Invocation.Inputs.default}"
+
+  ParseArticle:
+    run: parse-article
+    inputs: "{$.Tasks.FetchWebPage.Output}"
+    requires:
+    - FetchWebPage
+
+  ArticleContainsImage:
+    run: if
+    inputs:
+      if: "{!! $.Tasks.ParseArticle.Output.image}"
+      then:
+        # TODO resize image, change link
+        run: compose
+        inputs: "resized-image.png"
+    requires:
+    - ParseArticle
+
+  StoreInRedis:
+    run: redis-append
+    inputs:
+      default: "{$.Tasks.ParseArticle.Output}"
+    requires:
+    - ArticleContainsImage
+
+  NotifyUser:
+    run: notify-pushbullet
+    inputs:
+      default:
+        title: "{'Saved: ' + $.Tasks.ParseArticle.Output.url}!"
+        body: "{$.Tasks.ParseArticle.Output.title}"
+    requires:
+    - StoreInRedis
+
+  ComposeResult:
+    run: compose
+    inputs:
+      article: "{$.Tasks.ParseArticle.Output}"
+      url: "{$.Invocation.Inputs.default}"
+    requires:
+    - StoreInRedis
