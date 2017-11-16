@@ -17,16 +17,15 @@ Name     | Language | Description
 save-article | workflow | Given an url, process page and store resulting article
 parse-article | workflow | Given a html document, parse and return parsed article
 DONE http     | binary   | Perform an HTTP request and return response
-parse-article-body | python | Parse article body from html document
-parse-article-metadata | python | Parse article metadata (author, date, image) from html document
-DONE extract-ogp | python | Given HTML document, parse ogp data from it  
+DONE parse-article-body | python | Parse article body from html document
+extract-ogp | python | Given HTML document, parse ogp data from it  
 DONE notify-pushbullet | python | Send notification to pushbullet
-redis-append | python | Stores item into redis
-redis-list | python| Lists items for given key
+DONE redis-append | python | Stores item into redis
+DONE redis-list | python| Lists items for given key
 
 
 ## TODO
 - Some sort of config/secret management
-- Implement image handling/tranformating
+- Implement image handling/transformation
 - Show off some loop construct
 - 
