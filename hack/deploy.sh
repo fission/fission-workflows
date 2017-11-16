@@ -32,7 +32,7 @@ fi
 # Ensure that minikube is running
 if ! minikube ip >/dev/null 2>&1 ; then
     echo "Starting minikube-based Kubernetes ${KUBERNETES_VERSION} cluster..."
-    if ! minikube start --kubernetes-version ${KUBERNETES_VERSION} ; then
+    if ! minikube start --kubernetes-version ${KUBERNETES_VERSION} --memory 4096 ; then
         echo "Failed to setup minikube cluster."
         exit 1;
     fi

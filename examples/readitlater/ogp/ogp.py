@@ -1,5 +1,5 @@
 from opengraph import OpenGraph
-from flask import request, current_app
+from flask import request, current_app, Response
 import json
 
 def extract():
@@ -7,4 +7,4 @@ def extract():
     if doc is None or len(doc) == 0:
         return json.dumps({})
     og = OpenGraph(html=doc)
-    return json.dumps(og.__data__)
+    return Response(json.dumps(og.__data__), mimetype='application/json')

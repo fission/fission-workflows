@@ -1,0 +1,22 @@
+apiVersion: 1
+output: ComposeArticle
+# Input: html document
+tasks:
+  ParseBody:
+    run: parse-article-body
+    inputs: "{$.Invocation.Inputs.default}"
+  ParseMetadata:
+    run: ogp-extract
+    inputs: "{$.Invocation.Inputs.default}"
+  ComposeArticle:
+    run: compose
+    inputs:
+      # TODO use shortcut functions to make it more readable
+      body: "{$.Tasks.ParseBody.Output}"
+      title: "{$.Tasks.ParseMetadata.Output.title}"
+      image: "{$.Tasks.ParseMetadata.Output.image}"
+      description: "{$.Tasks.ParseMetadata.Output.description}"
+      url: "{$.Tasks.ParseMetadata.Output}"
+    requires:
+    - ParseBody
+    - ParseMetadata

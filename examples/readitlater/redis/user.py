@@ -1,4 +1,4 @@
-from flask import request, redirect
+from flask import request, redirect, Response
 import redis, json
 
 # TODO extract hardcoded location
@@ -8,30 +8,31 @@ redisConnection = redis.StrictRedis(host='redis.readitlater', port=6379, db=0)
 def list():
     key = get_key()
     bytevals = redisConnection.lrange(key, 0, -1)
-    li = []
+    result = []
     for val in bytevals:
-        li.append(val.decode('utf-8'))
-    return json.dumps(li)
+        result.append(val.decode('utf-8'))
+    return Response(json.dumps(result), mimetype='application/json')
 
 # Append value to values of the given key
 def append():
     key = get_key()
     value = request.data
     result = redisConnection.rpush(key, value)
-    return json.dumps(result)
+    return Response(json.dumps(result), mimetype='application/json')
 
 # Set the value for a given key
 def set():
     key = get_key()
     value = request.data
     result = redisConnection.set(key, value)
-    return json.dumps(result)
+    return Response(json.dumps(result), mimetype='application/json')
 
 # Get the value for a given key
 def get():
     key = get_key()
     val = redisConnection.get(key)
-    return json.dumps(val.decode('utf-8'))
+    result = val.decode('utf-8')
+    return Response(json.dumps(result), mimetype='application/json')
 
 
 def get_key():
