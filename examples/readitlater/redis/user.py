@@ -6,26 +6,36 @@ redisConnection = redis.StrictRedis(host='redis.readitlater', port=6379, db=0)
 
 # List all values for a given key
 def list():
-    key = request.args.get('key')
-    vals = redisConnection.lrange(key, 0, -1)
-    return json.dumps(vals)
+    key = get_key()
+    bytevals = redisConnection.lrange(key, 0, -1)
+    li = []
+    for val in bytevals:
+        li.append(val.decode('utf-8'))
+    return json.dumps(li)
 
 # Append value to values of the given key
 def append():
-    key = request.args.get('key')
-    value = request.datas
+    key = get_key()
+    value = request.data
     result = redisConnection.rpush(key, value)
     return json.dumps(result)
 
 # Set the value for a given key
 def set():
-    key = request.args.get('key')
+    key = get_key()
     value = request.data
     result = redisConnection.set(key, value)
     return json.dumps(result)
 
 # Get the value for a given key
 def get():
-    key = request.args.get('key')
+    key = get_key()
     val = redisConnection.get(key)
-    return json.dumps(val)
+    return json.dumps(val.decode('utf-8'))
+
+
+def get_key():
+    key = request.args.get('key')
+    if key is None:
+        key = request.headers["X-Redis-Key"]
+    return key

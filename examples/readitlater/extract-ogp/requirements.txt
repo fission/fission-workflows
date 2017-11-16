@@ -1,1 +1,1 @@
-opengraph
+python-opengraph

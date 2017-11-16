@@ -14,17 +14,19 @@ It features:
 
 Name     | Language | Description
 ---------|----------|------------
-DONE http     | binary   | Perform an HTTP request and return response
 save-article | workflow | Given an url, process page and store resulting article
 parse-article | workflow | Given a html document, parse and return parsed article
+DONE http     | binary   | Perform an HTTP request and return response
 parse-article-body | python | Parse article body from html document
 parse-article-metadata | python | Parse article metadata (author, date, image) from html document
-parse-article-thumbmail | ??? |
 DONE extract-ogp | python | Given HTML document, parse ogp data from it  
-resize-image | binary | Resizes an image
 DONE notify-pushbullet | python | Send notification to pushbullet
-store-redis | ??? | Stores json into database
+redis-append | python | Stores item into redis
+redis-list | python| Lists items for given key
 
 
 ## TODO
 - Some sort of config/secret management
+- Implement image handling/tranformating
+- Show off some loop construct
+- 
