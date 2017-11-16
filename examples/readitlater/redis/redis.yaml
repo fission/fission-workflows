@@ -1,0 +1,46 @@
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: readitlater
+  labels:
+    name: readitlater
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: redis
+  name: redis
+  namespace: readitlater
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: redis
+  template:
+    metadata:
+      labels:
+        run: redis
+    spec:
+      containers:
+      - image: redis
+        name: redis
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: redis
+  name: redis
+  namespace: readitlater
+spec:
+  selector:
+    run: redis
+  type: ClusterIP
+  ports:
+  - port: 6379
+    protocol: TCP
+    targetPort: 6379

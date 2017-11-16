@@ -14,16 +14,16 @@ It features:
 
 Name     | Language | Description
 ---------|----------|------------
-http     | binary   | Perform an HTTP request and return response
+DONE http     | binary   | Perform an HTTP request and return response
 save-article | workflow | Given an url, process page and store resulting article
 parse-article | workflow | Given a html document, parse and return parsed article
 parse-article-body | python | Parse article body from html document
 parse-article-metadata | python | Parse article metadata (author, date, image) from html document
 parse-article-thumbmail | ??? |
-parse-ogp | python | Given HTML document, parse ogp data from it  
+DONE extract-ogp | python | Given HTML document, parse ogp data from it  
 resize-image | binary | Resizes an image
-notify-pushbullet | python | Send notification to pushbullet
-store-boltdb | ??? | Stores json into database
+DONE notify-pushbullet | python | Send notification to pushbullet
+store-redis | ??? | Stores json into database
 
 
 ## TODO
