@@ -19,7 +19,7 @@ type Resolver interface {
 }
 
 var (
-	RESOLVING_TIMEOUT = time.Duration(100) * time.Millisecond
+	ResolvingTimeout = time.Duration(100) * time.Millisecond
 
 	ErrTimeOut = errors.New("expression resolver timed out")
 )
@@ -96,7 +96,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 	}
 
 	go func() {
-		<-time.After(RESOLVING_TIMEOUT)
+		<-time.After(ResolvingTimeout)
 		scoped.Interrupt <- func() {
 			panic(ErrTimeOut)
 		}

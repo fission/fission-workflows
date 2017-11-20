@@ -23,11 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	NOTIFICATION_BUFFER = 100
-	INVOCATION_TIMEOUT  = time.Duration(10) * time.Minute
-	MAX_ERROR_COUNT     = 3
-)
+var wfiLog = log.WithField(LogKeyController, "wf")
 
 type InvocationController struct {
 	invokeCache   fes.CacheReader
@@ -63,7 +59,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 		functionApi:   functionApi,
 		invocationApi: invocationApi,
 		exprParser:    exprParser,
-		workQueue:     make(chan Action, 50),
+		workQueue:     make(chan Action, WorkQueueSize),
 
 		// States maintains an active cache of currently running invocations, with execution related data.
 		// This state information is considered preemptable and can be removed or lost at any time.
@@ -71,8 +67,8 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 	}
 }
 
-func (cr *InvocationController) Init() error {
-	ctx, cancelFn := context.WithCancel(context.Background())
+func (cr *InvocationController) Init(sctx context.Context) error {
+	ctx, cancelFn := context.WithCancel(sctx)
 	cr.cancelFn = cancelFn
 
 	// Subscribe to invocation creations and task events.
@@ -80,7 +76,7 @@ func (cr *InvocationController) Init() error {
 
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		cr.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
-			Buf:           NOTIFICATION_BUFFER,
+			Buf:           NotificationBuffer,
 			LabelSelector: selector,
 		})
 
@@ -89,15 +85,15 @@ func (cr *InvocationController) Init() error {
 			for {
 				select {
 				case notification := <-cr.sub.Ch:
-					logrus.WithField("labels", notification.Labels()).Debug("Handling invocation notification.")
+					wfiLog.WithField("labels", notification.Labels()).Debug("Handling invocation notification.")
 					switch n := notification.(type) {
 					case *fes.Notification:
 						cr.HandleNotification(n)
 					default:
-						logrus.WithField("notification", n).Warn("Ignoring unknown notification type")
+						wfiLog.WithField("notification", n).Warn("Ignoring unknown notification type")
 					}
 				case <-ctx.Done():
-					logrus.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+					wfiLog.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
 					return
 				}
 			}
@@ -120,7 +116,7 @@ func (cr *InvocationController) Init() error {
 					err := action.Apply()
 					state := cr.states[action.Id()]
 					if err != nil {
-						logrus.WithField("action", action).Errorf("WorkflowInvocation action failed: %v", err)
+						wfiLog.WithField("action", action).Errorf("WorkflowInvocation action failed: %v", err)
 						state.recentError = err
 						state.errorCount += 1
 					} else {
@@ -130,7 +126,7 @@ func (cr *InvocationController) Init() error {
 				}()
 
 			case <-ctx.Done():
-				logrus.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
+				wfiLog.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
 				return
 			}
 		}
@@ -139,8 +135,8 @@ func (cr *InvocationController) Init() error {
 	return nil
 }
 
-func (cr *InvocationController) HandleNotification(msg *fes.Notification) {
-	logrus.WithFields(logrus.Fields{
+func (cr *InvocationController) HandleNotification(msg *fes.Notification) error {
+	wfiLog.WithFields(logrus.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
 	}).Info("controller event trigger!")
@@ -159,12 +155,13 @@ func (cr *InvocationController) HandleNotification(msg *fes.Notification) {
 
 		cr.evaluate(invoc.WorkflowInvocation)
 	default:
-		logrus.WithField("type", msg.EventType).Warn("Controller ignores unknown event.")
+		wfiLog.WithField("type", msg.EventType).Warn("Controller ignores unknown event.")
 	}
+	return nil
 }
 
-func (cr *InvocationController) HandleTick() {
-	logrus.Debug("Controller tick...")
+func (cr *InvocationController) HandleTick() error {
+	wfiLog.Debug("Controller tick...")
 	// Options: refresh projection, send ping, cancel invocation
 	// Short loop (invocations the controller is actively tracking) and long loop (to check if there are any orphans)
 
@@ -174,8 +171,7 @@ func (cr *InvocationController) HandleTick() {
 		wi := aggregates.NewWorkflowInvocation(entity.Id, nil)
 		err := cr.invokeCache.Get(wi)
 		if err != nil {
-			logrus.Error(err)
-			return
+			return err
 		}
 
 		// Check if we actually need to evaluate
@@ -184,12 +180,14 @@ func (cr *InvocationController) HandleTick() {
 			continue
 		}
 
-		// TODO check if workflow invocation is in a backoff
+		// TODO check if workflow invocation is in a back-off
 
 		cr.evaluate(wi.WorkflowInvocation)
 	}
+	return nil
 }
 
+// TODO return error
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	// TODO lock on invocation-level
 	cr.evalMutex.Lock()
@@ -203,27 +201,27 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 
 	// Check if the graph has been failing too often
-	if state.errorCount > MAX_ERROR_COUNT {
-		logrus.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
+	if state.errorCount > MaxErrorCount {
+		wfiLog.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
 		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
 		if err != nil {
-			logrus.Errorf("failed to cancel timed out invocation: %v", err)
+			wfiLog.Errorf("failed to cancel timed out invocation: %v", err)
 		}
 		return
 	}
 
 	// Check if the workflow invocation is in the right state
 	if invoc.Status.Status.Finished() {
-		logrus.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
+		wfiLog.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
 		return
 	}
 
 	// For now: kill after 10 min
-	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(INVOCATION_TIMEOUT.Seconds()) {
-		logrus.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
+	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(InvocationTimeout.Seconds()) {
+		wfiLog.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
 		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
 		if err != nil {
-			logrus.Errorf("failed to cancel timed out invocation: %v", err)
+			wfiLog.Errorf("failed to cancel timed out invocation: %v", err)
 		}
 		return
 	}
@@ -232,14 +230,14 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
 	err := cr.wfCache.Get(wf)
 	if err != nil {
-		logrus.Errorf("Controller failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
+		wfiLog.Errorf("Controller failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
 		return
 	}
 
 	// Check if workflow is in the right state to use.
 	if wf.Status.Status != types.WorkflowStatus_READY {
 		// TODO backoff
-		logrus.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
+		wfiLog.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
 		return
 	}
 
@@ -265,7 +263,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 
 		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput) // TODO just submit?
 		if err != nil {
-			logrus.Errorf("failed to mark invocation as complete: %v", err)
+			wfiLog.Errorf("failed to mark invocation as complete: %v", err)
 			return
 		}
 	}
@@ -298,6 +296,19 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 }
 
+func (cr *InvocationController) Close() error {
+	wfiLog.Info("Closing controller...")
+	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
+		err := invokePub.Unsubscribe(cr.sub)
+		if err != nil {
+			return err
+		}
+	}
+
+	cr.cancelFn()
+	return nil
+}
+
 func (cr *InvocationController) submit(action Action) (submitted bool) {
 	select {
 	case cr.workQueue <- action:
@@ -310,20 +321,6 @@ func (cr *InvocationController) submit(action Action) (submitted bool) {
 		// Action overflow
 	}
 	return submitted
-}
-
-func (cr *InvocationController) Close() error {
-	logrus.Debug("Closing controller...")
-	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
-		err := invokePub.Unsubscribe(cr.sub)
-		if err != nil {
-			return err
-		}
-	}
-
-	cr.cancelFn()
-
-	return nil
 }
 
 //
@@ -341,7 +338,7 @@ func (a *abortAction) Id() string {
 }
 
 func (a *abortAction) Apply() error {
-	logrus.Infof("aborting: '%v'", a.invocationId)
+	wfiLog.Infof("aborting: '%v'", a.invocationId)
 	return a.api.Cancel(a.invocationId)
 }
 
@@ -367,7 +364,7 @@ func (a *invokeTaskAction) Apply() error {
 			return fmt.Errorf("unknown task '%v'", a.task.Id)
 		}
 	}
-	logrus.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
+	wfiLog.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
 
 	// Resolve type of the task
 	taskDef, ok := a.wf.Status.ResolvedTasks[task.FunctionRef]
@@ -381,7 +378,7 @@ func (a *invokeTaskAction) Apply() error {
 	for inputKey, val := range a.task.Inputs {
 		resolvedInput, err := a.expr.Resolve(queryScope, queryScope.Tasks[a.task.Id], nil, val)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
+			wfiLog.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
 			}).Errorf("Failed to parse input: %v", err)
@@ -389,7 +386,7 @@ func (a *invokeTaskAction) Apply() error {
 		}
 
 		inputs[inputKey] = resolvedInput
-		logrus.WithFields(logrus.Fields{
+		wfiLog.WithFields(logrus.Fields{
 			"val":      val,
 			"key":      inputKey,
 			"resolved": resolvedInput,
@@ -405,7 +402,7 @@ func (a *invokeTaskAction) Apply() error {
 
 	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
+		wfiLog.WithFields(logrus.Fields{
 			"id":  a.wfi.Metadata.Id,
 			"err": err,
 		}).Errorf("Failed to execute task")
