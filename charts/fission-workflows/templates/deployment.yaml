@@ -15,7 +15,7 @@ spec:
       containers:
       - name: workflows-apiserver
         image: "{{ .Values.bundleImage }}:{{.Values.tag}}"
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.pullPolicy }}
         command: ["/fission-workflows-bundle"]
         args: [
         # Only run apiserver components
