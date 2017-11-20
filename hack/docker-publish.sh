@@ -25,10 +25,12 @@ NS=$1
 echo "Using tag: ${TAG} and org ${NS}"
 BUNDLE_IMAGE=${NS}/fission-workflows-bundle
 ENV_IMAGE=${NS}/workflow-env
+BUILD_ENV_IMAGE=${NS}/workflow-build-env
 
 # Check if images with tags exist
 local_image_exists ${BUNDLE_IMAGE} ${TAG}
 local_image_exists ${ENV_IMAGE} ${TAG}
+local_image_exists ${BUILD_ENV_IMAGE} ${TAG}
 
 # Publish
 read -p "Publish images with '${TAG}' to Dockerhub namespace '${NS}'? " -n 1 -r
@@ -40,4 +42,6 @@ then
     docker push ${BUNDLE_IMAGE}:${TAG}
     echo "Publishing ${ENV_IMAGE}:${TAG}"
     docker push ${ENV_IMAGE}:${TAG}
+    echo "publishing ${BUILD_ENV_IMAGE}:${TAG}"
+    docker push ${BUILD_ENV_IMAGE}:${TAG}
 fi
