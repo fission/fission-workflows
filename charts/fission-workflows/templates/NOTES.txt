@@ -6,7 +6,7 @@ Usage:
 https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortune.sh > fortune.sh
 https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/whalesay.sh > whalesay.sh
 
-fission env create --name binary --image fission/binary-env:0.3.0
+fission env create --name binary --image fission/binary-env
 fission fn create --name whalesay --env binary --deploy ./whalesay.sh
 fission fn create --name fortune --env binary --deploy ./fortune.sh
 
