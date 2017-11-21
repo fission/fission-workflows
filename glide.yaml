@@ -37,7 +37,7 @@ import:
   version: v2.0.0
 - package: gopkg.in/yaml.v2
 - package: github.com/fission/fission
-  version: ^0.3.0-rc
+  version: b2678783b63b4dccda8e6b02ca1adf292e1bb183
   # Due to the old version of the kubernetes client we need to fix the openapi versions to avoid incompatible interfaces.
 - package: github.com/go-openapi/errors
   version: 49fe8b3a0e0d32a617d8d50c67f856ad6e45b28b

@@ -45,7 +45,7 @@ func main() {
 		{
 			Name:    "status",
 			Aliases: []string{"s"},
-			Usage:   "Check cluster",
+			Usage:   "Check cluster status",
 			Action: func(c *cli.Context) error {
 				u := parseUrl(c.GlobalString("url"))
 				client := createTransportClient(u)

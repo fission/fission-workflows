@@ -26,8 +26,8 @@ eval $(minikube docker-env)
 bash ./docker.sh
 ```
 
-To deploy your locally compiled version. As of writing Fission Workflows, requires fission to be installed 
-in the fission namespace.
+To deploy your locally compiled version. **As of writing Fission Workflows, requires fission to be installed 
+in the fission namespace.**
 ```bash
 helm install --set "tag=latest" --namespace fission charts/fission-workflows
 ```

@@ -34,10 +34,10 @@ imports:
   - log
   - swagger
 - name: github.com/fission/fission
-  version: 52c77c5bf5b6b54249ab049c9035e3c16df53f25
+  version: b2678783b63b4dccda8e6b02ca1adf292e1bb183
   subpackages:
   - controller/client
-  - poolmgr/client
+  - executor/client
   - tpr
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee

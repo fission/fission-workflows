@@ -22,7 +22,7 @@ apiserver: true
 fnenv:
   fission:
     controller: http://controller.fission
-    poolmgr: http://poolmgr.fission
+    executor: http://executor.fission
 
 # Message queue config
 nats:

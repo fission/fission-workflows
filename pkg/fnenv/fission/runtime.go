@@ -10,7 +10,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	poolmgr "github.com/fission/fission/poolmgr/client"
+	executor "github.com/fission/fission/executor/client"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/1.5/pkg/api"
 
@@ -22,14 +22,14 @@ import (
 
 // FunctionEnv adapts the Fission platform to the function execution runtime.
 type FunctionEnv struct {
-	poolmgr *poolmgr.Client
-	ct      *ContentTypeMapper
+	executor *executor.Client
+	ct       *ContentTypeMapper
 }
 
-func NewFunctionEnv(poolmgr *poolmgr.Client) *FunctionEnv {
+func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
 	return &FunctionEnv{
-		poolmgr: poolmgr,
-		ct:      &ContentTypeMapper{typedvalues.DefaultParserFormatter},
+		executor: executor,
+		ct:       &ContentTypeMapper{typedvalues.DefaultParserFormatter},
 	}
 }
 
@@ -42,7 +42,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
 	}).Info("Invoking Fission function.")
-	serviceUrl, err := fe.poolmgr.GetServiceForFunction(meta)
+	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"err":  err,
