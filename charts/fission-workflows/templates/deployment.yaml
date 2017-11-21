@@ -3,7 +3,6 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: workflows-apiserver
-  namespace: fission
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 spec:
@@ -15,8 +14,8 @@ spec:
     spec:
       containers:
       - name: workflows-apiserver
-        image: {{ .Values.bundleImage }}
-        imagePullPolicy: IfNotPresent
+        image: "{{ .Values.bundleImage }}:{{.Values.tag}}"
+        imagePullPolicy: {{ .Values.pullPolicy }}
         command: ["/fission-workflows-bundle"]
         args: [
         # Only run apiserver components
@@ -53,6 +52,7 @@ spec:
     svc: workflows-apiserver
 ---
 {{ end }}
+# Workflow Engine is managed like any other environment in Fission
 apiVersion: fission.io/v1
 kind: Environment
 metadata:
@@ -62,8 +62,8 @@ spec:
   version: 2
   runtime:
   # TODO Add environment variables for environment once supported by Fission
-    image: "{{ .Values.envImage }}"
+    image: "{{ .Values.envImage }}:{{.Values.tag}}"
   builder:
-    image: "{{ .Values.buildEnvImage }}"
+    image: "{{ .Values.buildEnvImage }}:{{.Values.tag}}"
     command: "defaultBuild"
   allowedFunctionsPerContainer: infinite

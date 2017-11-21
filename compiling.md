@@ -1,5 +1,9 @@
 # Compiling
 
+*You only need to do this if you're making Fission Workflows changes; if you're
+just deploying Fission Workflows, use the helm chart which points to prebuilt
+images by default.*
+
 ## Requirements
 - go >1.8
 - docker
@@ -20,6 +24,12 @@ eval $(minikube docker-env)
 
 # Build the docker image
 bash ./docker.sh
+```
+
+To deploy your locally compiled version. As of writing Fission Workflows, requires fission to be installed 
+in the fission namespace.
+```bash
+helm install --set "tag=latest" --namespace fission charts/fission-workflows
 ```
 
 ### CLI

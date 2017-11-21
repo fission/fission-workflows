@@ -45,7 +45,7 @@ test workflow.  Clone this repository, and from its root directory, run:
 #
 # Add binary environment and create two test functions on your Fission setup:
 #
-fission env create --name binary --image fission/binary-env:v0.3.0
+fission env create --name binary --image fission/binary-env
 fission function create --name whalesay --env binary --deploy examples/whales/whalesay.sh
 fission function create --name fortune --env binary --deploy examples/whales/fortune.sh
 
@@ -58,7 +58,7 @@ fission function create --name fortunewhale --env workflow --src examples/whales
 #
 # Map an HTTP GET to your new workflow function:
 #
-$ fission route create --method GET --url /fortunewhale --function fortunewhale
+fission route create --method GET --url /fortunewhale --function fortunewhale
 
 #
 # Invoke the workflow with an HTTP request:
