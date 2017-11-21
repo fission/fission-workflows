@@ -12,12 +12,12 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	executor "github.com/fission/fission/executor/client"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/1.5/pkg/api"
 
 	"strings"
 
 	"github.com/fission/fission/router"
-	k8stypes "k8s.io/client-go/1.5/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // FunctionEnv adapts the Fission platform to the function execution runtime.
@@ -34,10 +34,10 @@ func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	meta := &api.ObjectMeta{
+	meta := &metav1.ObjectMeta{
 		Name:      spec.GetType().GetSrc(),
 		UID:       k8stypes.UID(spec.GetType().GetResolved()),
-		Namespace: api.NamespaceDefault,
+		Namespace: metav1.NamespaceDefault,
 	}
 	logrus.WithFields(logrus.Fields{
 		"metadata": meta,
