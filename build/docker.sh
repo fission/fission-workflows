@@ -3,10 +3,19 @@
 set -ex
 
 #
-# Builds all docker images
+# Builds all docker images. Usage docker.sh [<repo>] [<tag>]
 #
-IMAGE_VERSION=0.1.2
-IMAGE_ORG=fission
+BUILD_ROOT=$(dirname $0)
+
+IMAGE_REPO=$1
+if [ -z "$IMAGE_REPO" ]; then
+    IMAGE_TAG=fission
+fi
+
+IMAGE_TAG=$2
+if [ -z "$IMAGE_TAG" ]; then
+    IMAGE_TAG=latest
+fi
 
 # Check preconditions
 if [ ! -f ./fission-workflows-bundle ]; then
@@ -20,16 +29,16 @@ if [ ! -f ./wfcli ]; then
 fi
 
 # Prepare fs
-rm -f bundle/fission-workflows-bundle
-rm -f env/fission-workflows-bundle
-rm -f build-env/wfcli
+rm -f ${BUILD_ROOT}/bundle/fission-workflows-bundle
+rm -f ${BUILD_ROOT}/env/fission-workflows-bundle
+rm -f ${BUILD_ROOT}/build-env/wfcli
 chmod +x fission-workflows-bundle
 chmod +x wfcli
-yes | cp fission-workflows-bundle env/
-yes | cp fission-workflows-bundle bundle/
-yes | cp wfcli build-env/
+yes | cp fission-workflows-bundle ${BUILD_ROOT}/env/
+yes | cp fission-workflows-bundle ${BUILD_ROOT}/bundle/
+yes | cp wfcli ${BUILD_ROOT}/build-env/
 
 # Build images
-docker build --tag="${IMAGE_ORG}/fission-workflows-bundle:${IMAGE_VERSION}" bundle/
-docker build --tag="${IMAGE_ORG}/workflow-env:${IMAGE_VERSION}" env/
-docker build --tag="${IMAGE_ORG}/workflow-build-env:${IMAGE_VERSION}" build-env/
+docker build --tag="${IMAGE_REPO}/fission-workflows-bundle:${IMAGE_TAG}" ${BUILD_ROOT}/bundle/
+docker build --tag="${IMAGE_REPO}/workflow-env:${IMAGE_TAG}" ${BUILD_ROOT}/env/
+docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}/build-env/

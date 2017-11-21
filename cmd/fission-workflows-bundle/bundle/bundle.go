@@ -29,7 +29,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/fission/fission-workflows/pkg/version"
 	controllerc "github.com/fission/fission/controller/client"
-	poolmgrc "github.com/fission/fission/poolmgr/client"
+	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
 	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/nats-io/go-nats-streaming"
@@ -56,8 +56,8 @@ type Options struct {
 }
 
 type FissionOptions struct {
-	PoolmgrAddr    string
-	ControllerAddr string
+	ExecutorAddress string
+	ControllerAddr  string
 }
 
 type NatsOptions struct {
@@ -98,7 +98,7 @@ func Run(ctx context.Context, opts *Options) error {
 		resolvers["internal"] = setupInternalFunctionRuntime()
 	}
 	if opts.Fission != nil {
-		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.PoolmgrAddr)
+		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
 
@@ -195,9 +195,9 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 	return native.NewFunctionEnv(builtin.DefaultBuiltinFunctions)
 }
 
-func setupFissionFunctionRuntime(poolmgrAddr string) *fission.FunctionEnv {
-	poolmgrClient := poolmgrc.MakeClient(poolmgrAddr)
-	return fission.NewFunctionEnv(poolmgrClient)
+func setupFissionFunctionRuntime(executorAddr string) *fission.FunctionEnv {
+	client := executor.MakeClient(executorAddr)
+	return fission.NewFunctionEnv(client)
 }
 
 func setupFissionFunctionResolver(controllerAddr string) *fission.Resolver {

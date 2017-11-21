@@ -31,8 +31,8 @@ spec:
           value: nats://{{ .Values.nats.authToken }}@{{ .Values.nats.location }}
         - name: ES_NATS_CLUSTER
           value: "{{ .Values.nats.cluster }}"
-        - name: FNENV_FISSION_POOLMGR
-          value: "{{ .Values.fnenv.fission.poolmgr }}"
+        - name: FNENV_FISSION_EXECUTOR
+          value: "{{ .Values.fnenv.fission.executor }}"
         - name: FNENV_FISSION_CONTROLLER
           value: "{{ .Values.fnenv.fission.controller }}"
 ---

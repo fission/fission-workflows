@@ -50,8 +50,8 @@ func parseFissionOptions(c *cli.Context) *bundle.FissionOptions {
 	}
 
 	return &bundle.FissionOptions{
-		PoolmgrAddr:    c.String("fission-poolmgr"),
-		ControllerAddr: c.String("fission-controller"),
+		ExecutorAddress: c.String("fission-executor"),
+		ControllerAddr:  c.String("fission-controller"),
 	}
 }
 
@@ -112,10 +112,10 @@ func createCli() *cli.App {
 			Usage: "Use Fission as a function environment",
 		},
 		cli.StringFlag{
-			Name:   "fission-poolmgr",
-			Usage:  "Address of the poolmgr",
-			Value:  "http://poolmgr.fission",
-			EnvVar: "FNENV_FISSION_POOLMGR",
+			Name:   "fission-executor",
+			Usage:  "Address of the fission executor",
+			Value:  "http://executor.fission",
+			EnvVar: "FNENV_FISSION_EXECUTOR",
 		},
 		cli.StringFlag{
 			Name:   "fission-controller",

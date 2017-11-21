@@ -3,7 +3,8 @@ package fission
 import (
 	"github.com/fission/fission/controller/client"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/1.5/pkg/api"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Resolver struct {
@@ -16,7 +17,7 @@ func NewResolver(controller *client.Client) *Resolver {
 
 func (re *Resolver) Resolve(fnName string) (string, error) {
 	logrus.WithField("name", fnName).Info("Resolving function ")
-	fn, err := re.controller.FunctionGet(&api.ObjectMeta{
+	fn, err := re.controller.FunctionGet(&metav1.ObjectMeta{
 		Name: fnName,
 	})
 	if err != nil {
