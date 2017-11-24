@@ -21,11 +21,13 @@ apiserver: true
 # Fission configuration
 fnenv:
   fission:
-    controller: http://controller.fission
-    executor: http://executor.fission
+    ns: fission
+    controller: http://controller
+    executor: http://executor
 
 # Message queue config
 nats:
   authToken: defaultFissionAuthToken
   cluster: fissionMQTrigger
-  location: nats-streaming:4222
+  location: nats-streaming
+  port: 4222

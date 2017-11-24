@@ -27,14 +27,13 @@ spec:
         ]
         env:
         - name: ES_NATS_URL
-#          value: nats://defaultFissionAuthToken@nats-streaming:4222
-          value: nats://{{ .Values.nats.authToken }}@{{ .Values.nats.location }}
+          value: "nats://{{ .Values.nats.authToken }}@{{ .Values.nats.location }}:{{ .Values.nats.port }}"
         - name: ES_NATS_CLUSTER
           value: "{{ .Values.nats.cluster }}"
         - name: FNENV_FISSION_EXECUTOR
-          value: "{{ .Values.fnenv.fission.executor }}"
+          value: "{{ .Values.fnenv.fission.executor }}.{{ .Values.fnenv.fission.ns }}"
         - name: FNENV_FISSION_CONTROLLER
-          value: "{{ .Values.fnenv.fission.controller }}"
+          value: "{{ .Values.fnenv.fission.controller }}.{{ .Values.fnenv.fission.ns }}"
 ---
 apiVersion: v1
 kind: Service
@@ -61,8 +60,16 @@ metadata:
 spec:
   version: 2
   runtime:
-  # TODO Add environment variables for environment once supported by Fission
     image: "{{ .Values.envImage }}:{{.Values.tag}}"
+    env:
+    - name: ES_NATS_URL
+      value: "nats://{{ .Values.nats.cluster }}.{{ .Values.fnenv.fission.ns }}:{{ .Values.nats.port }}"
+    - name: ES_NATS_CLUSTER
+      value: "{{ .Values.nats.cluster }}"
+    - name: FNENV_FISSION_CONTROLLER
+      value: "{{ .Values.fnenv.fission.executor }}.{{ .Values.fnenv.fission.ns }}"
+    - name: FNENV_FISSION_EXECUTOR
+      value: "{{ .Values.fnenv.fission.controller }}.{{ .Values.fnenv.fission.ns }}"
   builder:
     image: "{{ .Values.buildEnvImage }}:{{.Values.tag}}"
     command: "defaultBuild"
