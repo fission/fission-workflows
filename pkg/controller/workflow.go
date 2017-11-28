@@ -76,10 +76,7 @@ func (ctr *WorkflowController) Init() error {
 		for {
 			select {
 			case action := <-ctr.workQueue:
-				err := action.Apply()
-				if err != nil {
-					logrus.WithField("action", action).Error("Workflow action failed")
-				}
+				ctr.HandleAction(action)
 			case <-ctx.Done():
 				logrus.WithField("ctx.err", ctx.Err()).Debug("Action workQueue worker closed.")
 				return
@@ -128,10 +125,10 @@ func (ctr *WorkflowController) HandleNotification(msg *fes.Notification) {
 	}
 
 	// Check if the target workflow is not in a backoff
-	locked := ctr.wfBackoff.Locked(wf.Aggregate().Id, time.Now())
-	if locked {
-		return
-	}
+	//locked := ctr.wfBackoff.Locked(wf.Aggregate().Id, time.Now())
+	//if locked {
+	//	return
+	//}
 
 	err := ctr.evaluate(wf.Workflow)
 	if err != nil {
@@ -170,10 +167,14 @@ func (ctr *WorkflowController) submit(action Action) (submitted bool) {
 }
 
 func (ctr *WorkflowController) HandleAction(action Action) {
+	actionLog := logrus.WithField("action", action.Id())
+	actionLog.Info("Handling action.")
 	err := action.Apply()
 	if err != nil {
-		logrus.Errorf("Failed to perform action: %v", err)
-		ctr.wfBackoff.Backoff(action.Id())
+		actionLog.Errorf("Failed to perform action: %v", err)
+		bkf := ctr.wfBackoff.Backoff(action.Id())
+		actionLog.Infof("Set evaluation backoff to %d ms (attempt: %v)",
+			bkf.Lockout.Nanoseconds()/1000, bkf.Attempts)
 	}
 }
 

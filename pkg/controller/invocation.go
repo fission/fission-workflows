@@ -120,7 +120,7 @@ func (cr *InvocationController) Init() error {
 					err := action.Apply()
 					state := cr.states[action.Id()]
 					if err != nil {
-						logrus.WithField("action", action).Error("WorkflowInvocation action failed")
+						logrus.WithField("action", action).Errorf("WorkflowInvocation action failed: %v", err)
 						state.recentError = err
 						state.errorCount += 1
 					} else {
@@ -238,6 +238,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 
 	// Check if workflow is in the right state to use.
 	if wf.Status.Status != types.WorkflowStatus_READY {
+		// TODO backoff
 		logrus.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
 		return
 	}
@@ -371,7 +372,7 @@ func (a *invokeTaskAction) Apply() error {
 	// Resolve type of the task
 	taskDef, ok := a.wf.Status.ResolvedTasks[task.FunctionRef]
 	if !ok {
-		return fmt.Errorf("no resolved task could be found for FunctionRef'%v'", task.FunctionRef)
+		return fmt.Errorf("no resolved task could be found for FunctionRef '%v'", task.FunctionRef)
 	}
 
 	// Resolve the inputs

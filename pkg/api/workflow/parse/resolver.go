@@ -41,7 +41,10 @@ func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, er
 	taskTypes := map[string]*types.TaskTypeDef{}
 	for taskId, task := range spec.GetTasks() {
 		go func(taskId string, task *types.Task) {
-			lastErr = ps.resolveTaskAndInputs(task, taskTypes)
+			err := ps.resolveTaskAndInputs(task, taskTypes)
+			if err != nil {
+				lastErr = err
+			}
 			wg.Done()
 		}(taskId, task)
 	}
