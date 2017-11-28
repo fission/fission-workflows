@@ -27,11 +27,11 @@ type FunctionEnv struct {
 }
 
 const (
-	InputBody          = "body" // or 'default'
-	InputHttpMethod    = "http_method"
-	InputHeaderPrefix  = "header_"
-	InputQueryPrefix   = "query_"
-	InputContentType   = "content_type" // to force the content type
+	InputBody         = "body" // or 'default'
+	InputHttpMethod   = "http_method"
+	InputHeaderPrefix = "header_"
+	InputQueryPrefix  = "query_"
+	InputContentType  = "content_type" // to force the content type
 
 	defaultHttpMethod  = http.MethodPost
 	defaultProtocol    = "http"
@@ -51,7 +51,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		Namespace: metav1.NamespaceDefault,
 	}
 	logrus.WithFields(logrus.Fields{
-		"metadata": meta,
+		"name": meta.Name,
+		"UID": meta.UID,
+		"ns": meta.Namespace,
 	}).Info("Invoking Fission function.")
 
 	// Get reqUrl
@@ -70,17 +72,17 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		panic(err)
 	}
 
-	// Map input parameters to actual Fission function parameters
-
 	// Map body parameter
 	var input []byte
 	mainInput, _ := getFirstDefinedTypedValue(spec.Inputs, types.INPUT_MAIN, InputBody)
+	var short string
 	if mainInput != nil {
 		input = mainInput.Value
+		short = mainInput.Short()
 	}
 
 	r := bytes.NewReader(input)
-	logrus.Infof("[request][body]: %v", string(input))
+	logrus.Infof("[request][body]: %v", short)
 
 	// Map HTTP method
 	httpMethod := httpMethod(spec.Inputs, defaultHttpMethod)
@@ -101,10 +103,10 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	if err != nil {
 		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
 	}
-	defer req.Body.Close()
 
 	// Add body
 	req.Body = ioutil.NopCloser(r)
+	defer req.Body.Close()
 
 	// Add parameters normally added by Fission
 	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
@@ -126,7 +128,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	output := toTypedValue(resp)
 
 	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
-	logrus.Infof("[%s][output]: %v", meta.Name, output)
+	logrus.Infof("[%s][output]: %v", meta.Name, output.Short())
 	logrus.Infof("[%s][status]: %v", meta.Name, resp.StatusCode)
 
 	// Determine status of the task invocation
@@ -219,7 +221,7 @@ func contentType(inputs map[string]*types.TypedValue, mainInput *types.TypedValu
 
 func inferContentType(mainInput *types.TypedValue, defaultContentType string) string {
 	// Infer content type from main input  (TODO Temporary solution)
-	if strings.HasPrefix(mainInput.Type, "json") {
+	if mainInput != nil && strings.HasPrefix(mainInput.Type, "json") {
 		return "application/json"
 	}
 
@@ -231,7 +233,7 @@ func headers(inputs map[string]*types.TypedValue) map[string]string { // TODO su
 	result := map[string]string{}
 	for k, v := range inputs {
 		if strings.HasPrefix(k, InputHeaderPrefix) {
-			result[k] = toString(v)
+			result[strings.TrimPrefix(k, InputHeaderPrefix)] = toString(v)
 		}
 	}
 	return result
@@ -241,7 +243,7 @@ func query(inputs map[string]*types.TypedValue) url.Values { // TODO support mul
 	result := url.Values{}
 	for k, v := range inputs {
 		if strings.HasPrefix(k, InputQueryPrefix) {
-			result.Add(k, toString(v))
+			result.Add(strings.TrimPrefix(k, InputQueryPrefix), toString(v))
 		}
 	}
 	return result
