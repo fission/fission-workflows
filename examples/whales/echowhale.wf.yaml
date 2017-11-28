@@ -1,3 +1,4 @@
+# This whale shows how to access and reference with workflow parameters
 apiVersion: 1
 output: echowhale
 tasks:

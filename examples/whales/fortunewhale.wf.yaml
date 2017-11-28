@@ -1,3 +1,4 @@
+# This whale shows of a basic workflow that combines both Fission Functions (fortune, whalesay) and internal functions (noop)
 apiVersion: 1
 output: WhaleWithFortune
 tasks:

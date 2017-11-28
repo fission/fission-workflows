@@ -1,0 +1,5 @@
+# A whale that shows off how to add metadata (e.g. headers, query) to your fission function
+apiVersion: 1
+output: PassAlong
+tasks:
+

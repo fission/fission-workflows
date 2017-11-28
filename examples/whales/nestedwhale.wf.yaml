@@ -1,3 +1,4 @@
+# This whale shows of how to call other workflows from a workflow (surprise! There is no difference with regular functions)
 apiVersion: 1
 output: WhaleIt
 tasks:

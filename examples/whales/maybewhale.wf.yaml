@@ -1,3 +1,4 @@
+# A whale that shows off how a if-condition works in a workflow
 apiVersion: 1
 output: PassAlong
 tasks:
