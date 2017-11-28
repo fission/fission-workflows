@@ -22,8 +22,8 @@ bash ./build-linux.sh
 # Optional: Ensure that you target the right docker registry (assuming minikube)
 eval $(minikube docker-env)
 
-# Build the docker image
-bash ./docker.sh
+# Build the docker images
+bash ./docker.sh fission latest
 ```
 
 To deploy your locally compiled version. **As of writing Fission Workflows, requires fission to be installed 
