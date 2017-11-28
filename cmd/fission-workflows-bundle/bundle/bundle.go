@@ -68,7 +68,7 @@ type NatsOptions struct {
 
 // Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
-	log.WithField("version", version.VERSION).Info("Starting bundle")
+	log.WithField("version", version.VERSION).Info("Starting bundle...")
 
 	var es fes.EventStore
 	var esPub pubsub.Publisher
@@ -78,6 +78,11 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Event Stores
 	if opts.Nats != nil {
+		log.WithFields(log.Fields{
+			"url":     opts.Nats.Url,
+			"cluster": opts.Nats.Cluster,
+			"client":  opts.Nats.Client,
+		}).Infof("Using event store: NATS")
 		natsEs := setupNatsEventStoreClient(opts.Nats.Url, opts.Nats.Cluster, opts.Nats.Client)
 		es = natsEs
 		esPub = natsEs
@@ -94,25 +99,33 @@ func Run(ctx context.Context, opts *Options) error {
 	resolvers := map[string]function.Resolver{}
 	runtimes := map[string]function.Runtime{}
 	if opts.InternalRuntime {
+		log.WithField("config", nil).Infof("Using Function Runtime: Internal")
 		runtimes["internal"] = setupInternalFunctionRuntime()
 		resolvers["internal"] = setupInternalFunctionRuntime()
 	}
 	if opts.Fission != nil {
+		log.WithFields(log.Fields{
+			"controller": opts.Fission.ControllerAddr,
+			"executor":   opts.Fission.ExecutorAddress,
+		}).Infof("Using Function Runtime: Fission")
 		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
 
 	// Controller
 	if opts.InvocationController || opts.WorkflowController {
-		ctrls := []controller.Controller{}
+		var ctrls []controller.Controller
 		if opts.InvocationController {
+			log.Info("Using controller: workflow")
 			ctrls = append(ctrls, setupWorkflowController(wfCache(), es, resolvers))
 		}
 
 		if opts.WorkflowController {
+			log.Info("Using controller: invocation")
 			ctrls = append(ctrls, setupInvocationController(wfiCache(), wfCache(), es, runtimes))
 		}
 
+		log.Info("Running controllers.")
 		runController(ctx, ctrls...)
 	}
 
@@ -161,6 +174,7 @@ func Run(ctx context.Context, opts *Options) error {
 		runHttpGateway(ctx, apiSrv, admin, wf, wfi)
 	}
 
+	log.Info("Bundle set up.")
 	<-ctx.Done()
 	log.Info("Shutting down...")
 	// TODO properly shutdown components
@@ -346,5 +360,4 @@ func setupWorkflowController(wfCache fes.CacheReader, es fes.EventStore, fnResol
 func runController(ctx context.Context, ctrls ...controller.Controller) {
 	ctrl := controller.NewMetaController(ctrls...)
 	go ctrl.Run(ctx)
-	log.Info("Running controller.")
 }

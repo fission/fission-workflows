@@ -67,9 +67,9 @@ spec:
     - name: "ES_NATS_CLUSTER"
       value: "{{ .Values.nats.cluster }}"
     - name: "FNENV_FISSION_CONTROLLER"
-      value: "{{ .Values.fnenv.fission.executor }}.{{ .Values.fnenv.fission.ns }}"
-    - name: "FNENV_FISSION_EXECUTOR"
       value: "{{ .Values.fnenv.fission.controller }}.{{ .Values.fnenv.fission.ns }}"
+    - name: "FNENV_FISSION_EXECUTOR"
+      value: "{{ .Values.fnenv.fission.executor }}.{{ .Values.fnenv.fission.ns }}"
   builder:
     image: "{{ .Values.buildEnvImage }}:{{.Values.tag}}"
     command: "defaultBuild"

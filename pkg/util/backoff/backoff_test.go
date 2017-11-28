@@ -1,8 +1,8 @@
 package backoff
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestBackoff_DefaultBackoffAlgorithm(t *testing.T) {

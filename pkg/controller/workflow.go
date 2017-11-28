@@ -125,10 +125,10 @@ func (ctr *WorkflowController) HandleNotification(msg *fes.Notification) {
 	}
 
 	// Check if the target workflow is not in a backoff
-	locked := ctr.wfBackoff.Locked(wf.Aggregate().Id, time.Now())
-	if locked {
-		return
-	}
+	//locked := ctr.wfBackoff.Locked(wf.Aggregate().Id, time.Now())
+	//if locked {
+	//	return
+	//}
 
 	err := ctr.evaluate(wf.Workflow)
 	if err != nil {
@@ -174,7 +174,7 @@ func (ctr *WorkflowController) HandleAction(action Action) {
 		actionLog.Errorf("Failed to perform action: %v", err)
 		bkf := ctr.wfBackoff.Backoff(action.Id())
 		actionLog.Infof("Set evaluation backoff to %d ms (attempt: %v)",
-			bkf.Lockout.Nanoseconds() / 1000, bkf.Attempts)
+			bkf.Lockout.Nanoseconds()/1000, bkf.Attempts)
 	}
 }
 
