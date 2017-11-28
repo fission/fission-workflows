@@ -5,12 +5,16 @@ import (
 	"time"
 )
 
+// Utility for managing backoff strategies.
+// Future: add a consistent log formatter
+// Future: store err and all info per attempt (to allow this to function as the general retry library)
+
 type Algorithm interface {
 	Backoff(context ...Context) Context
 }
 
 var DefaultBackoffAlgorithm = &ExponentialBackoff{
-	MaxBackoff: time.Duration(24) * time.Hour,
+	MaxBackoff: time.Duration(1) * time.Hour,
 	Exponent:   2,
 	Step:       time.Duration(100) * time.Millisecond,
 }
@@ -20,9 +24,10 @@ func Backoff(context ...Context) Context {
 }
 
 type Context struct {
-	Lockout   time.Time
-	Attempts  int
-	Algorithm Algorithm
+	LockedUntil time.Time
+	Attempts    int
+	Algorithm   Algorithm
+	Lockout     time.Duration
 }
 
 func (bc Context) Next() Context {
@@ -35,7 +40,7 @@ func (bc Context) Next() Context {
 }
 
 func (bc Context) Locked(time time.Time) bool {
-	return bc.Lockout.After(time)
+	return bc.LockedUntil.After(time)
 }
 
 type ExponentialBackoff struct {
@@ -51,24 +56,27 @@ func (eb *ExponentialBackoff) Backoff(context ...Context) Context {
 	l := time.Now()
 	if len(context) != 0 {
 		c = context[0].Attempts
-		l = context[0].Lockout
+		l = context[0].LockedUntil
 	}
 
 	max := eb.MaxBackoff.Nanoseconds()
 	min := eb.MinBackoff.Nanoseconds()
-	step := eb.MinBackoff.Nanoseconds()
+	step := eb.Step.Nanoseconds()
+	exp := eb.Exponent
 	if max == 0 {
 		max = math.MaxInt64
 	}
 
-	d := (0.5 * (math.Pow(float64(2), float64(c)) - 1.0)) * float64(step)
+	d := (0.5 * (math.Pow(float64(exp), float64(c)) - 1.0)) * float64(step)
 
 	lockoutDuration := math.Max(math.Min(d, float64(max)), float64(min))
 
+	lockout := time.Duration(lockoutDuration) * time.Nanosecond
 	return Context{
-		Algorithm: eb,
-		Attempts:  c + 1,
-		Lockout:   l.Add(time.Duration(lockoutDuration) * time.Nanosecond),
+		Algorithm:   eb,
+		Attempts:    c + 1,
+		LockedUntil: l.Add(lockout),
+		Lockout:     lockout,
 	}
 }
 
@@ -87,13 +95,20 @@ func (bc Map) Cleanup() {
 	}
 }
 
-func (bc Map) Backoff(key string) {
+func (bc Map) Reset(key string) {
+	delete(bc, key)
+}
+
+func (bc Map) Backoff(key string) Context {
 	c, ok := bc[key]
+	var nb Context
 	if ok {
-		bc[key] = Backoff(c)
+		nb = Backoff(c)
 	} else {
-		bc[key] = Backoff()
+		nb = Backoff()
 	}
+	bc[key] = nb
+	return nb
 }
 
 func (bc Map) Locked(key string, time time.Time) bool {
