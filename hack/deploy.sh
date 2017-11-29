@@ -6,10 +6,12 @@
 
 # Configs
 KUBERNETES_VERSION=v1.8.0
-FISSION_VERSION=0.4.0rc
-FISSION_WORKFLOWS_VERSION=0.1.2
+FISSION_VERSION=0.4.1
+FISSION_WORKFLOWS_VERSION=0.1.3
 
-echo "Fission Workflows Deploy Script v1.2"
+NOFISSION=$1
+
+echo "Fission Workflows Deploy Script v1.3"
 
 # Check if kubectl is installed
 if ! command -v kubectl >/dev/null 2>&1; then
@@ -69,10 +71,18 @@ if ! helm repo list | grep fission-charts >/dev/null 2>&1 ; then
     printf "\n"
 fi
 
+if [ ! -z "${NOFISSION}" ] ; then
+    echo "Argument provided; leaving Fission and Fission Workflows installation to user."
+    exit 0
+fi
+
 # Install Fission
 if ! fission fn list >/dev/null 2>&1 ; then
     echo "Installing Fission ${FISSION_VERSION}..."
-    helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --wait --version ${FISSION_VERSION}
+    if ! helm install --namespace fission --set "serviceType=NodePort,pullPolicy=IfNotPresent,analytics=false"  -n fission-all fission-charts/fission-all --wait --version ${FISSION_VERSION} ; then
+        echo "Failed to install fission"
+        exit 0
+    fi
 fi
 
 # Install Fission Workflows
