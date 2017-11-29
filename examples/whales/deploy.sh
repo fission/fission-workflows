@@ -14,3 +14,4 @@ fission fn create --name fortunewhale --env workflow --src ./fortunewhale.wf.yam
 fission fn create --name echowhale --env workflow --src ./echowhale.wf.yaml
 fission fn create --name maybewhale --env workflow --src ./maybewhale.wf.yaml
 fission fn create --name nestedwhale --env workflow --src ./nestedwhale.wf.yaml
+fission fn create --name metadatawhale --env workflow --src ./metadatawhale.wf.yaml

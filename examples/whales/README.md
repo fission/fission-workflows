@@ -45,6 +45,14 @@ curl -XPOST -d 'Whale you echo?' ${FISSION_ROUTER}/fission-function/maybewhale
 curl -XPOST -d 'Whale you echo this way too long message?' ${FISSION_ROUTER}/fission-function/maybewhale
 ```
 
+### Metadatawhale
+The `metadatawhale` workflow shows how to add metadata (headers, query values) to tasks.
+
+Run:
+```bash
+curl -XPOST ${FISSION_ROUTER}/fission-function/metadatawhale
+```
+
 ### Nestedwhale
 The `nestedwhale` workflow is surprisingly... empty.
 The principle that 'workflows are fission functions', allows workflows to call other workflows just like you would call regular Fission Functions.

@@ -52,8 +52,8 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 	logrus.WithFields(logrus.Fields{
 		"name": meta.Name,
-		"UID": meta.UID,
-		"ns": meta.Namespace,
+		"UID":  meta.UID,
+		"ns":   meta.Namespace,
 	}).Info("Invoking Fission function.")
 
 	// Get reqUrl
