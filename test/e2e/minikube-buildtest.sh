@@ -38,9 +38,9 @@ build() {
 }
 
 #
-# Setup
+# deploy
 #
-setup() {
+deploy() {
     # Pre-Cleanup
     cleanup
 
@@ -89,7 +89,7 @@ prepare-env
 
 build
 
-setup
+deploy
 
 test
 

@@ -3,16 +3,31 @@ dist: trusty
 language: go
 go:
 - 1.9
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+
 install:
 - go get github.com/Masterminds/glide
-- go get github.com/nats-io/nats-streaming-server
+- go get github.com/nats-io/nats-streaming-server # Needed for some integration tests
+- test/e2e/travis-kube-setup.sh
+
+env:
+  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/k8scli:${PATH}
+
 script:
 - hack/verify-gofmt.sh
 - hack/verify-govet.sh
 - cd ${TRAVIS_BUILD_DIR}
+- hack/verify-gofmt.sh
+- hack/verify-govet.sh
 - glide install
 - ./build/build-linux.sh
 - test/runtests.sh
+
 notifications:
   slack:
     secure: KNv4Ce8dkNpshPD0qskT7HQYPbz0Q1MuTyZBRt8U7XmsdwvvxF+P00tkqw7zkOpPolahgV/Ml8jo6LKBxWd3rQEkt3bzlZJZcAZaPs5RhDFoYLZPppF8Bqpq4CEGTyfWljF0Zk5xl2vo49m7erXKhJ4XITlRq0oRakZZL+gH500XTOOXHL7xXNPqtgpiJoYseLTyB5/5GJOxqfYm+JI/9o1MTMKa7xT+KMXcVzd1p5kvSjIih/Ul6MAlrNdvESqV2MEF0zkBMlJKT63f8TQ+Bm2g7DBlIyWUh+a3pXT+HZ7i/Pu8hpek88fsMMQ1b0bujjezhgQ93g1O1M8TsJak6xkPIRnbuDXn0zbn+keam4xwym1wLwazOIOBuf6j/30JBpjapR8X2aizYoZWdKUNTtx4GBG+zW7xXvsIGakczDQJ3/EW0eMUNmnt/PvdmcT+cKJrnvSw757xlEPgp3UY6LeaRYmFDtv2rsSO63LKNltQujqB9fVNGMd0tQxSkYgDPY6fAiY18xuM5Ci/kp9YzN7Kd4tDTo6c0GGJQtppmqjRayQf26MyTXhwzR7neweBFaa6SVLFENobBnLXudgAf2W0Sg24hQccYtgJ3y0nZrwXcwDba3tQ2x9XrBI7fppZ25X6X97nFs3q5YVOxIDIPPs3KjPOIYgHKaasQxNkusM=
+    on_success: change
+    on_failure: always
