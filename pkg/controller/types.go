@@ -12,12 +12,10 @@ const (
 	WorkQueueSize      = 50
 	InvocationTimeout  = time.Duration(10) * time.Minute
 	MaxErrorCount      = 3
-	LogKeyController   = "ctrl"
 )
 
 var log = logrus.New().WithFields(logrus.Fields{
 	"component":      "controller",
-	LogKeyController: "?",
 })
 
 type Controller interface {

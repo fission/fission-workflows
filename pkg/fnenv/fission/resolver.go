@@ -2,12 +2,11 @@ package fission
 
 import (
 	"github.com/fission/fission/controller/client"
-	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Resolver implements the resolver interface to allow functions to be resolved through Fission
+// Resolver implements the Resolver interface and is responsible for resolving function references to
+// deterministic Fission function UIDs.
 type Resolver struct {
 	controller *client.Client
 }
@@ -17,7 +16,7 @@ func NewResolver(controller *client.Client) *Resolver {
 }
 
 func (re *Resolver) Resolve(fnName string) (string, error) {
-	logrus.WithField("name", fnName).Info("Resolving function ")
+	log.Infof("Resolving function: %s", fnName)
 	fn, err := re.controller.FunctionGet(&metav1.ObjectMeta{
 		Name:      fnName,
 		Namespace: metav1.NamespaceDefault,
@@ -27,7 +26,7 @@ func (re *Resolver) Resolve(fnName string) (string, error) {
 	}
 	id := string(fn.Metadata.UID)
 
-	logrus.WithField("name", fnName).WithField("uid", id).Info("Resolved fission function")
+	log.Infof("Resolved fission function %s to %s", fnName, id)
 
 	return id, nil
 }

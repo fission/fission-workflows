@@ -21,9 +21,11 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
+	"reflect"
+	"sync/atomic"
 )
 
-var wfiLog = log.WithField(LogKeyController, "wf")
+var wfiLog = log.WithField("component", "controller-wi")
 
 type InvocationController struct {
 	invokeCache   fes.CacheReader
@@ -39,14 +41,32 @@ type InvocationController struct {
 
 	// Queued keeps track of which invocations still have actions in the workQueue
 	states    map[string]ControlState
-	evalMutex sync.Mutex
 	// TODO add active cache
 }
 
 type ControlState struct {
-	errorCount  int
-	recentError error
-	inQueue     int
+	ErrorCount  uint32
+	RecentError error
+	QueueSize   uint32
+	lock        sync.Mutex
+}
+
+func (cs ControlState) AddError(err error) uint32 {
+	cs.RecentError = err
+	return atomic.AddUint32(&cs.ErrorCount, 1)
+}
+
+func (cs ControlState) ResetError() {
+	cs.RecentError = nil
+	cs.ErrorCount = 0
+}
+
+func (cs ControlState) IncrementQueueSize() uint32 {
+	return atomic.AddUint32(&cs.QueueSize, 1)
+}
+
+func (cs ControlState) DecrementQueueSize() uint32 {
+	return atomic.AddUint32(&cs.QueueSize, ^uint32(0)) // TODO avoid overflow
 }
 
 func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReader,
@@ -105,28 +125,20 @@ func (cr *InvocationController) Init(sctx context.Context) error {
 		for {
 			select {
 			case action := <-cr.workQueue:
-				state := cr.states[action.Id()]
 
-				if state.inQueue > 0 {
-					state.inQueue -= 1
-				}
-				cr.states[action.Id()] = state
-
-				go func() { // TODO limit goroutine pool size & atomic integer
+				go func() { // TODO limit goroutine pool size
 					err := action.Apply()
-					state := cr.states[action.Id()]
 					if err != nil {
-						wfiLog.WithField("action", action).Errorf("WorkflowInvocation action failed: %v", err)
-						state.recentError = err
-						state.errorCount += 1
+						wfiLog.WithField("action", action).Errorf("action failed: %v", err)
+						cr.states[action.Id()].AddError(err)
 					} else {
-						state.errorCount = 0
+						cr.states[action.Id()].ResetError()
 					}
-					cr.states[action.Id()] = state
+					cr.states[action.Id()].DecrementQueueSize()
 				}()
 
 			case <-ctx.Done():
-				wfiLog.WithField("ctx.err", ctx.Err()).Debug("WorkflowInvocation workQueue closed.")
+				wfiLog.WithField("ctx.err", ctx.Err()).Debug("workQueue closed.")
 				return
 			}
 		}
@@ -139,7 +151,7 @@ func (cr *InvocationController) HandleNotification(msg *fes.Notification) error 
 	wfiLog.WithFields(logrus.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
-	}).Info("controller event trigger!")
+	}).Info("Handling notification!")
 
 	switch msg.EventType {
 	case events.Invocation_INVOCATION_CREATED.String():
@@ -174,14 +186,6 @@ func (cr *InvocationController) HandleTick() error {
 			return err
 		}
 
-		// Check if we actually need to evaluate
-		if wi.Status.Status.Finished() {
-			// TODO remove finished wfi from active cache
-			continue
-		}
-
-		// TODO check if workflow invocation is in a back-off
-
 		cr.evaluate(wi.WorkflowInvocation)
 	}
 	return nil
@@ -189,23 +193,32 @@ func (cr *InvocationController) HandleTick() error {
 
 // TODO return error
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
-	// TODO lock on invocation-level
-	cr.evalMutex.Lock()
-	defer cr.evalMutex.Unlock()
-
 	state := cr.states[invoc.Metadata.Id]
+	state.lock.Lock()
+	defer state.lock.Unlock()
 
-	// Check if there are still open actions
-	if state.inQueue > 0 {
+	// Check if there are still open actions for this invocation
+	if state.QueueSize > 0 {
 		return
 	}
 
+	// Check if we actually need to evaluate
+	if invoc.Status.Status.Finished() {
+		// TODO remove finished wfi from active cache
+		return
+	}
+
+	// TODO check if workflow invocation is in a back-off
+
 	// Check if the graph has been failing too often
-	if state.errorCount > MaxErrorCount {
-		wfiLog.Infof("canceling invocation %v due to error count", invoc.Metadata.Id)
-		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
-		if err != nil {
-			wfiLog.Errorf("failed to cancel timed out invocation: %v", err)
+	if state.ErrorCount > MaxErrorCount {
+		wfiLog.Infof("canceling due to error count %v exceeds max error count  %v", state.ErrorCount, MaxErrorCount)
+		ok := cr.submit(&abortAction{
+			api:          cr.invocationApi,
+			invocationId: invoc.Metadata.Id,
+		})
+		if !ok {
+			wfiLog.Error("failed to cancel timed out invocation.")
 		}
 		return
 	}
@@ -217,11 +230,15 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 
 	// For now: kill after 10 min
-	if (time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds) > int64(InvocationTimeout.Seconds()) {
-		wfiLog.Infof("canceling timeout invocation %v", invoc.Metadata.Id)
-		err := cr.invocationApi.Cancel(invoc.Metadata.Id) // TODO just submit?
-		if err != nil {
-			wfiLog.Errorf("failed to cancel timed out invocation: %v", err)
+	duration := time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds
+	if duration > int64(InvocationTimeout.Seconds()) {
+		wfiLog.Infof("cancelling due to timeout; %v exceeds max timeout %v", duration, int64(InvocationTimeout.Seconds()))
+		ok := cr.submit(&abortAction{
+			api:          cr.invocationApi,
+			invocationId: invoc.Metadata.Id,
+		})
+		if !ok {
+			wfiLog.Error("failed to cancel timed out invocation.")
 		}
 		return
 	}
@@ -313,10 +330,10 @@ func (cr *InvocationController) submit(action Action) (submitted bool) {
 	select {
 	case cr.workQueue <- action:
 		// Ok
-		state := cr.states[action.Id()]
-		state.inQueue += 1
-		cr.states[action.Id()] = state
+		cr.states[action.Id()].IncrementQueueSize()
 		submitted = true
+		wfiLog.WithField("wfi", action.Id()).
+			Infof("submitted action: '%s'", reflect.TypeOf(action))
 	default:
 		// Action overflow
 	}
@@ -338,7 +355,7 @@ func (a *abortAction) Id() string {
 }
 
 func (a *abortAction) Apply() error {
-	wfiLog.Infof("aborting: '%v'", a.invocationId)
+	wfiLog.WithField("wfi", a.Id()).Info("Applying abort action")
 	return a.api.Cancel(a.invocationId)
 }
 
@@ -356,6 +373,7 @@ func (a *invokeTaskAction) Id() string {
 }
 
 func (a *invokeTaskAction) Apply() error {
+	actionLog := wfiLog.WithField("wfi", a.Id())
 	// Find task (static or dynamic)
 	task, ok := a.wfi.Status.DynamicTasks[a.task.Id]
 	if !ok {
@@ -364,7 +382,7 @@ func (a *invokeTaskAction) Apply() error {
 			return fmt.Errorf("unknown task '%v'", a.task.Id)
 		}
 	}
-	wfiLog.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
+	actionLog.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
 
 	// Resolve type of the task
 	taskDef, ok := a.wf.Status.ResolvedTasks[task.FunctionRef]
@@ -378,7 +396,7 @@ func (a *invokeTaskAction) Apply() error {
 	for inputKey, val := range a.task.Inputs {
 		resolvedInput, err := a.expr.Resolve(queryScope, queryScope.Tasks[a.task.Id], nil, val)
 		if err != nil {
-			wfiLog.WithFields(logrus.Fields{
+			actionLog.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
 			}).Errorf("Failed to parse input: %v", err)
@@ -386,7 +404,7 @@ func (a *invokeTaskAction) Apply() error {
 		}
 
 		inputs[inputKey] = resolvedInput
-		wfiLog.WithFields(logrus.Fields{
+		actionLog.WithFields(logrus.Fields{
 			"val":      val,
 			"key":      inputKey,
 			"resolved": resolvedInput,
@@ -402,7 +420,7 @@ func (a *invokeTaskAction) Apply() error {
 
 	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
 	if err != nil {
-		wfiLog.WithFields(logrus.Fields{
+		actionLog.WithFields(logrus.Fields{
 			"id":  a.wfi.Metadata.Id,
 			"err": err,
 		}).Errorf("Failed to execute task")

@@ -17,7 +17,7 @@ import (
 	"fmt"
 )
 
-var wfLog = log.WithField(LogKeyController, "wf")
+var wfLog = log.WithField("controller", "controller-wf")
 
 // WorkflowController is the controller concerned with the lifecycle of workflows. It handles responsibilities, such as
 // parsing of workflows.

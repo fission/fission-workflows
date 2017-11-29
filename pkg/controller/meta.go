@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	metaLog = log.WithField(LogKeyController, "meta")
+	metaLog = log.WithField("controller", "controller-meta")
 )
 
 // MetaController is a 'controller for controllers', allowing for composition with controllers. It allows users to
