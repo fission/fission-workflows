@@ -27,7 +27,7 @@ func CreateScopeId(parentId string, taskId string) string {
 }
 
 // Wait is a sync.WaitGroup.Wait() implementation that supports timeouts
-func Wait(wg sync.WaitGroup, timeout time.Duration) bool {
+func Wait(wg *sync.WaitGroup, timeout time.Duration) bool {
 	wgDone := make(chan bool)
 	defer close(wgDone)
 	go func() {
