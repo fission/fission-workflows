@@ -140,6 +140,6 @@ func toEvent(msg *stan.Msg) (*fes.Event, error) {
 		return nil, err
 	}
 
-	e.Id = fmt.Sprintf("%s", msg.Sequence)
+	e.Id = fmt.Sprintf("%d", msg.Sequence)
 	return e, nil
 }

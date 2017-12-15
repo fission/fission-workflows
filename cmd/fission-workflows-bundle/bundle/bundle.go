@@ -131,7 +131,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Http servers
 	if opts.Fission != nil {
-		proxySrv := http.Server{Addr: FISSION_PROXY_ADDRESS}
+		proxySrv := &http.Server{Addr: FISSION_PROXY_ADDRESS}
 		defer proxySrv.Shutdown(ctx)
 		runFissionEnvironmentProxy(proxySrv, es, wfiCache(), wfCache(), resolvers)
 	}
@@ -159,7 +159,7 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.ApiHttp {
-		apiSrv := http.Server{Addr: API_GATEWAY_ADDRESS}
+		apiSrv := &http.Server{Addr: API_GATEWAY_ADDRESS}
 		defer apiSrv.Shutdown(ctx)
 		var admin, wf, wfi string
 		if opts.ApiAdmin {
@@ -292,7 +292,7 @@ func runWorkflowInvocationApiServer(s *grpc.Server, es fes.EventStore, wfiCache 
 	log.Infof("Serving workflow invocation gRPC API at %s.", GRPC_ADDRESS)
 }
 
-func runHttpGateway(ctx context.Context, gwSrv http.Server, adminApiAddr string, wfApiAddr string, wfiApiAddr string) {
+func runHttpGateway(ctx context.Context, gwSrv *http.Server, adminApiAddr string, wfApiAddr string, wfiApiAddr string) {
 	mux := grpcruntime.NewServeMux()
 	grpcOpts := []grpc.DialOption{grpc.WithInsecure()}
 	if adminApiAddr != "" {
@@ -325,7 +325,7 @@ func runHttpGateway(ctx context.Context, gwSrv http.Server, adminApiAddr string,
 	log.Info("Serving HTTP API gateway at: ", gwSrv.Addr)
 }
 
-func runFissionEnvironmentProxy(proxySrv http.Server, es fes.EventStore, wfiCache fes.CacheReader,
+func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.EventStore, wfiCache fes.CacheReader,
 	wfCache fes.CacheReader, resolvers map[string]function.Resolver) {
 
 	workflowParser := parse.NewResolver(resolvers)
