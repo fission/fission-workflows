@@ -3,6 +3,9 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/fission/fission-workflows)](https://goreportcard.com/report/github.com/fission/fission-workflows)
 [![Fission Slack](http://slack.fission.io/badge.svg)](http://slack.fission.io)
 
+[![Fission Workflows](Docs/assets/fission-workflows-logo.png)](http://fission.io/workflows)
+
+----
 [fission.io](http://fission.io)  [@fissionio](http://twitter.com/fissionio)
 
 Fission Workflows is a workflow-based serverless function composition framework built on top of the [Fission](https://github.com/fission/fission) Function-as-a-Service (FaaS) platform.
@@ -13,6 +16,8 @@ Fission Workflows is a workflow-based serverless function composition framework 
 - **High Performance**: In contrast to existing workflow engines targeting other domains, Fission Workflows is designed from the ground up for low overhead, low latency workflow executions.
 - **Extensible**: All main aspects of the engine are extensible. For example, you can even define your own control flow constructs.
 - **Lightweight**: With just the need for a single data store (NATS Streaming) and a FaaS platform (Fission), the engine consumes minimal resources.
+
+----
 
 ### Philosophy
 
@@ -50,11 +55,16 @@ most other workflow engines are part of the internal API.
 
 **Workflows** can generally be represented in as a Directed Acyclic Graph (DAG).
 Consider the following example, a common pattern, the diamond-shaped workflow:
+
+<!--
 ```
-(A) --> (B) ---> (C) ---
-          \              \     
-            --> (D) ---->  (E) ---> (F)
+(A) -> (B) -> (C) ----
+          \            \     
+            -> (D) ->  (E) -> (F)
 ```
+-->
+
+![Workflow Example](Docs/assets/workflow-example.png)
 
 In this graph there is a single _starting task_ A, a _scatter task_ B
 triggering parallel execution of two _branches_ with tasks C and D,
@@ -63,7 +73,7 @@ parallel tasks.
 
 Finally the graph concludes once _final task_ F has been completed.
 
-Although Fission Workflow has additional functionality such as
+Although Fission Workflows has additional functionality such as
 conditional branches and advanced control flow options, it
 fundamentally executes a dependency graph.
 
@@ -150,7 +160,7 @@ issues, checkout the [roadmap](./Docs/roadmap.md) or browse through
 the open issues on Github.
 
 Finally, we're looking for early developer feedback -- if you do use
-Fission or Fission Workflow, we'd love to hear how it's working for
+Fission or Fission Workflows, we'd love to hear how it's working for
 you, what parts in particular you'd like to see improved, and so on.
 
 Talk to us on [slack](http://slack.fission.io) or
