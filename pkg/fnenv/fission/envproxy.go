@@ -25,7 +25,8 @@ import (
 	"strings"
 )
 
-// Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface
+// Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface. This
+// ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
 	invocationServer apiserver.WorkflowInvocationAPIServer
 	workflowServer   apiserver.WorkflowAPIServer
@@ -77,49 +78,49 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		fp.fissionIds[fnId] = true
 	}
 
-	// Map Inputs to function parameters
+	// Map request to workflow inputs
 	inputs := map[string]*types.TypedValue{}
-	err := ParseRequest(r, inputs)
+	err := parseRequest(r, inputs)
 	if err != nil {
 		logrus.Errorf("Failed to parse inputs: %v", err)
 		http.Error(w, "Failed to parse inputs", 400)
 		return
 	}
 
+	wfSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: fnId,
+		Inputs:     inputs,
+	}
+
 	// Temporary: in case of query header 'X-Async' being present, make request async
 	if len(r.Header.Get("X-Async")) > 0 {
-		invocatinId, err := fp.invocationServer.Invoke(ctx, &types.WorkflowInvocationSpec{
-			WorkflowId: fnId,
-			Inputs:     inputs,
-		})
+		invocationId, err := fp.invocationServer.Invoke(ctx, wfSpec)
 		if err != nil {
 			logrus.Errorf("Failed to invoke: %v", err)
 			http.Error(w, err.Error(), 500)
 			return
 		}
 		w.WriteHeader(200)
-		w.Write([]byte(invocatinId.Id))
+		w.Write([]byte(invocationId.Id))
 		return
 	}
 
 	// Otherwise, the request synchronous like other Fission functions
-	invocation, err := fp.invocationServer.InvokeSync(ctx, &types.WorkflowInvocationSpec{
-		WorkflowId: fnId,
-		Inputs:     inputs,
-	})
+	invocation, err := fp.invocationServer.InvokeSync(ctx, wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke: %v", err)
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// In case of an error, create an error response corresponding to Fission function errors
 	if !invocation.Status.Status.Successful() {
 		logrus.Errorf("Invocation not successful, was '%v'", invocation.Status.Status.String())
 		http.Error(w, invocation.Status.Status.String(), 500)
 		return
 	}
 
-	// TODO determine header based on the output value
+	// Otherwise, create a response corresponding to Fission function responses.
 	var resp []byte
 	if invocation.Status.Output != nil {
 		resp = invocation.Status.Output.Value
@@ -127,7 +128,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logrus.Infof("Invocation '%v' has no output.", fnId)
 	}
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
 

@@ -10,6 +10,9 @@ const (
 	SUBJECT_INVOCATION = "invocation"
 	SUBJECT_WORKFLOW   = "workflows"
 	INPUT_MAIN         = "default"
+	INPUT_HEADERS      = "headers"
+	INPUT_QUERY        = "query"
+	INPUT_METHOD       = "method"
 
 	typedValueShortMaxLen = 32
 )
