@@ -5,4 +5,6 @@ tasks:
   PrefixedFortune:
     run: fortune
     inputs:
-      header_prefix: "Whale says:"
+      headers:
+        # If the 'prefix' header is non-empty, we use that. Otherwise we default to "whale says"
+        prefix: "{ $.Invocation.Inputs.headers.Prefix || 'Whale says: ' }"

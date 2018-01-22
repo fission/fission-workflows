@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Resolver implements the resolver interface to allow functions to be resolved through Fission
 type Resolver struct {
 	controller *client.Client
 }
