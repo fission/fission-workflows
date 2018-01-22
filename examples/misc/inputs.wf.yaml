@@ -1,0 +1,9 @@
+# The Inputs Workflow - simply prints the inputs it received, including body, query params and headers.
+#
+# Example: curl -XPUT -H "hello: world" http://$FISSION_ROUTER/fission-function/inputs?a=b
+apiVersion: 1
+output: Printer
+tasks:
+  Printer:
+    run: compose
+    inputs: "{$.Invocation.Inputs}"
