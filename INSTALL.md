@@ -4,36 +4,36 @@ This document covers the installation of Fission Workflows.
 
 ### Prerequisites
 
-Fission Workflows requires the following to be installed on the host machine:
+Fission Workflows requires the following to be installed on your host machine:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 - [helm](https://github.com/kubernetes/helm)
 
-Additionally, Fission Workflows requires a
-[Fission](https://github.com/fission/fission) deployment on your
-Kubernetes cluster.  If you do not have a Fission deployment, follow
-[Fission's installation guide](http://fission.io/docs/0.3.0/install/).
+Additionally, Fission Workflows requires a [Fission](https://github.com/fission/fission) 
+deployment on your Kubernetes cluster. If you do not have a Fission deployment, follow
+[Fission's installation guide](http://fission.io/docs/0.4.0/install/).
 
-(Note that Fission Workflows requires Fission 0.3.0 or higher.)
+**(Note that Fission Workflows requires Fission 0.4.1 or higher, with the NATS component installed!)**
 
 ### Installing Fission Workflows
 
 Fission Workflows is an add-on to Fission. You can install both
-Fission and Workflows using helm charts.
+Fission and Fission Workflows using helm charts.
 
 Assuming you have a Kubernetes cluster, run the following commands:
 
 ```bash
-
 # Add the Fission charts repo
 helm repo add fission-charts https://fission.github.io/fission-charts/
 helm repo update
 
-# Install Fission (if you do not have a Fission deployment yet)
-helm install --namespace fission --set serviceType=NodePort -n fission-all fission-charts/fission-all --version 0.3.0
+# Install Fission 
+# This assumes that you do not have a Fission deployment yet, and are installing on a standard Minikube deployment.
+# Otherwise see http://fission.io/docs/0.4.0/install/ for more detailed instructions
+helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.4.1
 
 # Install Fission Workflows
-helm install fission-charts/fission-workflows
+helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.2.0
 ```
 
 ### Creating your first workflow
@@ -63,5 +63,5 @@ fission route create --method GET --url /fortunewhale --function fortunewhale
 #
 # Invoke the workflow with an HTTP request:
 #
-curl $FISSION_ROUTER/fortunewhale
+curl ${FISSION_ROUTER}/fortunewhale
 ``` 

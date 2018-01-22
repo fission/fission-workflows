@@ -9,7 +9,7 @@ BUILD_ROOT=$(dirname $0)
 
 IMAGE_REPO=$1
 if [ -z "$IMAGE_REPO" ]; then
-    IMAGE_TAG=fission
+    IMAGE_REPO=fission
 fi
 
 IMAGE_TAG=$2
