@@ -30,25 +30,41 @@ func NewResolver(client map[string]function.Resolver) *Resolver {
 	return &Resolver{client}
 }
 
+type resolvedFn struct {
+	fnRef     string
+	fnTypeDef *types.TaskTypeDef
+}
+
 // Resolve parses the interpreted workflow from a given spec.
 func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, error) {
-
+	var lastErr error
 	taskSize := len(spec.GetTasks())
 	wg := sync.WaitGroup{}
 	wg.Add(taskSize)
-	var lastErr error
-
 	taskTypes := map[string]*types.TaskTypeDef{}
-	for taskId, task := range spec.GetTasks() {
-		go func(taskId string, task *types.Task) {
-			err := ps.resolveTaskAndInputs(task, taskTypes)
+	resolvedC := make(chan resolvedFn, len(spec.Tasks))
+
+	// Resolve each task in the workflow definition in parallel
+	for taskId, t := range spec.GetTasks() {
+		go func(taskId string, t *types.Task, tc chan resolvedFn) {
+			err := ps.resolveTaskAndInputs(t, tc)
 			if err != nil {
 				lastErr = err
 			}
 			wg.Done()
-		}(taskId, task)
+		}(taskId, t, resolvedC)
 	}
-	wg.Wait() // for all tasks to be resolved
+
+	// Close channel when all tasks have resolved
+	go func() {
+		wg.Wait()
+		close(resolvedC)
+	}()
+
+	// Store results of the resolved tasks
+	for t := range resolvedC {
+		taskTypes[t.fnRef] = t.fnTypeDef
+	}
 
 	if lastErr != nil {
 		return nil, lastErr
@@ -58,12 +74,12 @@ func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, er
 	}, nil
 }
 
-func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolved map[string]*types.TaskTypeDef) error {
+func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolvedC chan resolvedFn) error {
 	t, err := ps.resolveTask(task)
 	if err != nil {
 		return err
 	}
-	resolved[task.FunctionRef] = t
+	resolvedC <- resolvedFn{task.FunctionRef, t}
 	for _, input := range task.Inputs {
 		if input.Type == typedvalues.TYPE_FLOW {
 			f, err := typedvalues.Format(input)
@@ -72,7 +88,7 @@ func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolved map[string]*
 			}
 			switch it := f.(type) {
 			case *types.Task:
-				err = ps.resolveTaskAndInputs(it, resolved)
+				err = ps.resolveTaskAndInputs(it, resolvedC)
 				if err != nil {
 					return err
 				}
@@ -95,6 +111,7 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 
 	waitFor := len(ps.clients)
 	resolved := make(chan *types.TaskTypeDef, waitFor)
+	defer close(resolved)
 	wg := sync.WaitGroup{}
 	wg.Add(waitFor)
 	var lastErr error
@@ -154,7 +171,7 @@ func parseTaskAddress(task string) (*types.TaskTypeDef, error) {
 
 	switch len(parts) {
 	case 0:
-		return nil, fmt.Errorf("Could not parse invalid task address '%s'", task)
+		return nil, fmt.Errorf("could not parse invalid task address '%s'", task)
 	case 1:
 		return &types.TaskTypeDef{
 			Src: parts[0],
