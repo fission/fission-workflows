@@ -11,7 +11,7 @@ before_install:
 install:
 - go get github.com/Masterminds/glide
 - go get github.com/nats-io/nats-streaming-server # Needed for some integration tests
-- test/e2e/travis-kube-setup.sh
+#- test/e2e/travis-kube-setup.sh
 
 env:
   - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/k8scli:${PATH}

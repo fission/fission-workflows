@@ -65,7 +65,7 @@ func main() {
 			Name:        "parse",
 			Aliases:     []string{"p"},
 			Usage:       "parse <path-to-yaml> ",
-			Description: "Parse YAML definitions to the executable JSON format",
+			Description: "Parse YAML definitions to the executable JSON format (deprecated)",
 			Action: func(c *cli.Context) error {
 
 				if c.NArg() == 0 {
@@ -210,7 +210,7 @@ func main() {
 							}
 							wis := resp.Payload
 							sort.Strings(wis.Invocations)
-							rows := [][]string{}
+							var rows [][]string
 							for _, wfiId := range wis.Invocations {
 								resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
 								if err != nil {
