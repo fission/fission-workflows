@@ -1,5 +1,5 @@
-hash: 21e3ba2937297ef8f9bbba49b9b9146886f370ee0f285852c7b18333dbb7e2bd
-updated: 2017-11-21T14:28:06.375434+01:00
+hash: f128a23dd034612f9bd76d5616b3f7ee2867b7e5d3fca2ed9032159ae1086439
+updated: 2018-02-06T13:25:49.40329+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -98,7 +98,7 @@ imports:
 - name: github.com/gorilla/handlers
   version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
-  version: 7f08801859139f86dfafd1c296e2cba9a80d292e
+  version: 53c1911da2b537f792e7cafcb446b05ffe33b996
 - name: github.com/grpc-ecosystem/grpc-gateway
   version: f2862b476edcef83412c7af8687c9cd8e4097c0f
   subpackages:
@@ -124,7 +124,7 @@ imports:
 - name: github.com/mitchellh/mapstructure
   version: d0303fe809921458f417bcf828397a65db30a7e4
 - name: github.com/nats-io/go-nats
-  version: 29f9728a183bf3fa7e809e14edac00b33be72088
+  version: d66cb54e6b7bdd93f0b28afc8450d84c780dfb68
   subpackages:
   - encoders/builtin
   - util
@@ -149,7 +149,7 @@ imports:
   - token
   - underscore
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
   version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
 - name: github.com/spf13/pflag
@@ -190,6 +190,7 @@ imports:
   version: 88f656faf3f37f690df1a32515b479415e1a6769
   subpackages:
   - cases
+  - internal
   - internal/tag
   - language
   - runes
@@ -390,6 +391,6 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
   subpackages:
   - assert
