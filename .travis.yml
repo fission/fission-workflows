@@ -1,30 +1,45 @@
 sudo: required
 dist: trusty
+group: travis_lts
 language: go
 go:
 - 1.9
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-
-install:
-- go get github.com/Masterminds/glide
-- go get github.com/nats-io/nats-streaming-server # Needed for some integration tests
-#- test/e2e/travis-kube-setup.sh
+cache:
+  apt: true
+  directories:
+    - ${HOME}/testbin/
+    - ${GOPATH}/bin/
+    - ${GOPATH}/pkg/
 
 env:
-  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/k8scli:${PATH}
+  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/testbin:${PATH}
+
+services:
+  - docker
+
+before_install:
+- curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+- sudo apt-get update
+
+install:
+- sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+- sudo apt-get -y install google-cloud-sdk
+- test/e2e/travis-kube-setup.sh
+- go get github.com/Masterminds/glide
+- go get github.com/nats-io/nats-streaming-server # Needed for some integration tests
+
+before_script:
+# Build
+- cd ${TRAVIS_BUILD_DIR}
+- glide install
+- build/build-linux.sh
 
 script:
-- hack/verify-gofmt.sh
-- hack/verify-govet.sh
-- cd ${TRAVIS_BUILD_DIR}
-- hack/verify-gofmt.sh
-- hack/verify-govet.sh
-- glide install
-- ./build/build-linux.sh
+# Unit and Integration tests
 - test/runtests.sh
+# End-to-end tests
+#- test/e2e/travis-buildtest.sh TODO fix namespace issue in GKE cluster
 
 notifications:
   slack:
