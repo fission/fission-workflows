@@ -31,11 +31,10 @@ generate_test_id() {
 }
 
 set_environment() {
-    id=$1
-    ns=f-$id
+    ns=$1
 
-    export FISSION_URL=http://$(kubectl -n $ns get svc controller -o jsonpath='{...ip}')
-    export FISSION_ROUTER=$(kubectl -n $ns get svc router -o jsonpath='{...ip}')
+    export FISSION_URL=http://$(kubectl -n ${ns} get svc controller -o jsonpath='{...ip}')
+    export FISSION_ROUTER=$(kubectl -n ${ns} get svc router -o jsonpath='{...ip}')
 }
 
 #run_all_tests() {
@@ -111,6 +110,7 @@ helm_install_fission_workflows() {
 run_all_tests() {
     local path=$1
     local failures=0
+
     for file in ${path}/test_*
     do
     TEST_UID=$(generate_test_id)
@@ -236,7 +236,7 @@ dump_system_info() {
     helm version
     echo "--- fission ---"
     fission -v
-    curl ${FISSION_URL}
+    curl -s ${FISSION_URL} || true
     echo "--- wfcli ---"
     wfcli -v
     echo "--- End System Info ---"

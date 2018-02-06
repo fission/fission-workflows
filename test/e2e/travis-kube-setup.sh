@@ -21,6 +21,7 @@ if [ ! -d ${BIN_DIR} ]
 then
     mkdir -p ${BIN_DIR}
 fi
+export PATH=$HOME/testbin:${PATH}
 
 # Get kubectl binary
 if ! command -v kubectl >/dev/null 2>&1; then
@@ -37,33 +38,27 @@ if ! command -v helm >/dev/null 2>&1 ; then
     chmod +x linux-amd64/helm
     mv linux-amd64/helm ${BIN_DIR}/helm
 fi
-export PATH=$HOME/testbin:${PATH}
 
-# Get and install gcloud
-# https://stackoverflow.com/questions/38762590/how-to-install-google-cloud-sdk-on-travis
-#if [ ! -d "${HOME}/google-cloud-sdk/bin" ]
-#then
-#    rm -rf $HOME/google-cloud-sdk
-#    export CLOUDSDK_CORE_DISABLE_PROMPTS=1
-#    curl https://sdk.cloud.google.com | bash
-#fi
-#export PATH=${HOME}/google-cloud-sdk/bin:${PATH}
+# Get Fission binary
+if ! command -v fission >/dev/null 2>&1 ; then
+    curl -sLo fission https://github.com/fission/fission/releases/download/0.4.1/fission-cli-linux
+    chmod +x fission
+    mv fission ${BIN_DIR}/fission
+fi
 
 # get gcloud credentials
-#echo ${FISSION_CI_SERVICE_ACCOUNT} | base64 -D - > ${HOME}/gcloud-service-key.json
 gcloud auth activate-service-account --key-file <(echo ${FISSION_WORKFLOWS_CI_SERVICE_ACCOUNT} | base64 -d)
 unset FISSION_CI_SERVICE_ACCOUNT
 
 # get kube config
-# TODO separate cluster for fission-workflows?
-gcloud container clusters get-credentials fission-ci-1 --zone us-central1-a --project fission-ci
+gcloud container clusters get-credentials fission-workflows-ci-1 --zone us-central1-a --project fission-ci
 
-# ensure we have the gcloud binary
+# ensure we have the binaries
 # DEBUG
-#echo ${KUBECONFIG_CONTENTS} | base64 -D - > ${HOME}/.kube/config
 kubectl version
 gcloud version
-helm version
+helm version -c
+fission -v
 # END DEBUG
 
 # does it work?

@@ -6,6 +6,7 @@
 set -euo pipefail
 
 . $(dirname $0)/utils.sh
+
 ROOT=$(dirname $0)/../..
 TEST_SUITE_UID=$(generate_test_id)
 DOCKER_REPO=minikube-ci
@@ -21,29 +22,30 @@ FISSION_VERSION=0.4.1
 TAG=test
 TEST_STATUS=0
 TEST_LOGFILE_PATH=tests.log
+BIN_DIR="${BIN_DIR:-$HOME/testbin}"
 
 
 cleanup() {
-    echo "Removing Fission and Fission Workflow deployments..."
+    emph "Removing Fission and Fission Workflow deployments..."
     helm_uninstall_release ${fissionWorkflowsHelmId} || true
     helm_uninstall_release ${fissionHelmId} || true
 
-    echo "Removing custom resources..."
+    emph "Removing custom resources..."
     clean_tpr_crd_resources || true
 
     # Trigger deletion of all namespaces before waiting - for concurrency of deletion
-    echo "Forcing deletion of namespaces..."
+    emph "Forcing deletion of namespaces..."
     kubectl delete ns/${NS} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
     kubectl delete ns/${NS_BUILDER} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
     kubectl delete ns/${NS_FUNCTION} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
 
     # Wait until all namespaces are actually deleted!
-    echo "Awaiting deletion of namespaces..."
+    emph "Awaiting deletion of namespaces..."
     retry kubectl delete ns/${NS} 2>&1  | grep -qv "Error from server (Conflict):"
     retry kubectl delete ns/${NS_BUILDER} 2>&1 | grep -qv "Error from server (Conflict):"
     retry kubectl delete ns/${NS_FUNCTION} 2>&1  | grep -qv "Error from server (Conflict):"
 
-    echo "Cleaning up local filesystem..."
+    emph "Cleaning up local filesystem..."
     rm -f ./fission-workflows-bundle ./wfcli
     sleep 5
 }
@@ -56,7 +58,7 @@ print_report() {
 
 on_exit() {
     # Dump all the logs
-    dump_logs ${NS} ${NS_FUNCTION}
+    dump_logs ${NS} ${NS_FUNCTION} || true
 
     # Ensure teardown after tests finish
     # TODO provide option to not cleanup the test setup after tests (e.g. for further tests)
@@ -85,11 +87,15 @@ trap on_exit EXIT
 # TODO use test specific namespace
 emph "Deploying Fission: helm chart '${fissionHelmId}' in namespace '${NS}'..."
 # Needs to be retried because k8s can still be busy with cleaning up
-helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "serviceType=NodePort,pullPolicy=IfNotPresent,analytics=false"
+# helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "serviceType=NodePort,pullPolicy=IfNotPresent,
+# analytics=false"
+controllerPort=31234
+routerPort=31235
+helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=controllerPort,routerPort=routerPort,pullPolicy=Always,analytics=false"
 
 # Direct CLI to the deployed cluster
-FISSION_URL=http://$(minikube ip):31313
-FISSION_ROUTER=$(minikube ip):31314
+set_environment ${NS}
+emph "Fission environment: FISSION_URL: '${FISSION_URL}' and FISSION_ROUTER: '${FISSION_ROUTER}'"
 
 # Wait for Fission to get ready
 sleep 5
@@ -103,6 +109,11 @@ emph "Fission deployed!"
 emph "Building binaries..."
 bash ${ROOT}/build/build-linux.sh
 
+# Ensure cli is in path
+emph "Copying wfcli to '${BIN_DIR}/wfcli'..."
+cp wfcli ${BIN_DIR}/wfcli
+wfcli -h > /dev/null
+
 # Build docker images
 emph "Building images..."
 bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
@@ -110,7 +121,7 @@ bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
 #
 # Deploy Fission Workflows
 # TODO use test specific namespace
-emph "Deploying Fission: ${fissionWorkflowsHelmId}"
+emph "Deploying Fission Workflows '${fissionWorkflowsHelmId}' to ns '${NS}'..."
 helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=IfNotPresent,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
 
 # Wait for Fission Workflows to get ready
