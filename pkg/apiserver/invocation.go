@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	INVOKE_SYNC_TIMEOUT          = time.Duration(10) * time.Minute
-	INVOKE_SYNC_POLLING_INTERVAL = time.Duration(1) * time.Second
+	invokeSyncTimeout         = time.Duration(10) * time.Minute
+	invokeSyncPollingInterval = time.Duration(100) * time.Millisecond
 )
 
 type grpcInvocationApiServer struct {
@@ -43,7 +43,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		return nil, err
 	}
 
-	timeout, _ := context.WithTimeout(ctx, INVOKE_SYNC_TIMEOUT)
+	timeout, _ := context.WithTimeout(ctx, invokeSyncTimeout)
 	var result *types.WorkflowInvocation
 	for {
 		wi := aggregates.NewWorkflowInvocation(wfiId, &types.WorkflowInvocation{})
@@ -65,7 +65,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 			return nil, errors.New("timeout occurred")
 		default:
 			// TODO polling is a temporary shortcut; needs optimizing.
-			time.Sleep(INVOKE_SYNC_POLLING_INTERVAL)
+			time.Sleep(invokeSyncPollingInterval)
 		}
 	}
 
@@ -91,10 +91,10 @@ func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *Workfl
 }
 
 func (gi *grpcInvocationApiServer) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
-	invocations := []string{}
+	var invocations []string
 	as := gi.wfiCache.List()
 	for _, a := range as {
-		if a.Type != aggregates.TYPE_WORKFLOW_INVOCATION {
+		if a.Type != aggregates.TypeWorkflowInvocation {
 			return nil, errors.New("invalid type in invocation cache")
 		}
 

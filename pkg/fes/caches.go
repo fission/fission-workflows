@@ -124,7 +124,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 					continue
 				}
 				logrus.WithField("msg", msg.Labels()).Debug("Cache received new event.")
-				err := c.HandleEvent(event)
+				err := c.ApplyEvent(event)
 				if err != nil {
 					logrus.WithField("err", err).Error("Failed to handle event")
 				}
@@ -135,7 +135,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 	return c
 }
 
-func (uc *SubscribedCache) HandleEvent(event *Event) error {
+func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
 		"event.id":       event.Id,
 		"aggregate.id":   event.Aggregate.Id,

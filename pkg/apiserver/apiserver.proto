@@ -118,8 +118,18 @@ service AdminAPI {
             get: "/status"
         };
     }
+
+    rpc Version (google.protobuf.Empty) returns (VersionResp) {
+        option (google.api.http) = {
+            get: "/version"
+        };
+    }
 }
 
 message Health {
     string status = 1;
+}
+
+message VersionResp {
+    string version = 1;
 }

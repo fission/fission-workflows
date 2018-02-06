@@ -19,16 +19,16 @@ const (
 	rangeFetchTimeout        = time.Duration(1) * time.Minute
 )
 
-type ActivityEvent int32
+type eventType int32
 
 const (
-	activityCreated ActivityEvent = iota
-	activityDeleted
+	noop    eventType = iota
+	deleted
 )
 
-type SubjectEvent struct {
-	Subject string        `json:"subject,omitempty"`
-	Type    ActivityEvent `json:"type,omitempty"`
+type subjectEvent struct {
+	Subject string    `json:"Subject,omitempty"`
+	Type    eventType `json:"type,omitempty"`
 }
 
 // Conn is a wrapper of 'stan.Conn' struct to augment the API with bounded subscriptions and channel-based subscriptions
@@ -75,7 +75,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		select {
 		case seqEnd = <-rightBound:
 		case <-time.After(time.Duration(10) * time.Second):
-			return nil, fmt.Errorf("timed out while finding boundary for subject '%s'", subject)
+			return nil, fmt.Errorf("timed out while finding boundary for Subject '%s'", subject)
 		}
 	}
 
@@ -147,7 +147,7 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 	}
 
 	metaSub, err := wc.Conn.Subscribe(subjectActivity, func(msg *stan.Msg) {
-		subjectEvent := &SubjectEvent{}
+		subjectEvent := &subjectEvent{}
 		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -168,8 +168,11 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 			"event":           subjectEvent,
 		}).Debug("NatsClient received activity.")
 
+		// TODO add semaphore for ws.sources manipulation
 		switch subjectEvent.Type {
-		case activityCreated:
+		case noop:
+			// Create a new listener if event is of a new subject
+			// TODO issue: if resumed previous event will be replayed, check if these are ignored by the event store!
 			if _, ok := ws.sources[subject]; !ok {
 				sub, err := wc.Subscribe(subject, cb, opts...)
 				if err != nil {
@@ -177,9 +180,16 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 				}
 				ws.sources[subject] = sub
 			}
+		case deleted:
+			// Delete the current listener of the subject of the event
+			if _, ok := ws.sources[subject]; ok {
+				err := ws.sources[subject].Close()
+				if err != nil {
+					logrus.Errorf("Failed to close (sub)listener: %v", err)
+				}
+			}
 		default:
-			// TODO notify subscription that wildcardSubject has been closed and close channel
-			panic(fmt.Sprintf("Unknown ActivityEvent: %v", subjectEvent))
+			panic(fmt.Sprintf("Unknown eventType: %v", subjectEvent))
 		}
 	}, stan.DeliverAllAvailable())
 	if err != nil {
@@ -197,20 +207,20 @@ func (wc *WildcardConn) Publish(subject string, data []byte) error {
 		return err
 	}
 
-	// Announce subject activity on notification thread, because of missing wildcards in NATS streaming
-	activityEvent := &SubjectEvent{
+	// Announce Subject activity on notification thread, because of missing wildcards in NATS streaming
+	activityEvent := &subjectEvent{
 		Subject: subject,
-		Type:    activityCreated, // TODO infer from context if created or closed
+		Type:    noop, // TODO infer from context if noop or closed
 	}
 	err = wc.publishActivity(activityEvent)
 	if err != nil {
-		logrus.Warnf("Failed to publish subject '%s': %v", subject, err)
+		logrus.Warnf("Failed to publish Subject '%s': %v", subject, err)
 	}
 
 	return nil
 }
 
-func (wc *WildcardConn) publishActivity(activity *SubjectEvent) error {
+func (wc *WildcardConn) publishActivity(activity *subjectEvent) error {
 	subjectData, err := json.Marshal(activity)
 	if err != nil {
 		return err
@@ -222,7 +232,7 @@ func (wc *WildcardConn) publishActivity(activity *SubjectEvent) error {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"subject": subjectActivity,
+		"Subject": subjectActivity,
 		"event":   activity,
 	}).Debug("Published activity event to event store.")
 
@@ -237,7 +247,7 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 	}
 	subjectCount := map[string]int{}
 	for _, msg := range msgs {
-		subjectEvent := &SubjectEvent{}
+		subjectEvent := &subjectEvent{}
 		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{

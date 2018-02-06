@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	TYPE_WORKFLOW = "workflow"
+	TypeWorkflow = "workflow"
 )
 
 type Workflow struct {
@@ -29,7 +29,7 @@ func NewWorkflow(workflowId string, wi *types.Workflow) *Workflow {
 func NewWorkflowAggregate(workflowId string) *fes.Aggregate {
 	return &fes.Aggregate{
 		Id:   workflowId,
-		Type: TYPE_WORKFLOW,
+		Type: TypeWorkflow,
 	}
 }
 

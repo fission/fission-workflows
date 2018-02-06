@@ -27,7 +27,6 @@ func NewEventStore(conn *WildcardConn) *EventStore {
 
 // Watch a aggregate type
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
-
 	subject := fmt.Sprintf("%s.>", aggregate.Type)
 	sub, err := es.conn.Subscribe(subject, func(msg *stan.Msg) {
 		event, err := toEvent(msg)
@@ -40,7 +39,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"aggregate.id":   event.Aggregate.Id,
 			"event.type":     event.Type,
 			"event.id":       event.Id,
-			"nats.subject":   msg.Subject,
+			"nats.Subject":   msg.Subject,
 		}).Info("Publishing aggregate event to subscribers.")
 
 		err = es.Publisher.Publish(event)
@@ -61,8 +60,8 @@ func (es *EventStore) Close() error {
 	return es.conn.Close()
 }
 
-func (es *EventStore) HandleEvent(event *fes.Event) error {
-	// TODO make generic / configurable whether to fold event into parent's subject
+func (es *EventStore) Append(event *fes.Event) error {
+	// TODO make generic / configurable whether to fold event into parent's Subject
 	subject := toSubject(event.Aggregate)
 	if event.Parent != nil {
 		subject = toSubject(event.Parent)
@@ -77,7 +76,7 @@ func (es *EventStore) HandleEvent(event *fes.Event) error {
 		"event.type":     event.Type,
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
-		"nats.subject":   subject,
+		"nats.Subject":   subject,
 	}).Info("EventStore client appending event.")
 
 	return es.conn.Publish(subject, data)
