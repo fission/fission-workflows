@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 var log = logrus.WithField("component", "scheduler")
 
 type WorkflowScheduler struct {
@@ -18,7 +17,7 @@ type WorkflowScheduler struct {
 
 func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
-		"wfi":   request.Invocation.Metadata.Id,
+		"wfi": request.Invocation.Metadata.Id,
 	})
 
 	schedule := &Schedule{

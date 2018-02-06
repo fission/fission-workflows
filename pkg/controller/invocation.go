@@ -40,7 +40,7 @@ type InvocationController struct {
 	workQueue chan Action
 
 	// Queued keeps track of which invocations still have actions in the workQueue
-	states    map[string]ControlState
+	states map[string]ControlState
 	// TODO add active cache
 }
 

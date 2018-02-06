@@ -9,8 +9,8 @@ import (
 
 	"io"
 
-	"github.com/fission/fission-workflows/pkg/fes"
 	"errors"
+	"github.com/fission/fission-workflows/pkg/fes"
 )
 
 const (

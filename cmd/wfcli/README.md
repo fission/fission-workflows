@@ -16,7 +16,7 @@ wfcli status # View whether the Fission Workflows deployment can be reached.
 
 wfcli workflow get # List all workflows in the workflow engine.
 
-wfcli workflow get <id> # Get the definition of a specifc workflow
+wfcli workflow get <id> # Get the definition of a specific workflow
 
 wfcli invocation get # List all invocations so-far (both in-progress and finished)
 
