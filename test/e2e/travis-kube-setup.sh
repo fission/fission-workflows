@@ -48,7 +48,11 @@ fi
 
 # get gcloud credentials
 gcloud auth activate-service-account --key-file <(echo ${FISSION_WORKFLOWS_CI_SERVICE_ACCOUNT} | base64 -d)
-unset FISSION_CI_SERVICE_ACCOUNT
+curl -sLO https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v1.4.3/docker-credential-gcr_linux_amd64-1.4.3.tar.gz
+tar xzvf docker-credential-*.tar.gz
+mv docker-credential-gcr ${BIN_DIR}/docker-credential-gcr
+docker-credential-gcr configure-docker
+unset FISSION_WORKFLOWS_CI_SERVICE_ACCOUNT
 
 # get kube config
 gcloud container clusters get-credentials fission-workflows-ci-1 --zone us-central1-a --project fission-ci

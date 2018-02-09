@@ -9,7 +9,7 @@ set -euo pipefail
 
 ROOT=$(dirname $0)/../..
 TEST_SUITE_UID=$(generate_test_id)
-DOCKER_REPO=minikube-ci
+DOCKER_REPO=gcr.io/fission-ci
 WORKFLOWS_ENV_IMAGE=${DOCKER_REPO}/workflow-env
 WORKFLOWS_BUILD_ENV_IMAGE=${DOCKER_REPO}/workflow-build-env
 WORKFLOWS_BUNDLE_IMAGE=${DOCKER_REPO}/fission-workflows-bundle
@@ -57,6 +57,7 @@ print_report() {
 }
 
 on_exit() {
+    emph "[Buildtest exited]"
     # Dump all the logs
     dump_logs ${NS} ${NS_FUNCTION} || true
 
@@ -91,13 +92,14 @@ emph "Deploying Fission: helm chart '${fissionHelmId}' in namespace '${NS}'..."
 # analytics=false"
 controllerPort=31234
 routerPort=31235
-helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=controllerPort,routerPort=routerPort,pullPolicy=Always,analytics=false"
+helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=${controllerPort},routerPort=${routerPort},pullPolicy=Always,analytics=false"
 
 # Direct CLI to the deployed cluster
-set_environment ${NS}
+set_environment ${NS} ${controllerPort} ${routerPort}
 emph "Fission environment: FISSION_URL: '${FISSION_URL}' and FISSION_ROUTER: '${FISSION_ROUTER}'"
 
 # Wait for Fission to get ready
+emph "Waiting for fission to be ready..."
 sleep 5
 retry fission fn list
 echo
@@ -118,6 +120,12 @@ wfcli -h > /dev/null
 emph "Building images..."
 bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
 
+# Publish to gcloud
+emph "Pushing images to container registry..."
+gcloud docker -- push ${WORKFLOWS_ENV_IMAGE}:${TAG}
+gcloud docker -- push ${WORKFLOWS_BUILD_ENV_IMAGE}:${TAG}
+gcloud docker -- push ${WORKFLOWS_BUNDLE_IMAGE}:${TAG}
+
 #
 # Deploy Fission Workflows
 # TODO use test specific namespace
@@ -125,6 +133,8 @@ emph "Deploying Fission Workflows '${fissionWorkflowsHelmId}' to ns '${NS}'..."
 helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=IfNotPresent,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
 
 # Wait for Fission Workflows to get ready
+wfcli config
+emph "Waiting for Fission Workflows to be ready..."
 sleep 5
 retry wfcli status
 echo

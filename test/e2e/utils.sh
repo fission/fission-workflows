@@ -27,7 +27,7 @@ gcloud_login() {
 }
 
 generate_test_id() {
-    echo $(date |md5 | head -c8; echo)
+    echo $(date|md5sum|cut -c1-6)
 }
 
 set_environment() {
@@ -228,6 +228,9 @@ dump_system_info() {
     echo "--- System Info ---"
     echo "--- go ---"
     go version
+    echo "--- python ---"
+    python --version
+    python3 --version
     echo "--- docker ---"
     docker version
     echo "--- kubectl ---"

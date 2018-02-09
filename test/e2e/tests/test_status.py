@@ -3,9 +3,10 @@
 # Tests for `wfcli status`
 # Note that this is a small experiment to see if python is more appropriate for the tests
 import sys, os
+print(sys.version_info)
+
 sys.path.append(os.path.dirname(__file__)) # Needed to import testutils when invoked from another wd.
 import testutils
-
 
 # Check for correctly deployed cluster
 testutils.run(["wfcli", "status"], check=True)
