@@ -144,6 +144,10 @@ emph "Fission Workflows deployed!"
 # Test
 #
 emph "--- Start Tests ---"
+export ROOT
+export TEST_SUITE_UID
+echo "ROOT: $ROOT"
+echo "TEST_SUITE_UID: $TEST_SUITE_UID"
 $(dirname $0)/runtests.sh 2>&1 | tee ${TEST_LOGFILE_PATH}
 TEST_STATUS=${PIPESTATUS[0]}
 emph "--- End Tests ---"
