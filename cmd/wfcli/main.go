@@ -40,6 +40,10 @@ func main() {
 			EnvVar: "FISSION_URL",
 			Usage:  "Url to the Fission apiserver",
 		},
+		cli.BoolFlag{
+			Name:   "debug, d",
+			EnvVar: "WFCLI_DEBUG",
+		},
 	}
 	app.Commands = []cli.Command{
 		{
@@ -60,7 +64,20 @@ func main() {
 				return nil
 			},
 		},
-
+		{
+			Name:    "config",
+			Usage:   "Print wfcli config",
+			Action: func(c *cli.Context) error {
+				fmt.Println("cli:")
+				for _, flag := range c.GlobalFlagNames() {
+					fmt.Printf("  %s: %v\n", flag, c.GlobalGeneric(flag))
+				}
+				for _, flag := range c.FlagNames() {
+					fmt.Printf("  %s: %v\n", flag, c.Generic(flag))
+				}
+				return nil
+			},
+		},
 		{
 			Name:        "parse",
 			Aliases:     []string{"p"},

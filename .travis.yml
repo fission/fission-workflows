@@ -1,33 +1,39 @@
 sudo: required
 dist: trusty
-group: travis_lts
 language: go
 go:
 - 1.9
 
+python:
+- 3.6
+
 cache:
   apt: true
   directories:
+    - ${HOME}/.helm/
     - ${HOME}/testbin/
     - ${GOPATH}/bin/
     - ${GOPATH}/pkg/
 
 env:
-  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/testbin:${PATH}
+  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/testbin:${PATH} BIN_DIR=${HOME}/testbin
 
 services:
   - docker
 
 before_install:
+- source ~/virtualenv/python3.6/bin/activate
 - curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 - sudo apt-get update
 
 install:
 - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 - sudo apt-get -y install google-cloud-sdk
+- sudo apt-get -y install coreutils
 - test/e2e/travis-kube-setup.sh
-- go get github.com/Masterminds/glide
-- go get github.com/nats-io/nats-streaming-server # Needed for some integration tests
+- glide -h > /dev/null || go get github.com/Masterminds/glide
+# Needed for some integration tests
+- nats-streaming-server -h > /dev/null || get github.com/nats-io/nats-streaming-server
 
 before_script:
 # Build
@@ -39,10 +45,11 @@ script:
 # Unit and Integration tests
 - test/runtests.sh
 # End-to-end tests
-#- test/e2e/travis-buildtest.sh TODO fix namespace issue in GKE cluster
+- test/e2e/travis-buildtest.sh
 
 notifications:
   slack:
-    secure: KNv4Ce8dkNpshPD0qskT7HQYPbz0Q1MuTyZBRt8U7XmsdwvvxF+P00tkqw7zkOpPolahgV/Ml8jo6LKBxWd3rQEkt3bzlZJZcAZaPs5RhDFoYLZPppF8Bqpq4CEGTyfWljF0Zk5xl2vo49m7erXKhJ4XITlRq0oRakZZL+gH500XTOOXHL7xXNPqtgpiJoYseLTyB5/5GJOxqfYm+JI/9o1MTMKa7xT+KMXcVzd1p5kvSjIih/Ul6MAlrNdvESqV2MEF0zkBMlJKT63f8TQ+Bm2g7DBlIyWUh+a3pXT+HZ7i/Pu8hpek88fsMMQ1b0bujjezhgQ93g1O1M8TsJak6xkPIRnbuDXn0zbn+keam4xwym1wLwazOIOBuf6j/30JBpjapR8X2aizYoZWdKUNTtx4GBG+zW7xXvsIGakczDQJ3/EW0eMUNmnt/PvdmcT+cKJrnvSw757xlEPgp3UY6LeaRYmFDtv2rsSO63LKNltQujqB9fVNGMd0tQxSkYgDPY6fAiY18xuM5Ci/kp9YzN7Kd4tDTo6c0GGJQtppmqjRayQf26MyTXhwzR7neweBFaa6SVLFENobBnLXudgAf2W0Sg24hQccYtgJ3y0nZrwXcwDba3tQ2x9XrBI7fppZ25X6X97nFs3q5YVOxIDIPPs3KjPOIYgHKaasQxNkusM=
+    rooms:
+      secure: KNv4Ce8dkNpshPD0qskT7HQYPbz0Q1MuTyZBRt8U7XmsdwvvxF+P00tkqw7zkOpPolahgV/Ml8jo6LKBxWd3rQEkt3bzlZJZcAZaPs5RhDFoYLZPppF8Bqpq4CEGTyfWljF0Zk5xl2vo49m7erXKhJ4XITlRq0oRakZZL+gH500XTOOXHL7xXNPqtgpiJoYseLTyB5/5GJOxqfYm+JI/9o1MTMKa7xT+KMXcVzd1p5kvSjIih/Ul6MAlrNdvESqV2MEF0zkBMlJKT63f8TQ+Bm2g7DBlIyWUh+a3pXT+HZ7i/Pu8hpek88fsMMQ1b0bujjezhgQ93g1O1M8TsJak6xkPIRnbuDXn0zbn+keam4xwym1wLwazOIOBuf6j/30JBpjapR8X2aizYoZWdKUNTtx4GBG+zW7xXvsIGakczDQJ3/EW0eMUNmnt/PvdmcT+cKJrnvSw757xlEPgp3UY6LeaRYmFDtv2rsSO63LKNltQujqB9fVNGMd0tQxSkYgDPY6fAiY18xuM5Ci/kp9YzN7Kd4tDTo6c0GGJQtppmqjRayQf26MyTXhwzR7neweBFaa6SVLFENobBnLXudgAf2W0Sg24hQccYtgJ3y0nZrwXcwDba3tQ2x9XrBI7fppZ25X6X97nFs3q5YVOxIDIPPs3KjPOIYgHKaasQxNkusM=
     on_success: change
     on_failure: always
