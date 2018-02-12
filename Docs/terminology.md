@@ -16,3 +16,12 @@ Throughout the system it is often also called a "function"".
  
 #### Workflow Engine
 The core part of the Workflow Management System, responsible for the scheduling and controlling of workflow.
+
+
+## Common abbreviations
+```
+wf   = workflow
+wfi  = worfklow invocation
+ctrl = controller
+expr = expression
+```

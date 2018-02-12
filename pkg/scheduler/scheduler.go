@@ -7,23 +7,25 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/ptypes"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
+
+
+var log = logrus.WithField("component", "scheduler")
 
 type WorkflowScheduler struct {
 }
 
 func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
+	ctxLog := log.WithFields(logrus.Fields{
+		"wfi":   request.Invocation.Metadata.Id,
+	})
+
 	schedule := &Schedule{
 		InvocationId: request.Invocation.Metadata.Id,
 		CreatedAt:    ptypes.TimestampNow(),
 		Actions:      []*Action{},
 	}
-
-	ctxLog := log.WithFields(log.Fields{
-		"workflow": request.Workflow.Metadata.Id,
-		"invoke":   request.Invocation.Metadata.Id,
-	})
 
 	ctxLog.Info("Scheduler evaluating...")
 
@@ -64,7 +66,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		for depName := range task.Requires {
 			t, ok := cwf[depName]
 			if !ok {
-				log.Warnf("Unknown task dependency: %v", depName)
+				ctxLog.Warnf("Unknown task dependency: %v", depName)
 			}
 
 			if ok && t.Invocation != nil && t.Invocation.Status.Status.Finished() {
@@ -72,7 +74,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 			}
 		}
 
-		log.WithFields(log.Fields{
+		ctxLog.WithFields(logrus.Fields{
 			"completedDeps": completedDeps,
 			"task":          id,
 			"max":           int(math.Max(float64(task.Await), float64(len(task.Requires)-1))),

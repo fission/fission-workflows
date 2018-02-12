@@ -3,6 +3,7 @@
 This document describes the high-level architecture of Fission Workflows.
 
 ![System Architecture](./assets/sysarch.png)
+
 *System Architecture of Fission Workflows*
 
 ### API (Server)

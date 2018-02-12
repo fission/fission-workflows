@@ -5,7 +5,7 @@ It makes use of the scheduler to determine the strategy towards the completion o
 It makes use of the InvocationApi, FunctionApi and WorkflowApi to perform actions.
 
 ## Control Flow
-The controller can best be described as an interruptible control loop.
+The controller can best be described as an interruptable control loop.
 It contains the following ways of managing the lifecycle of invocations.
 - Long control loop
 - Short control loop
@@ -25,7 +25,8 @@ This is meant to capture any invocations of which the notification (see notifica
 The notification resembles more or less an interrupt. 
 Whenever a relevant event occurs for an invocation, the controller receives a notification of this event.
 Note that notifications are entirely optional, and only serve to reduce the latency of a workflow invocation.
-In case of errors or an overload of notifications, the short or long control loop will pick up the invocation
+In case of errors or an overload of notifications, the short or long control loop will pick up the invocation.
+The controller is not obligated to handle a notification.
 
 
 ## Procedure

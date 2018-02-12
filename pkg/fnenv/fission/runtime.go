@@ -16,6 +16,8 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
+var log = logrus.WithField("component", "fnenv-fission")
+
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
 type FunctionEnv struct {
@@ -39,17 +41,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		UID:       k8stypes.UID(spec.GetType().GetResolved()),
 		Namespace: metav1.NamespaceDefault,
 	}
-	logrus.WithFields(logrus.Fields{
-		"name": meta.Name,
-		"uid":  meta.UID,
-		"ns":   meta.Namespace,
-	}).Info("Invoking Fission function.")
 
 	// Get reqUrl
 	// TODO use router instead once we can route to a specific function uid
+	ctxLog := log.WithField("fn", meta.Name)
+	ctxLog.Infof("Invoking Fission function: '%v'.", meta.Name, meta.UID)
 	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"err":  err,
 			"meta": meta,
 		}).Error("Fission function could not be found!")
@@ -86,14 +85,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return nil, fmt.Errorf("failed to parse output: %v", err)
 	}
 
-	logrus.Infof("[%s][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
-	logrus.Infof("[%s][output]: %v", meta.Name, output.Short())
-	logrus.Infof("[%s][status]: %v", meta.Name, resp.StatusCode)
+	ctxLog.Infof("[response][status]: %v", meta.Name, resp.StatusCode)
+	ctxLog.Infof("[response][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
+	ctxLog.Debugf("[%s][output]: %v", meta.Name, output)
 
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
 		msg, _ := typedvalues.Format(output)
-		logrus.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
+		ctxLog.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{
