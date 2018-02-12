@@ -2,6 +2,7 @@ package function
 
 import (
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
@@ -12,11 +13,11 @@ import (
 
 // Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
 type Api struct {
-	runtime map[string]Runtime // TODO support AsyncRuntime
+	runtime map[string]fnenv.Runtime // TODO support AsyncRuntime
 	es      fes.EventStore
 }
 
-func NewApi(runtime map[string]Runtime, esClient fes.EventStore) *Api {
+func NewApi(runtime map[string]fnenv.Runtime, esClient fes.EventStore) *Api {
 	return &Api{
 		runtime: runtime,
 		es:      esClient,

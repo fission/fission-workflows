@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	COMPOSE_INPUT = types.INPUT_MAIN
+	ComposeInput = types.INPUT_MAIN
 )
 
 type FunctionCompose struct{}
@@ -19,7 +19,7 @@ func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 	case 0:
 		output = nil
 	case 1:
-		defaultInput, ok := spec.GetInputs()[COMPOSE_INPUT]
+		defaultInput, ok := spec.GetInputs()[ComposeInput]
 		if ok {
 			output = defaultInput
 			break

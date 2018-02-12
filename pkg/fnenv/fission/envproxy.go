@@ -1,19 +1,16 @@
 package fission
 
 import (
-	"net/http"
-
-	"context"
-
-	"io/ioutil"
-
-	"os"
-
 	"bytes"
-
+	"context"
 	"encoding/json"
-
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
@@ -21,8 +18,7 @@ import (
 	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
-	"path"
-	"strings"
+	"golang.org/x/sync/syncmap"
 )
 
 // Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface. This
@@ -30,52 +26,57 @@ import (
 type Proxy struct {
 	invocationServer apiserver.WorkflowInvocationAPIServer
 	workflowServer   apiserver.WorkflowAPIServer
-	fissionIds       map[string]bool
+	fissionIds       syncmap.Map // map[string]bool
 }
 
+// NewFissionProxyServer creates a proxy server to adheres to the Fission Environment specification.
 func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
 	return &Proxy{
 		invocationServer: wfiSrv,
 		workflowServer:   wfSrv,
-		fissionIds:       map[string]bool{},
+		fissionIds:       syncmap.Map{},
 	}
 }
 
+// RegisterServer adds the endpoints needed for the Fission Environment interface to the mux server.
 func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
 	mux.HandleFunc("/", fp.handleRequest)
 	mux.HandleFunc("/v2/specialize", fp.handleSpecialize)
+	mux.HandleFunc("/healthz", fp.handleSpecialize)
 }
 
+func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+// TODO revise !!!
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
 	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
 
-	fnId := string(meta.UID)
+	fnID := string(meta.UID)
 	if len(meta.UID) == 0 {
 		logrus.WithField("meta", meta).Error("Fission function name is missing")
 		http.Error(w, "Fission function name is missing", 400)
 		return
 	}
 
-	// Map fission function name to workflow id
-	_, ok := fp.fissionIds[fnId]
-
+	// Check if the workflow engine contains the workflow associated with the Fission function UID
+	_, ok := fp.fissionIds.Load(fnID)
 	if !ok {
 		// Fallback 1 : check if it is in the event store somewhere
-		wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{Id: fnId})
-		if err != nil || wf == nil {
-			logrus.WithField("fnId", fnId).
-				WithField("err", err).
+		if fp.hasWorkflow(ctx, fnID) {
+			logrus.WithField("fnID", fnID).
 				WithField("map", fp.fissionIds).
 				Error("Unknown fission function name")
 
 			logrus.Warn(fp.fissionIds)
-			http.Error(w, "Unknown fission function name", 400)
+			http.Error(w, "Unknown fission function name; not specialized", 400)
 			return
 		}
-		fp.fissionIds[fnId] = true
+		fp.fissionIds.Store(fnID, true)
 	}
 
 	// Map request to workflow inputs
@@ -86,27 +87,26 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse inputs", 400)
 		return
 	}
-
 	wfSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: fnId,
+		WorkflowId: fnID,
 		Inputs:     inputs,
 	}
 
 	// Temporary: in case of query header 'X-Async' being present, make request async
 	if len(r.Header.Get("X-Async")) > 0 {
-		invocationId, err := fp.invocationServer.Invoke(ctx, wfSpec)
-		if err != nil {
-			logrus.Errorf("Failed to invoke: %v", err)
-			http.Error(w, err.Error(), 500)
+		invocationID, invokeErr := fp.invocationServer.Invoke(ctx, wfSpec)
+		if invokeErr != nil {
+			logrus.Errorf("Failed to invoke: %v", invokeErr)
+			http.Error(w, invokeErr.Error(), 500)
 			return
 		}
 		w.WriteHeader(200)
-		w.Write([]byte(invocationId.Id))
+		w.Write([]byte(invocationID.Id))
 		return
 	}
 
 	// Otherwise, the request synchronous like other Fission functions
-	invocation, err := fp.invocationServer.InvokeSync(ctx, wfSpec)
+	wi, err := fp.invocationServer.InvokeSync(ctx, wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -114,19 +114,19 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In case of an error, create an error response corresponding to Fission function errors
-	if !invocation.Status.Status.Successful() {
-		logrus.Errorf("Invocation not successful, was '%v'", invocation.Status.Status.String())
-		http.Error(w, invocation.Status.Status.String(), 500)
+	if !wi.Status.Successful() {
+		logrus.Errorf("Invocation not successful, was '%v'", wi.Status.Status.String())
+		http.Error(w, wi.Status.Status.String(), 500)
 		return
 	}
 
 	// Otherwise, create a response corresponding to Fission function responses.
 	var resp []byte
-	if invocation.Status.Output != nil {
-		resp = invocation.Status.Output.Value
-		w.Header().Add("Content-Type", inferContentType(invocation.Status.Output, defaultContentType))
+	if wi.Status.Output != nil {
+		resp = wi.Status.Output.Value
+		w.Header().Add("Content-Type", inferContentType(wi.Status.Output, defaultContentType))
 	} else {
-		logrus.Infof("Invocation '%v' has no output.", fnId)
+		logrus.Infof("Invocation '%v' has no output.", fnID)
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
@@ -135,8 +135,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Info("Specializing...")
-	body := r.Body
-	bs, err := ioutil.ReadAll(body)
+	bs, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logrus.Errorf("Failed to read body: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -146,6 +145,7 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 
 	logrus.Info("Received specialization body:", string(bs))
 
+	// Parse the function load request
 	flr := &fission.FunctionLoadRequest{}
 	err = json.Unmarshal(bs, flr)
 	if err != nil {
@@ -155,15 +155,8 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metadata := flr.FunctionMetadata
-	if metadata == nil {
-		logrus.Errorf("No workflow metadata provided: %v", metadata)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("No workflow metadata provided."))
-		return
-	}
-
-	wfId, err := fp.specializePackage(ctx, flr)
+	// Attempt to specialize with the provided function load request
+	wfIDs, err := fp.Specialize(ctx, flr)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
 		if os.IsNotExist(err) {
@@ -174,55 +167,90 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	logrus.Infof("Specialized successfully wf '%s'", wfId)
+	logrus.Infof("Specialized successfully wf '%s'", wfIDs)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(wfId))
+	// TODO change this to a more structured output once specialization protocol has been formalized
+	w.Write([]byte(strings.Join(wfIDs, ";")))
 }
 
-func (fp *Proxy) specializePackage(ctx context.Context, flr *fission.FunctionLoadRequest) (string, error) {
+// Specialize creates workflows provided by a Fission Load Request.
+//
+// The Fission package can either exist out of a single workflow file, or out of a directory filled with
+// solely workflow definitions.
+func (fp *Proxy) Specialize(ctx context.Context, flr *fission.FunctionLoadRequest) ([]string, error) {
+	if flr == nil {
+		return nil, errors.New("no function load request provided")
+	}
+
+	// Check if request contains the expected metadata
+	metadata := flr.FunctionMetadata
+	if metadata == nil {
+		logrus.Errorf("No workflow metadata provided: %v", metadata)
+		return nil, errors.New("no metadata provided in function load request")
+	}
+
+	// Search provided package for workflow definitions
+	wfPaths, err := fp.findWorkflowFiles(ctx, flr)
+	if err != nil {
+		return nil, err
+	}
+	var wfIDs []string
+
+	// Create workflows for each detected workflow definition
+	for _, wfPath := range wfPaths {
+		wfID, err := fp.createWorkflowFromFile(ctx, flr, wfPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to specialize package: %v", err)
+		}
+		wfIDs = append(wfIDs, wfID)
+	}
+
+	return wfIDs, nil
+}
+
+// findWorkflowFiles searches for all of the workflow definitions in a Fission package
+func (fp *Proxy) findWorkflowFiles(ctx context.Context, flr *fission.FunctionLoadRequest) ([]string, error) {
 	fi, err := os.Stat(flr.FilePath)
 	if err != nil {
-		return "", fmt.Errorf("no file present at '%v", flr.FilePath)
+		return nil, fmt.Errorf("no file present at '%v", flr.FilePath)
 	}
 
 	if fi.IsDir() {
 		// User provided a package
 		contents, err := ioutil.ReadDir(flr.FilePath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read package: '%v", flr.FilePath)
+			return nil, fmt.Errorf("failed to read package: '%v", flr.FilePath)
 		}
 
 		if len(contents) == 0 {
-			return "", fmt.Errorf("package is empty")
+			return nil, fmt.Errorf("package is empty")
 		}
 
-		var wfIds []string
+		var paths []string
 		for _, n := range contents {
+			// Note: this assumes that all files in package are workflow definitions!
 			file := path.Join(flr.FilePath, n.Name())
-			wfId, err := fp.specialize(ctx, flr, file)
-			if err != nil {
-				return "", fmt.Errorf("failed to specialize package: %v", err)
-			}
-			wfIds = append(wfIds, wfId)
+			paths = append(paths, file)
 		}
 
 		// TODO maybe change to []string to provide all generated ids
-		return strings.Join(wfIds, ";"), nil
-	} else {
-		// Provided workflow is a file
-		return fp.specialize(ctx, flr, flr.FilePath)
+		return paths, nil
 	}
+	// Provided workflow is a file
+	return []string{flr.FilePath}, nil
 }
 
-func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest, filePath string) (string, error) {
+// createWorkflowFromFile creates a workflow given a path to the file containing the workflow definition
+func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.FunctionLoadRequest,
+	path string) (string, error) {
 
-	rdr, err := os.Open(filePath)
+	rdr, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file '%v': %v", filePath, err)
+		return "", fmt.Errorf("failed to open file '%v': %v", path, err)
 	}
 	raw, err := ioutil.ReadAll(rdr)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file '%v': %v", filePath, err)
+		return "", fmt.Errorf("failed to read file '%v': %v", path, err)
 	}
 	logrus.Infof("received definition: %s", string(raw))
 
@@ -241,10 +269,18 @@ func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadReques
 	if err != nil {
 		return "", fmt.Errorf("failed to store workflow internally: %v", err)
 	}
-	wfId := resp.Id
+	wfID := resp.Id
 
 	// Cache the ID so we don't have to check whether the workflow engine already has it.
-	fp.fissionIds[wfSpec.Id] = true
+	fp.fissionIds.Store(wfSpec.Id, true)
 
-	return wfId, nil
+	return wfID, nil
+}
+
+func (fp *Proxy) hasWorkflow(ctx context.Context, fnID string) bool {
+	wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{Id: fnID})
+	if err != nil {
+		logrus.Errorf("Failed to get workflow: %v; assuming it is non-existent", err)
+	}
+	return wf != nil
 }

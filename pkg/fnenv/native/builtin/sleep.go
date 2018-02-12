@@ -1,24 +1,23 @@
 package builtin
 
 import (
-	"time"
-
 	"fmt"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
 
 const (
-	SLEEP_INPUT_MS         = types.INPUT_MAIN
-	SLEEP_INPUT_MS_DEFAULT = time.Duration(1) * time.Second
+	SleepInput        = types.INPUT_MAIN
+	SleepInputDefault = time.Duration(1) * time.Second
 )
 
 type FunctionSleep struct{}
 
 func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	duration := SLEEP_INPUT_MS_DEFAULT
-	input, ok := spec.Inputs[SLEEP_INPUT_MS]
+	duration := SleepInputDefault
+	input, ok := spec.Inputs[SleepInput]
 	if ok {
 		i, err := typedvalues.Format(input)
 		if err != nil {

@@ -68,7 +68,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 				ctxLog.Warnf("Unknown task dependency: %v", depName)
 			}
 
-			if ok && t.Invocation != nil && t.Invocation.Status.Status.Finished() {
+			if ok && t.Invocation != nil && t.Invocation.Status.Finished() {
 				completedDeps = completedDeps + 1
 			}
 		}

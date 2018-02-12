@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -80,7 +80,7 @@ func TestWorkflowCreate(t *testing.T) {
 
 func TestWorkflowInvocation(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +145,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	for ti := range tick.C {
 		invoc, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wiId})
 		assert.NoError(t, err)
-		if invoc.Status.Status.Finished() || ti.After(deadline) {
+		if invoc.Status.Finished() || ti.After(deadline) {
 			invocation = invoc
 			tick.Stop()
 			break
@@ -154,12 +154,12 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	assert.Equal(t, wiSpec, invocation.Spec)
 	assert.Equal(t, etv, invocation.Status.Output)
-	assert.True(t, invocation.Status.Status.Successful())
+	assert.True(t, invocation.Status.Successful())
 }
 
 func TestDynamicWorkflowInvocation(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.Dial(GRPC_ADDRESS, grpc.WithInsecure())
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}

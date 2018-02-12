@@ -14,8 +14,8 @@ func TestFunctionIfConsequentFlow(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IF_INPUT_CONDITION:  parseUnsafe(true),
-				IF_INPUT_CONSEQUENT: parseUnsafe(expectedTask),
+				IfInputCondition: parseUnsafe(true),
+				IfInputThen:      parseUnsafe(expectedTask),
 			},
 		},
 		expectedTask)
@@ -32,9 +32,9 @@ func TestFunctionIfAlternativeFlow(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IF_INPUT_CONDITION:   parseUnsafe(false),
-				IF_INPUT_CONSEQUENT:  parseUnsafe(task),
-				IF_INPUT_ALTERNATIVE: parseUnsafe(alternativeTask),
+				IfInputCondition: parseUnsafe(false),
+				IfInputThen:      parseUnsafe(task),
+				IfInputElse:      parseUnsafe(alternativeTask),
 			},
 		},
 		alternativeTask)
@@ -45,9 +45,9 @@ func TestFunctionIfLiteral(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IF_INPUT_CONDITION:   parseUnsafe(true),
-				IF_INPUT_CONSEQUENT:  parseUnsafe("foo"),
-				IF_INPUT_ALTERNATIVE: parseUnsafe("bar"),
+				IfInputCondition: parseUnsafe(true),
+				IfInputThen:      parseUnsafe("foo"),
+				IfInputElse:      parseUnsafe("bar"),
 			},
 		},
 		"foo")
@@ -58,8 +58,8 @@ func TestFunctionIfMissingAlternative(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IF_INPUT_CONDITION:  parseUnsafe(false),
-				IF_INPUT_CONSEQUENT: parseUnsafe("then"),
+				IfInputCondition: parseUnsafe(false),
+				IfInputThen:      parseUnsafe("then"),
 			},
 		},
 		nil)

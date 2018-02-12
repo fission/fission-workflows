@@ -12,7 +12,7 @@ func TestFunctionNoopPassInput(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				NOOP_INPUT: parseUnsafe(expected),
+				NoopInput: parseUnsafe(expected),
 			},
 		},
 		expected)

@@ -2,12 +2,11 @@ package controller
 
 import (
 	"context"
-
 	"fmt"
-
-	"time"
-
+	"reflect"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
@@ -21,8 +20,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
-	"reflect"
-	"sync/atomic"
 )
 
 var wfiLog = log.WithField("component", "controller-wi")
@@ -48,7 +45,22 @@ type ControlState struct {
 	ErrorCount  uint32
 	RecentError error
 	QueueSize   uint32
-	lock        sync.Mutex
+	lock        *sync.Mutex
+}
+
+func (cs ControlState) Lock() {
+	if cs.lock == nil {
+		cs.lock = &sync.Mutex{}
+	}
+	cs.lock.Lock()
+}
+
+func (cs ControlState) Unlock() {
+	if cs.lock == nil {
+		cs.lock = &sync.Mutex{}
+	} else {
+		cs.lock.Unlock()
+	}
 }
 
 func (cs ControlState) AddError(err error) uint32 {
@@ -194,8 +206,8 @@ func (cr *InvocationController) HandleTick() error {
 // TODO return error
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	state := cr.states[invoc.Metadata.Id]
-	state.lock.Lock()
-	defer state.lock.Unlock()
+	state.Lock()
+	defer state.Unlock()
 
 	// Check if there are still open actions for this invocation
 	if state.QueueSize > 0 {
@@ -203,7 +215,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 
 	// Check if we actually need to evaluate
-	if invoc.Status.Status.Finished() {
+	if invoc.Status.Finished() {
 		// TODO remove finished wfi from active cache
 		return
 	}
@@ -224,7 +236,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	}
 
 	// Check if the workflow invocation is in the right state
-	if invoc.Status.Status.Finished() {
+	if invoc.Status.Finished() {
 		wfiLog.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
 		return
 	}
@@ -263,7 +275,7 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 	finished := true
 	for id := range tasks {
 		t, ok := invoc.Status.Tasks[id]
-		if !ok || !t.Status.Status.Finished() {
+		if !ok || !t.Status.Finished() {
 			finished = false
 			break
 		}
