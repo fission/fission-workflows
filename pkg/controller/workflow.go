@@ -7,6 +7,7 @@ import (
 
 	"context"
 
+	"fmt"
 	"github.com/fission/fission-workflows/pkg/api/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -14,7 +15,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/backoff"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
-	"fmt"
 )
 
 var wfLog = log.WithField("controller", "controller-wf")
@@ -105,7 +105,7 @@ func (ctr *WorkflowController) HandleTick() error {
 		if !ok {
 			wfLog.WithField("wfEntity", wfEntity).WithField("type", reflect.TypeOf(wfEntity)).
 				Error("Unexpected type in wfCache")
-			panic(fmt.Sprintf("unexpected type '%v' in wfCache", reflect.TypeOf(wfEntity)));
+			panic(fmt.Sprintf("unexpected type '%v' in wfCache", reflect.TypeOf(wfEntity)))
 		}
 
 		err = ctr.evaluate(wf.Workflow)

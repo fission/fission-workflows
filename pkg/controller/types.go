@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"github.com/fission/fission-workflows/pkg/fes"
-	"time"
-	"github.com/sirupsen/logrus"
 	"context"
+	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/sirupsen/logrus"
+	"time"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 var log = logrus.New().WithFields(logrus.Fields{
-	"component":      "controller",
+	"component": "controller",
 })
 
 type Controller interface {
