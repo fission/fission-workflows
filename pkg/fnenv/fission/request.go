@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	InputBody        = "body" // or 'default'
-	InputHttpMethod  = "method"
-	InputContentType = "content_type" // to force the content type
+	inputBody        = "body" // or 'default'
+	inputHTTPMethod  = "method"
+	inputContentType = "content_type" // to force the content type
 
 	defaultContentType = "text/plain"
 	headerContentType  = "Content-Type"
@@ -32,7 +32,7 @@ func formatRequest(r *http.Request, source map[string]*types.TypedValue) error {
 	formatHeaders(r, source) // TODO move error handling here
 
 	// Map HTTP method inputs to request, or use default
-	formatHttpMethod(r, source)
+	formatMethod(r, source)
 
 	// Map query inputs to request
 	formatQuery(r.URL, source) // TODO move error handling here
@@ -82,19 +82,19 @@ func parseRequest(r *http.Request, target map[string]*types.TypedValue) error {
 }
 
 // parseBody maps the body from a request to the "main" key in the target map
-func parseBody(b io.ReadCloser, contentType string) (*types.TypedValue, error) {
-	body, err := ioutil.ReadAll(b)
+func parseBody(body io.Reader, contentType string) (*types.TypedValue, error) {
+	bs, err := ioutil.ReadAll(body)
 	if err != nil {
 		return nil, errors.New("failed to read body")
 	}
 
-	var i interface{} = body
+	var i interface{} = bs
 	// TODO fix this, remove the hardcoded JSON transform
 	if strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/json") {
-		err = json.Unmarshal(body, &i)
+		err = json.Unmarshal(bs, &i)
 		if err != nil {
-			logrus.WithField("body", len(body)).Infof("Input is not json: %v", err)
-			i = body
+			logrus.WithField("body", len(bs)).Infof("Input is not json: %v", err)
+			i = bs
 		}
 	}
 
@@ -156,8 +156,8 @@ func flattenMultimap(mm map[string][]string) map[string]interface{} {
 
 // formatting logic
 
-func formatHttpMethod(target *http.Request, inputs map[string]*types.TypedValue) {
-	_, tv := getFirstDefinedTypedValue(inputs, InputHttpMethod)
+func formatMethod(target *http.Request, inputs map[string]*types.TypedValue) {
+	_, tv := getFirstDefinedTypedValue(inputs, inputHTTPMethod)
 	httpMethod := toString(tv)
 	if httpMethod != "" {
 		target.Method = httpMethod
@@ -165,7 +165,7 @@ func formatHttpMethod(target *http.Request, inputs map[string]*types.TypedValue)
 }
 
 // TODO support multivalued query params at some point
-func formatQuery(targetUrl *url.URL, inputs map[string]*types.TypedValue) {
+func formatQuery(targetURL *url.URL, inputs map[string]*types.TypedValue) {
 	queryInput := inputs[types.INPUT_QUERY]
 	if queryInput == nil {
 		return
@@ -178,11 +178,11 @@ func formatQuery(targetUrl *url.URL, inputs map[string]*types.TypedValue) {
 
 	switch i.(type) {
 	case map[string]interface{}:
-		origQuery := targetUrl.Query()
+		origQuery := targetURL.Query()
 		for k, v := range i.(map[string]interface{}) {
 			origQuery.Add(k, fmt.Sprintf("%v", v))
 		}
-		targetUrl.RawQuery = origQuery.Encode()
+		targetURL.RawQuery = origQuery.Encode()
 	default:
 		logrus.Warnf("Ignoring invalid type of query input (expected map[string]interface{}, was %v)",
 			reflect.TypeOf(i))
@@ -217,7 +217,7 @@ func formatHeaders(target *http.Request, inputs map[string]*types.TypedValue) {
 
 func formatBody(inputs map[string]*types.TypedValue) io.ReadCloser {
 	var input []byte
-	_, mainInput := getFirstDefinedTypedValue(inputs, types.INPUT_MAIN, InputBody)
+	_, mainInput := getFirstDefinedTypedValue(inputs, types.INPUT_MAIN, inputBody)
 	if mainInput != nil {
 		// TODO ensure that it is a byte-representation 1-1 of actual value not the representation in TypedValue
 		input = mainInput.Value
@@ -228,7 +228,7 @@ func formatBody(inputs map[string]*types.TypedValue) io.ReadCloser {
 
 func formatContentType(inputs map[string]*types.TypedValue, defaultContentType string) string {
 	// Check if content type is forced
-	_, tv := getFirstDefinedTypedValue(inputs, InputContentType) // TODO lookup in headers?
+	_, tv := getFirstDefinedTypedValue(inputs, inputContentType) // TODO lookup in headers?
 	contentType := toString(tv)
 	if contentType != "" {
 		return contentType

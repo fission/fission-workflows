@@ -24,7 +24,7 @@ func verifyInput(inputs map[string]*types.TypedValue, key string, expType string
 
 	i, ok := inputs[key]
 	if !ok {
-		return nil, fmt.Errorf("Input '%s' is not set.", key)
+		return nil, fmt.Errorf("input '%s' is not set", key)
 	}
 
 	//if !typedvalues.(i.Type, expType) {

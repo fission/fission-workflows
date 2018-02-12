@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	SCOPE_INPUT = types.INPUT_MAIN
+	ScopeInput = types.INPUT_MAIN
 )
 
 type FunctionScope struct{}
 
 func (fn *FunctionScope) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	scope, ok := spec.GetInputs()[NOOP_INPUT]
+	scope, ok := spec.GetInputs()[NoopInput]
 	if !ok {
 		return nil, errors.New("missing scope input")
 	}

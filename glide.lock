@@ -1,5 +1,5 @@
-hash: f128a23dd034612f9bd76d5616b3f7ee2867b7e5d3fca2ed9032159ae1086439
-updated: 2018-02-06T13:25:49.40329+01:00
+hash: 85c7264693e84b8352542e0018e4e3d609fdb4681b5435f38d8db7db1ed97def
+updated: 2018-02-12T11:02:55.971444+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -182,8 +182,12 @@ imports:
   - internal
   - jws
   - jwt
+- name: golang.org/x/sync
+  version: fd80eb99c8f653c847d294a001bdf2a3a6f768f5
+  subpackages:
+  - syncmap
 - name: golang.org/x/sys
-  version: b699b7032584f0953262cb2788a0ca19bb494703
+  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -243,7 +247,7 @@ imports:
 - name: gopkg.in/sourcemap.v1
   version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b5
 - name: gopkg.in/yaml.v2
-  version: bef53efd0c76e49e6de55ead051f886bea7e9420
+  version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apiextensions-apiserver
   version: fcd622fe88a4a6efcb5aea9e94ee87324ac1b036
   subpackages:

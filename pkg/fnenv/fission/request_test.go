@@ -2,15 +2,16 @@ package fission
 
 import (
 	"fmt"
-	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFormatRequest(t *testing.T) {
@@ -22,12 +23,12 @@ func TestFormatRequest(t *testing.T) {
 		"Header-Key": "headerVal",
 	}
 	method := http.MethodPost
-	reqUrl, err := url.Parse("http://bar.example")
+	reqURL, err := url.Parse("http://bar.example")
 	if err != nil {
 		panic(err)
 	}
 	target := &http.Request{
-		URL: reqUrl,
+		URL: reqURL,
 		// TODO verify that existing headers, query params, etc stay in tact.
 	}
 	source := map[string]*types.TypedValue{
@@ -131,12 +132,12 @@ func TestParseRequestMinimal(t *testing.T) {
 	assert.Equal(t, nil, query["nonExistent"])
 }
 
-func createRequest(method string, rawUrl string, headers map[string]string, bodyReader io.Reader) *http.Request {
+func createRequest(method string, rawURL string, headers map[string]string, bodyReader io.Reader) *http.Request {
 	mheaders := http.Header{}
 	for k, v := range headers {
 		mheaders[k] = []string{v}
 	}
-	requrl, _ := url.Parse(rawUrl)
+	requrl, _ := url.Parse(rawURL)
 	body := ioutil.NopCloser(bodyReader)
 	return &http.Request{
 		Method: method,

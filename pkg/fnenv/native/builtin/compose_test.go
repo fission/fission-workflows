@@ -12,7 +12,7 @@ func TestFunctionComposePassInput(t *testing.T) {
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				COMPOSE_INPUT: parseUnsafe(expected),
+				ComposeInput: parseUnsafe(expected),
 			},
 		},
 		expected)

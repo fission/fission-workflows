@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	NOOP_INPUT = types.INPUT_MAIN
+	NoopInput = types.INPUT_MAIN
 )
 
 type FunctionNoop struct{}
@@ -18,7 +18,7 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	case 0:
 		output = nil
 	default:
-		defaultInput, ok := spec.GetInputs()[NOOP_INPUT]
+		defaultInput, ok := spec.GetInputs()[NoopInput]
 		if ok {
 			output = defaultInput
 			break

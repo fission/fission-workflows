@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	IF_INPUT_CONDITION   = "if"
-	IF_INPUT_CONSEQUENT  = "then"
-	IF_INPUT_ALTERNATIVE = "else"
+	// Condition
+	IfInputCondition = "if"
+	IfInputThen      = "then"
+	IfInputElse      = "else"
 )
 
 type FunctionIf struct{}
@@ -19,14 +20,14 @@ type FunctionIf struct{}
 func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 
 	// Verify and get condition
-	expr, err := verifyInput(spec.GetInputs(), IF_INPUT_CONDITION, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_BOOL))
+	expr, err := verifyInput(spec.GetInputs(), IfInputCondition, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_BOOL))
 	if err != nil {
 		return nil, err
 	}
 
 	// Get consequent alternative, if one of those does not exist, that is fine.
-	consequent := spec.GetInputs()[IF_INPUT_CONSEQUENT]
-	alternative := spec.GetInputs()[IF_INPUT_ALTERNATIVE]
+	consequent := spec.GetInputs()[IfInputThen]
+	alternative := spec.GetInputs()[IfInputElse]
 
 	// Parse condition to a bool
 	i, err := typedvalues.Format(expr)

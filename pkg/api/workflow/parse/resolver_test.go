@@ -7,7 +7,7 @@ import (
 
 	"errors"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ func TestResolve(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]function.Resolver{
+	clients := map[string]fnenv.Resolver{
 		fooClient: uppercaseResolver,
 		"failing": failingResolver,
 	}
@@ -44,7 +44,7 @@ func TestResolveForced(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]function.Resolver{
+	clients := map[string]fnenv.Resolver{
 		"bar":     uppercaseResolver,
 		fooClient: uppercaseResolver,
 		"failing": failingResolver,
@@ -72,7 +72,7 @@ func TestResolveInputs(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]function.Resolver{
+	clients := map[string]fnenv.Resolver{
 		fooClient: uppercaseResolver,
 		fooClient: uppercaseResolver,
 	}
@@ -112,7 +112,7 @@ func TestResolveInputs(t *testing.T) {
 
 func TestResolveNotFound(t *testing.T) {
 
-	clients := map[string]function.Resolver{
+	clients := map[string]fnenv.Resolver{
 		"bar":     uppercaseResolver,
 		"failing": failingResolver,
 	}

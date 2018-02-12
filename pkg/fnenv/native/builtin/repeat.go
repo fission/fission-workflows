@@ -8,22 +8,22 @@ import (
 )
 
 const (
-	REPEAT_INPUT_TIMES = "times"
-	REPEAT_INPUT_DO    = "do"
+	RepeatInputTimes = "times"
+	RepeatInputDo    = "do"
 )
 
 type FunctionRepeat struct{}
 
 func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 
-	n, ok := spec.GetInputs()[REPEAT_INPUT_TIMES]
+	n, ok := spec.GetInputs()[RepeatInputTimes]
 	if !ok {
-		return nil, fmt.Errorf("repeat needs '%s'", REPEAT_INPUT_TIMES)
+		return nil, fmt.Errorf("repeat needs '%s'", RepeatInputTimes)
 	}
 
-	do, ok := spec.GetInputs()[REPEAT_INPUT_DO]
+	do, ok := spec.GetInputs()[RepeatInputDo]
 	if !ok {
-		return nil, fmt.Errorf("repeat needs '%s'", REPEAT_INPUT_DO)
+		return nil, fmt.Errorf("repeat needs '%s'", RepeatInputDo)
 	}
 
 	// Parse condition to a int

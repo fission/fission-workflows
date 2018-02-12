@@ -31,22 +31,22 @@ var taskFinalStates = []TaskInvocationStatus_Status{
 	TaskInvocationStatus_SUCCEEDED,
 }
 
-func (wi WorkflowInvocationStatus_Status) Finished() bool {
+func (wi WorkflowInvocationStatus) Finished() bool {
 	for _, event := range invocationFinalStates {
-		if event == wi {
+		if event == wi.Status {
 			return true
 		}
 	}
 	return false
 }
 
-func (wi WorkflowInvocationStatus_Status) Successful() bool {
-	return wi == WorkflowInvocationStatus_SUCCEEDED
+func (wi WorkflowInvocationStatus) Successful() bool {
+	return wi.Status == WorkflowInvocationStatus_SUCCEEDED
 }
 
-func (ti TaskInvocationStatus_Status) Finished() bool {
+func (ti TaskInvocationStatus) Finished() bool {
 	for _, event := range taskFinalStates {
-		if event == ti {
+		if event == ti.Status {
 			return true
 		}
 	}

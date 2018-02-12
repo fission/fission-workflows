@@ -51,7 +51,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 		if err != nil {
 			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
 		}
-		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Status.Finished() {
+		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Finished() {
 			result = wi.WorkflowInvocation
 			break
 		}

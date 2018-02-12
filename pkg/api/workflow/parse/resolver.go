@@ -3,10 +3,9 @@ package parse
 import (
 	"fmt"
 	"strings"
-
 	"sync"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
@@ -23,10 +22,10 @@ import (
 //   for scheduling (overhead vs. load)
 //
 type Resolver struct {
-	clients map[string]function.Resolver
+	clients map[string]fnenv.Resolver
 }
 
-func NewResolver(client map[string]function.Resolver) *Resolver {
+func NewResolver(client map[string]fnenv.Resolver) *Resolver {
 	return &Resolver{client}
 }
 
@@ -138,7 +137,7 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	case result := <-resolved:
 		return result, nil
 	default:
-		return nil, fmt.Errorf("failed to resolve function '%s' using clients '%v'", t, ps.clients)
+		return nil, fmt.Errorf("failed to resolve function '%s' using clients '%v': %v", t, ps.clients, lastErr)
 	}
 }
 

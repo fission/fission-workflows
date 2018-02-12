@@ -22,7 +22,7 @@ const (
 type eventType int32
 
 const (
-	noop    eventType = iota
+	noop eventType = iota
 	deleted
 )
 

@@ -38,6 +38,8 @@ install:
 before_script:
 # Build
 - cd ${TRAVIS_BUILD_DIR}
+- hack/verify-govet.sh
+- hack/verify-gofmt.sh
 - glide install
 - build/build-linux.sh
 

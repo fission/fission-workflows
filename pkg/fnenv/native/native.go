@@ -1,3 +1,4 @@
+// Note: package is called 'native' because 'internal' is not an allowed package name.
 package native
 
 import (
@@ -7,8 +8,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
-
-// Note: package is called 'native' because 'internal' is not an allowed package name.
 
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {

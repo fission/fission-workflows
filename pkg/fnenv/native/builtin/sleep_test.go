@@ -15,7 +15,7 @@ func TestSleepFunctionString(t *testing.T) {
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				SLEEP_INPUT_MS: parseUnsafe("1000ms"),
+				SleepInput: parseUnsafe("1000ms"),
 			},
 		},
 		nil)
@@ -29,7 +29,7 @@ func TestSleepFunctionInt(t *testing.T) {
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				SLEEP_INPUT_MS: parseUnsafe(1000),
+				SleepInput: parseUnsafe(1000),
 			},
 		},
 		nil)

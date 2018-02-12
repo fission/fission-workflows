@@ -40,7 +40,7 @@ import:
 - package: gopkg.in/sourcemap.v1
   version: v2.0.0
 - package: gopkg.in/yaml.v2
-  # Due to the old version of the kubernetes client we need to fix the openapi versions to avoid incompatible interfaces.
+# Due to the old version of the kubernetes client we need to fix the openapi versions to avoid incompatible interfaces.
 - package: github.com/go-openapi/errors
   version: 49fe8b3a0e0d32a617d8d50c67f856ad6e45b28b
 - package: github.com/go-openapi/analysis
@@ -49,6 +49,9 @@ import:
   version: 315567415dfd74b651f7a62cabfc82a57ed7b9ad
 - package: github.com/go-openapi/validate
   version: 2c997e169d705fe1e4235c9c1d62a7e704a84290
+- package: golang.org/x/sync
+  subpackages:
+  - syncmap
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.1.4
