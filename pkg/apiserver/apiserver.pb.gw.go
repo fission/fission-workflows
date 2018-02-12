@@ -207,6 +207,15 @@ func request_AdminAPI_Status_0(ctx context.Context, marshaler runtime.Marshaler,
 
 }
 
+func request_AdminAPI_Version_0(ctx context.Context, marshaler runtime.Marshaler, client AdminAPIClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq empty.Empty
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.Version(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
 // RegisterWorkflowAPIHandlerFromEndpoint is same as RegisterWorkflowAPIHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
 func RegisterWorkflowAPIHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
@@ -235,10 +244,18 @@ func RegisterWorkflowAPIHandlerFromEndpoint(ctx context.Context, mux *runtime.Se
 // RegisterWorkflowAPIHandler registers the http handlers for service WorkflowAPI to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
 func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	client := NewWorkflowAPIClient(conn)
+	return RegisterWorkflowAPIHandlerClient(ctx, mux, NewWorkflowAPIClient(conn))
+}
+
+// RegisterWorkflowAPIHandler registers the http handlers for service WorkflowAPI to "mux".
+// The handlers forward requests to the grpc endpoint over the given implementation of "WorkflowAPIClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "WorkflowAPIClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "WorkflowAPIClient" to call the correct interceptors.
+func RegisterWorkflowAPIHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WorkflowAPIClient) error {
 
 	mux.Handle("POST", pattern_WorkflowAPI_Create_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -267,7 +284,7 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 	})
 
 	mux.Handle("GET", pattern_WorkflowAPI_List_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -296,7 +313,7 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 	})
 
 	mux.Handle("GET", pattern_WorkflowAPI_Get_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -325,7 +342,7 @@ func RegisterWorkflowAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn
 	})
 
 	mux.Handle("POST", pattern_WorkflowAPI_Validate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -404,10 +421,18 @@ func RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx context.Context, mux *
 // RegisterWorkflowInvocationAPIHandler registers the http handlers for service WorkflowInvocationAPI to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
 func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	client := NewWorkflowInvocationAPIClient(conn)
+	return RegisterWorkflowInvocationAPIHandlerClient(ctx, mux, NewWorkflowInvocationAPIClient(conn))
+}
+
+// RegisterWorkflowInvocationAPIHandler registers the http handlers for service WorkflowInvocationAPI to "mux".
+// The handlers forward requests to the grpc endpoint over the given implementation of "WorkflowInvocationAPIClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "WorkflowInvocationAPIClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "WorkflowInvocationAPIClient" to call the correct interceptors.
+func RegisterWorkflowInvocationAPIHandlerClient(ctx context.Context, mux *runtime.ServeMux, client WorkflowInvocationAPIClient) error {
 
 	mux.Handle("POST", pattern_WorkflowInvocationAPI_Invoke_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -436,7 +461,7 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 	})
 
 	mux.Handle("POST", pattern_WorkflowInvocationAPI_InvokeSync_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -465,7 +490,7 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 	})
 
 	mux.Handle("GET", pattern_WorkflowInvocationAPI_InvokeSync_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -494,7 +519,7 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 	})
 
 	mux.Handle("DELETE", pattern_WorkflowInvocationAPI_Cancel_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -523,7 +548,7 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 	})
 
 	mux.Handle("GET", pattern_WorkflowInvocationAPI_List_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -552,7 +577,7 @@ func RegisterWorkflowInvocationAPIHandler(ctx context.Context, mux *runtime.Serv
 	})
 
 	mux.Handle("GET", pattern_WorkflowInvocationAPI_Get_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -639,10 +664,18 @@ func RegisterAdminAPIHandlerFromEndpoint(ctx context.Context, mux *runtime.Serve
 // RegisterAdminAPIHandler registers the http handlers for service AdminAPI to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
 func RegisterAdminAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	client := NewAdminAPIClient(conn)
+	return RegisterAdminAPIHandlerClient(ctx, mux, NewAdminAPIClient(conn))
+}
+
+// RegisterAdminAPIHandler registers the http handlers for service AdminAPI to "mux".
+// The handlers forward requests to the grpc endpoint over the given implementation of "AdminAPIClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "AdminAPIClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "AdminAPIClient" to call the correct interceptors.
+func RegisterAdminAPIHandlerClient(ctx context.Context, mux *runtime.ServeMux, client AdminAPIClient) error {
 
 	mux.Handle("GET", pattern_AdminAPI_Status_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		if cn, ok := w.(http.CloseNotifier); ok {
 			go func(done <-chan struct{}, closed <-chan bool) {
@@ -670,13 +703,46 @@ func RegisterAdminAPIHandler(ctx context.Context, mux *runtime.ServeMux, conn *g
 
 	})
 
+	mux.Handle("GET", pattern_AdminAPI_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		if cn, ok := w.(http.CloseNotifier); ok {
+			go func(done <-chan struct{}, closed <-chan bool) {
+				select {
+				case <-done:
+				case <-closed:
+					cancel()
+				}
+			}(ctx.Done(), cn.CloseNotify())
+		}
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_AdminAPI_Version_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_AdminAPI_Version_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
 var (
 	pattern_AdminAPI_Status_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"status"}, ""))
+
+	pattern_AdminAPI_Version_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"version"}, ""))
 )
 
 var (
 	forward_AdminAPI_Status_0 = runtime.ForwardResponseMessage
+
+	forward_AdminAPI_Version_0 = runtime.ForwardResponseMessage
 )

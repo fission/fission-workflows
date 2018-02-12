@@ -1,17 +1,35 @@
 package nats
 
 import (
-	"fmt"
-	"time"
-
-	"strings"
-
 	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 )
+
+const (
+	subjectActivity          = "_activity"
+	mostRecentMsg     uint64 = 0
+	firstMsg          uint64 = 1
+	rangeFetchTimeout        = time.Duration(1) * time.Minute
+)
+
+type eventType int32
+
+const (
+	noop    eventType = iota
+	deleted
+)
+
+type subjectEvent struct {
+	Subject string    `json:"Subject,omitempty"`
+	Type    eventType `json:"type,omitempty"`
+}
 
 // Conn is a wrapper of 'stan.Conn' struct to augment the API with bounded subscriptions and channel-based subscriptions
 type Conn struct {
@@ -27,13 +45,6 @@ func (cn *Conn) SubscribeChan(subject string, msgChan chan *stan.Msg, opts ...st
 		msgChan <- msg
 	}, opts...)
 }
-
-const (
-	SUBJECT_ACTIVITY = "_activity"
-)
-
-const MOST_RECENT_MSG uint64 = 0
-const FIRST_MSG uint64 = 1
 
 // Msg has a python style element selector (-1 = len(events)-1)
 func (cn *Conn) Msg(subject string, seqId uint64) (*stan.Msg, error) {
@@ -64,7 +75,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		select {
 		case seqEnd = <-rightBound:
 		case <-time.After(time.Duration(10) * time.Second):
-			return nil, fmt.Errorf("timed out while finding boundary for subject '%s'", subject)
+			return nil, fmt.Errorf("timed out while finding boundary for Subject '%s'", subject)
 		}
 	}
 
@@ -80,15 +91,23 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		leftBoundOptions = append(leftBoundOptions, stan.StartAtSequence(seqStart))
 	}
 
-	result := []*stan.Msg{}
-	c := make(chan *stan.Msg)
+	var result []*stan.Msg
+	elementC := make(chan *stan.Msg)
+	errC := make(chan error)
 	sub, err := cn.Subscribe(subject, func(msg *stan.Msg) {
 		defer msg.Ack()
-		// TODO add a timeout here
-		c <- msg
-		if msg.Sequence == seqEnd {
-			msg.Sub.Close()
-			close(c)
+
+		select {
+		case <-time.After(rangeFetchTimeout):
+			errC <- errors.New("range fetch timeout")
+			close(elementC)
+			close(errC)
+		case elementC <- msg:
+			if msg.Sequence == seqEnd {
+				msg.Sub.Close()
+				close(elementC)
+				close(errC)
+			}
 		}
 	}, leftBoundOptions...)
 	if err != nil {
@@ -96,11 +115,14 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 	}
 	defer sub.Close()
 
-	for msg := range c {
-		result = append(result, msg)
+	for {
+		select {
+		case err := <-errC:
+			return result, err
+		case msg := <-elementC:
+			result = append(result, msg)
+		}
 	}
-
-	return result, nil
 }
 
 // WildcardConn is an abstraction on top of Conn that provides wildcard support
@@ -124,8 +146,8 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 		sources: map[string]stan.Subscription{},
 	}
 
-	metaSub, err := wc.Conn.Subscribe(SUBJECT_ACTIVITY, func(msg *stan.Msg) {
-		subjectEvent := &SubjectEvent{}
+	metaSub, err := wc.Conn.Subscribe(subjectActivity, func(msg *stan.Msg) {
+		subjectEvent := &subjectEvent{}
 		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -146,8 +168,11 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 			"event":           subjectEvent,
 		}).Debug("NatsClient received activity.")
 
+		// TODO add semaphore for ws.sources manipulation
 		switch subjectEvent.Type {
-		case ACTIVITY_CREATED:
+		case noop:
+			// Create a new listener if event is of a new subject
+			// TODO issue: if resumed previous event will be replayed, check if these are ignored by the event store!
 			if _, ok := ws.sources[subject]; !ok {
 				sub, err := wc.Subscribe(subject, cb, opts...)
 				if err != nil {
@@ -155,9 +180,16 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 				}
 				ws.sources[subject] = sub
 			}
+		case deleted:
+			// Delete the current listener of the subject of the event
+			if _, ok := ws.sources[subject]; ok {
+				err := ws.sources[subject].Close()
+				if err != nil {
+					logrus.Errorf("Failed to close (sub)listener: %v", err)
+				}
+			}
 		default:
-			// TODO notify subscription that wildcardSubject has been closed and close channel
-			panic(fmt.Sprintf("Unknown ActivityEvent: %v", subjectEvent))
+			panic(fmt.Sprintf("Unknown eventType: %v", subjectEvent))
 		}
 	}, stan.DeliverAllAvailable())
 	if err != nil {
@@ -175,32 +207,32 @@ func (wc *WildcardConn) Publish(subject string, data []byte) error {
 		return err
 	}
 
-	// Announce subject activity on notification thread, because of missing wildcards in NATS streaming
-	activityEvent := &SubjectEvent{
+	// Announce Subject activity on notification thread, because of missing wildcards in NATS streaming
+	activityEvent := &subjectEvent{
 		Subject: subject,
-		Type:    ACTIVITY_CREATED, // TODO infer from context if created or closed
+		Type:    noop, // TODO infer from context if noop or closed
 	}
 	err = wc.publishActivity(activityEvent)
 	if err != nil {
-		logrus.Warnf("Failed to publish subject '%s': %v", subject, err)
+		logrus.Warnf("Failed to publish Subject '%s': %v", subject, err)
 	}
 
 	return nil
 }
 
-func (wc *WildcardConn) publishActivity(activity *SubjectEvent) error {
+func (wc *WildcardConn) publishActivity(activity *subjectEvent) error {
 	subjectData, err := json.Marshal(activity)
 	if err != nil {
 		return err
 	}
 
-	err = wc.Conn.Publish(SUBJECT_ACTIVITY, subjectData)
+	err = wc.Conn.Publish(subjectActivity, subjectData)
 	if err != nil {
 		return err
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"subject": SUBJECT_ACTIVITY,
+		"Subject": subjectActivity,
 		"event":   activity,
 	}).Debug("Published activity event to event store.")
 
@@ -209,18 +241,18 @@ func (wc *WildcardConn) publishActivity(activity *SubjectEvent) error {
 
 func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 
-	msgs, err := wc.Conn.MsgSeqRange(SUBJECT_ACTIVITY, FIRST_MSG, MOST_RECENT_MSG)
+	msgs, err := wc.Conn.MsgSeqRange(subjectActivity, firstMsg, mostRecentMsg)
 	if err != nil {
 		return nil, err
 	}
 	subjectCount := map[string]int{}
 	for _, msg := range msgs {
-		subjectEvent := &SubjectEvent{}
+		subjectEvent := &subjectEvent{}
 		err := json.Unmarshal(msg.Data, subjectEvent)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"msg":             subjectEvent,
-				"activitySubject": SUBJECT_ACTIVITY,
+				"activitySubject": subjectActivity,
 			}).Warnf("Failed to parse subjectEvent.")
 			continue
 		}
@@ -235,7 +267,7 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 		}
 	}
 
-	results := []string{}
+	var results []string
 	for subject := range subjectCount {
 		results = append(results, subject)
 	}
@@ -243,6 +275,7 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 	return results, nil
 }
 
+// WildcardSub is an abstraction on top of stan.Subscription that provides wildcard support
 type WildcardSub struct {
 	subject     string
 	sources     map[string]stan.Subscription
@@ -293,16 +326,4 @@ func queryMatches(subject string, query string) bool {
 		}
 	}
 	return true
-}
-
-type ActivityEvent int32
-
-const (
-	ACTIVITY_CREATED ActivityEvent = iota
-	ACTIVITY_DELETED
-)
-
-type SubjectEvent struct {
-	Subject string        `json:"subject,omitempty"`
-	Type    ActivityEvent `json:"type,omitempty"`
 }

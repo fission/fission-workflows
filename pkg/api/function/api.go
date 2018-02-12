@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/sirupsen/logrus"
 )
 
 // Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
@@ -23,6 +24,7 @@ func NewApi(runtime map[string]Runtime, esClient fes.EventStore) *Api {
 }
 
 func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+	aggregate := aggregates.NewWorkflowInvocationAggregate(invocationId)
 	id := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
 	fn := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
@@ -37,9 +39,9 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 		return nil, err
 	}
 
-	err = ap.es.HandleEvent(&fes.Event{
+	err = ap.es.Append(&fes.Event{
 		Type:      events.Function_TASK_STARTED.String(),
-		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Parent:    aggregate,
 		Aggregate: aggregates.NewTaskInvocationAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      fnAny,
@@ -50,10 +52,11 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 
 	fnResult, err := ap.runtime[spec.Type.Runtime].Invoke(spec)
 	if err != nil {
-		// TODO record error message
-		esErr := ap.es.HandleEvent(&fes.Event{
+		// TODO improve error handling here (retries? internal or task related error?)
+		logrus.WithField("task", invocationId).Infof("Task failed: %v", err)
+		esErr := ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_FAILED.String(),
-			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(id),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnAny,
@@ -70,17 +73,17 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 	}
 
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
-		err = ap.es.HandleEvent(&fes.Event{
+		err = ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_SUCCEEDED.String(),
-			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(id),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
 		})
 	} else {
-		err = ap.es.HandleEvent(&fes.Event{
+		err = ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_FAILED.String(),
-			Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
+			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(id),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
@@ -95,7 +98,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 }
 
 func (ap *Api) Fail(invocationId string, taskId string) error {
-	return ap.es.HandleEvent(&fes.Event{
+	return ap.es.Append(&fes.Event{
 		Type:      events.Function_TASK_FAILED.String(),
 		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),

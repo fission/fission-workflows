@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TYPE_FUNCTION_INVOCATION = "function"
+	TypeTaskInvocation = "function"
 )
 
 type TaskInvocation struct {
@@ -32,7 +32,7 @@ func NewTaskInvocation(id string, fi *types.TaskInvocation) *TaskInvocation {
 func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 	return &fes.Aggregate{
 		Id:   id,
-		Type: TYPE_FUNCTION_INVOCATION,
+		Type: TypeTaskInvocation,
 	}
 }
 

@@ -34,7 +34,7 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 		return "", err
 	}
 
-	err = ia.es.HandleEvent(&fes.Event{
+	err = ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_CREATED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
@@ -56,8 +56,9 @@ func (ia *Api) Cancel(invocationId string) error {
 		Type:      events.Invocation_INVOCATION_CANCELED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Timestamp: ptypes.TimestampNow(),
+		Hints:     &fes.EventHints{Completed: true},
 	}
-	err := ia.es.HandleEvent(event)
+	err := ia.es.Append(event)
 	if err != nil {
 		return err
 	}
@@ -78,14 +79,13 @@ func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) erro
 		return err
 	}
 
-	event := &fes.Event{
+	err = ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_COMPLETED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
-	}
-
-	err = ia.es.HandleEvent(event)
+		Hints:     &fes.EventHints{Completed: true},
+	})
 	if err != nil {
 		return err
 	}

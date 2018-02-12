@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+package fission.workflows.eventstore;
+option go_package = "fes";
+
 import "google/protobuf/timestamp.proto";
 
 message Aggregate {
@@ -13,5 +16,11 @@ message Event {
     Aggregate aggregate = 3;
     google.protobuf.Timestamp timestamp = 4;
     bytes data = 5;
-    Aggregate parent = 6;
+    Aggregate parent = 6; // TODO what is the difference between a parent and a aggregate ??
+    EventHints hints = 7;
+}
+
+// EventHints is a collection of optional metadata that help components in the event store to improve performance.
+message EventHints {
+    bool completed = 1;
 }

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	TYPE_WORKFLOW_INVOCATION = "invocation"
+	TypeWorkflowInvocation = "invocation"
 )
 
 type WorkflowInvocation struct {
@@ -35,13 +35,13 @@ func NewWorkflowInvocation(invocationId string, wi *types.WorkflowInvocation) *W
 func NewWorkflowInvocationAggregate(invocationId string) *fes.Aggregate {
 	return &fes.Aggregate{
 		Id:   invocationId,
-		Type: TYPE_WORKFLOW_INVOCATION,
+		Type: TypeWorkflowInvocation,
 	}
 }
 
 func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 	// If the event is a function event, use the Function Aggregate to resolve it.
-	if event.Aggregate.Type == TYPE_FUNCTION_INVOCATION {
+	if event.Aggregate.Type == TypeTaskInvocation {
 		return wi.applyTaskEvent(event)
 	}
 

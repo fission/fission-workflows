@@ -34,7 +34,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 		return "", err
 	}
 
-	err = wa.es.HandleEvent(&fes.Event{
+	err = wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_CREATED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
@@ -48,10 +48,11 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 }
 
 func (wa *Api) Delete(id string) error {
-	return wa.es.HandleEvent(&fes.Event{
+	return wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_DELETED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
+		Hints:     &fes.EventHints{Completed: true},
 	})
 }
 
@@ -66,7 +67,7 @@ func (wa *Api) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
 		return nil, err
 	}
 
-	err = wa.es.HandleEvent(&fes.Event{
+	err = wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_PARSED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(workflow.Metadata.Id),
 		Timestamp: ptypes.TimestampNow(),

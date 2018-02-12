@@ -2,7 +2,6 @@ package nats
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -28,7 +27,6 @@ func NewEventStore(conn *WildcardConn) *EventStore {
 
 // Watch a aggregate type
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
-
 	subject := fmt.Sprintf("%s.>", aggregate.Type)
 	sub, err := es.conn.Subscribe(subject, func(msg *stan.Msg) {
 		event, err := toEvent(msg)
@@ -41,7 +39,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"aggregate.id":   event.Aggregate.Id,
 			"event.type":     event.Type,
 			"event.id":       event.Id,
-			"nats.subject":   msg.Subject,
+			"nats.Subject":   msg.Subject,
 		}).Info("Publishing aggregate event to subscribers.")
 
 		err = es.Publisher.Publish(event)
@@ -62,8 +60,8 @@ func (es *EventStore) Close() error {
 	return es.conn.Close()
 }
 
-func (es *EventStore) HandleEvent(event *fes.Event) error {
-	// TODO make generic / configurable whether to fold event into parent's subject
+func (es *EventStore) Append(event *fes.Event) error {
+	// TODO make generic / configurable whether to fold event into parent's Subject
 	subject := toSubject(event.Aggregate)
 	if event.Parent != nil {
 		subject = toSubject(event.Parent)
@@ -78,21 +76,20 @@ func (es *EventStore) HandleEvent(event *fes.Event) error {
 		"event.type":     event.Type,
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
-		"nats.subject":   subject,
+		"nats.Subject":   subject,
 	}).Info("EventStore client appending event.")
 
 	return es.conn.Publish(subject, data)
 }
 
 func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
-	//logrus.WithField("subject", aggregateType).Debug("GET events from event store")
 	subject := toSubject(aggregate)
 
-	msgs, err := es.conn.MsgSeqRange(subject, FIRST_MSG, MOST_RECENT_MSG)
+	msgs, err := es.conn.MsgSeqRange(subject, firstMsg, mostRecentMsg)
 	if err != nil {
 		return nil, err
 	}
-	results := []*fes.Event{}
+	var results []*fes.Event
 	for _, msg := range msgs {
 		event, err := toEvent(msg)
 		if err != nil {
@@ -109,7 +106,7 @@ func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
 	if err != nil {
 		return nil, err
 	}
-	results := []fes.Aggregate{}
+	var results []fes.Aggregate
 	for _, subject := range subjects {
 		a := toAggregate(subject)
 		results = append(results, *a)

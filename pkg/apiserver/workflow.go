@@ -57,7 +57,7 @@ func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowId
 }
 
 func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
-	results := []string{}
+	var results []string
 	wfs := ga.cache.List()
 	for _, result := range wfs {
 		results = append(results, result.Id)

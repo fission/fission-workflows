@@ -2,14 +2,16 @@ package fes
 
 import "github.com/fission/fission-workflows/pkg/util/pubsub"
 
-// Aggregator is a entity that can be update
+// Aggregator is a entity that can be updated
+// TODO we need to keep more event-related information (such as current index)
 type Aggregator interface {
 	// Entity-specific
+	// TODO can we avoid mutability here?
 	ApplyEvent(event *Event) error
 
 	// Aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
 	//
-	// Implemented by AggregatorMixin
+	// This is implemented by AggregatorMixin
 	Aggregate() Aggregate
 
 	// UpdateState mutates the current entity to the provided target state
@@ -18,22 +20,16 @@ type Aggregator interface {
 	UpdateState(targetState Aggregator) error
 }
 
-type EventHandler interface {
-	HandleEvent(event *Event) error
+type EventAppender interface {
+	Append(event *Event) error
 }
 
 // EventStore is a persistent store for events
 type EventStore interface {
-	EventHandler
+	EventAppender
 	Get(aggregate *Aggregate) ([]*Event, error)
 	List(matcher StringMatcher) ([]Aggregate, error)
 }
-
-// EventBus is the volatile reactive store that processes, stores events, and notifies subscribers
-//type Dispatcher interface {
-//	EventHandler
-//	//pubsub.Publisher
-//}
 
 // Projector projects events into an entity
 type Projector interface {
