@@ -56,6 +56,7 @@ func (ia *Api) Cancel(invocationId string) error {
 		Type:      events.Invocation_INVOCATION_CANCELED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Timestamp: ptypes.TimestampNow(),
+		Hints:     &fes.EventHints{Completed: true},
 	}
 	err := ia.es.Append(event)
 	if err != nil {
@@ -83,6 +84,7 @@ func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) erro
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
+		Hints:     &fes.EventHints{Completed: true},
 	})
 	if err != nil {
 		return err

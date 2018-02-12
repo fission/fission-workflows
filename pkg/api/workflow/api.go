@@ -52,6 +52,7 @@ func (wa *Api) Delete(id string) error {
 		Type:      events.Workflow_WORKFLOW_DELETED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(id),
 		Timestamp: ptypes.TimestampNow(),
+		Hints:     &fes.EventHints{Completed: true},
 	})
 }
 
