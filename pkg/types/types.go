@@ -64,3 +64,7 @@ func (tv TypedValue) Short() string {
 
 	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
 }
+
+func (m *Error) Error() string {
+	return m.Message
+}

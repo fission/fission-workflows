@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -21,12 +22,14 @@ var log = logrus.WithField("component", "fnenv-fission")
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
 type FunctionEnv struct {
-	executor *executor.Client
+	executor         *executor.Client
+	timedExecService *TimedExecPool
 }
 
 const (
 	defaultHttpMethod = http.MethodPost
 	defaultProtocol   = "http"
+	provisionDuration = time.Duration(500) - time.Millisecond
 )
 
 func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
@@ -35,48 +38,35 @@ func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
 	}
 }
 
+// Invoke executes the task in a blocking way.
+//
+// spec contains the complete configuration needed for the execution.
+// It returns the TaskInvocationStatus with a completed (FINISHED, FAILED, ABORTED) status.
+// An error is returned only when error occurs outside of the runtime's control.
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	meta := &metav1.ObjectMeta{
-		Name:      spec.GetType().GetSrc(),
-		UID:       k8stypes.UID(spec.GetType().GetResolved()),
-		Namespace: metav1.NamespaceDefault,
-	}
-
-	// Get reqUrl
+	// Get fission function url
 	// TODO use router instead once we can route to a specific function uid
-	ctxLog := log.WithField("fn", meta.Name)
-	ctxLog.Infof("Invoking Fission function: '%v'.", meta.Name, meta.UID)
-	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"err":  err,
-			"meta": meta,
-		}).Error("Fission function could not be found!")
-		return nil, err
-	}
-	rawUrl := fmt.Sprintf("%s://%s", defaultProtocol, serviceUrl)
-	reqUrl, err := url.Parse(rawUrl)
-	if err != nil {
-		logrus.Errorf("Failed to parse url: '%v'", rawUrl)
-		panic(err)
-	}
+	ctxLog := log.WithField("fn", spec.GetType())
+	reqUrl, err := fe.getFnUrl(spec.GetType())
 
 	// Construct request and add body
+	ctxLog.Infof("Invoking Fission function: '%v'.", reqUrl)
 	req, err := http.NewRequest(defaultHttpMethod, reqUrl.String(), nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to make request for '%s': %v", serviceUrl, err))
+		panic(fmt.Errorf("failed to make request for '%v': %v", reqUrl, err))
 	}
 
 	// Map task inputs to request
 	formatRequest(req, spec.Inputs)
 
 	// Add parameters normally added by Fission
+	meta := createFunctionMeta(spec.GetType())
 	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
 
 	// Perform request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error for reqUrl '%s': %v", serviceUrl, err)
+		return nil, fmt.Errorf("error for reqUrl '%v': %v", reqUrl, err)
 	}
 
 	// Parse output
@@ -97,7 +87,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{
 				Code:    fmt.Sprintf("%v", resp.StatusCode),
-				Message: fmt.Sprintf("%s", msg),
+				Message: fmt.Sprintf("%v", msg),
 			},
 		}, nil
 	}
@@ -106,4 +96,49 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		Status: types.TaskInvocationStatus_SUCCEEDED,
 		Output: output,
 	}, nil
+}
+
+// Notify signals the Fission runtime that a function request is expected at a specific time.
+func (fe *FunctionEnv) Notify(taskID string, fn types.TaskTypeDef, expectedAt time.Time) error {
+	reqUrl, err := fe.getFnUrl(&fn)
+	if err != nil {
+		return err
+	}
+
+	// For this now assume a standard cold start delay; use profiling to provide a better estimate.
+	execAt := expectedAt.Add(-provisionDuration)
+
+	// Tap the Fission function at the right time
+	fe.timedExecService.Submit(func() {
+		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqUrl)
+		fe.executor.TapService(reqUrl)
+	}, execAt)
+	return nil
+}
+
+func (fe *FunctionEnv) getFnUrl(fn *types.TaskTypeDef) (*url.URL, error) {
+	meta := createFunctionMeta(fn)
+	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"err":  err,
+			"meta": meta,
+		}).Error("Fission function could not be found!")
+		return nil, err
+	}
+	rawUrl := fmt.Sprintf("%s://%s", defaultProtocol, serviceUrl)
+	reqUrl, err := url.Parse(rawUrl)
+	if err != nil {
+		logrus.Errorf("Failed to parse url: '%v'", rawUrl)
+		panic(err)
+	}
+	return reqUrl, nil
+}
+
+func createFunctionMeta(fn *types.TaskTypeDef) *metav1.ObjectMeta {
+	return &metav1.ObjectMeta{
+		Name:      fn.GetSrc(),
+		UID:       k8stypes.UID(fn.GetResolved()),
+		Namespace: metav1.NamespaceDefault,
+	}
 }
