@@ -70,5 +70,5 @@ type Notifier interface {
 	// a signal that the function invocation will come (almost) immediately. fnId is an optional
 	// identifier for the signal, which the implementation can use this to identify signals.
 	// By default, if fnId is empty, it is not possible to later update the notification.
-	Notify(taskID string, fn types.TaskTypeDef, expectedAt time.Time) error
+	Notify(taskID string, fn types.ResolvedTask, expectedAt time.Time) error
 }

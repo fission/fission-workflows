@@ -127,7 +127,7 @@ func (mk *Runtime) Status(fnInvocationID string) (*types.TaskInvocationStatus, e
 	return invocation.Status, nil
 }
 
-func (mk *Runtime) Notify(taskID string, fn types.TaskTypeDef, expectedAt time.Time) error {
+func (mk *Runtime) Notify(taskID string, fn types.ResolvedTask, expectedAt time.Time) error {
 	return nil
 }
 

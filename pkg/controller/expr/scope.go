@@ -18,9 +18,9 @@ type Scope struct {
 // WorkflowScope provides information about the workflow definition.
 type WorkflowScope struct {
 	*ObjectMetadata
-	UpdatedAt     int64  // unix timestamp
-	Status        string // workflow status
-	ResolvedTasks map[string]*types.TaskTypeDef
+	UpdatedAt int64  // unix timestamp
+	Status    string // workflow status
+	Tasks     map[string]*types.ResolvedTask
 }
 
 // InvocationScope object provides information about the current invocation.
@@ -43,6 +43,7 @@ type TaskScope struct {
 	Inputs    map[string]interface{}
 	Requires  map[string]*types.TaskDependencyParameters
 	Output    interface{}
+	Resolved  *types.ResolvedTask
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
@@ -58,17 +59,14 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 			panic(err)
 		}
 
-		taskDef, ok := wfi.Status.DynamicTasks[taskId]
-		if !ok {
-			taskDef = wf.Spec.Tasks[taskId]
-		}
+		task, _ := types.GetTask(wf, wfi, taskId)
 
 		tasks[taskId] = &TaskScope{
 			ObjectMetadata: fn.Metadata,
 			Status:         fn.Status.Status.String(),
 			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
 			Inputs:         formatTypedValueMap(fn.Spec.Inputs),
-			Requires:       taskDef.Requires,
+			Requires:       task.Spec.Requires,
 			Output:         output,
 		}
 	}
@@ -78,7 +76,7 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 			ObjectMetadata: formatMetadata(wf.Metadata),
 			UpdatedAt:      formatTimestamp(wf.Status.UpdatedAt),
 			Status:         wf.Status.Status.String(),
-			ResolvedTasks:  wf.Status.ResolvedTasks,
+			Tasks:          formatResolvedTask(wf.Status.Tasks),
 		},
 		Invocation: &InvocationScope{
 			ObjectMetadata: formatMetadata(wfi.Metadata),
@@ -86,6 +84,14 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 		},
 		Tasks: tasks,
 	}
+}
+
+func formatResolvedTask(resolved map[string]*types.TaskStatus) map[string]*types.ResolvedTask {
+	results := map[string]*types.ResolvedTask{}
+	for k, v := range resolved {
+		results[k] = v.Resolved
+	}
+	return results
 }
 
 func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {

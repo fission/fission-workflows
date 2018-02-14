@@ -20,15 +20,14 @@ func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.Ty
 	switch output.Type {
 	case TypeTask:
 		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
-			if dep, ok := outputTask.Requires[taskId]; ok && dep.Type == types.
-				TaskDependencyParameters_DYNAMIC_OUTPUT {
+			if dep, ok := outputTask.Spec.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
 				return ResolveTaskOutput(outputTaskId, invoc)
 			}
 		}
 		return nil
 	case TypeWorkflow:
 		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
-			if dep, ok := outputTask.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
+			if dep, ok := outputTask.Spec.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
 				return ResolveTaskOutput(outputTaskId, invoc)
 			}
 		}

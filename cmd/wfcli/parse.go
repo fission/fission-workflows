@@ -30,12 +30,7 @@ var cmdParse = cli.Command{
 				panic(err)
 			}
 
-			wfDef, err := yaml.Parse(f)
-			if err != nil {
-				panic(err)
-			}
-
-			wfSpec, err := yaml.Transform(wfDef)
+			wfSpec, err := yaml.Parse(f)
 			if err != nil {
 				panic(err)
 			}

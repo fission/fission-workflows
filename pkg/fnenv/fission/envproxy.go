@@ -21,7 +21,7 @@ import (
 	"golang.org/x/sync/syncmap"
 )
 
-// Proxy between Fission and Workflow to ensure that workflowInvocations comply with Fission function interface. This
+// Proxy between Fission and ParseWorkflow to ensure that workflowInvocations comply with Fission function interface. This
 // ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
 	invocationServer apiserver.WorkflowInvocationAPIServer
@@ -49,7 +49,6 @@ func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// TODO revise !!!
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
@@ -69,10 +68,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		// Fallback 1 : check if it is in the event store somewhere
 		if fp.hasWorkflow(ctx, fnID) {
 			logrus.WithField("fnID", fnID).
-				WithField("map", fp.fissionIds).
 				Error("Unknown fission function name")
-
-			logrus.Warn(fp.fissionIds)
 			http.Error(w, "Unknown fission function name; not specialized", 400)
 			return
 		}
@@ -262,7 +258,8 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
 	// Synchronize the workflow ID with the fission ID
-	wfSpec.Id = string(flr.FunctionMetadata.GetUID())
+	fissionId := string(flr.FunctionMetadata.GetUID())
+	wfSpec.ForceId = fissionId
 	wfSpec.Name = flr.FunctionMetadata.Name
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
@@ -272,7 +269,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	wfID := resp.Id
 
 	// Cache the ID so we don't have to check whether the workflow engine already has it.
-	fp.fissionIds.Store(wfSpec.Id, true)
+	fp.fissionIds.Store(fissionId, true)
 
 	return wfID, nil
 }

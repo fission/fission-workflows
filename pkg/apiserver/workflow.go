@@ -4,37 +4,31 @@ import (
 	"errors"
 
 	"github.com/fission/fission-workflows/pkg/api/workflow"
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"
 )
 
 type GrpcWorkflowApiServer struct {
-	api       *workflow.Api
-	validator *parse.Validator
-	cache     fes.CacheReader
+	api   *workflow.Api
+	cache fes.CacheReader
 }
 
-func NewGrpcWorkflowApiServer(api *workflow.Api, validator *parse.Validator, cache fes.CacheReader) *GrpcWorkflowApiServer {
+func NewGrpcWorkflowApiServer(api *workflow.Api, cache fes.CacheReader) *GrpcWorkflowApiServer {
 	wf := &GrpcWorkflowApiServer{
-		api:       api,
-		validator: validator,
-		cache:     cache,
+		api:   api,
+		cache: cache,
 	}
 
 	return wf
 }
 
-func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, wf *types.WorkflowSpec) (*WorkflowIdentifier, error) {
-	err := ga.validator.Validate(wf)
-	if err != nil {
-		return nil, err
-	}
+func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, spec *types.WorkflowSpec) (*WorkflowIdentifier, error) {
 
-	id, err := ga.api.Create(wf)
+	id, err := ga.api.Create(spec)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +60,7 @@ func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*S
 }
 
 func (ga *GrpcWorkflowApiServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
-	err := ga.validator.Validate(spec)
+	err := validate.WorkflowSpec(spec)
 	if err != nil {
 		return nil, err
 	}

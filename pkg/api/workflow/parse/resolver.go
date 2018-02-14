@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -11,9 +12,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	ProviderSeparator = ":"
+	defaultTimeout    = time.Duration(1) * time.Minute
+)
+
 // Resolver contacts function execution runtime clients to resolve the function definitions to concrete function ids.
 //
-// Task definitions (See types/TaskDef) can contain the following function reference:
+// ParseTask definitions (See types/TaskDef) can contain the following function reference:
 // - `<name>` : the function is currently resolved to one of the clients
 // - `<client>:<name>` : forces the client that the function needs to be resolved to.
 //
@@ -23,35 +29,64 @@ import (
 //
 type Resolver struct {
 	clients map[string]fnenv.Resolver
+	timeout time.Duration
 }
 
 func NewResolver(client map[string]fnenv.Resolver) *Resolver {
-	return &Resolver{client}
+	return &Resolver{
+		clients: client,
+		timeout: defaultTimeout,
+	}
 }
 
 type resolvedFn struct {
 	fnRef     string
-	fnTypeDef *types.TaskTypeDef
+	fnTypeDef *types.ResolvedTask
+}
+
+func (ps *Resolver) ResolveTask(task *types.TaskSpec) (*types.ResolvedTask, error) {
+	resolved, err := ps.Resolve(task)
+	if err != nil {
+		return nil, err
+	}
+	return resolved[task.FunctionRef], nil
+}
+
+func (ps *Resolver) ResolveMap(tasks map[string]*types.TaskSpec) (map[string]*types.ResolvedTask, error) {
+	var flattened []*types.TaskSpec
+	for _, v := range tasks {
+		flattened = append(flattened, v)
+	}
+	return ps.Resolve(flattened...)
 }
 
 // Resolve parses the interpreted workflow from a given spec.
-func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, error) {
+//
+// It returns a map consisting of the functionRef as the key for easier lookups
+func (ps *Resolver) Resolve(tasks ...*types.TaskSpec) (map[string]*types.ResolvedTask, error) {
+	// Check for duplicates
+	uniqueTasks := map[string]*types.TaskSpec{}
+	for _, t := range tasks {
+		if _, ok := uniqueTasks[t.FunctionRef]; !ok {
+			uniqueTasks[t.FunctionRef] = t
+		}
+	}
+
 	var lastErr error
-	taskSize := len(spec.GetTasks())
 	wg := sync.WaitGroup{}
-	wg.Add(taskSize)
-	taskTypes := map[string]*types.TaskTypeDef{}
-	resolvedC := make(chan resolvedFn, len(spec.Tasks))
+	wg.Add(len(uniqueTasks))
+	resolved := map[string]*types.ResolvedTask{}
+	resolvedC := make(chan resolvedFn, len(uniqueTasks))
 
 	// Resolve each task in the workflow definition in parallel
-	for taskId, t := range spec.GetTasks() {
-		go func(taskId string, t *types.Task, tc chan resolvedFn) {
+	for _, t := range uniqueTasks {
+		go func(t *types.TaskSpec, tc chan resolvedFn) {
 			err := ps.resolveTaskAndInputs(t, tc)
 			if err != nil {
 				lastErr = err
 			}
 			wg.Done()
-		}(taskId, t, resolvedC)
+		}(t, resolvedC)
 	}
 
 	// Close channel when all tasks have resolved
@@ -62,32 +97,39 @@ func (ps *Resolver) Resolve(spec *types.WorkflowSpec) (*types.WorkflowStatus, er
 
 	// Store results of the resolved tasks
 	for t := range resolvedC {
-		taskTypes[t.fnRef] = t.fnTypeDef
+		resolved[t.fnRef] = t.fnTypeDef
 	}
 
 	if lastErr != nil {
 		return nil, lastErr
 	}
-	return &types.WorkflowStatus{
-		ResolvedTasks: taskTypes,
-	}, nil
+	return resolved, nil
 }
 
-func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolvedC chan resolvedFn) error {
+func (ps *Resolver) resolveTaskAndInputs(task *types.TaskSpec, resolvedC chan resolvedFn) error {
 	t, err := ps.resolveTask(task)
 	if err != nil {
 		return err
 	}
 	resolvedC <- resolvedFn{task.FunctionRef, t}
 	for _, input := range task.Inputs {
-		if input.Type == typedvalues.TypeTask {
-			f, err := typedvalues.Format(input)
+		switch input.Type {
+		case typedvalues.TypeTask:
+			f, err := typedvalues.FormatTask(input)
 			if err != nil {
 				return err
 			}
-			switch it := f.(type) {
-			case *types.Task:
-				err = ps.resolveTaskAndInputs(it, resolvedC)
+			err = ps.resolveTaskAndInputs(f, resolvedC)
+			if err != nil {
+				return err
+			}
+		case typedvalues.TypeWorkflow:
+			wf, err := typedvalues.FormatWorkflow(input)
+			if err != nil {
+				return err
+			}
+			for _, tasks := range wf.Tasks {
+				err = ps.resolveTaskAndInputs(tasks, resolvedC)
 				if err != nil {
 					return err
 				}
@@ -97,7 +139,7 @@ func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolvedC chan resolv
 	return nil
 }
 
-func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
+func (ps *Resolver) resolveTask(task *types.TaskSpec) (*types.ResolvedTask, error) {
 	t := task.FunctionRef
 	// Use clients to resolve task to id
 	p, err := parseTaskAddress(t)
@@ -109,7 +151,7 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	}
 
 	waitFor := len(ps.clients)
-	resolved := make(chan *types.TaskTypeDef, waitFor)
+	resolved := make(chan *types.ResolvedTask, waitFor)
 	defer close(resolved)
 	wg := sync.WaitGroup{}
 	wg.Add(waitFor)
@@ -141,7 +183,7 @@ func (ps *Resolver) resolveTask(task *types.Task) (*types.TaskTypeDef, error) {
 	}
 }
 
-func (ps *Resolver) resolveForRuntime(taskName string, runtime string) (*types.TaskTypeDef, error) {
+func (ps *Resolver) resolveForRuntime(taskName string, runtime string) (*types.ResolvedTask, error) {
 	resolver, ok := ps.clients[runtime]
 	if !ok {
 		return nil, fmt.Errorf("runtime '%s' could not be found", runtime)
@@ -157,7 +199,7 @@ func (ps *Resolver) resolveForRuntime(taskName string, runtime string) (*types.T
 		"runtime":  runtime,
 		"resolved": fnId,
 	}).Info("Resolved task")
-	return &types.TaskTypeDef{
+	return &types.ResolvedTask{
 		Src:      taskName,
 		Runtime:  runtime,
 		Resolved: fnId,
@@ -165,18 +207,18 @@ func (ps *Resolver) resolveForRuntime(taskName string, runtime string) (*types.T
 }
 
 // Format: <runtime>:<name> for now
-func parseTaskAddress(task string) (*types.TaskTypeDef, error) {
-	parts := strings.SplitN(task, ":", 2)
+func parseTaskAddress(task string) (*types.ResolvedTask, error) {
+	parts := strings.SplitN(task, ProviderSeparator, 2)
 
 	switch len(parts) {
 	case 0:
 		return nil, fmt.Errorf("could not parse invalid task address '%s'", task)
 	case 1:
-		return &types.TaskTypeDef{
+		return &types.ResolvedTask{
 			Src: parts[0],
 		}, nil
 	default:
-		return &types.TaskTypeDef{
+		return &types.ResolvedTask{
 			Src:     parts[1],
 			Runtime: parts[0],
 		}, nil

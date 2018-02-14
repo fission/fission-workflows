@@ -17,7 +17,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-var log = logrus.WithField("component", "fnenv-fission")
+var log = logrus.WithField("component", "fnenv.fission")
 
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
@@ -99,7 +99,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 }
 
 // Notify signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(taskID string, fn types.TaskTypeDef, expectedAt time.Time) error {
+func (fe *FunctionEnv) Notify(taskID string, fn types.ResolvedTask, expectedAt time.Time) error {
 	reqUrl, err := fe.getFnUrl(&fn)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (fe *FunctionEnv) Notify(taskID string, fn types.TaskTypeDef, expectedAt ti
 	return nil
 }
 
-func (fe *FunctionEnv) getFnUrl(fn *types.TaskTypeDef) (*url.URL, error) {
+func (fe *FunctionEnv) getFnUrl(fn *types.ResolvedTask) (*url.URL, error) {
 	meta := createFunctionMeta(fn)
 	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
 	if err != nil {
@@ -135,7 +135,7 @@ func (fe *FunctionEnv) getFnUrl(fn *types.TaskTypeDef) (*url.URL, error) {
 	return reqUrl, nil
 }
 
-func createFunctionMeta(fn *types.TaskTypeDef) *metav1.ObjectMeta {
+func createFunctionMeta(fn *types.ResolvedTask) *metav1.ObjectMeta {
 	return &metav1.ObjectMeta{
 		Name:      fn.GetSrc(),
 		UID:       k8stypes.UID(fn.GetResolved()),

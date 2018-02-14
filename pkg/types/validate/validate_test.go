@@ -54,14 +54,14 @@ func TestWorkflowSpecNoTasks(t *testing.T) {
 	assert.Error(t, WorkflowSpec(spec))
 }
 
-//func TestWorkflowSpecInvalidRequires(t *testing.T) {
-//	spec := validSpec()
-//	spec.Tasks["middle"].AddDependency("nonExistentDep")
-//	assert.Error(t, WorkflowSpec(spec))
-//}
-//
-//func TestWorkflowSpecInvalidCircularDependency(t *testing.T) {
-//	spec := validSpec()
-//	spec.Tasks["first"].AddDependency("last")
-//	assert.Error(t, WorkflowSpec(spec))
-//}
+func TestWorkflowSpecInvalidRequires(t *testing.T) {
+	spec := validSpec()
+	spec.Tasks["middle"].AddDependency("nonExistentDep")
+	assert.Error(t, WorkflowSpec(spec))
+}
+
+func TestWorkflowSpecInvalidCircularDependency(t *testing.T) {
+	spec := validSpec()
+	spec.Tasks["first"].AddDependency("last")
+	assert.Error(t, WorkflowSpec(spec))
+}

@@ -59,7 +59,7 @@ print_report() {
 on_exit() {
     emph "[Buildtest exited]"
     # Dump all the logs
-    dump_logs ${NS} ${NS_FUNCTION} || true
+    dump_logs ${NS} ${NS_FUNCTION} ${NS_BUILDER} || true
 
     # Ensure teardown after tests finish
     # TODO provide option to not cleanup the test setup after tests (e.g. for further tests)

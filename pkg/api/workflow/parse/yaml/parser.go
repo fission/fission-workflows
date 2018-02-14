@@ -1,12 +1,12 @@
 package yaml
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 
-	"encoding/json"
-	"fmt"
-
+	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
@@ -14,16 +14,31 @@ import (
 )
 
 const (
-	DEFAULT_FUNCTIONREF = "noop"
+	defaultFunctionRef = builtin.Noop
 )
 
-func Parse(r io.Reader) (*WorkflowDef, error) {
+func Parse(r io.ReadCloser) (*types.WorkflowSpec, error) {
+	b, err := Read(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read workflow definition: %v", err)
+	}
+	defer r.Close()
+
+	spec, err := ParseWorkflow(b)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse workflow definition: %v", err)
+	}
+
+	return spec, nil
+}
+
+func Read(r io.Reader) (*WorkflowSpec, error) {
 	bs, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	i := &WorkflowDef{}
+	i := &WorkflowSpec{}
 	err = yaml.Unmarshal(bs, i)
 	if err != nil {
 		return nil, err
@@ -31,12 +46,12 @@ func Parse(r io.Reader) (*WorkflowDef, error) {
 	return i, nil
 }
 
-func Transform(def *WorkflowDef) (*types.WorkflowSpec, error) {
+func ParseWorkflow(def *WorkflowSpec) (*types.WorkflowSpec, error) {
 
-	tasks := map[string]*types.Task{}
+	tasks := map[string]*types.TaskSpec{}
 
 	for id, task := range def.Tasks {
-		p, err := parseTask(id, task)
+		p, err := ParseTask(id, task)
 		if err != nil {
 			return nil, err
 		}
@@ -48,6 +63,37 @@ func Transform(def *WorkflowDef) (*types.WorkflowSpec, error) {
 		OutputTask: def.Output,
 		Tasks:      tasks,
 	}, nil
+}
+
+func ParseTask(id string, t *TaskSpec) (*types.TaskSpec, error) {
+	deps := map[string]*types.TaskDependencyParameters{}
+	for _, dep := range t.Requires {
+		deps[dep] = &types.TaskDependencyParameters{}
+	}
+
+	if len(id) == 0 {
+		id = t.Id
+	}
+
+	inputs, err := parseInputs(t.Inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	fn := t.Run
+	if len(fn) == 0 {
+		fn = defaultFunctionRef
+	}
+
+	result := &types.TaskSpec{
+		FunctionRef: fn,
+		Requires:    deps,
+		Await:       int32(len(deps)),
+		Inputs:      inputs,
+	}
+
+	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Debugf("parsed task")
+	return result, nil
 }
 
 func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
@@ -79,7 +125,7 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 		}
 		return result, nil
 	}
-	p, err := parseSingleInput("default", i)
+	p, err := parseSingleInput(types.INPUT_MAIN, i)
 	if err != nil {
 		return nil, err
 	}
@@ -93,22 +139,37 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 	switch t := i.(type) {
 	case map[interface{}]interface{}:
 		res := convertInterfaceMaps(t)
-
 		if _, ok := res["run"]; ok {
+			// The input might be a task
+			td := &TaskSpec{}
 			bs, err := json.Marshal(res)
-			if err != nil {
-				panic(err)
-			}
-			td := &TaskDef{}
 			err = json.Unmarshal(bs, td)
 			if err != nil {
 				panic(err)
 			}
-			p, err := parseTask(id, td)
-			if err != nil {
-				i = res
-			} else {
+
+			p, err := ParseTask(id, td)
+			if err == nil {
 				i = p
+			} else {
+				// Not a task
+				i = res
+			}
+		} else if _, ok := res["tasks"]; ok {
+			// The input might be a workflow
+			td := &WorkflowSpec{}
+			bs, err := json.Marshal(res)
+			err = json.Unmarshal(bs, td)
+			if err != nil {
+				panic(err)
+			}
+
+			p, err := ParseWorkflow(td)
+			if err == nil {
+				i = p
+			} else {
+				// Not a workflow
+				i = res
 			}
 		} else {
 			p, err := typedvalues.Parse(res)
@@ -117,12 +178,18 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 			}
 			i = p
 		}
-	case *TaskDef: // Handle TaskDef because it cannot be parsed by standard parser
-		p, err := parseTask(id, t)
+	case *TaskSpec: // Handle TaskSpec because it cannot be parsed by standard parser
+		p, err := ParseTask(id, t)
 		if err != nil {
 			return nil, err
 		}
 		i = p
+	case *WorkflowSpec:
+		w, err := ParseWorkflow(t)
+		if err != nil {
+			return nil, err
+		}
+		i = w
 	}
 
 	p, err := typedvalues.Parse(i)
@@ -145,50 +212,18 @@ func convertInterfaceMaps(src map[interface{}]interface{}) map[string]interface{
 	return res
 }
 
-func parseTask(id string, t *TaskDef) (*types.Task, error) {
-	deps := map[string]*types.TaskDependencyParameters{}
-	for _, dep := range t.Requires {
-		deps[dep] = &types.TaskDependencyParameters{}
-	}
-
-	if len(id) == 0 {
-		id = t.Id
-	}
-
-	inputs, err := parseInputs(t.Inputs)
-	if err != nil {
-		return nil, err
-	}
-
-	fn := t.Run
-	if len(fn) == 0 {
-		fn = DEFAULT_FUNCTIONREF
-	}
-
-	result := &types.Task{
-		Id:          id,
-		FunctionRef: fn,
-		Requires:    deps,
-		Await:       int32(len(deps)),
-		Inputs:      inputs,
-	}
-
-	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Debugf("parsed task")
-	return result, nil
-}
-
 //
 // YAML data structures
 //
 
-type WorkflowDef struct {
+type WorkflowSpec struct {
 	ApiVersion  string
 	Description string
 	Output      string
-	Tasks       map[string]*TaskDef
+	Tasks       map[string]*TaskSpec
 }
 
-type TaskDef struct {
+type TaskSpec struct {
 	Id       string
 	Run      string
 	Inputs   interface{}

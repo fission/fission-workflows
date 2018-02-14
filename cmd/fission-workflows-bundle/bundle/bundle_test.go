@@ -3,20 +3,19 @@ package bundle
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"time"
-
-	"os"
-	"testing"
-
-	"strings"
-
 	"io"
 	"net"
+	"os"
+	"os/exec"
+	"strings"
+	"testing"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
@@ -27,7 +26,7 @@ import (
 
 func TestMain(m *testing.M) {
 
-	ctx, cancelFn := context.WithCancel(context.Background())
+	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
 	setup(ctx)
 
 	time.Sleep(time.Duration(4) * time.Second)
@@ -50,9 +49,9 @@ func TestWorkflowCreate(t *testing.T) {
 
 	// Test workflow creation
 	spec := &types.WorkflowSpec{
-		ApiVersion: "v1",
+		ApiVersion: types.WorkflowApiVersion,
 		OutputTask: "fakeFinalTask",
-		Tasks: map[string]*types.Task{
+		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 			},
@@ -89,9 +88,9 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: "v1",
+		ApiVersion: types.WorkflowApiVersion,
 		OutputTask: "fakeFinalTask",
-		Tasks: map[string]*types.Task{
+		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
@@ -168,9 +167,9 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: "v1",
+		ApiVersion: types.WorkflowApiVersion,
 		OutputTask: "fakeFinalTask",
-		Tasks: map[string]*types.Task{
+		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
@@ -190,14 +189,14 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			"someConditionalTask": {
 				FunctionRef: "if",
 				Inputs: map[string]*types.TypedValue{
-					"condition": typedvalues.Expr("{$.Invocation.Inputs.default == 'FOO'}"),
-					"consequent": typedvalues.ParseTask(&types.Task{
+					builtin.IfInputCondition: typedvalues.Expr("{$.Invocation.Inputs.default == 'FOO'}"),
+					builtin.IfInputThen: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'consequent'"),
 						},
 					}),
-					"alternative": typedvalues.ParseTask(&types.Task{
+					builtin.IfInputElse: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'alternative'"),
@@ -221,10 +220,91 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			types.INPUT_MAIN: typedvalues.Expr("'foo'"),
 		},
 	}
-	result, err := wi.InvokeSync(ctx, wiSpec)
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, 4, len(wfi.Status.Tasks))
 
-	typedvalues.Format(result.Status.Output)
+	output := typedvalues.UnsafeFormat(wfi.Status.Output)
+	fmt.Printf("Output: '%v'\n", output)
+	fmt.Printf("Tasks: '%v'\n", wfi.Status.Tasks)
+	assert.Equal(t, "alternative", output)
+}
+
+func TestInlineWorkflowInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowApiVersion,
+		OutputTask: "finalTask",
+		Tasks: map[string]*types.TaskSpec{
+			"nestedTask": {
+				FunctionRef: "noop",
+				Inputs: map[string]*types.TypedValue{
+					builtin.NoopInput: typedvalues.ParseWorkflow(&types.WorkflowSpec{
+						OutputTask: "b",
+						Tasks: map[string]*types.TaskSpec{
+							"a": {
+								FunctionRef: "noop",
+								Inputs: map[string]*types.TypedValue{
+									types.INPUT_MAIN: typedvalues.Expr("'inner1'"),
+								},
+							},
+							"b": {
+								FunctionRef: "noop",
+								Inputs: map[string]*types.TypedValue{
+									types.INPUT_MAIN: typedvalues.Expr("output('a')"),
+								},
+								Requires: map[string]*types.TaskDependencyParameters{
+									"a": nil,
+								},
+							},
+						},
+					}),
+				},
+			},
+			"finalTask": {
+				FunctionRef: "noop",
+				Inputs: map[string]*types.TypedValue{
+					types.INPUT_MAIN: typedvalues.Expr("output('nestedTask')"),
+				},
+				Requires: map[string]*types.TaskDependencyParameters{
+					"nestedTask": {},
+				},
+			},
+		},
+	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	fmt.Printf("%v\n", validate.Format(err))
+	fmt.Println("-----")
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+	}
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, 3, len(wfi.Status.Tasks))
+
+	output, err := typedvalues.Format(wfi.Status.Output)
+	assert.NoError(t, err)
+	fmt.Printf("Output: '%v'\n", output)
+	fmt.Printf("Tasks: '%v'\n", wfi.Status.Tasks)
+	assert.Equal(t, "inner1", output)
 }
 
 func setup(ctx context.Context) {
@@ -250,7 +330,7 @@ func setupEventStore(ctx context.Context) *NatsOptions {
 	if err != nil {
 		panic(err)
 	}
-	address := "0.0.0.0"
+	address := "127.0.0.1"
 	flags := strings.Split(fmt.Sprintf("-cid %s -p %d -a %s", clusterId, port, address), " ")
 	logrus.Info(flags)
 	cmd := exec.CommandContext(ctx, "nats-streaming-server", flags...)

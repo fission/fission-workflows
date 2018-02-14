@@ -3,15 +3,15 @@ package scheduler
 import (
 	"fmt"
 
-	"math"
-
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/graph"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("component", "scheduler")
 
+// TODO document other approach: scheduler as a controller
 type WorkflowScheduler struct {
 }
 
@@ -27,19 +27,18 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}
 
 	ctxLog.Info("Scheduler evaluating...")
+	cwf := types.GetTaskContainers(request.Workflow, request.Invocation)
 
-	cwf := types.CalculateTaskDependencyGraph(request.Workflow, request.Invocation)
-
-	openTasks := map[string]*types.TaskStatus{}
 	// Fill open tasks
+	openTasks := map[string]*types.TaskInstance{}
 	for id, t := range cwf {
-		if t.Invocation == nil {
+		if t.Invocation == nil || t.Invocation.Status.Status == types.TaskInvocationStatus_UNKNOWN {
 			openTasks[id] = t
 			continue
 		}
 		if t.Invocation.Status.Status == types.TaskInvocationStatus_FAILED {
 			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
-				Reason: fmt.Sprintf("TaskStatus '%s' failed!", t.Invocation),
+				Reason: fmt.Sprintf("taskContainer '%s' failed!", t.Invocation),
 			})
 
 			abortAction := &Action{
@@ -53,45 +52,37 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		return schedule, nil
 	}
 
+	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
+	horizon := graph.Roots(depGraph)
+
 	// Determine horizon (aka tasks that can be executed now)
-	horizon := map[string]*types.TaskStatus{}
-	for id, task := range openTasks {
-		if len(task.Requires) == 0 {
-			horizon[id] = task
-			break
-		}
+	//horizon := map[string]*types.TaskInstance{}
+	//for id, task := range openTasks {
+	//	// TODO replace graph implementation, with marked and await counter
+	//	completedDeps := len(task.Task.Spec.Requires) - len(depGraph.To(graph.Get(depGraph, id)))
+	//
+	//	ctxLog.WithFields(logrus.Fields{
+	//		"completedDeps": completedDeps,
+	//		"task":          id,
+	//		"max":           int(math.Max(float64(task.Task.Spec.Await), float64(len(task.Task.Spec.Requires)-1))),
+	//	}).Infof("Checking if dependencies have been satisfied")
+	//	if completedDeps >= int(math.Max(float64(task.Task.Spec.Await), float64(len(task.Task.Spec.Requires)))) {
+	//		log.WithField("task", task.Task.Id()).Info("task found on horizon")
+	//		horizon = append(horizon, &graph.TaskInstanceNode{TaskInstance: task})
+	//	}
+	//	// TODO fix graph representation (how to find second horizon)
+	//}
 
-		completedDeps := 0
-		for depName := range task.Requires {
-			t, ok := cwf[depName]
-			if !ok {
-				ctxLog.Warnf("Unknown task dependency: %v", depName)
-			}
-
-			if ok && t.Invocation != nil && t.Invocation.Status.Finished() {
-				completedDeps = completedDeps + 1
-			}
-		}
-
-		ctxLog.WithFields(logrus.Fields{
-			"completedDeps": completedDeps,
-			"task":          id,
-			"max":           int(math.Max(float64(task.Await), float64(len(task.Requires)-1))),
-		}).Infof("Checking if dependencies have been satisfied")
-		if completedDeps >= int(math.Max(float64(task.Await), float64(len(task.Requires)))) {
-			log.WithField("task", task.Id).Info("task found on horizon")
-			horizon[id] = task
-		}
-	}
-
-	ctxLog.WithField("horizon", horizon).Debug("Determined horizon")
+	ctxLog.WithField("horizon", horizon).Info("Determined horizon")
 
 	// Determine schedule nodes
-	for taskId, taskDef := range horizon {
+	for _, node := range horizon {
+		taskDef := node.(*graph.TaskInstanceNode)
 		// Fetch input
-		inputs := taskDef.Inputs
+		// TODO might be Status.Inputs instead of Spec.Inputs
+		inputs := taskDef.Task.Spec.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:     taskId,
+			Id:     taskDef.Task.Id(),
 			Inputs: inputs,
 		})
 

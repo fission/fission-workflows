@@ -24,18 +24,18 @@ func TestResolve(t *testing.T) {
 
 	task1 := "task1"
 	task1Name := "lowercase"
-	tasks := map[string]*types.Task{
+	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
+	wf, err := resolver.ResolveMap(tasks)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, wf.ResolvedTasks[task1Name].Resolved, strings.ToUpper(task1Name))
-	assert.Equal(t, wf.ResolvedTasks[task1Name].Runtime, fooClient)
+	assert.Equal(t, wf[task1Name].Resolved, strings.ToUpper(task1Name))
+	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
 func TestResolveForced(t *testing.T) {
@@ -52,18 +52,18 @@ func TestResolveForced(t *testing.T) {
 
 	task1 := "task1"
 	task1Name := "foo:lowercase"
-	tasks := map[string]*types.Task{
+	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
+	wf, err := resolver.ResolveMap(tasks)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, wf.ResolvedTasks[task1Name].Resolved, strings.ToUpper(task1Name))
-	assert.Equal(t, wf.ResolvedTasks[task1Name].Runtime, fooClient)
+	assert.Equal(t, wf[task1Name].Resolved, strings.ToUpper(task1Name))
+	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
 func TestResolveInputs(t *testing.T) {
@@ -81,14 +81,14 @@ func TestResolveInputs(t *testing.T) {
 	task1Name := "lowercase"
 	nestedTaskName := "nestedLowercase"
 	nestedNestedTaskName := "nestedLowercase"
-	tasks := map[string]*types.Task{
+	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
 			Inputs: map[string]*types.TypedValue{
-				"nested": typedvalues.ParseTask(&types.Task{
+				"nested": typedvalues.ParseTask(&types.TaskSpec{
 					FunctionRef: nestedTaskName,
 					Inputs: map[string]*types.TypedValue{
-						"nested2": typedvalues.ParseTask(&types.Task{
+						"nested2": typedvalues.ParseTask(&types.TaskSpec{
 							FunctionRef: nestedNestedTaskName,
 						}),
 					},
@@ -97,15 +97,15 @@ func TestResolveInputs(t *testing.T) {
 		},
 	}
 
-	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
+	wf, err := resolver.ResolveMap(tasks)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, strings.ToUpper(task1Name), wf.ResolvedTasks[task1Name].Resolved)
-	assert.Equal(t, strings.ToUpper(nestedTaskName), wf.ResolvedTasks[nestedTaskName].Resolved)
-	assert.Equal(t, strings.ToUpper(nestedNestedTaskName), wf.ResolvedTasks[nestedNestedTaskName].Resolved)
-	assert.Equal(t, fooClient, wf.ResolvedTasks[nestedNestedTaskName].Runtime)
+	assert.Equal(t, strings.ToUpper(task1Name), wf[task1Name].Resolved)
+	assert.Equal(t, strings.ToUpper(nestedTaskName), wf[nestedTaskName].Resolved)
+	assert.Equal(t, strings.ToUpper(nestedNestedTaskName), wf[nestedNestedTaskName].Resolved)
+	assert.Equal(t, fooClient, wf[nestedNestedTaskName].Runtime)
 }
 
 func TestResolveNotFound(t *testing.T) {
@@ -119,12 +119,12 @@ func TestResolveNotFound(t *testing.T) {
 
 	task1 := "task1"
 	task1Name := "foo:lowercase"
-	tasks := map[string]*types.Task{
+	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.Resolve(&types.WorkflowSpec{Tasks: tasks})
+	wf, err := resolver.ResolveMap(tasks)
 	if err == nil {
 		t.Fatal(wf)
 	}

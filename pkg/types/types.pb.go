@@ -8,21 +8,24 @@ It is generated from these files:
 	pkg/types/types.proto
 
 It has these top-level messages:
-	ObjectMetadata
 	Workflow
+	WorkflowSpec
+	WorkflowStatus
+	WorkflowInvocation
+	WorkflowInvocationSpec
+	WorkflowInvocationStatus
+	DependencyConfig
+	Task
+	TaskSpec
+	TaskStatus
+	TaskDependencyParameters
 	TaskInvocation
 	TaskInvocationSpec
 	TaskInvocationStatus
-	WorkflowInvocationSpec
-	WorkflowInvocationStatus
-	WorkflowInvocation
-	WorkflowSpec
-	Task
-	TaskDependencyParameters
-	WorkflowStatus
-	TaskTypeDef
+	ObjectMetadata
 	TypedValue
 	Error
+	ResolvedTask
 */
 package types
 
@@ -41,6 +44,119 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
+type WorkflowStatus_Status int32
+
+const (
+	WorkflowStatus_PENDING WorkflowStatus_Status = 0
+	//        PARSING = 1; // During validation/parsing
+	WorkflowStatus_READY   WorkflowStatus_Status = 2
+	WorkflowStatus_FAILED  WorkflowStatus_Status = 3
+	WorkflowStatus_DELETED WorkflowStatus_Status = 4
+)
+
+var WorkflowStatus_Status_name = map[int32]string{
+	0: "PENDING",
+	2: "READY",
+	3: "FAILED",
+	4: "DELETED",
+}
+var WorkflowStatus_Status_value = map[string]int32{
+	"PENDING": 0,
+	"READY":   2,
+	"FAILED":  3,
+	"DELETED": 4,
+}
+
+func (x WorkflowStatus_Status) String() string {
+	return proto.EnumName(WorkflowStatus_Status_name, int32(x))
+}
+func (WorkflowStatus_Status) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{2, 0} }
+
+type WorkflowInvocationStatus_Status int32
+
+const (
+	WorkflowInvocationStatus_UNKNOWN     WorkflowInvocationStatus_Status = 0
+	WorkflowInvocationStatus_SCHEDULED   WorkflowInvocationStatus_Status = 1
+	WorkflowInvocationStatus_IN_PROGRESS WorkflowInvocationStatus_Status = 2
+	WorkflowInvocationStatus_SUCCEEDED   WorkflowInvocationStatus_Status = 3
+	WorkflowInvocationStatus_FAILED      WorkflowInvocationStatus_Status = 4
+	WorkflowInvocationStatus_ABORTED     WorkflowInvocationStatus_Status = 5
+)
+
+var WorkflowInvocationStatus_Status_name = map[int32]string{
+	0: "UNKNOWN",
+	1: "SCHEDULED",
+	2: "IN_PROGRESS",
+	3: "SUCCEEDED",
+	4: "FAILED",
+	5: "ABORTED",
+}
+var WorkflowInvocationStatus_Status_value = map[string]int32{
+	"UNKNOWN":     0,
+	"SCHEDULED":   1,
+	"IN_PROGRESS": 2,
+	"SUCCEEDED":   3,
+	"FAILED":      4,
+	"ABORTED":     5,
+}
+
+func (x WorkflowInvocationStatus_Status) String() string {
+	return proto.EnumName(WorkflowInvocationStatus_Status_name, int32(x))
+}
+func (WorkflowInvocationStatus_Status) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{5, 0}
+}
+
+type TaskStatus_Status int32
+
+const (
+	TaskStatus_STARTED TaskStatus_Status = 0
+	TaskStatus_READY   TaskStatus_Status = 1
+	TaskStatus_FAILED  TaskStatus_Status = 2
+)
+
+var TaskStatus_Status_name = map[int32]string{
+	0: "STARTED",
+	1: "READY",
+	2: "FAILED",
+}
+var TaskStatus_Status_value = map[string]int32{
+	"STARTED": 0,
+	"READY":   1,
+	"FAILED":  2,
+}
+
+func (x TaskStatus_Status) String() string {
+	return proto.EnumName(TaskStatus_Status_name, int32(x))
+}
+func (TaskStatus_Status) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{9, 0} }
+
+type TaskDependencyParameters_DependencyType int32
+
+const (
+	TaskDependencyParameters_DATA           TaskDependencyParameters_DependencyType = 0
+	TaskDependencyParameters_CONTROL        TaskDependencyParameters_DependencyType = 1
+	TaskDependencyParameters_DYNAMIC_OUTPUT TaskDependencyParameters_DependencyType = 2
+)
+
+var TaskDependencyParameters_DependencyType_name = map[int32]string{
+	0: "DATA",
+	1: "CONTROL",
+	2: "DYNAMIC_OUTPUT",
+}
+var TaskDependencyParameters_DependencyType_value = map[string]int32{
+	"DATA":           0,
+	"CONTROL":        1,
+	"DYNAMIC_OUTPUT": 2,
+}
+
+func (x TaskDependencyParameters_DependencyType) String() string {
+	return proto.EnumName(TaskDependencyParameters_DependencyType_name, int32(x))
+}
+func (TaskDependencyParameters_DependencyType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{10, 0}
+}
 
 type TaskInvocationStatus_Status int32
 
@@ -77,124 +193,12 @@ func (x TaskInvocationStatus_Status) String() string {
 	return proto.EnumName(TaskInvocationStatus_Status_name, int32(x))
 }
 func (TaskInvocationStatus_Status) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor0, []int{4, 0}
+	return fileDescriptor0, []int{13, 0}
 }
 
-type WorkflowInvocationStatus_Status int32
-
-const (
-	WorkflowInvocationStatus_UNKNOWN     WorkflowInvocationStatus_Status = 0
-	WorkflowInvocationStatus_SCHEDULED   WorkflowInvocationStatus_Status = 1
-	WorkflowInvocationStatus_IN_PROGRESS WorkflowInvocationStatus_Status = 2
-	WorkflowInvocationStatus_SUCCEEDED   WorkflowInvocationStatus_Status = 3
-	WorkflowInvocationStatus_FAILED      WorkflowInvocationStatus_Status = 4
-	WorkflowInvocationStatus_ABORTED     WorkflowInvocationStatus_Status = 5
-)
-
-var WorkflowInvocationStatus_Status_name = map[int32]string{
-	0: "UNKNOWN",
-	1: "SCHEDULED",
-	2: "IN_PROGRESS",
-	3: "SUCCEEDED",
-	4: "FAILED",
-	5: "ABORTED",
-}
-var WorkflowInvocationStatus_Status_value = map[string]int32{
-	"UNKNOWN":     0,
-	"SCHEDULED":   1,
-	"IN_PROGRESS": 2,
-	"SUCCEEDED":   3,
-	"FAILED":      4,
-	"ABORTED":     5,
-}
-
-func (x WorkflowInvocationStatus_Status) String() string {
-	return proto.EnumName(WorkflowInvocationStatus_Status_name, int32(x))
-}
-func (WorkflowInvocationStatus_Status) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor0, []int{6, 0}
-}
-
-type TaskDependencyParameters_DependencyType int32
-
-const (
-	TaskDependencyParameters_DATA           TaskDependencyParameters_DependencyType = 0
-	TaskDependencyParameters_CONTROL        TaskDependencyParameters_DependencyType = 1
-	TaskDependencyParameters_DYNAMIC_OUTPUT TaskDependencyParameters_DependencyType = 2
-)
-
-var TaskDependencyParameters_DependencyType_name = map[int32]string{
-	0: "DATA",
-	1: "CONTROL",
-	2: "DYNAMIC_OUTPUT",
-}
-var TaskDependencyParameters_DependencyType_value = map[string]int32{
-	"DATA":           0,
-	"CONTROL":        1,
-	"DYNAMIC_OUTPUT": 2,
-}
-
-func (x TaskDependencyParameters_DependencyType) String() string {
-	return proto.EnumName(TaskDependencyParameters_DependencyType_name, int32(x))
-}
-func (TaskDependencyParameters_DependencyType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor0, []int{10, 0}
-}
-
-type WorkflowStatus_Status int32
-
-const (
-	WorkflowStatus_UNKNOWN WorkflowStatus_Status = 0
-	//        PARSING = 1; // During validation/parsing
-	WorkflowStatus_READY   WorkflowStatus_Status = 2
-	WorkflowStatus_FAILED  WorkflowStatus_Status = 3
-	WorkflowStatus_DELETED WorkflowStatus_Status = 4
-)
-
-var WorkflowStatus_Status_name = map[int32]string{
-	0: "UNKNOWN",
-	2: "READY",
-	3: "FAILED",
-	4: "DELETED",
-}
-var WorkflowStatus_Status_value = map[string]int32{
-	"UNKNOWN": 0,
-	"READY":   2,
-	"FAILED":  3,
-	"DELETED": 4,
-}
-
-func (x WorkflowStatus_Status) String() string {
-	return proto.EnumName(WorkflowStatus_Status_name, int32(x))
-}
-func (WorkflowStatus_Status) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{11, 0} }
-
-// Common
-type ObjectMetadata struct {
-	Id        string                     `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	CreatedAt *google_protobuf.Timestamp `protobuf:"bytes,3,opt,name=createdAt" json:"createdAt,omitempty"`
-}
-
-func (m *ObjectMetadata) Reset()                    { *m = ObjectMetadata{} }
-func (m *ObjectMetadata) String() string            { return proto.CompactTextString(m) }
-func (*ObjectMetadata) ProtoMessage()               {}
-func (*ObjectMetadata) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
-
-func (m *ObjectMetadata) GetId() string {
-	if m != nil {
-		return m.Id
-	}
-	return ""
-}
-
-func (m *ObjectMetadata) GetCreatedAt() *google_protobuf.Timestamp {
-	if m != nil {
-		return m.CreatedAt
-	}
-	return nil
-}
-
+//
 // Workflow Model
+//
 type Workflow struct {
 	Metadata *ObjectMetadata `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
 	Spec     *WorkflowSpec   `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
@@ -204,7 +208,7 @@ type Workflow struct {
 func (m *Workflow) Reset()                    { *m = Workflow{} }
 func (m *Workflow) String() string            { return proto.CompactTextString(m) }
 func (*Workflow) ProtoMessage()               {}
-func (*Workflow) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*Workflow) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
 func (m *Workflow) GetMetadata() *ObjectMetadata {
 	if m != nil {
@@ -227,108 +231,159 @@ func (m *Workflow) GetStatus() *WorkflowStatus {
 	return nil
 }
 
-// Task Invocation Model
-type TaskInvocation struct {
-	Metadata *ObjectMetadata       `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
-	Spec     *TaskInvocationSpec   `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
-	Status   *TaskInvocationStatus `protobuf:"bytes,3,opt,name=status" json:"status,omitempty"`
+// Workflow Definition
+//
+// The workflowDefinition contains the definition of a workflow.
+//
+// Ideally the source code (json, yaml) can be converted directly to this message.
+// Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
+// to the user/system upon the creation of a workflow.
+type WorkflowSpec struct {
+	// apiVersion describes what version is of the workflow definition.
+	// By default the workflow engine will assume the latest version to be used.
+	ApiVersion string `protobuf:"bytes,1,opt,name=apiVersion" json:"apiVersion,omitempty"`
+	// Tasks contains the specs of the tasks, with the key being the task id.
+	//
+	// Note: Dependency graph is build into the tasks.
+	Tasks map[string]*TaskSpec `protobuf:"bytes,2,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// From which task should the workflow return the output? Future: multiple? Implicit?
+	OutputTask  string `protobuf:"bytes,3,opt,name=outputTask" json:"outputTask,omitempty"`
+	Description string `protobuf:"bytes,4,opt,name=description" json:"description,omitempty"`
+	// The UID that the workflow should have. Only use this in case you want to force a specific UID.
+	ForceId string `protobuf:"bytes,5,opt,name=forceId" json:"forceId,omitempty"`
+	// Name is solely for human-readablity
+	Name string `protobuf:"bytes,6,opt,name=name" json:"name,omitempty"`
+	// Internal indicates whether is a workflow should be visible to a human (default) or not.
+	//
+	Internal bool `protobuf:"varint,7,opt,name=internal" json:"internal,omitempty"`
 }
 
-func (m *TaskInvocation) Reset()                    { *m = TaskInvocation{} }
-func (m *TaskInvocation) String() string            { return proto.CompactTextString(m) }
-func (*TaskInvocation) ProtoMessage()               {}
-func (*TaskInvocation) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (m *WorkflowSpec) Reset()                    { *m = WorkflowSpec{} }
+func (m *WorkflowSpec) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowSpec) ProtoMessage()               {}
+func (*WorkflowSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *TaskInvocation) GetMetadata() *ObjectMetadata {
+func (m *WorkflowSpec) GetApiVersion() string {
 	if m != nil {
-		return m.Metadata
-	}
-	return nil
-}
-
-func (m *TaskInvocation) GetSpec() *TaskInvocationSpec {
-	if m != nil {
-		return m.Spec
-	}
-	return nil
-}
-
-func (m *TaskInvocation) GetStatus() *TaskInvocationStatus {
-	if m != nil {
-		return m.Status
-	}
-	return nil
-}
-
-type TaskInvocationSpec struct {
-	// Id of the task to be invoked (no ambiguatity at this point
-	Type   *TaskTypeDef           `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
-	TaskId string                 `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
-	Inputs map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-}
-
-func (m *TaskInvocationSpec) Reset()                    { *m = TaskInvocationSpec{} }
-func (m *TaskInvocationSpec) String() string            { return proto.CompactTextString(m) }
-func (*TaskInvocationSpec) ProtoMessage()               {}
-func (*TaskInvocationSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *TaskInvocationSpec) GetType() *TaskTypeDef {
-	if m != nil {
-		return m.Type
-	}
-	return nil
-}
-
-func (m *TaskInvocationSpec) GetTaskId() string {
-	if m != nil {
-		return m.TaskId
+		return m.ApiVersion
 	}
 	return ""
 }
 
-func (m *TaskInvocationSpec) GetInputs() map[string]*TypedValue {
+func (m *WorkflowSpec) GetTasks() map[string]*TaskSpec {
 	if m != nil {
-		return m.Inputs
+		return m.Tasks
 	}
 	return nil
 }
 
-type TaskInvocationStatus struct {
-	Status    TaskInvocationStatus_Status `protobuf:"varint,1,opt,name=status,enum=TaskInvocationStatus_Status" json:"status,omitempty"`
-	UpdatedAt *google_protobuf.Timestamp  `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
-	Output    *TypedValue                 `protobuf:"bytes,3,opt,name=output" json:"output,omitempty"`
-	Error     *Error                      `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+func (m *WorkflowSpec) GetOutputTask() string {
+	if m != nil {
+		return m.OutputTask
+	}
+	return ""
 }
 
-func (m *TaskInvocationStatus) Reset()                    { *m = TaskInvocationStatus{} }
-func (m *TaskInvocationStatus) String() string            { return proto.CompactTextString(m) }
-func (*TaskInvocationStatus) ProtoMessage()               {}
-func (*TaskInvocationStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (m *WorkflowSpec) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
 
-func (m *TaskInvocationStatus) GetStatus() TaskInvocationStatus_Status {
+func (m *WorkflowSpec) GetForceId() string {
+	if m != nil {
+		return m.ForceId
+	}
+	return ""
+}
+
+func (m *WorkflowSpec) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *WorkflowSpec) GetInternal() bool {
+	if m != nil {
+		return m.Internal
+	}
+	return false
+}
+
+type WorkflowStatus struct {
+	Status    WorkflowStatus_Status      `protobuf:"varint,1,opt,name=status,enum=WorkflowStatus_Status" json:"status,omitempty"`
+	UpdatedAt *google_protobuf.Timestamp `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
+	// Tasks contains the status of the tasks, with the key being the task id.
+	Tasks map[string]*TaskStatus `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Error *Error                 `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *WorkflowStatus) Reset()                    { *m = WorkflowStatus{} }
+func (m *WorkflowStatus) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowStatus) ProtoMessage()               {}
+func (*WorkflowStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *WorkflowStatus) GetStatus() WorkflowStatus_Status {
 	if m != nil {
 		return m.Status
 	}
-	return TaskInvocationStatus_UNKNOWN
+	return WorkflowStatus_PENDING
 }
 
-func (m *TaskInvocationStatus) GetUpdatedAt() *google_protobuf.Timestamp {
+func (m *WorkflowStatus) GetUpdatedAt() *google_protobuf.Timestamp {
 	if m != nil {
 		return m.UpdatedAt
 	}
 	return nil
 }
 
-func (m *TaskInvocationStatus) GetOutput() *TypedValue {
+func (m *WorkflowStatus) GetTasks() map[string]*TaskStatus {
 	if m != nil {
-		return m.Output
+		return m.Tasks
 	}
 	return nil
 }
 
-func (m *TaskInvocationStatus) GetError() *Error {
+func (m *WorkflowStatus) GetError() *Error {
 	if m != nil {
 		return m.Error
+	}
+	return nil
+}
+
+//
+// Workflow Invocation Model
+//
+type WorkflowInvocation struct {
+	Metadata *ObjectMetadata           `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
+	Spec     *WorkflowInvocationSpec   `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
+	Status   *WorkflowInvocationStatus `protobuf:"bytes,3,opt,name=status" json:"status,omitempty"`
+}
+
+func (m *WorkflowInvocation) Reset()                    { *m = WorkflowInvocation{} }
+func (m *WorkflowInvocation) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowInvocation) ProtoMessage()               {}
+func (*WorkflowInvocation) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *WorkflowInvocation) GetMetadata() *ObjectMetadata {
+	if m != nil {
+		return m.Metadata
+	}
+	return nil
+}
+
+func (m *WorkflowInvocation) GetSpec() *WorkflowInvocationSpec {
+	if m != nil {
+		return m.Spec
+	}
+	return nil
+}
+
+func (m *WorkflowInvocation) GetStatus() *WorkflowInvocationStatus {
+	if m != nil {
+		return m.Status
 	}
 	return nil
 }
@@ -336,13 +391,17 @@ func (m *TaskInvocationStatus) GetError() *Error {
 // Workflow Invocation Model
 type WorkflowInvocationSpec struct {
 	WorkflowId string                 `protobuf:"bytes,1,opt,name=workflowId" json:"workflowId,omitempty"`
-	Inputs     map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Inputs     map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// ParentId contains the id of the encapsulating workflow invocation.
+	//
+	// This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
+	ParentId string `protobuf:"bytes,3,opt,name=parentId" json:"parentId,omitempty"`
 }
 
 func (m *WorkflowInvocationSpec) Reset()                    { *m = WorkflowInvocationSpec{} }
 func (m *WorkflowInvocationSpec) String() string            { return proto.CompactTextString(m) }
 func (*WorkflowInvocationSpec) ProtoMessage()               {}
-func (*WorkflowInvocationSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*WorkflowInvocationSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *WorkflowInvocationSpec) GetWorkflowId() string {
 	if m != nil {
@@ -358,19 +417,28 @@ func (m *WorkflowInvocationSpec) GetInputs() map[string]*TypedValue {
 	return nil
 }
 
+func (m *WorkflowInvocationSpec) GetParentId() string {
+	if m != nil {
+		return m.ParentId
+	}
+	return ""
+}
+
 type WorkflowInvocationStatus struct {
-	Status       WorkflowInvocationStatus_Status `protobuf:"varint,1,opt,name=status,enum=WorkflowInvocationStatus_Status" json:"status,omitempty"`
-	UpdatedAt    *google_protobuf.Timestamp      `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
-	Tasks        map[string]*TaskInvocation      `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Output       *TypedValue                     `protobuf:"bytes,4,opt,name=output" json:"output,omitempty"`
-	DynamicTasks map[string]*Task                `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Error        *Error                          `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
+	Status    WorkflowInvocationStatus_Status `protobuf:"varint,1,opt,name=status,enum=WorkflowInvocationStatus_Status" json:"status,omitempty"`
+	UpdatedAt *google_protobuf.Timestamp      `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
+	Tasks     map[string]*TaskInvocation      `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Output    *TypedValue                     `protobuf:"bytes,4,opt,name=output" json:"output,omitempty"`
+	// In case the task ID also exists in the workflow spec, the dynamic task will be
+	// used as an overlay over the static task.
+	DynamicTasks map[string]*Task `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Error        *Error           `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
 }
 
 func (m *WorkflowInvocationStatus) Reset()                    { *m = WorkflowInvocationStatus{} }
 func (m *WorkflowInvocationStatus) String() string            { return proto.CompactTextString(m) }
 func (*WorkflowInvocationStatus) ProtoMessage()               {}
-func (*WorkflowInvocationStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*WorkflowInvocationStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
 func (m *WorkflowInvocationStatus) GetStatus() WorkflowInvocationStatus_Status {
 	if m != nil {
@@ -414,172 +482,159 @@ func (m *WorkflowInvocationStatus) GetError() *Error {
 	return nil
 }
 
-type WorkflowInvocation struct {
-	Metadata *ObjectMetadata           `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
-	Spec     *WorkflowInvocationSpec   `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
-	Status   *WorkflowInvocationStatus `protobuf:"bytes,3,opt,name=status" json:"status,omitempty"`
-}
-
-func (m *WorkflowInvocation) Reset()                    { *m = WorkflowInvocation{} }
-func (m *WorkflowInvocation) String() string            { return proto.CompactTextString(m) }
-func (*WorkflowInvocation) ProtoMessage()               {}
-func (*WorkflowInvocation) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
-
-func (m *WorkflowInvocation) GetMetadata() *ObjectMetadata {
-	if m != nil {
-		return m.Metadata
-	}
-	return nil
-}
-
-func (m *WorkflowInvocation) GetSpec() *WorkflowInvocationSpec {
-	if m != nil {
-		return m.Spec
-	}
-	return nil
-}
-
-func (m *WorkflowInvocation) GetStatus() *WorkflowInvocationStatus {
-	if m != nil {
-		return m.Status
-	}
-	return nil
-}
-
-// Workflow Definition
-//
-// The workflowDefinition contains the definition of a workflow.
-//
-// Ideally the source code (json, yaml) can be converted directly to this message.
-// Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
-// to the user/system upon the creation of a workflow.
-type WorkflowSpec struct {
-	// apiVersion describes what version is of the workflow definition.
-	// By default the workflow engine will assume the latest version to be used.
-	ApiVersion string `protobuf:"bytes,1,opt,name=apiVersion" json:"apiVersion,omitempty"`
-	// TODO Parameters
-	// Dependency graph is build into the tasks
-	Tasks map[string]*Task `protobuf:"bytes,2,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// From which task should the workflow return the output? Future: multiple? Implicit?
-	OutputTask  string `protobuf:"bytes,3,opt,name=outputTask" json:"outputTask,omitempty"`
-	Description string `protobuf:"bytes,4,opt,name=description" json:"description,omitempty"`
-	// TODO move outside of spec
-	// The UID that the workflow should have. Only use this in case you want to force a specific UID.
-	Id string `protobuf:"bytes,5,opt,name=id" json:"id,omitempty"`
-	// Name is solely for human-readablity
-	Name string `protobuf:"bytes,6,opt,name=name" json:"name,omitempty"`
-}
-
-func (m *WorkflowSpec) Reset()                    { *m = WorkflowSpec{} }
-func (m *WorkflowSpec) String() string            { return proto.CompactTextString(m) }
-func (*WorkflowSpec) ProtoMessage()               {}
-func (*WorkflowSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
-
-func (m *WorkflowSpec) GetApiVersion() string {
-	if m != nil {
-		return m.ApiVersion
-	}
-	return ""
-}
-
-func (m *WorkflowSpec) GetTasks() map[string]*Task {
-	if m != nil {
-		return m.Tasks
-	}
-	return nil
-}
-
-func (m *WorkflowSpec) GetOutputTask() string {
-	if m != nil {
-		return m.OutputTask
-	}
-	return ""
-}
-
-func (m *WorkflowSpec) GetDescription() string {
-	if m != nil {
-		return m.Description
-	}
-	return ""
-}
-
-func (m *WorkflowSpec) GetId() string {
-	if m != nil {
-		return m.Id
-	}
-	return ""
-}
-
-func (m *WorkflowSpec) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-// A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
-//
-// A task as a number of inputs and exactly two outputs
-// Id is specified outside of task
-type Task struct {
-	// Same as the string in the map<string, Task> definition. One needs to be set.
-	//
-	// If there is a conflict the map key gets precendence over this field.
-	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	// Name/identifier of the function
-	FunctionRef string                 `protobuf:"bytes,3,opt,name=functionRef" json:"functionRef,omitempty"`
-	Inputs      map[string]*TypedValue `protobuf:"bytes,4,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+type DependencyConfig struct {
 	// Dependencies for this task to execute
-	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,5,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,1,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Number of dependencies to wait for
-	Await int32 `protobuf:"varint,6,opt,name=await" json:"await,omitempty"`
-	// Transform the output, or override the output with a literal
-	Output *TypedValue `protobuf:"bytes,7,opt,name=output" json:"output,omitempty"`
+	Await int32 `protobuf:"varint,2,opt,name=await" json:"await,omitempty"`
 }
 
-func (m *Task) Reset()                    { *m = Task{} }
-func (m *Task) String() string            { return proto.CompactTextString(m) }
-func (*Task) ProtoMessage()               {}
-func (*Task) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (m *DependencyConfig) Reset()                    { *m = DependencyConfig{} }
+func (m *DependencyConfig) String() string            { return proto.CompactTextString(m) }
+func (*DependencyConfig) ProtoMessage()               {}
+func (*DependencyConfig) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
-func (m *Task) GetId() string {
-	if m != nil {
-		return m.Id
-	}
-	return ""
-}
-
-func (m *Task) GetFunctionRef() string {
-	if m != nil {
-		return m.FunctionRef
-	}
-	return ""
-}
-
-func (m *Task) GetInputs() map[string]*TypedValue {
-	if m != nil {
-		return m.Inputs
-	}
-	return nil
-}
-
-func (m *Task) GetRequires() map[string]*TaskDependencyParameters {
+func (m *DependencyConfig) GetRequires() map[string]*TaskDependencyParameters {
 	if m != nil {
 		return m.Requires
 	}
 	return nil
 }
 
-func (m *Task) GetAwait() int32 {
+func (m *DependencyConfig) GetAwait() int32 {
 	if m != nil {
 		return m.Await
 	}
 	return 0
 }
 
-func (m *Task) GetOutput() *TypedValue {
+//
+// Task Model
+//
+type Task struct {
+	Metadata *ObjectMetadata `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
+	Spec     *TaskSpec       `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
+	Status   *TaskStatus     `protobuf:"bytes,3,opt,name=status" json:"status,omitempty"`
+}
+
+func (m *Task) Reset()                    { *m = Task{} }
+func (m *Task) String() string            { return proto.CompactTextString(m) }
+func (*Task) ProtoMessage()               {}
+func (*Task) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *Task) GetMetadata() *ObjectMetadata {
+	if m != nil {
+		return m.Metadata
+	}
+	return nil
+}
+
+func (m *Task) GetSpec() *TaskSpec {
+	if m != nil {
+		return m.Spec
+	}
+	return nil
+}
+
+func (m *Task) GetStatus() *TaskStatus {
+	if m != nil {
+		return m.Status
+	}
+	return nil
+}
+
+// A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
+//
+// A task as a number of inputs and exactly two outputs
+// Id is specified outside of TaskSpec
+type TaskSpec struct {
+	// Name/identifier of the function
+	FunctionRef string                 `protobuf:"bytes,1,opt,name=functionRef" json:"functionRef,omitempty"`
+	Inputs      map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Dependencies for this task to execute
+	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,3,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Number of dependencies to wait for
+	Await int32 `protobuf:"varint,4,opt,name=await" json:"await,omitempty"`
+	// Transform the output, or override the output with a literal
+	Output *TypedValue `protobuf:"bytes,5,opt,name=output" json:"output,omitempty"`
+}
+
+func (m *TaskSpec) Reset()                    { *m = TaskSpec{} }
+func (m *TaskSpec) String() string            { return proto.CompactTextString(m) }
+func (*TaskSpec) ProtoMessage()               {}
+func (*TaskSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+
+func (m *TaskSpec) GetFunctionRef() string {
+	if m != nil {
+		return m.FunctionRef
+	}
+	return ""
+}
+
+func (m *TaskSpec) GetInputs() map[string]*TypedValue {
+	if m != nil {
+		return m.Inputs
+	}
+	return nil
+}
+
+func (m *TaskSpec) GetRequires() map[string]*TaskDependencyParameters {
+	if m != nil {
+		return m.Requires
+	}
+	return nil
+}
+
+func (m *TaskSpec) GetAwait() int32 {
+	if m != nil {
+		return m.Await
+	}
+	return 0
+}
+
+func (m *TaskSpec) GetOutput() *TypedValue {
 	if m != nil {
 		return m.Output
+	}
+	return nil
+}
+
+type TaskStatus struct {
+	Status    TaskStatus_Status          `protobuf:"varint,1,opt,name=status,enum=TaskStatus_Status" json:"status,omitempty"`
+	UpdatedAt *google_protobuf.Timestamp `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
+	Resolved  *ResolvedTask              `protobuf:"bytes,3,opt,name=resolved" json:"resolved,omitempty"`
+	Error     *Error                     `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *TaskStatus) Reset()                    { *m = TaskStatus{} }
+func (m *TaskStatus) String() string            { return proto.CompactTextString(m) }
+func (*TaskStatus) ProtoMessage()               {}
+func (*TaskStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *TaskStatus) GetStatus() TaskStatus_Status {
+	if m != nil {
+		return m.Status
+	}
+	return TaskStatus_STARTED
+}
+
+func (m *TaskStatus) GetUpdatedAt() *google_protobuf.Timestamp {
+	if m != nil {
+		return m.UpdatedAt
+	}
+	return nil
+}
+
+func (m *TaskStatus) GetResolved() *ResolvedTask {
+	if m != nil {
+		return m.Resolved
+	}
+	return nil
+}
+
+func (m *TaskStatus) GetError() *Error {
+	if m != nil {
+		return m.Error
 	}
 	return nil
 }
@@ -608,77 +663,139 @@ func (m *TaskDependencyParameters) GetAlias() string {
 	return ""
 }
 
-// Internal
-type WorkflowStatus struct {
-	Status        WorkflowStatus_Status      `protobuf:"varint,1,opt,name=status,enum=WorkflowStatus_Status" json:"status,omitempty"`
-	UpdatedAt     *google_protobuf.Timestamp `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
-	ResolvedTasks map[string]*TaskTypeDef    `protobuf:"bytes,3,rep,name=resolvedTasks" json:"resolvedTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Error         *Error                     `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+//
+// Task Invocation Model
+//
+type TaskInvocation struct {
+	Metadata *ObjectMetadata       `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
+	Spec     *TaskInvocationSpec   `protobuf:"bytes,2,opt,name=spec" json:"spec,omitempty"`
+	Status   *TaskInvocationStatus `protobuf:"bytes,3,opt,name=status" json:"status,omitempty"`
 }
 
-func (m *WorkflowStatus) Reset()                    { *m = WorkflowStatus{} }
-func (m *WorkflowStatus) String() string            { return proto.CompactTextString(m) }
-func (*WorkflowStatus) ProtoMessage()               {}
-func (*WorkflowStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (m *TaskInvocation) Reset()                    { *m = TaskInvocation{} }
+func (m *TaskInvocation) String() string            { return proto.CompactTextString(m) }
+func (*TaskInvocation) ProtoMessage()               {}
+func (*TaskInvocation) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
 
-func (m *WorkflowStatus) GetStatus() WorkflowStatus_Status {
+func (m *TaskInvocation) GetMetadata() *ObjectMetadata {
+	if m != nil {
+		return m.Metadata
+	}
+	return nil
+}
+
+func (m *TaskInvocation) GetSpec() *TaskInvocationSpec {
+	if m != nil {
+		return m.Spec
+	}
+	return nil
+}
+
+func (m *TaskInvocation) GetStatus() *TaskInvocationStatus {
 	if m != nil {
 		return m.Status
 	}
-	return WorkflowStatus_UNKNOWN
+	return nil
 }
 
-func (m *WorkflowStatus) GetUpdatedAt() *google_protobuf.Timestamp {
+type TaskInvocationSpec struct {
+	// Id of the task to be invoked (no ambiguatity at this point
+	Type   *ResolvedTask          `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
+	TaskId string                 `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
+	Inputs map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+func (m *TaskInvocationSpec) Reset()                    { *m = TaskInvocationSpec{} }
+func (m *TaskInvocationSpec) String() string            { return proto.CompactTextString(m) }
+func (*TaskInvocationSpec) ProtoMessage()               {}
+func (*TaskInvocationSpec) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+func (m *TaskInvocationSpec) GetType() *ResolvedTask {
+	if m != nil {
+		return m.Type
+	}
+	return nil
+}
+
+func (m *TaskInvocationSpec) GetTaskId() string {
+	if m != nil {
+		return m.TaskId
+	}
+	return ""
+}
+
+func (m *TaskInvocationSpec) GetInputs() map[string]*TypedValue {
+	if m != nil {
+		return m.Inputs
+	}
+	return nil
+}
+
+type TaskInvocationStatus struct {
+	Status    TaskInvocationStatus_Status `protobuf:"varint,1,opt,name=status,enum=TaskInvocationStatus_Status" json:"status,omitempty"`
+	UpdatedAt *google_protobuf.Timestamp  `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
+	Output    *TypedValue                 `protobuf:"bytes,3,opt,name=output" json:"output,omitempty"`
+	Error     *Error                      `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *TaskInvocationStatus) Reset()                    { *m = TaskInvocationStatus{} }
+func (m *TaskInvocationStatus) String() string            { return proto.CompactTextString(m) }
+func (*TaskInvocationStatus) ProtoMessage()               {}
+func (*TaskInvocationStatus) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *TaskInvocationStatus) GetStatus() TaskInvocationStatus_Status {
+	if m != nil {
+		return m.Status
+	}
+	return TaskInvocationStatus_UNKNOWN
+}
+
+func (m *TaskInvocationStatus) GetUpdatedAt() *google_protobuf.Timestamp {
 	if m != nil {
 		return m.UpdatedAt
 	}
 	return nil
 }
 
-func (m *WorkflowStatus) GetResolvedTasks() map[string]*TaskTypeDef {
+func (m *TaskInvocationStatus) GetOutput() *TypedValue {
 	if m != nil {
-		return m.ResolvedTasks
+		return m.Output
 	}
 	return nil
 }
 
-func (m *WorkflowStatus) GetError() *Error {
+func (m *TaskInvocationStatus) GetError() *Error {
 	if m != nil {
 		return m.Error
 	}
 	return nil
 }
 
-type TaskTypeDef struct {
-	Src      string `protobuf:"bytes,1,opt,name=src" json:"src,omitempty"`
-	Runtime  string `protobuf:"bytes,2,opt,name=runtime" json:"runtime,omitempty"`
-	Resolved string `protobuf:"bytes,3,opt,name=resolved" json:"resolved,omitempty"`
+//
+// Common
+//
+type ObjectMetadata struct {
+	Id        string                     `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	CreatedAt *google_protobuf.Timestamp `protobuf:"bytes,3,opt,name=createdAt" json:"createdAt,omitempty"`
 }
 
-func (m *TaskTypeDef) Reset()                    { *m = TaskTypeDef{} }
-func (m *TaskTypeDef) String() string            { return proto.CompactTextString(m) }
-func (*TaskTypeDef) ProtoMessage()               {}
-func (*TaskTypeDef) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (m *ObjectMetadata) Reset()                    { *m = ObjectMetadata{} }
+func (m *ObjectMetadata) String() string            { return proto.CompactTextString(m) }
+func (*ObjectMetadata) ProtoMessage()               {}
+func (*ObjectMetadata) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
 
-func (m *TaskTypeDef) GetSrc() string {
+func (m *ObjectMetadata) GetId() string {
 	if m != nil {
-		return m.Src
+		return m.Id
 	}
 	return ""
 }
 
-func (m *TaskTypeDef) GetRuntime() string {
+func (m *ObjectMetadata) GetCreatedAt() *google_protobuf.Timestamp {
 	if m != nil {
-		return m.Runtime
+		return m.CreatedAt
 	}
-	return ""
-}
-
-func (m *TaskTypeDef) GetResolved() string {
-	if m != nil {
-		return m.Resolved
-	}
-	return ""
+	return nil
 }
 
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
@@ -690,7 +807,7 @@ type TypedValue struct {
 func (m *TypedValue) Reset()                    { *m = TypedValue{} }
 func (m *TypedValue) String() string            { return proto.CompactTextString(m) }
 func (*TypedValue) ProtoMessage()               {}
-func (*TypedValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+func (*TypedValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
 
 func (m *TypedValue) GetType() string {
 	if m != nil {
@@ -714,7 +831,7 @@ type Error struct {
 func (m *Error) Reset()                    { *m = Error{} }
 func (m *Error) String() string            { return proto.CompactTextString(m) }
 func (*Error) ProtoMessage()               {}
-func (*Error) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+func (*Error) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
 
 func (m *Error) GetCode() string {
 	if m != nil {
@@ -730,100 +847,149 @@ func (m *Error) GetMessage() string {
 	return ""
 }
 
+type ResolvedTask struct {
+	// Src contains the function reference that was resolved.
+	// TODO allow fission.FunctionRef struct here
+	Src string `protobuf:"bytes,1,opt,name=src" json:"src,omitempty"`
+	// Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
+	Runtime string `protobuf:"bytes,2,opt,name=runtime" json:"runtime,omitempty"`
+	// Resolved contains the address (UID) to the function.
+	Resolved string `protobuf:"bytes,3,opt,name=resolved" json:"resolved,omitempty"`
+}
+
+func (m *ResolvedTask) Reset()                    { *m = ResolvedTask{} }
+func (m *ResolvedTask) String() string            { return proto.CompactTextString(m) }
+func (*ResolvedTask) ProtoMessage()               {}
+func (*ResolvedTask) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+
+func (m *ResolvedTask) GetSrc() string {
+	if m != nil {
+		return m.Src
+	}
+	return ""
+}
+
+func (m *ResolvedTask) GetRuntime() string {
+	if m != nil {
+		return m.Runtime
+	}
+	return ""
+}
+
+func (m *ResolvedTask) GetResolved() string {
+	if m != nil {
+		return m.Resolved
+	}
+	return ""
+}
+
 func init() {
-	proto.RegisterType((*ObjectMetadata)(nil), "ObjectMetadata")
 	proto.RegisterType((*Workflow)(nil), "Workflow")
+	proto.RegisterType((*WorkflowSpec)(nil), "WorkflowSpec")
+	proto.RegisterType((*WorkflowStatus)(nil), "WorkflowStatus")
+	proto.RegisterType((*WorkflowInvocation)(nil), "WorkflowInvocation")
+	proto.RegisterType((*WorkflowInvocationSpec)(nil), "WorkflowInvocationSpec")
+	proto.RegisterType((*WorkflowInvocationStatus)(nil), "WorkflowInvocationStatus")
+	proto.RegisterType((*DependencyConfig)(nil), "DependencyConfig")
+	proto.RegisterType((*Task)(nil), "Task")
+	proto.RegisterType((*TaskSpec)(nil), "TaskSpec")
+	proto.RegisterType((*TaskStatus)(nil), "TaskStatus")
+	proto.RegisterType((*TaskDependencyParameters)(nil), "TaskDependencyParameters")
 	proto.RegisterType((*TaskInvocation)(nil), "TaskInvocation")
 	proto.RegisterType((*TaskInvocationSpec)(nil), "TaskInvocationSpec")
 	proto.RegisterType((*TaskInvocationStatus)(nil), "TaskInvocationStatus")
-	proto.RegisterType((*WorkflowInvocationSpec)(nil), "WorkflowInvocationSpec")
-	proto.RegisterType((*WorkflowInvocationStatus)(nil), "WorkflowInvocationStatus")
-	proto.RegisterType((*WorkflowInvocation)(nil), "WorkflowInvocation")
-	proto.RegisterType((*WorkflowSpec)(nil), "WorkflowSpec")
-	proto.RegisterType((*Task)(nil), "Task")
-	proto.RegisterType((*TaskDependencyParameters)(nil), "TaskDependencyParameters")
-	proto.RegisterType((*WorkflowStatus)(nil), "WorkflowStatus")
-	proto.RegisterType((*TaskTypeDef)(nil), "TaskTypeDef")
+	proto.RegisterType((*ObjectMetadata)(nil), "ObjectMetadata")
 	proto.RegisterType((*TypedValue)(nil), "TypedValue")
 	proto.RegisterType((*Error)(nil), "Error")
-	proto.RegisterEnum("TaskInvocationStatus_Status", TaskInvocationStatus_Status_name, TaskInvocationStatus_Status_value)
-	proto.RegisterEnum("WorkflowInvocationStatus_Status", WorkflowInvocationStatus_Status_name, WorkflowInvocationStatus_Status_value)
-	proto.RegisterEnum("TaskDependencyParameters_DependencyType", TaskDependencyParameters_DependencyType_name, TaskDependencyParameters_DependencyType_value)
+	proto.RegisterType((*ResolvedTask)(nil), "ResolvedTask")
 	proto.RegisterEnum("WorkflowStatus_Status", WorkflowStatus_Status_name, WorkflowStatus_Status_value)
+	proto.RegisterEnum("WorkflowInvocationStatus_Status", WorkflowInvocationStatus_Status_name, WorkflowInvocationStatus_Status_value)
+	proto.RegisterEnum("TaskStatus_Status", TaskStatus_Status_name, TaskStatus_Status_value)
+	proto.RegisterEnum("TaskDependencyParameters_DependencyType", TaskDependencyParameters_DependencyType_name, TaskDependencyParameters_DependencyType_value)
+	proto.RegisterEnum("TaskInvocationStatus_Status", TaskInvocationStatus_Status_name, TaskInvocationStatus_Status_value)
 }
 
 func init() { proto.RegisterFile("pkg/types/types.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 1119 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0xdd, 0x6e, 0xdb, 0x36,
-	0x14, 0xae, 0x14, 0xc9, 0x89, 0x8f, 0x12, 0x47, 0xe5, 0xda, 0xce, 0xf5, 0x8a, 0xd6, 0x55, 0x37,
-	0x34, 0x43, 0x30, 0x05, 0xcb, 0xfe, 0xba, 0x76, 0xc0, 0xe0, 0x46, 0xca, 0x6a, 0x34, 0xb5, 0x03,
-	0xc6, 0x4e, 0xd1, 0x02, 0x43, 0xa1, 0x48, 0x4c, 0xa0, 0xc6, 0x96, 0x34, 0xfd, 0x24, 0xf0, 0xf5,
-	0xb0, 0x47, 0xd8, 0x03, 0xec, 0x7a, 0xd7, 0xbb, 0xdc, 0x33, 0x6c, 0x2f, 0x32, 0xec, 0x15, 0x06,
-	0x52, 0x94, 0x2c, 0x29, 0xf2, 0x82, 0x02, 0xe9, 0x8d, 0x21, 0x1e, 0x1e, 0x7e, 0xfc, 0x78, 0xce,
-	0x77, 0x0e, 0x69, 0xb8, 0x19, 0x9c, 0x9e, 0x6c, 0xc5, 0xb3, 0x80, 0x44, 0xe9, 0xaf, 0x1e, 0x84,
-	0x7e, 0xec, 0x77, 0xee, 0x9d, 0xf8, 0xfe, 0xc9, 0x84, 0x6c, 0xb1, 0xd1, 0x51, 0x72, 0xbc, 0x15,
-	0xbb, 0x53, 0x12, 0xc5, 0xd6, 0x34, 0x48, 0x1d, 0xb4, 0xd7, 0xd0, 0x1a, 0x1e, 0xbd, 0x25, 0x76,
-	0xfc, 0x82, 0xc4, 0x96, 0x63, 0xc5, 0x16, 0x6a, 0x81, 0xe8, 0x3a, 0x6d, 0xa1, 0x2b, 0x6c, 0x34,
-	0xb1, 0xe8, 0x3a, 0xe8, 0x11, 0x34, 0xed, 0x90, 0x58, 0x31, 0x71, 0x7a, 0x71, 0x7b, 0xa9, 0x2b,
-	0x6c, 0x28, 0xdb, 0x1d, 0x3d, 0x85, 0xd5, 0x33, 0x58, 0x7d, 0x94, 0xc1, 0xe2, 0xb9, 0xb3, 0xf6,
-	0xb3, 0x00, 0x2b, 0x2f, 0xfd, 0xf0, 0xf4, 0x78, 0xe2, 0x9f, 0xa3, 0x4d, 0x58, 0x99, 0xf2, 0x2d,
-	0x18, 0xb8, 0xb2, 0xbd, 0xae, 0x97, 0x77, 0xc6, 0xb9, 0x03, 0xba, 0x0f, 0x52, 0x14, 0x10, 0xbb,
-	0x2d, 0x32, 0xc7, 0x35, 0x3d, 0x43, 0x39, 0x08, 0x88, 0x8d, 0xd9, 0x14, 0x7a, 0x08, 0x8d, 0x28,
-	0xb6, 0xe2, 0x24, 0xe2, 0x9c, 0xd6, 0xe7, 0x4e, 0xcc, 0x8c, 0xf9, 0xb4, 0xf6, 0xab, 0x00, 0xad,
-	0x91, 0x15, 0x9d, 0xf6, 0xbd, 0x33, 0xdf, 0xb6, 0x62, 0xd7, 0xf7, 0xde, 0x8d, 0xcb, 0xc3, 0x12,
-	0x97, 0x0f, 0xf4, 0x32, 0x56, 0x81, 0xd1, 0x67, 0x15, 0x46, 0x37, 0xab, 0xae, 0x65, 0x5e, 0x7f,
-	0x09, 0x80, 0x2e, 0x62, 0xa1, 0x2e, 0x48, 0x34, 0x81, 0x9c, 0xd7, 0x2a, 0xc3, 0x18, 0xcd, 0x02,
-	0x62, 0x90, 0x63, 0xcc, 0x66, 0xd0, 0x2d, 0x68, 0xc4, 0x74, 0x9d, 0xc3, 0x28, 0x35, 0x31, 0x1f,
-	0xa1, 0x6f, 0xa0, 0xe1, 0x7a, 0x41, 0x12, 0xd3, 0xfd, 0x97, 0x36, 0x94, 0xed, 0x7b, 0x35, 0x54,
-	0xf5, 0x3e, 0xf3, 0x30, 0xbd, 0x38, 0x9c, 0x61, 0xee, 0xde, 0xd9, 0x05, 0xa5, 0x60, 0x46, 0x2a,
-	0x2c, 0x9d, 0x92, 0x19, 0x57, 0x00, 0xfd, 0x44, 0xf7, 0x41, 0x3e, 0xb3, 0x26, 0x09, 0xe1, 0x31,
-	0x50, 0x74, 0x4a, 0xc8, 0x39, 0xa4, 0x26, 0x9c, 0xce, 0x3c, 0x16, 0x1f, 0x09, 0xda, 0x1f, 0x22,
-	0xdc, 0xa8, 0x3b, 0x32, 0xfa, 0x32, 0x8f, 0x0c, 0x05, 0x6d, 0x6d, 0xdf, 0xa9, 0x8d, 0x8c, 0x5e,
-	0x0e, 0x10, 0x15, 0x5e, 0x12, 0x38, 0x5c, 0x78, 0xe2, 0xe5, 0xc2, 0xcb, 0x9d, 0xd1, 0x03, 0x68,
-	0xf8, 0x49, 0x1c, 0x24, 0x99, 0x5e, 0x4b, 0x84, 0xf9, 0x14, 0xba, 0x03, 0x32, 0x09, 0x43, 0x3f,
-	0x6c, 0x4b, 0xcc, 0xa7, 0xa1, 0x9b, 0x74, 0x84, 0x53, 0xa3, 0xf6, 0x16, 0x1a, 0x9c, 0xbc, 0x02,
-	0xcb, 0xe3, 0xc1, 0xf3, 0xc1, 0xf0, 0xe5, 0x40, 0xbd, 0x86, 0xd6, 0xa0, 0x79, 0xb0, 0xf3, 0xcc,
-	0x34, 0xc6, 0x7b, 0xa6, 0xa1, 0x0a, 0x68, 0x1d, 0x94, 0xfe, 0xe0, 0xcd, 0x3e, 0x1e, 0xfe, 0x80,
-	0xcd, 0x83, 0x03, 0x55, 0x64, 0xf3, 0xe3, 0x9d, 0x1d, 0xd3, 0x34, 0x4c, 0x43, 0x5d, 0x42, 0x00,
-	0x8d, 0xdd, 0x5e, 0x9f, 0xfa, 0x4a, 0x14, 0xa7, 0xf7, 0x74, 0x88, 0x47, 0xa6, 0xa1, 0xca, 0x74,
-	0x70, 0xf0, 0xbc, 0xbf, 0xbf, 0x6f, 0x1a, 0x6a, 0x43, 0xfb, 0x53, 0x80, 0x5b, 0x99, 0x78, 0x2b,
-	0x6a, 0xb8, 0x0b, 0x70, 0x9e, 0xcd, 0x64, 0x45, 0x59, 0xb0, 0xa0, 0x27, 0x95, 0x9c, 0x3f, 0xd0,
-	0xeb, 0x81, 0xde, 0x6b, 0xde, 0xff, 0x96, 0xa0, 0x5d, 0xb3, 0x6d, 0x96, 0xc5, 0x72, 0xee, 0xbb,
-	0xfa, 0x22, 0xd7, 0xab, 0xcb, 0xff, 0x63, 0x90, 0x69, 0x4d, 0x64, 0x41, 0xf9, 0x78, 0xf1, 0x96,
-	0x54, 0x87, 0x3c, 0x2a, 0xe9, 0x92, 0x82, 0x76, 0xa4, 0xc5, 0xda, 0x19, 0xc2, 0xaa, 0x33, 0xf3,
-	0xac, 0xa9, 0x6b, 0x33, 0x80, 0xb6, 0xcc, 0xf6, 0xd9, 0x5c, 0xbc, 0x8f, 0x51, 0xf0, 0x4e, 0xb7,
-	0x2b, 0x01, 0xcc, 0xc5, 0xd8, 0xa8, 0x11, 0x63, 0xa7, 0x0f, 0x30, 0x5f, 0x59, 0x93, 0xa7, 0x4f,
-	0xca, 0x79, 0x5a, 0xaf, 0x94, 0x57, 0x21, 0x57, 0x9d, 0x5d, 0xb8, 0x7e, 0x81, 0x4b, 0x0d, 0xe2,
-	0x47, 0x65, 0x44, 0x99, 0x21, 0x16, 0x73, 0xfe, 0xe3, 0x7b, 0xad, 0x0f, 0xed, 0x37, 0x01, 0xd0,
-	0xc5, 0x60, 0xbe, 0x5b, 0xe3, 0xde, 0x2c, 0x35, 0xee, 0x0f, 0x17, 0x54, 0x06, 0x6f, 0xde, 0x9f,
-	0x57, 0x9a, 0xf7, 0xed, 0x85, 0xb9, 0xcc, 0x1b, 0xf8, 0x2f, 0x22, 0xac, 0x16, 0x2f, 0x26, 0x5a,
-	0xac, 0x56, 0xe0, 0x1e, 0x92, 0x30, 0x72, 0x7d, 0x2f, 0x2b, 0xd6, 0xb9, 0x05, 0xe9, 0x99, 0x2c,
-	0x45, 0x26, 0x97, 0x76, 0xe9, 0x5a, 0xab, 0x91, 0xe2, 0x5d, 0x80, 0x54, 0x6f, 0x74, 0x8a, 0xf1,
-	0x6a, 0xe2, 0x82, 0x05, 0x75, 0x41, 0x71, 0x48, 0x64, 0x87, 0x6e, 0x40, 0xd9, 0x31, 0xbd, 0x36,
-	0x71, 0xd1, 0xc4, 0xef, 0x72, 0x39, 0xbf, 0xcb, 0x11, 0x48, 0x9e, 0x35, 0x25, 0x4c, 0x65, 0x4d,
-	0xcc, 0xbe, 0x3b, 0xdf, 0x5f, 0x22, 0xae, 0x4b, 0xa5, 0xf0, 0xaf, 0x08, 0x12, 0xe3, 0x53, 0x7d,
-	0x39, 0x74, 0x41, 0x39, 0x4e, 0x3c, 0x9b, 0x49, 0x90, 0x1c, 0xf3, 0x03, 0x14, 0x4d, 0xe8, 0xd3,
-	0xbc, 0x7d, 0x49, 0x2c, 0x24, 0xd7, 0x19, 0x78, 0x5d, 0xb3, 0x42, 0x5b, 0xb0, 0x12, 0x92, 0x9f,
-	0x12, 0x37, 0x24, 0x59, 0xb9, 0xa5, 0x57, 0xb1, 0x8e, 0xb9, 0x35, 0x75, 0xcf, 0x9d, 0xd0, 0x0d,
-	0x90, 0xad, 0x73, 0xcb, 0x8d, 0xd9, 0x61, 0x65, 0x9c, 0x0e, 0x0a, 0xe5, 0xbd, 0xbc, 0xb0, 0xbc,
-	0xaf, 0xaa, 0x31, 0x76, 0x0e, 0x61, 0xad, 0xc4, 0xae, 0x06, 0x69, 0xab, 0x8c, 0x74, 0x9b, 0x9d,
-	0xc9, 0x20, 0x01, 0xf1, 0x1c, 0xe2, 0xd9, 0xb3, 0x7d, 0x2b, 0xb4, 0xa6, 0x24, 0x26, 0x61, 0x54,
-	0x8c, 0xf8, 0xef, 0x02, 0xb4, 0x17, 0xf9, 0xa1, 0xef, 0x0a, 0x0f, 0x88, 0xd6, 0xf6, 0xc6, 0x42,
-	0x40, 0x7d, 0x6e, 0xa4, 0xec, 0xf9, 0xe3, 0x82, 0x46, 0x6d, 0xe2, 0x5a, 0x11, 0x7f, 0x5b, 0xa4,
-	0x03, 0xed, 0x09, 0xb4, 0xca, 0xde, 0x68, 0x05, 0x24, 0xa3, 0x37, 0xea, 0xa9, 0xd7, 0x68, 0xdd,
-	0xee, 0x0c, 0x07, 0x23, 0x3c, 0xdc, 0x53, 0x05, 0x84, 0xa0, 0x65, 0xbc, 0x1a, 0xf4, 0x5e, 0xf4,
-	0x77, 0xde, 0x0c, 0xc7, 0xa3, 0xfd, 0xf1, 0x48, 0x15, 0xb5, 0x7f, 0x44, 0x68, 0x95, 0xdf, 0x66,
-	0x48, 0xaf, 0x5c, 0x0a, 0xb7, 0x2a, 0x8f, 0xb7, 0xab, 0xbb, 0x0a, 0x9e, 0xc1, 0x5a, 0x48, 0x22,
-	0x7f, 0x72, 0x46, 0x9c, 0x51, 0xe1, 0x4a, 0xd0, 0xaa, 0x1b, 0xe2, 0xa2, 0x53, 0x2a, 0xa5, 0xf2,
-	0xc2, 0xff, 0x7f, 0x2f, 0x74, 0x06, 0x80, 0x2e, 0x42, 0xd4, 0xe4, 0x5b, 0x2b, 0xe7, 0xbb, 0xfc,
-	0xbe, 0x2b, 0xa4, 0xf8, 0xdb, 0xfa, 0xfe, 0xda, 0x04, 0x19, 0x9b, 0x3d, 0xe3, 0x95, 0x2a, 0x16,
-	0x7a, 0xe7, 0x12, 0xf5, 0x31, 0xcc, 0x3d, 0x93, 0xf6, 0x4e, 0x49, 0x1b, 0x83, 0x52, 0x00, 0xa5,
-	0x1c, 0xa2, 0xd0, 0xce, 0x38, 0x44, 0xa1, 0x8d, 0xda, 0xb0, 0x1c, 0x26, 0x1e, 0xfd, 0x27, 0xc0,
-	0xb3, 0x9c, 0x0d, 0x51, 0x87, 0x16, 0x59, 0x7a, 0x0a, 0x5e, 0xae, 0xf9, 0x58, 0xfb, 0x1a, 0x60,
-	0xae, 0x72, 0xda, 0x49, 0x72, 0x95, 0x35, 0xe7, 0xda, 0x99, 0x9f, 0x6d, 0x95, 0x9f, 0x46, 0xfb,
-	0x0a, 0x64, 0x16, 0x29, 0xba, 0xc4, 0xf6, 0x9d, 0x7c, 0x09, 0xfd, 0xa6, 0x54, 0xa6, 0x24, 0x8a,
-	0xac, 0x93, 0x9c, 0x0a, 0x1f, 0x3e, 0x5d, 0x7e, 0x2d, 0xb3, 0x3f, 0x32, 0x47, 0x0d, 0x96, 0xe0,
-	0x2f, 0xfe, 0x0b, 0x00, 0x00, 0xff, 0xff, 0x00, 0xca, 0x00, 0x8c, 0xe2, 0x0c, 0x00, 0x00,
+	// 1249 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x57, 0xcd, 0x6e, 0xdb, 0x46,
+	0x10, 0x0e, 0x29, 0x51, 0x96, 0x46, 0xb6, 0xc2, 0x6e, 0xf3, 0xc3, 0xa8, 0x69, 0xe3, 0x30, 0x2d,
+	0xe2, 0x36, 0x0d, 0xdd, 0x3a, 0xfd, 0x49, 0x93, 0x5e, 0x14, 0x91, 0x49, 0x85, 0x24, 0x92, 0x40,
+	0xcb, 0x0e, 0x12, 0xa0, 0x08, 0x18, 0x72, 0x65, 0x30, 0x96, 0x48, 0x96, 0xa4, 0x6c, 0xe8, 0xdc,
+	0x67, 0xe8, 0x03, 0xf4, 0xdc, 0x43, 0x4f, 0x3d, 0xf6, 0x0d, 0x7a, 0xc8, 0xb5, 0x8f, 0x50, 0xf4,
+	0x25, 0x8a, 0x5d, 0x2e, 0xc9, 0x25, 0x25, 0xc5, 0x35, 0xe0, 0x5c, 0x04, 0xed, 0xec, 0xcc, 0x2c,
+	0xe7, 0x9b, 0xef, 0x9b, 0x25, 0xe1, 0x62, 0x70, 0x78, 0xb0, 0x1d, 0xcf, 0x03, 0x1c, 0x25, 0xbf,
+	0x5a, 0x10, 0xfa, 0xb1, 0xdf, 0xbe, 0x76, 0xe0, 0xfb, 0x07, 0x13, 0xbc, 0x4d, 0x57, 0xaf, 0x66,
+	0xe3, 0xed, 0xd8, 0x9d, 0xe2, 0x28, 0xb6, 0xa6, 0x41, 0xe2, 0xa0, 0xfe, 0x2c, 0x40, 0xfd, 0x99,
+	0x1f, 0x1e, 0x8e, 0x27, 0xfe, 0x31, 0xba, 0x05, 0xf5, 0x29, 0x8e, 0x2d, 0xc7, 0x8a, 0x2d, 0x45,
+	0xd8, 0x14, 0xb6, 0x9a, 0x3b, 0xe7, 0xb5, 0xc1, 0xab, 0xd7, 0xd8, 0x8e, 0x9f, 0x32, 0xb3, 0x99,
+	0x39, 0xa0, 0xeb, 0x50, 0x8d, 0x02, 0x6c, 0x2b, 0x22, 0x75, 0xdc, 0xd0, 0xd2, 0x2c, 0xbb, 0x01,
+	0xb6, 0x4d, 0xba, 0x85, 0x6e, 0x42, 0x2d, 0x8a, 0xad, 0x78, 0x16, 0x29, 0x15, 0x96, 0x2d, 0x73,
+	0xa2, 0x66, 0x93, 0x6d, 0xab, 0xbf, 0x8b, 0xb0, 0xce, 0xc7, 0xa3, 0x8f, 0x00, 0xac, 0xc0, 0xdd,
+	0xc7, 0x61, 0xe4, 0xfa, 0x1e, 0x7d, 0x96, 0x86, 0xc9, 0x59, 0x90, 0x06, 0x52, 0x6c, 0x45, 0x87,
+	0x91, 0x22, 0x6e, 0x56, 0xb6, 0x9a, 0x3b, 0x4a, 0xe1, 0x74, 0x6d, 0x44, 0xb6, 0x0c, 0x2f, 0x0e,
+	0xe7, 0x66, 0xe2, 0x46, 0xf2, 0xf9, 0xb3, 0x38, 0x98, 0xc5, 0x64, 0x8b, 0x3e, 0x4d, 0xc3, 0xe4,
+	0x2c, 0x68, 0x13, 0x9a, 0x0e, 0x8e, 0xec, 0xd0, 0x0d, 0x62, 0x72, 0x60, 0x95, 0x3a, 0xf0, 0x26,
+	0xa4, 0xc0, 0xda, 0xd8, 0x0f, 0x6d, 0xdc, 0x73, 0x14, 0x89, 0xee, 0xa6, 0x4b, 0x84, 0xa0, 0xea,
+	0x59, 0x53, 0xac, 0xd4, 0xa8, 0x99, 0xfe, 0x47, 0x6d, 0xa8, 0xbb, 0x5e, 0x8c, 0x43, 0xcf, 0x9a,
+	0x28, 0x6b, 0x9b, 0xc2, 0x56, 0xdd, 0xcc, 0xd6, 0xed, 0x2e, 0x40, 0xfe, 0x80, 0x48, 0x86, 0xca,
+	0x21, 0x9e, 0xb3, 0x12, 0xc9, 0x5f, 0x74, 0x0d, 0xa4, 0x23, 0x6b, 0x32, 0xc3, 0x0c, 0xd9, 0x06,
+	0x2d, 0x87, 0xa2, 0x9a, 0xd8, 0xef, 0x89, 0x77, 0x05, 0xf5, 0x2f, 0x11, 0x5a, 0x45, 0x30, 0x91,
+	0x96, 0xa1, 0x4d, 0x92, 0xb5, 0x76, 0x2e, 0x95, 0xd0, 0xd6, 0x8a, 0xa0, 0xa3, 0xbb, 0xd0, 0x98,
+	0x05, 0x8e, 0x15, 0x63, 0xa7, 0x13, 0xb3, 0xb3, 0xda, 0x5a, 0xc2, 0x17, 0x2d, 0xe5, 0x8b, 0x36,
+	0x4a, 0xf9, 0x62, 0xe6, 0xce, 0xe8, 0x8b, 0x14, 0xfd, 0x0a, 0x45, 0xbf, 0x5d, 0x3e, 0x68, 0x11,
+	0xff, 0xab, 0x20, 0xe1, 0x30, 0xf4, 0x43, 0x8a, 0x6c, 0x73, 0xa7, 0xa6, 0x19, 0x64, 0x65, 0x26,
+	0xc6, 0xb6, 0x71, 0x02, 0x22, 0xd7, 0x8b, 0x88, 0x34, 0x13, 0x44, 0x92, 0x6a, 0x38, 0x4c, 0xbe,
+	0x83, 0x1a, 0x83, 0xa2, 0x09, 0x6b, 0x43, 0xa3, 0xaf, 0xf7, 0xfa, 0x8f, 0xe4, 0x73, 0xa8, 0x01,
+	0x92, 0x69, 0x74, 0xf4, 0xe7, 0xb2, 0x88, 0x00, 0x6a, 0x0f, 0x3b, 0xbd, 0x27, 0x86, 0x2e, 0x57,
+	0x88, 0x8f, 0x6e, 0x3c, 0x31, 0x46, 0x86, 0x2e, 0x57, 0xd5, 0x5f, 0x05, 0x40, 0x69, 0x11, 0x3d,
+	0xef, 0xc8, 0xb7, 0x2d, 0xda, 0xf4, 0x53, 0x09, 0xe2, 0x56, 0x41, 0x10, 0x97, 0xb5, 0xc5, 0x7c,
+	0x9c, 0x34, 0xbe, 0x2c, 0x49, 0xe3, 0xca, 0x32, 0xf7, 0xa2, 0x48, 0xfe, 0x16, 0xe0, 0xd2, 0xf2,
+	0x9c, 0x84, 0xde, 0xc7, 0xe9, 0x8e, 0x93, 0xca, 0x25, 0xb7, 0xa0, 0xfb, 0x50, 0x73, 0xbd, 0x60,
+	0x16, 0xa7, 0x7a, 0xb9, 0xb1, 0xe2, 0xe1, 0xb4, 0x1e, 0xf5, 0x4a, 0x5a, 0xc7, 0x42, 0x08, 0x97,
+	0x03, 0x2b, 0xc4, 0x5e, 0xdc, 0x73, 0x98, 0x72, 0xb2, 0x75, 0xfb, 0x21, 0x34, 0xb9, 0x90, 0xff,
+	0xd5, 0xba, 0x79, 0x80, 0x9d, 0x7d, 0x62, 0xe2, 0x5b, 0xf7, 0xa6, 0x0a, 0xca, 0x2a, 0x00, 0xd0,
+	0xdd, 0x12, 0xb1, 0x37, 0x57, 0x62, 0x75, 0x76, 0x14, 0xbf, 0x57, 0xa4, 0xf8, 0xc7, 0xab, 0x8f,
+	0x5c, 0x24, 0xfb, 0x0d, 0xa8, 0x25, 0xa3, 0x85, 0xb1, 0xbd, 0x50, 0x34, 0xdb, 0x42, 0x03, 0x58,
+	0x77, 0xe6, 0x9e, 0x35, 0x75, 0x6d, 0x9a, 0x40, 0x91, 0xe8, 0x39, 0xb7, 0x56, 0x9f, 0xa3, 0x73,
+	0xde, 0xc9, 0x71, 0x85, 0x04, 0xb9, 0xc4, 0x6a, 0xcb, 0x24, 0xd6, 0x3b, 0x41, 0x62, 0x9f, 0x14,
+	0xfb, 0x74, 0x9e, 0x96, 0x95, 0x3f, 0x03, 0xd7, 0xab, 0xf6, 0x43, 0x78, 0x6f, 0xe1, 0x59, 0x96,
+	0x64, 0xfc, 0xa0, 0x98, 0x51, 0xa2, 0x19, 0xf9, 0x9e, 0xff, 0xc8, 0xcb, 0x75, 0xaf, 0xff, 0xb8,
+	0x3f, 0x78, 0xd6, 0x97, 0xcf, 0xa1, 0x0d, 0x68, 0xec, 0x76, 0x7f, 0x30, 0xf4, 0x3d, 0x22, 0x53,
+	0x01, 0x9d, 0x87, 0x66, 0xaf, 0xff, 0x72, 0x68, 0x0e, 0x1e, 0x99, 0xc6, 0xee, 0xae, 0x2c, 0xd2,
+	0xfd, 0xbd, 0x6e, 0xd7, 0x30, 0x74, 0x2a, 0xe3, 0x5c, 0xd2, 0x55, 0x92, 0xa7, 0xf3, 0x60, 0x60,
+	0x12, 0x49, 0x4b, 0xea, 0x9f, 0x02, 0xc8, 0x3a, 0x0e, 0xb0, 0xe7, 0x60, 0xcf, 0x9e, 0x77, 0x7d,
+	0x6f, 0xec, 0x1e, 0xa0, 0xfb, 0x50, 0x0f, 0xf1, 0x4f, 0x33, 0x37, 0xc4, 0x84, 0x4c, 0x04, 0xf1,
+	0x6b, 0x5a, 0xd9, 0x49, 0x33, 0x99, 0x47, 0x82, 0x72, 0x16, 0x80, 0x2e, 0x80, 0x64, 0x1d, 0x5b,
+	0x6e, 0xc2, 0x24, 0xc9, 0x4c, 0x16, 0xed, 0x7d, 0xd8, 0x28, 0x04, 0x2c, 0x81, 0x62, 0xbb, 0x08,
+	0xc5, 0x15, 0x0a, 0x45, 0x7e, 0xec, 0xd0, 0x0a, 0xad, 0x29, 0x8e, 0x71, 0x58, 0x98, 0x66, 0xc7,
+	0x50, 0xa5, 0x57, 0xd3, 0xa9, 0x66, 0xd0, 0x87, 0x85, 0x19, 0xc4, 0x5d, 0x1d, 0xc9, 0xd4, 0xb9,
+	0x51, 0x9a, 0x3a, 0x85, 0x49, 0x9a, 0xce, 0x99, 0x7f, 0x45, 0xa8, 0xa7, 0x71, 0xe4, 0x62, 0x1c,
+	0xcf, 0x3c, 0x9b, 0x72, 0x00, 0x8f, 0x59, 0x51, 0xbc, 0x09, 0xdd, 0x2e, 0xcd, 0x96, 0x8b, 0xd9,
+	0xa1, 0x4b, 0xa7, 0xc9, 0x1d, 0xae, 0x03, 0x89, 0xb6, 0x2e, 0xe7, 0x01, 0x27, 0x22, 0x5f, 0xe5,
+	0x90, 0xe7, 0x74, 0x26, 0xad, 0xd4, 0xd9, 0x59, 0x4d, 0xa8, 0x77, 0xd6, 0xe6, 0x7f, 0x84, 0x44,
+	0x99, 0x4c, 0x0a, 0x9f, 0x95, 0x66, 0x1d, 0xe2, 0x3a, 0x74, 0x76, 0xd3, 0xed, 0x53, 0xd2, 0x84,
+	0xc8, 0x9f, 0x1c, 0x61, 0x87, 0x31, 0x61, 0x43, 0x33, 0x99, 0x81, 0xca, 0x34, 0xdb, 0x7e, 0xfb,
+	0xcd, 0xad, 0x7e, 0xce, 0x6b, 0x78, 0x77, 0xd4, 0xa1, 0xda, 0xe3, 0xae, 0x5c, 0x81, 0xd3, 0xa7,
+	0xa8, 0xfe, 0x26, 0x80, 0xb2, 0x0a, 0x13, 0xf4, 0x3d, 0x54, 0xc9, 0x9b, 0x2b, 0xab, 0x7b, 0x6b,
+	0x25, 0x78, 0x9c, 0x5e, 0x49, 0xa7, 0x4c, 0x1a, 0x45, 0x19, 0x32, 0x71, 0xad, 0x88, 0xe2, 0xd0,
+	0x30, 0x93, 0x85, 0x7a, 0x1f, 0x5a, 0x45, 0x6f, 0x54, 0x87, 0xaa, 0xde, 0x19, 0x75, 0xe4, 0x73,
+	0xe4, 0x81, 0xbb, 0x83, 0xfe, 0xc8, 0x1c, 0x3c, 0x91, 0x05, 0x84, 0xa0, 0xa5, 0x3f, 0xef, 0x77,
+	0x9e, 0xf6, 0xba, 0x2f, 0x07, 0x7b, 0xa3, 0xe1, 0xde, 0x48, 0x16, 0xd5, 0x5f, 0x04, 0x68, 0x15,
+	0xa7, 0xe0, 0xe9, 0xb4, 0x78, 0xb3, 0xa0, 0xc5, 0xf7, 0x4b, 0x13, 0x95, 0x53, 0xe5, 0xed, 0x92,
+	0x2a, 0x2f, 0x96, 0x5d, 0x8b, 0xfa, 0x7c, 0x23, 0x00, 0x5a, 0xcc, 0x45, 0xde, 0xc7, 0x33, 0xfc,
+	0x16, 0xfa, 0x99, 0x80, 0x74, 0x09, 0x6a, 0xe4, 0x86, 0xea, 0x39, 0x0c, 0x25, 0xb6, 0x42, 0xdf,
+	0x66, 0x12, 0xae, 0xb0, 0x99, 0xb8, 0x98, 0x7f, 0x99, 0x98, 0xcf, 0xec, 0xfa, 0xff, 0x43, 0x84,
+	0x0b, 0xcb, 0x6a, 0x46, 0x5f, 0x95, 0xe4, 0x70, 0x75, 0x29, 0x34, 0x67, 0x27, 0x8c, 0x7c, 0xa4,
+	0x54, 0x56, 0x5f, 0xdd, 0x6f, 0x97, 0xc4, 0xeb, 0x77, 0x7a, 0xad, 0x51, 0x9d, 0x3d, 0xee, 0x0d,
+	0x87, 0x86, 0x2e, 0xd7, 0xd4, 0x17, 0xd0, 0x2a, 0xd2, 0x0f, 0xb5, 0x40, 0x74, 0xd3, 0x37, 0x40,
+	0xd1, 0x75, 0x08, 0x14, 0x76, 0x88, 0x19, 0x14, 0x95, 0x93, 0xa1, 0xc8, 0x9c, 0xd5, 0x6f, 0x00,
+	0xf2, 0xda, 0xc9, 0x47, 0x4e, 0xc6, 0xae, 0x46, 0xae, 0xb9, 0xbc, 0xb9, 0xeb, 0xac, 0x9f, 0xea,
+	0xd7, 0x20, 0x51, 0x3c, 0x48, 0x88, 0xed, 0x3b, 0x59, 0x08, 0xf9, 0x4f, 0xbe, 0xa2, 0xa6, 0x38,
+	0x8a, 0xac, 0x03, 0xcc, 0x28, 0x98, 0x2e, 0xd5, 0x7d, 0x58, 0xe7, 0x19, 0x4b, 0xb8, 0x14, 0x85,
+	0x76, 0xca, 0xa5, 0x28, 0xb4, 0x49, 0x6c, 0x38, 0xf3, 0xc8, 0x07, 0x6c, 0x1a, 0xcb, 0x96, 0xe4,
+	0x0d, 0xb5, 0x30, 0xce, 0x1a, 0xf9, 0xfc, 0x7a, 0xb0, 0xf6, 0x42, 0xa2, 0x1f, 0xc4, 0xaf, 0x6a,
+	0xb4, 0xdc, 0x3b, 0xff, 0x05, 0x00, 0x00, 0xff, 0xff, 0x18, 0xae, 0xe2, 0xde, 0x2a, 0x0f, 0x00,
+	0x00,
 }
