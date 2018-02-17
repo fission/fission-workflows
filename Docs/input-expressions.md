@@ -121,9 +121,8 @@ name | Usage      | Description
 uid  | `uid()`    | Generates a unique (string) id
 input | `input("taskId", "key")` | Gets the input of a task for the given key. If no key is provided, the default key is used.    
 output | `output("taskId")` | Gets the output of a task. If no argument is provided the output of the current task is returned.
-param | `param("key")` | Gets the invocation param for the given key.  
-task | `task("taskId")` | Gets the task for the given taskId.
-me
+param | `param("key")` | Gets the invocation param for the given key. If no key is provided, the default key is used.
+task | `task("taskId")` | Gets the task for the given taskId. If no argument is provided the current task is returned.
 
 ### Adding Custom Function
 The JavaScript expression interpreter is fully extensible, allowing you to add your own functions to the existing 

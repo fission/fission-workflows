@@ -11,12 +11,11 @@ import (
 
 // Built-in functions for the expression parser
 var BuiltinFunctions = map[string]Function{
-	"uid":     &UidFn{},
-	"input":   &InputFn{},
-	"output":  &OutputFn{},
-	"param":   &ParamFn{},
-	"task":    &TaskFn{},
-	"current": &CurrentFn{},
+	"uid":    &UidFn{},
+	"input":  &InputFn{},
+	"output": &OutputFn{},
+	"param":  &ParamFn{},
+	"task":   &TaskFn{},
 }
 
 // UidFn provides a function to generate a unique (string) id
@@ -33,22 +32,28 @@ func (qf *UidFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 type InputFn struct{}
 
 // Apply gets the input of a task for the given key. If no key is provided, the default key is used.
+// If no argument is provided at all, the default key of the current task will be used.
 func (qf *InputFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 	var task, inputKey string
 	switch len(call.ArgumentList) {
 	case 0:
-		return otto.UndefinedValue()
+		task = varCurrentTask
+		fallthrough
 	case 1:
 		inputKey = types.INPUT_MAIN
 		fallthrough
 	case 2:
 		fallthrough
 	default:
-		task = call.Argument(0).String()
+		// Set task if argument provided
+		if len(call.ArgumentList) > 0 {
+			task = fmt.Sprintf("\"%s\"", call.Argument(0).String())
+		}
+		// Set input key if argument provided
 		if len(call.ArgumentList) > 1 {
 			inputKey = call.Argument(1).String()
 		}
-		lookup := fmt.Sprintf("$.Tasks.%s.Inputs.%s", task, inputKey)
+		lookup := fmt.Sprintf("$.Tasks[%s].Inputs[\"%s\"]", task, inputKey)
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup input: %s", lookup)
@@ -69,10 +74,11 @@ func (qf *OutputFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		task = varCurrentTask
 		fallthrough
 	default:
-		if len(task) == 0 {
+		// Set task if argument provided
+		if len(call.ArgumentList) > 0 {
 			task = fmt.Sprintf("\"%s\"", call.Argument(0).String())
 		}
-		lookup := fmt.Sprintf("$.Tasks.%s.Output", task)
+		lookup := fmt.Sprintf("$.Tasks[%s].Output", task)
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup output: %s", lookup)
@@ -82,17 +88,23 @@ func (qf *OutputFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 	}
 }
 
-// ParmFn provides a function to get the invocation param for the given key
+// ParmFn provides a function to get the invocation param for the given key. If no key is provided, the default key
+// is used.
 type ParamFn struct{}
 
-// Apply gets the invocation param for the given key
+// Apply gets the invocation param for the given key. If no key is provided, the default key is used.
 func (qf *ParamFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
+	var key string
 	switch len(call.ArgumentList) {
 	case 0:
-		return otto.UndefinedValue()
+		key = types.INPUT_MAIN
+		fallthrough
 	default:
-		param := call.Argument(0).String()
-		lookup := fmt.Sprintf("$.Invocation.Inputs.%s", param)
+		// Set key if argument provided
+		if len(call.ArgumentList) > 0 {
+			key = call.Argument(0).String()
+		}
+		lookup := fmt.Sprintf("$.Invocation.Inputs[\"%s\"]", key)
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup param: %s", lookup)
@@ -102,17 +114,23 @@ func (qf *ParamFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 	}
 }
 
-// TaskFn provides a function to get a task for the given taskId.
+// TaskFn provides a function to get a task for the given taskId. If no argument is provided the current task is
+// returned.
 type TaskFn struct{}
 
-// Apply gets the task for the given taskId.
+// Apply gets the task for the given taskId. If no argument is provided the current task is returned.
 func (qf *TaskFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
+	var task string
 	switch len(call.ArgumentList) {
 	case 0:
-		return otto.UndefinedValue()
+		task = varCurrentTask
+		fallthrough
 	default:
-		param := call.Argument(0).String()
-		lookup := fmt.Sprintf("$.Tasks.%s", param)
+		// Set task if argument provided
+		if len(call.ArgumentList) > 0 {
+			task = fmt.Sprintf("\"%s\"", call.Argument(0).String())
+		}
+		lookup := fmt.Sprintf("$.Tasks[%s]", task)
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup param: %s", lookup)
@@ -120,16 +138,4 @@ func (qf *TaskFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		}
 		return result
 	}
-}
-
-type CurrentFn struct{}
-
-func (ct *CurrentFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
-	lookup := fmt.Sprintf("$.Tasks[%s]", varCurrentTask)
-	result, err := vm.Eval(lookup)
-	if err != nil {
-		logrus.Warnf("Failed to lookup param: %s", lookup)
-		return otto.UndefinedValue()
-	}
-	return result
 }
