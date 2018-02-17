@@ -8,70 +8,67 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Scope is a custom view of the data, which can be queried by the user.
+// Scope is the broadest view of the workflow invocation, which can be queried by the user.
 type Scope struct {
 	Workflow   *WorkflowScope
 	Invocation *InvocationScope
 	Tasks      map[string]*TaskScope
 }
 
+// WorkflowScope provides information about the workflow definition.
 type WorkflowScope struct {
 	*ObjectMetadata
 	UpdatedAt     int64  // unix timestamp
 	Status        string // workflow status
-	ResolvedTasks map[string]*TaskDefScope
+	ResolvedTasks map[string]*types.TaskTypeDef
 }
 
-type TaskDefScope struct {
-	Runtime  string
-	Src      string
-	Resolved string
-}
-
+// InvocationScope object provides information about the current invocation.
 type InvocationScope struct {
 	*ObjectMetadata
 	Inputs map[string]interface{}
 }
 
+// ObjectMetadata contains identity and meta-data about an object.
 type ObjectMetadata struct {
 	Id        string
 	CreatedAt int64 // unix timestamp
 }
 
+// TaskScope holds information about a specific task execution within the current workflow invocation.
 type TaskScope struct {
-	*ObjectMetadata
+	*types.ObjectMetadata
 	Status    string // TaskInvocation status
 	UpdatedAt int64  // unix timestamp
 	Inputs    map[string]interface{}
 	Requires  map[string]*types.TaskDependencyParameters
-	Name      string
 	Output    interface{}
 }
 
-func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
+// NewScope creates a new scope given the workflow invocation and its associates workflow definition.
+func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 
 	tasks := map[string]*TaskScope{}
-	for taskId, fn := range invoc.Status.Tasks {
+	for taskId, fn := range wfi.Status.Tasks {
 
 		// Dep: pipe output of dynamic tasks
-		t := typedvalues.ResolveTaskOutput(taskId, invoc)
+		t := typedvalues.ResolveTaskOutput(taskId, wfi)
 		output, err := typedvalues.Format(t)
 		if err != nil {
 			panic(err)
 		}
 
-		taskDef, ok := invoc.Status.DynamicTasks[taskId]
+		taskDef, ok := wfi.Status.DynamicTasks[taskId]
 		if !ok {
 			taskDef = wf.Spec.Tasks[taskId]
 		}
 
 		tasks[taskId] = &TaskScope{
-			ObjectMetadata: formatMetadata(fn.Metadata),
+			ObjectMetadata: fn.Metadata,
 			Status:         fn.Status.Status.String(),
 			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
 			Inputs:         formatTypedValueMap(fn.Spec.Inputs),
 			Requires:       taskDef.Requires,
-			Name:           taskDef.FunctionRef,
 			Output:         output,
 		}
 	}
@@ -81,26 +78,14 @@ func NewScope(wf *types.Workflow, invoc *types.WorkflowInvocation) *Scope {
 			ObjectMetadata: formatMetadata(wf.Metadata),
 			UpdatedAt:      formatTimestamp(wf.Status.UpdatedAt),
 			Status:         wf.Status.Status.String(),
-			ResolvedTasks:  formatResolvedTask(wf.Status.ResolvedTasks),
+			ResolvedTasks:  wf.Status.ResolvedTasks,
 		},
 		Invocation: &InvocationScope{
-			ObjectMetadata: formatMetadata(invoc.Metadata),
-			Inputs:         formatTypedValueMap(invoc.Spec.Inputs),
+			ObjectMetadata: formatMetadata(wfi.Metadata),
+			Inputs:         formatTypedValueMap(wfi.Spec.Inputs),
 		},
 		Tasks: tasks,
 	}
-}
-
-func formatResolvedTask(resolved map[string]*types.TaskTypeDef) map[string]*TaskDefScope {
-	results := map[string]*TaskDefScope{}
-	for k, v := range resolved {
-		results[k] = &TaskDefScope{
-			Src:      v.Src,
-			Runtime:  v.Runtime,
-			Resolved: v.Resolved,
-		}
-	}
-	return results
 }
 
 func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {

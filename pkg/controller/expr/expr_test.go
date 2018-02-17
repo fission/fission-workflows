@@ -1,20 +1,20 @@
 package expr
 
 import (
-	"testing"
-
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/stretchr/testify/assert"
 )
 
 var scope = map[string]interface{}{
 	"bit": "bat",
 }
-var rootscope = map[string]interface{}{
+var rootScope = map[string]interface{}{
 	"foo":          "bar",
 	"currentScope": scope,
 }
@@ -23,7 +23,7 @@ func TestResolveTestRootScopePath(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, rootscope, nil, typedvalues.Expr("{$.currentScope.bit}"))
+	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr("{$.currentScope.bit}"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,29 +34,20 @@ func TestResolveTestRootScopePath(t *testing.T) {
 	}
 
 	expected := scope["bit"]
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", expected, resolved)
-	}
+	assert.Equal(t, expected, resolvedString)
 }
 
 func TestResolveTestScopePath(t *testing.T) {
-
+	currentTask := "fooTask"
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr("task.bit"))
-	if err != nil {
-		t.Error(err)
-	}
+	resolved, err := exprParser.Resolve(rootScope, currentTask, typedvalues.Expr(varCurrentTask))
+	assert.NoError(t, err)
 
 	resolvedString, err := typedvalues.Format(resolved)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
-	expected := scope["bit"]
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", expected, resolved)
-	}
+	assert.Equal(t, currentTask, resolvedString)
 }
 
 func TestResolveLiteral(t *testing.T) {
@@ -64,26 +55,11 @@ func TestResolveLiteral(t *testing.T) {
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
 	expected := "foobar"
-	resolved, _ := exprParser.Resolve(rootscope, scope, "output", typedvalues.Expr(fmt.Sprintf("'%s'", expected)))
+	resolved, err := exprParser.Resolve(rootScope, "output", typedvalues.Expr(fmt.Sprintf("'%s'", expected)))
+	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", expected, resolved)
-	}
-}
-
-func TestResolveOutput(t *testing.T) {
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
-
-	expected := "expected"
-	resolved, _ := exprParser.Resolve(rootscope, scope, map[string]string{
-		"acme": expected,
-	}, typedvalues.Expr("output.acme"))
-
-	resolvedString, _ := typedvalues.Format(resolved)
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", expected, resolved)
-	}
+	assert.Equal(t, expected, resolvedString)
 }
 
 func TestResolveTransformation(t *testing.T) {
@@ -91,30 +67,24 @@ func TestResolveTransformation(t *testing.T) {
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
 	src := "foobar"
-	resolved, _ := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr(fmt.Sprintf("'%s'.toUpperCase()", src)))
 	expected := strings.ToUpper(src)
+	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr(fmt.Sprintf("'%s'.toUpperCase()", src)))
+	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", src, resolved)
-	}
+	assert.Equal(t, expected, resolvedString)
 }
 
 func TestResolveInjectedFunction(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, err := exprParser.Resolve(rootscope, scope, nil, typedvalues.Expr("uid()"))
-
-	if err != nil {
-		t.Error(err)
-	}
+	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr("uid()"))
+	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
 
-	if resolvedString == "" {
-		t.Error("Uid returned empty string")
-	}
+	assert.NotEmpty(t, resolvedString)
 }
 
 func TestScope(t *testing.T) {
@@ -169,11 +139,9 @@ func TestScope(t *testing.T) {
 
 	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 
-	resolved, _ := exprParser.Resolve(actualScope, actualScope.Tasks["fooTask"], nil,
-		typedvalues.Expr("{$.Tasks.fooTask.Output}"))
+	resolved, err := exprParser.Resolve(actualScope, "fooTask", typedvalues.Expr("{$.Tasks.fooTask.Output}"))
+	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
-	if resolvedString != expected {
-		t.Errorf("Expected value '%v' does not match '%v'", resolvedString, expectedOutput)
-	}
+	assert.Equal(t, expected, resolvedString)
 }
