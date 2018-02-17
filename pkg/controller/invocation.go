@@ -406,7 +406,7 @@ func (a *invokeTaskAction) Apply() error {
 	inputs := map[string]*types.TypedValue{}
 	queryScope := expr.NewScope(a.wf, a.wfi)
 	for inputKey, val := range a.task.Inputs {
-		resolvedInput, err := a.expr.Resolve(queryScope, queryScope.Tasks[a.task.Id], nil, val)
+		resolvedInput, err := a.expr.Resolve(queryScope, a.task.Id, val)
 		if err != nil {
 			actionLog.WithFields(logrus.Fields{
 				"val":      val,

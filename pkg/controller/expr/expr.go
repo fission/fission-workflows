@@ -1,11 +1,9 @@
 package expr
 
 import (
-	"time"
-
 	"errors"
-
 	"strings"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
@@ -14,15 +12,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Resolver interface {
-	Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error)
-}
+const (
+	varScope         = "$"
+	varCurrentTask   = "taskId"
+	ResolvingTimeout = time.Duration(100) * time.Millisecond
+)
 
 var (
-	ResolvingTimeout = time.Duration(100) * time.Millisecond
-
 	ErrTimeOut = errors.New("expression resolver timed out")
 )
+
+// Resolver resolves an expression within a given context/scope.
+type Resolver interface {
+	Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error)
+}
+
+// Function is an interface for providing functions that are able to be injected into the Otto runtime.
+type Function interface {
+	Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value
+}
 
 type JavascriptExpressionParser struct {
 	vm     *otto.Otto
@@ -39,7 +47,9 @@ func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpress
 	}
 }
 
-func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScope interface{}, output interface{}, expr *types.TypedValue) (*types.TypedValue, error) {
+func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask string,
+	expr *types.TypedValue) (*types.TypedValue, error) {
+
 	defer func() {
 		if caught := recover(); caught != nil {
 			if ErrTimeOut != caught {
@@ -65,7 +75,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 				return nil, err
 			}
 
-			resolved, err := oe.Resolve(rootScope, currentScope, output, field)
+			resolved, err := oe.Resolve(rootScope, currentTask, field)
 			if err != nil {
 				return nil, err
 			}
@@ -85,11 +95,8 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentScop
 
 	scoped := oe.vm.Copy()
 	injectFunctions(scoped, BuiltinFunctions)
-	err := scoped.Set("$", rootScope)
-	err = scoped.Set("task", currentScope)
-	if output != nil {
-		err = scoped.Set("output", output)
-	}
+	err := scoped.Set(varScope, rootScope)
+	err = scoped.Set(varCurrentTask, currentTask)
 	if err != nil {
 		// Failed to set some variable
 		return nil, err
