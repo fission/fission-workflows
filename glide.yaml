@@ -9,7 +9,7 @@ import:
 - package: golang.org/x/text
   version: 88f656faf3f37f690df1a32515b479415e1a6769
 - package: github.com/sirupsen/logrus
-  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
+  version: 1.0.4
 - package: github.com/urfave/cli
   version: ^1.18.1
 - package: github.com/gorilla/handlers
@@ -22,7 +22,6 @@ import:
   version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
 - package: golang.org/x/net
   version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
-- package: google.golang.org/genproto
 - package: github.com/satori/go.uuid
   version: ^1.1.0
 - package: github.com/nats-io/go-nats
@@ -32,7 +31,7 @@ import:
 - package: github.com/nats-io/go-nats-streaming
   version: ^v0.3.4
 - package: github.com/gogo/protobuf
-  version: ^0.4.0
+  version: 1.0.0
   subpackages:
   - gogoproto
 - package: github.com/golang/glog
@@ -52,6 +51,13 @@ import:
 - package: golang.org/x/sync
   subpackages:
   - syncmap
+- package: gonum.org/v1/gonum
+  version: 996b88e8f8941c9defdbb338bea5e239a230e742
+  repo:    http://github.com/gonum/gonum
+  subpackages:
+  - graph
+  - graph/topo
+  - graph/simple
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.1.4

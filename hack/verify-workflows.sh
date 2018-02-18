@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+find_files() {
+  find . -not \( \
+      \( \
+        -wholename '*/vendor/*' \
+      \) -prune \
+    \) -name '*.wf.yaml'
+}
+
+TOOL="wfcli validate"
+bad_files=$(find_files | grep -v '.glide/cache' | xargs ${TOOL})
+if [[ -n "${bad_files}" ]]; then
+  echo "The following workflows are invalid: "
+  echo "${bad_files}"
+  exit 1
+fi
