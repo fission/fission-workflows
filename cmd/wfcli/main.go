@@ -40,6 +40,7 @@ func main() {
 		cmdParse,
 		cmdWorkflow,
 		cmdInvocation,
+		cmdValidate,
 	}
 
 	app.Run(os.Args)
@@ -63,15 +64,17 @@ func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
 	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
 }
 
-func fatal(msg interface{}) {
-	fmt.Fprintln(os.Stderr, msg)
+func fail(msg ...interface{}) {
+	for _, line := range msg {
+		fmt.Fprintln(os.Stderr, line)
+	}
 	os.Exit(1)
 }
 
 func parseUrl(rawUrl string) *url.URL {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
-		fatal(fmt.Sprintf("Invalid url '%s': %v", rawUrl, err))
+		fail(fmt.Sprintf("Invalid url '%s': %v", rawUrl, err))
 	}
 	return u
 }

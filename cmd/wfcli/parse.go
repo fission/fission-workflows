@@ -14,7 +14,7 @@ var cmdParse = cli.Command{
 	Name:        "parse",
 	Aliases:     []string{"p"},
 	Usage:       "parse <path-to-yaml> ",
-	Description: "Parse YAML definitions to the executable JSON format (deprecated)",
+	Description: "Read YAML definitions to the executable JSON format (deprecated)",
 	Action: func(c *cli.Context) error {
 
 		if c.NArg() == 0 {

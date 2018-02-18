@@ -36,10 +36,11 @@ install:
 - nats-streaming-server -h > /dev/null || go get github.com/nats-io/nats-streaming-server
 
 before_script:
-# Build
 - cd ${TRAVIS_BUILD_DIR}
+# Static code analysis
 - hack/verify-govet.sh
 - hack/verify-gofmt.sh
+# Build
 - glide install
 - build/build-linux.sh
 
