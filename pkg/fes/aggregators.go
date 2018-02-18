@@ -11,7 +11,10 @@ import (
 // - ApplyEvent(event)
 type AggregatorMixin struct {
 	aggregate Aggregate
-	parent    Aggregator
+	// parent is a pointer to the wrapper of this mixin, to allow for reflection-based aggregation.
+	parent Aggregator
+
+	version uint
 }
 
 func (am *AggregatorMixin) Aggregate() Aggregate {
@@ -41,6 +44,13 @@ func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
 		}
 	}
 	return nil
+}
+
+func (am AggregatorMixin) CopyAggregatorMixin(self Aggregator) *AggregatorMixin {
+	return &AggregatorMixin{
+		aggregate: am.aggregate,
+		parent:    self,
+	}
 }
 
 func NewAggregatorMixin(thiz Aggregator, aggregate Aggregate) *AggregatorMixin {

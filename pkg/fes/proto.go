@@ -35,3 +35,8 @@ func (m *Event) Labels() labels.Labels {
 		"event.type":     m.Type,
 	}
 }
+
+func (m *Event) BelongsTo(parent Aggregator) bool {
+	a := parent.Aggregate()
+	return *m.Aggregate != a && *m.Parent != a
+}

@@ -1,9 +1,8 @@
 package aggregates
 
 import (
-	"fmt"
-
 	"errors"
+	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -118,12 +117,20 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	taskId := event.Aggregate.Id
 	task, ok := wi.Status.Tasks[taskId]
 	if !ok {
-		task = &types.TaskInvocation{}
+		task = &types.TaskInvocation{
+			Metadata: &types.ObjectMetadata{
+				Id: taskId,
+			},
+		}
 	}
 	ti := NewTaskInvocation(taskId, task)
 	err := ti.ApplyEvent(event)
 	if err != nil {
 		return err
+	}
+
+	if wi.Status.Tasks == nil {
+		wi.Status.Tasks = map[string]*types.TaskInvocation{}
 	}
 	wi.Status.Tasks[taskId] = ti.TaskInvocation
 
@@ -137,23 +144,19 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 		if dynamicTask.Requires == nil {
 			dynamicTask.Requires = map[string]*types.TaskDependencyParameters{}
 		}
-
-		if dynamicTask.Inputs == nil {
-			dynamicTask.Inputs = map[string]*types.TypedValue{}
-		}
-
-		// Ensure that the outputted task depends on the creating task
-		dynamicTask.Requires[taskId] = &types.TaskDependencyParameters{
-			Type: types.TaskDependencyParameters_DYNAMIC_OUTPUT, // Marks this task as the output of the
-		}
-
-		log.WithFields(log.Fields{
-			"id":          dynamicTask.Id,
-			"functionRef": dynamicTask.FunctionRef,
-		}).Debug("Adding dynamic task.")
-
-		wi.Status.DynamicTasks[id] = dynamicTask
 	}
 
 	return nil
+}
+
+func (wi *WorkflowInvocation) GenericCopy() fes.Aggregator {
+	n := &WorkflowInvocation{
+		WorkflowInvocation: wi.Copy(),
+	}
+	n.AggregatorMixin = wi.CopyAggregatorMixin(n)
+	return n
+}
+
+func (wi *WorkflowInvocation) Copy() *types.WorkflowInvocation {
+	return proto.Clone(wi.WorkflowInvocation).(*types.WorkflowInvocation)
 }

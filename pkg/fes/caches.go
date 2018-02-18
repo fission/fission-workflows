@@ -3,7 +3,7 @@ package fes
 import (
 	"context"
 	"errors"
-
+	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
@@ -15,14 +15,16 @@ var (
 	ErrNotFound = errors.New("could not find entity")
 )
 
-// MapCache provides a simple non-preempting map-based CacheReaderWriter implementation
+// MapCache provides a simple non-preempting map-based CacheReaderWriter implementation.
 type MapCache struct {
 	contents map[string]map[string]Aggregator // Map: AggregateType -> AggregateId -> entity
+	lock     *sync.RWMutex
 }
 
 func NewMapCache() *MapCache {
 	return &MapCache{
 		contents: map[string]map[string]Aggregator{},
+		lock:     &sync.RWMutex{},
 	}
 }
 
@@ -57,6 +59,8 @@ func (rc *MapCache) GetAggregate(aggregate Aggregate) (Aggregator, error) {
 		return nil, err
 	}
 
+	rc.lock.RLock()
+	defer rc.lock.RUnlock()
 	aType, ok := rc.contents[aggregate.Type]
 	if !ok {
 		return nil, nil
@@ -77,6 +81,8 @@ func (rc *MapCache) Put(entity Aggregator) error {
 		return err
 	}
 
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
 	if _, ok := rc.contents[ref.Type]; !ok {
 		rc.contents[ref.Type] = map[string]Aggregator{}
 	}
@@ -85,8 +91,16 @@ func (rc *MapCache) Put(entity Aggregator) error {
 	return nil
 }
 
+func (rc *MapCache) Invalidate(ref *Aggregate) {
+	rc.lock.Lock()
+	defer rc.lock.Unlock()
+	delete(rc.contents[ref.Type], ref.Id)
+}
+
 func (rc *MapCache) List() []Aggregate {
-	results := []Aggregate{}
+	rc.lock.RLock()
+	defer rc.lock.RUnlock()
+	var results []Aggregate
 	for atype := range rc.contents {
 		for _, entity := range rc.contents[atype] {
 			results = append(results, entity.Aggregate())
@@ -95,7 +109,7 @@ func (rc *MapCache) List() []Aggregate {
 	return results
 }
 
-// A SubscribedCache is subscribed to some event emitter,
+// A SubscribedCache is subscribed to some event emitter, using a mutex to ensure thread safety
 type SubscribedCache struct {
 	pubsub.Publisher
 	CacheReaderWriter
@@ -115,18 +129,19 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 		for {
 			select {
 			case <-ctx.Done():
+				logrus.Info("SubscribedCache worker was canceled.")
 				return
 			case msg := <-sub.Ch:
 				// Discard invalid messages
 				event, ok := msg.(*Event)
 				if !ok {
-					logrus.WithField("msg", msg).Error("Received a malformed message")
+					logrus.WithField("msg", msg).Error("Received a malformed message. Ignoring.")
 					continue
 				}
 				logrus.WithField("msg", msg.Labels()).Debug("Cache received new event.")
 				err := c.ApplyEvent(event)
 				if err != nil {
-					logrus.WithField("err", err).Error("Failed to handle event")
+					logrus.WithField("err", err).Error("Failed to handle event. Continuing.")
 				}
 			}
 		}
@@ -141,7 +156,7 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
 		"event.type":     event.Type,
-	}).Debug("Handling event for subscribed cache.")
+	}).Debug("Applying event to subscribed cache.")
 
 	cached, err := uc.GetAggregate(*event.GetAggregate())
 	if err != nil {
@@ -164,6 +179,9 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 		}
 	}
 
+	// clone to avoid race conflicts with subscribers of the cache.
+	cached = cached.GenericCopy()
+
 	err = Project(cached, event)
 	if err != nil {
 		return err
@@ -175,7 +193,8 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 	}
 
 	// Do not publish replayed events as notifications
-	ets, _ := ptypes.Timestamp(event.Timestamp) // TODO replace with a token or flag that cache has cached up.
+	// TODO replace with a token or flag that cache has cached up.
+	ets, _ := ptypes.Timestamp(event.Timestamp)
 	if ets.After(uc.ts) {
 		n := newNotification(cached, event)
 		logrus.WithFields(logrus.Fields{
@@ -184,10 +203,9 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 			"aggregate.type":    event.Aggregate.Type,
 			"notification.type": n.EventType,
 		}).Debug("Cache handling done. Sending out Notification.")
-		return uc.Publisher.Publish(n)
-	} else {
-		return nil
+		err = uc.Publisher.Publish(n)
 	}
+	return err
 }
 
 // FallbackCache looks into a backing data store in case there is a cache miss

@@ -16,7 +16,7 @@ message Event {
     Aggregate aggregate = 3;
     google.protobuf.Timestamp timestamp = 4;
     bytes data = 5;
-    Aggregate parent = 6; // TODO what is the difference between a parent and a aggregate ??
+    Aggregate parent = 6;
     EventHints hints = 7;
 }
 
