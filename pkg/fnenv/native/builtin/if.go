@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// Condition
+	If               = "if"
 	IfInputCondition = "if"
 	IfInputThen      = "then"
 	IfInputElse      = "else"
@@ -20,7 +20,7 @@ type FunctionIf struct{}
 func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 
 	// Verify and get condition
-	expr, err := verifyInput(spec.GetInputs(), IfInputCondition, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_BOOL))
+	expr, err := verifyInput(spec.GetInputs(), IfInputCondition)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestSleepFunctionString(t *testing.T) {
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				SleepInput: parseUnsafe("1000ms"),
+				SleepInput: typedvalues.UnsafeParse("1000ms"),
 			},
 		},
 		nil)
@@ -29,7 +30,7 @@ func TestSleepFunctionInt(t *testing.T) {
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				SleepInput: parseUnsafe(1000),
+				SleepInput: typedvalues.UnsafeParse(1000),
 			},
 		},
 		nil)

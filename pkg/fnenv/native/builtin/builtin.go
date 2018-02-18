@@ -2,8 +2,8 @@ package builtin
 
 import (
 	"fmt"
-
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
@@ -12,33 +12,38 @@ import (
 )
 
 var DefaultBuiltinFunctions = map[string]native.InternalFunction{
-	"if":      &FunctionIf{},
-	"noop":    &FunctionNoop{},
-	"compose": &FunctionCompose{},
-	"sleep":   &FunctionSleep{},
-	"scope":   &FunctionScope{},
+	If:         &FunctionIf{},
+	Noop:       &FunctionNoop{},
+	"nop":      &FunctionNoop{},
+	Compose:    &FunctionCompose{},
+	Sleep:      &FunctionSleep{},
+	Repeat:     &FunctionRepeat{},
+	Javascript: NewFunctionJavascript(),
 }
 
 // Utils
-func verifyInput(inputs map[string]*types.TypedValue, key string, expType string) (*types.TypedValue, error) {
+func verifyInput(inputs map[string]*types.TypedValue, key string, validTypes ...string) (*types.TypedValue, error) {
 
 	i, ok := inputs[key]
 	if !ok {
 		return nil, fmt.Errorf("input '%s' is not set", key)
 	}
 
-	//if !typedvalues.(i.Type, expType) {
-	//	return nil, fmt.Errorf("Input '%s' is not of expected type '%s' (was '%s')", key, expType, i.Type)
-	//}
-	return i, nil
-}
-
-func parseUnsafe(i interface{}) *types.TypedValue {
-	val, err := typedvalues.Parse(i)
-	if err != nil {
-		panic(err)
+	if len(validTypes) > 0 {
+		var valid bool
+		for _, t := range validTypes {
+			if strings.Contains(i.Type, t) {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %s)", key,
+				strings.Join(validTypes, "|"))
+		}
 	}
-	return val
+
+	return i, nil
 }
 
 func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types.TaskInvocationSpec, expected interface{}) {

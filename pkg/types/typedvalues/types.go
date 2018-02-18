@@ -74,7 +74,8 @@ func newDefaultParserFormatter() ParserFormatter {
 		FormatType(FORMAT_JSON, TYPE_STRING): jsPf,
 		FormatType(FORMAT_JSON, TYPE_ARRAY):  jsPf,
 		FormatType(FORMAT_JSON, TYPE_OBJECT): jsPf,
-		FormatType(TYPE_FLOW):                &ControlFlowParserFormatter{},
+		FormatType(TypeTask):                 &ControlFlowParserFormatter{},
+		FormatType(TypeWorkflow):             &ControlFlowParserFormatter{},
 		FormatType(TYPE_NIL):                 &NilParserFormatter{},
 		FormatType(TYPE_RAW):                 &RawParserFormatter{},
 	}, []string{
@@ -84,7 +85,8 @@ func newDefaultParserFormatter() ParserFormatter {
 		FormatType(FORMAT_JSON, TYPE_STRING),
 		FormatType(FORMAT_JSON, TYPE_ARRAY),
 		FormatType(FORMAT_JSON, TYPE_OBJECT),
-		FormatType(TYPE_FLOW),
+		FormatType(TypeTask),
+		FormatType(TypeWorkflow),
 		FormatType(TYPE_NIL),
 		FormatType(TYPE_RAW),
 	}...)

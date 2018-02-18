@@ -70,9 +70,9 @@ func (m *Error) Error() string {
 	return m.Message
 }
 
-type TaskSpec = Task
-
 type TaskInstance struct {
 	Task       *TaskSpec
 	Invocation *TaskInvocation
 }
+
+type TaskSpec = Task

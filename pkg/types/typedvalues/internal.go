@@ -6,13 +6,11 @@ import (
 	"strings"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/proto"
 )
 
 const (
 	FORMAT_RESERVED = "reserved"
 	TYPE_EXPRESSION = "expr"
-	TYPE_FLOW       = "flow"
 	TYPE_RAW        = "raw"
 	TYPE_NIL        = "empty"
 )
@@ -21,17 +19,6 @@ func Expr(expr string) *types.TypedValue {
 	return &types.TypedValue{
 		Type:  FormatType(TYPE_EXPRESSION),
 		Value: []byte(expr),
-	}
-}
-
-func Flow(task *types.Task) *types.TypedValue {
-	data, err := proto.Marshal(task)
-	if err != nil {
-		panic(err)
-	}
-	return &types.TypedValue{
-		Type:  FormatType(TYPE_FLOW),
-		Value: data,
 	}
 }
 
@@ -45,7 +32,7 @@ type RawParserFormatter struct{}
 func (dp *RawParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	b, ok := i.([]byte)
 	if !ok {
-		return nil, errors.New("Provided value is not of type '[]byte'")
+		return nil, errors.New("provided value is not of type '[]byte'")
 	}
 
 	return &types.TypedValue{
@@ -142,7 +129,7 @@ func (cp *ComposedParserFormatter) Parse(i interface{}, allowedTypes ...string) 
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse value '%v'", i)
+		return nil, fmt.Errorf("failed to parse %T value '%v': %v", i, i, err)
 	}
 	return result, nil
 }
@@ -157,41 +144,6 @@ func (cp *ComposedParserFormatter) Format(v *types.TypedValue) (interface{}, err
 		return nil, fmt.Errorf("TypedValue '%v' has unknown type '%v'", v, v.Type)
 	}
 	return formatter.Format(v)
-}
-
-type ControlFlowParserFormatter struct {
-}
-
-func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
-	// TODO allow scope / inline workflow too
-	t, ok := i.(*types.Task)
-	if !ok {
-		return nil, errors.New("provided value is not of type 'task'")
-	}
-
-	bs, err := proto.Marshal(t)
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.TypedValue{
-		Type:  TYPE_FLOW,
-		Value: bs,
-	}, nil
-}
-
-func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
-	//if IsFormat(v.Type, TYPE_FLOW) {
-	//	return nil, fmt.Errorf("Value '%v' is not of type 'flow'", v)
-	//}
-
-	// TODO allow scope / inline workflow too
-	t := &types.Task{}
-	err := proto.Unmarshal(v.Value, t)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
 }
 
 type NilParserFormatter struct {

@@ -4,37 +4,38 @@ import (
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
 
 func TestFunctionIfConsequentFlow(t *testing.T) {
-	expectedTask := &types.Task{
+	expectedTask := &types.TaskSpec{
 		FunctionRef: "DoThisTask",
 	}
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: parseUnsafe(true),
-				IfInputThen:      parseUnsafe(expectedTask),
+				IfInputCondition: typedvalues.UnsafeParse(true),
+				IfInputThen:      typedvalues.UnsafeParse(expectedTask),
 			},
 		},
 		expectedTask)
 }
 
 func TestFunctionIfAlternativeFlow(t *testing.T) {
-	task := &types.Task{
+	task := &types.TaskSpec{
 		FunctionRef: "DoThisTask",
 	}
-	alternativeTask := &types.Task{
+	alternativeTask := &types.TaskSpec{
 		FunctionRef: "DoThisOtherTask",
 	}
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: parseUnsafe(false),
-				IfInputThen:      parseUnsafe(task),
-				IfInputElse:      parseUnsafe(alternativeTask),
+				IfInputCondition: typedvalues.UnsafeParse(false),
+				IfInputThen:      typedvalues.UnsafeParse(task),
+				IfInputElse:      typedvalues.UnsafeParse(alternativeTask),
 			},
 		},
 		alternativeTask)
@@ -45,9 +46,9 @@ func TestFunctionIfLiteral(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: parseUnsafe(true),
-				IfInputThen:      parseUnsafe("foo"),
-				IfInputElse:      parseUnsafe("bar"),
+				IfInputCondition: typedvalues.UnsafeParse(true),
+				IfInputThen:      typedvalues.UnsafeParse("foo"),
+				IfInputElse:      typedvalues.UnsafeParse("bar"),
 			},
 		},
 		"foo")
@@ -58,8 +59,8 @@ func TestFunctionIfMissingAlternative(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: parseUnsafe(false),
-				IfInputThen:      parseUnsafe("then"),
+				IfInputCondition: typedvalues.UnsafeParse(false),
+				IfInputThen:      typedvalues.UnsafeParse("then"),
 			},
 		},
 		nil)

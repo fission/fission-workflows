@@ -1,11 +1,9 @@
 package parse
 
 import (
-	"testing"
-
-	"strings"
-
 	"errors"
+	"strings"
+	"testing"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -87,10 +85,10 @@ func TestResolveInputs(t *testing.T) {
 		task1: {
 			FunctionRef: task1Name,
 			Inputs: map[string]*types.TypedValue{
-				"nested": typedvalues.Flow(&types.Task{
+				"nested": typedvalues.ParseTask(&types.Task{
 					FunctionRef: nestedTaskName,
 					Inputs: map[string]*types.TypedValue{
-						"nested2": typedvalues.Flow(&types.Task{
+						"nested2": typedvalues.ParseTask(&types.Task{
 							FunctionRef: nestedNestedTaskName,
 						}),
 					},

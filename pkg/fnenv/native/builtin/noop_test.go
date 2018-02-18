@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
 
 func TestFunctionNoopPassInput(t *testing.T) {
@@ -12,7 +13,7 @@ func TestFunctionNoopPassInput(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				NoopInput: parseUnsafe(expected),
+				NoopInput: typedvalues.UnsafeParse(expected),
 			},
 		},
 		expected)
@@ -32,9 +33,9 @@ func TestFunctionNoopObject(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo":     parseUnsafe(true),
-				"bar":     parseUnsafe(false),
-				"default": parseUnsafe("hello"),
+				"foo":            typedvalues.UnsafeParse(true),
+				"bar":            typedvalues.UnsafeParse(false),
+				types.INPUT_MAIN: typedvalues.UnsafeParse("hello"),
 			},
 		},
 		"hello")

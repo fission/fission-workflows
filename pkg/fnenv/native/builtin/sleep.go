@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	Sleep             = "sleep"
 	SleepInput        = types.INPUT_MAIN
 	SleepInputDefault = time.Duration(1) * time.Second
 )

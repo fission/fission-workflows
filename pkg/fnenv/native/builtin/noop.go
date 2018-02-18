@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	Noop      = "noop"
 	NoopInput = types.INPUT_MAIN
 )
 
