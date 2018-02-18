@@ -17,7 +17,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
-	"github.com/fission/fission-workflows/pkg/fes/eventstore/nats"
+	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
 	"github.com/fission/fission-workflows/pkg/fnenv/native"

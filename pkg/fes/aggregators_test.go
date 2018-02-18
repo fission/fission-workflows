@@ -19,6 +19,10 @@ func newMockAggregate(id string, atype string, val int) *MockAggregate {
 	return m
 }
 
+func (ma *MockAggregate) GenericCopy() Aggregator {
+	panic("implement me")
+}
+
 func (ma *MockAggregate) ApplyEvent(event *Event) error {
 	panic("Should not be relevant")
 }

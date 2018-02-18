@@ -87,14 +87,22 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 	case events.Function_TASK_SKIPPED:
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
 		ti.Status.UpdatedAt = event.Timestamp
-	case events.Function_TASK_HEARTBEAT_REQUEST:
-		panic("NA")
-	case events.Function_TASK_HEARTBEAT_RESPONSE:
-		panic("NA")
 	default:
 		log.WithFields(log.Fields{
 			"event": event,
 		}).Warn("Skipping unimplemented event.")
 	}
 	return nil
+}
+
+func (ti *TaskInvocation) GenericCopy() fes.Aggregator {
+	n := &TaskInvocation{
+		TaskInvocation: ti.Copy(),
+	}
+	n.AggregatorMixin = ti.CopyAggregatorMixin(n)
+	return n
+}
+
+func (ti *TaskInvocation) Copy() *types.TaskInvocation {
+	return proto.Clone(ti.TaskInvocation).(*types.TaskInvocation)
 }

@@ -18,6 +18,9 @@ type Aggregator interface {
 	//
 	// This is implemented by AggregatorMixin, can be overridden for performance approach
 	UpdateState(targetState Aggregator) error
+
+	// Copy copies the actual wrapped object. This is useful to get a snapshot of the state.
+	GenericCopy() Aggregator
 }
 
 type EventAppender interface {
@@ -44,7 +47,7 @@ type CacheReader interface {
 
 type CacheWriter interface {
 	Put(entity Aggregator) error
-	// TODO add an invalidate()
+	Invalidate(entity *Aggregate)
 }
 
 type CacheReaderWriter interface {

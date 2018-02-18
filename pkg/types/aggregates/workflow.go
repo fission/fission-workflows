@@ -67,7 +67,8 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 			},
 			Spec: spec,
 			Status: &types.WorkflowStatus{
-				Status:    types.WorkflowStatus_UNKNOWN, // TODO Nest into own state machine maybe
+				// TODO Nest into own state machine
+				Status:    types.WorkflowStatus_UNKNOWN,
 				UpdatedAt: event.GetTimestamp(),
 			},
 		}
@@ -79,11 +80,23 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		}
 		wf.Status.UpdatedAt = event.GetTimestamp()
 		wf.Status.Status = types.WorkflowStatus_READY
-		wf.Status.ResolvedTasks = status.GetResolvedTasks()
+		wf.Status.ResolvedTasks = status.ResolvedTasks
 	default:
 		log.WithFields(log.Fields{
 			"event": event,
 		}).Warn("Skipping unimplemented event.")
 	}
 	return nil
+}
+
+func (wf *Workflow) GenericCopy() fes.Aggregator {
+	n := &Workflow{
+		Workflow: wf.Copy(),
+	}
+	n.AggregatorMixin = wf.CopyAggregatorMixin(n)
+	return n
+}
+
+func (wf *Workflow) Copy() *types.Workflow {
+	return proto.Clone(wf.Workflow).(*types.Workflow)
 }
