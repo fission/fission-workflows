@@ -1,18 +1,16 @@
+// Package pubsub is a simple, label-based, thread-safe PubSub implementation.
 package pubsub
 
 import (
 	"io"
 	"sync"
-
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/util/labels"
 )
 
-// A simple PubSub implementation
-
 const (
-	DEFAULT_SUB_BUF = 10
+	defaultSubscriptionBuffer = 10
 )
 
 type Msg interface {
@@ -73,22 +71,22 @@ func (pm *GenericMsg) Payload() interface{} {
 	return pm.payload
 }
 
-func NewPublisher() Publisher {
-	return &publisher{
+func NewPublisher() *DefaultPublisher {
+	return &DefaultPublisher{
 		subs: []*Subscription{},
 	}
 }
 
-type publisher struct {
+type DefaultPublisher struct {
 	subs []*Subscription
 	lock sync.Mutex
 }
 
-func (pu *publisher) Unsubscribe(sub *Subscription) error {
+func (pu *DefaultPublisher) Unsubscribe(sub *Subscription) error {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	close(sub.Ch)
-	updatedSubs := []*Subscription{}
+	var updatedSubs []*Subscription
 	for _, s := range pu.subs {
 		if sub != s {
 			updatedSubs = append(updatedSubs, s)
@@ -97,7 +95,7 @@ func (pu *publisher) Unsubscribe(sub *Subscription) error {
 	return nil
 }
 
-func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
+func (pu *DefaultPublisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	var subOpts SubscriptionOptions
@@ -106,7 +104,7 @@ func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	}
 
 	if subOpts.Buf <= 0 {
-		subOpts.Buf = DEFAULT_SUB_BUF
+		subOpts.Buf = defaultSubscriptionBuffer
 	}
 
 	sub := &Subscription{
@@ -118,7 +116,7 @@ func (pu *publisher) Subscribe(opts ...SubscriptionOptions) *Subscription {
 	return sub
 }
 
-func (pu *publisher) Publish(msg Msg) error {
+func (pu *DefaultPublisher) Publish(msg Msg) error {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	for _, sub := range pu.subs {
@@ -136,7 +134,7 @@ func (pu *publisher) Publish(msg Msg) error {
 	return nil
 }
 
-func (pu *publisher) Close() error {
+func (pu *DefaultPublisher) Close() error {
 	var err error
 	for _, sub := range pu.subs {
 		err = pu.Unsubscribe(sub)
