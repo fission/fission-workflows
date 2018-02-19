@@ -11,9 +11,7 @@ import (
 func TestFunctionRepeat_Invoke(t *testing.T) {
 	taskToRepeat := &types.TaskSpec{
 		FunctionRef: Noop,
-		Inputs: map[string]*types.TypedValue{
-			types.INPUT_MAIN: typedvalues.UnsafeParse("foo"),
-		},
+		Inputs:      types.SingleDefaultInput(typedvalues.UnsafeParse("foo")),
 	}
 
 	repeatFn := &FunctionRepeat{}

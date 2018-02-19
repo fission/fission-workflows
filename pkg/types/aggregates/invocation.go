@@ -7,8 +7,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/events"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/gogo/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 )
@@ -98,6 +96,19 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		wi.Status.Status = types.WorkflowInvocationStatus_SUCCEEDED
 		wi.Status.Output = status.Output
 		wi.Status.UpdatedAt = event.GetTimestamp()
+	case events.Invocation_INVOCATION_TASK_ADDED:
+		err := wi.handleTaskAdded(event)
+		if err != nil {
+			return err
+		}
+	case events.Invocation_INVOCATION_FAILED:
+		errMsg := &types.Error{}
+		err = proto.Unmarshal(event.Data, errMsg)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+		}
+		wi.Status.Error = errMsg
+		wi.Status.Status = types.WorkflowInvocationStatus_FAILED
 	default:
 		log.WithFields(log.Fields{
 			"event": event,
@@ -117,11 +128,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	taskId := event.Aggregate.Id
 	task, ok := wi.Status.Tasks[taskId]
 	if !ok {
-		task = &types.TaskInvocation{
-			Metadata: &types.ObjectMetadata{
-				Id: taskId,
-			},
-		}
+		task = types.NewTaskInvocation(taskId)
 	}
 	ti := NewTaskInvocation(taskId, task)
 	err := ti.ApplyEvent(event)
@@ -134,18 +141,25 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	}
 	wi.Status.Tasks[taskId] = ti.TaskInvocation
 
-	// Handle dynamic tasks
-	output := ti.TaskInvocation.Status.Output
-	if output != nil && output.Type == typedvalues.TypeTask {
-		i, _ := typedvalues.Format(output)
-		dynamicTask := i.(*types.Task)
-		id := util.CreateScopeId(taskId, dynamicTask.Id)
-		dynamicTask.Id = id
-		if dynamicTask.Requires == nil {
-			dynamicTask.Requires = map[string]*types.TaskDependencyParameters{}
-		}
-	}
+	return nil
+}
 
+// TODO move updates to other nodes here instead of calculating in graph
+func (wi *WorkflowInvocation) handleTaskAdded(event *fes.Event) error {
+	task := &types.Task{}
+	err := proto.Unmarshal(event.Data, task)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+	}
+	if wi.Status.DynamicTasks == nil {
+		wi.Status.DynamicTasks = map[string]*types.Task{}
+	}
+	wi.Status.DynamicTasks[task.Id()] = task
+
+	log.WithFields(log.Fields{
+		"id":          task.Id(),
+		"functionRef": task.Spec.FunctionRef,
+	}).Info("Added dynamic task.")
 	return nil
 }
 

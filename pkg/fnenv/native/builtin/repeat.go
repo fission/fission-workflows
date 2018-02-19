@@ -69,17 +69,16 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVa
 	}
 }
 
-func createRepeatTasks(task *types.Task, times int64) map[string]*types.Task {
-	tasks := map[string]*types.Task{}
+func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.TaskSpec {
+	tasks := map[string]*types.TaskSpec{}
 
 	for n := int64(0); n < times; n += 1 {
 		id := taskId(n)
-		do := proto.Clone(task).(*types.Task)
+		do := proto.Clone(task).(*types.TaskSpec)
 		if n > 0 {
-			// TODO add in next stage
-			//prev := taskId(n - 1)
-			//do.AddDependency(prev)
-			//do.AddInput(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
+			prev := taskId(n - 1)
+			do.AddDependency(prev)
+			do.AddInput(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
 		}
 		tasks[id] = do
 	}

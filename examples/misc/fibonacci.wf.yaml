@@ -1,0 +1,22 @@
+apiVersion: v1
+output: ExtractResult
+tasks:
+  Fib:
+    run: repeat
+    inputs:
+      times: "{ param() || 0 }"
+      do:
+        run: javascript
+        inputs:
+          args:
+            fn: "{ task().Inputs.prev.fn || 1 }"
+            fn1: "{ task().Inputs.prev.fn1 || 0}"
+          expr: "{{ fn: (fn + fn1), fn1: prev }}"
+
+          # For the initial element, to avoid NPEs
+          prev: {}
+  ExtractResult:
+    run: compose
+    inputs: "{ (output('Fib') || {}).fn || 0 }"
+    requires:
+    - Fib

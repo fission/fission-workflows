@@ -22,7 +22,7 @@ type ControlFlowParserFormatter struct {
 
 func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	switch cf := i.(type) {
-	case *types.Task:
+	case *types.TaskSpec:
 		return ParseTask(cf), nil
 	case *types.WorkflowSpec:
 		return ParseWorkflow(cf), nil
@@ -42,7 +42,7 @@ func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, 
 	}
 }
 
-func ParseTask(task *types.Task) *types.TypedValue {
+func ParseTask(task *types.TaskSpec) *types.TypedValue {
 	data, err := proto.Marshal(task)
 	if err != nil {
 		panic(err)
@@ -64,8 +64,8 @@ func ParseWorkflow(task *types.WorkflowSpec) *types.TypedValue {
 	}
 }
 
-func FormatTask(v *types.TypedValue) (*types.Task, error) {
-	t := &types.Task{}
+func FormatTask(v *types.TypedValue) (*types.TaskSpec, error) {
+	t := &types.TaskSpec{}
 	err := proto.Unmarshal(v.Value, t)
 	if err != nil {
 		return nil, err

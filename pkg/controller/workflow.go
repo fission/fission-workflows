@@ -8,7 +8,9 @@ import (
 	"context"
 
 	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/controller/action"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -17,7 +19,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 )
 
-var wfLog = log.WithField("controller", "controller-wf")
+var wfLog = log.WithField("component", "controller.wf")
 
 // WorkflowController is the controller concerned with the lifecycle of workflows. It handles responsibilities, such as
 // parsing of workflows.
@@ -76,7 +78,7 @@ func (ctr *WorkflowController) Init(sctx context.Context) error {
 		for {
 			select {
 			case action := <-ctr.workQueue:
-				ctr.HandleAction(action)
+				go ctr.HandleAction(action)
 			case <-ctx.Done():
 				wfLog.WithField("ctx.err", ctx.Err()).Info("WorkQueue handler closed.")
 				return
@@ -138,13 +140,13 @@ func (ctr *WorkflowController) evaluate(wf *types.Workflow) error {
 	case types.WorkflowStatus_READY:
 		// Alright.
 	case types.WorkflowStatus_DELETED:
-		wfLog.WithField("wf", wf.Metadata.Id).Warn("Should be removed")
-	case types.WorkflowStatus_UNKNOWN:
+		wfLog.WithField("wf", wf.Metadata.Id).Warn("Workflow should have been removed.")
+	case types.WorkflowStatus_PENDING:
 		fallthrough
 	case types.WorkflowStatus_FAILED:
-		ok := ctr.submit(&parseWorkflowAction{
-			wfApi: ctr.api,
-			wf:    wf,
+		ok := ctr.submit(&action.ParseWorkflow{
+			WfApi: ctr.api,
+			Wf:    wf,
 		})
 		if !ok {
 			wfLog.Warn("Failed to submit action.")
@@ -169,7 +171,7 @@ func (ctr *WorkflowController) HandleAction(action Action) {
 	actionLog.Info("Handling action.")
 	err := action.Apply()
 	if err != nil {
-		actionLog.Errorf("Failed to perform action: %v", err)
+		actionLog.Errorf("Failed to perform workflow action: %v", err)
 		bkf := ctr.backoffHandler.Backoff(action.Id())
 		actionLog.Infof("Set evaluation backoff to %d ms (attempt: %v)",
 			bkf.Lockout.Nanoseconds()/1000, bkf.Attempts)
@@ -187,22 +189,4 @@ func (ctr *WorkflowController) Close() error {
 
 	ctr.cancelFn()
 	return nil
-}
-
-//
-// Actions
-//
-
-type parseWorkflowAction struct {
-	wfApi *workflow.Api
-	wf    *types.Workflow
-}
-
-func (ac *parseWorkflowAction) Id() string {
-	return ac.wf.Metadata.Id
-}
-
-func (ac *parseWorkflowAction) Apply() error {
-	_, err := ac.wfApi.Parse(ac.wf)
-	return err
 }

@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/controller/action"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -37,48 +36,8 @@ type InvocationController struct {
 	workQueue chan Action
 
 	// Queued keeps track of which invocations still have actions in the workQueue
-	states map[string]ControlState
+	states map[string]*ControlState
 	// TODO add active cache
-}
-
-type ControlState struct {
-	ErrorCount  uint32
-	RecentError error
-	QueueSize   uint32
-	lock        *sync.Mutex
-}
-
-func (cs ControlState) Lock() {
-	if cs.lock == nil {
-		cs.lock = &sync.Mutex{}
-	}
-	cs.lock.Lock()
-}
-
-func (cs ControlState) Unlock() {
-	if cs.lock == nil {
-		cs.lock = &sync.Mutex{}
-	} else {
-		cs.lock.Unlock()
-	}
-}
-
-func (cs ControlState) AddError(err error) uint32 {
-	cs.RecentError = err
-	return atomic.AddUint32(&cs.ErrorCount, 1)
-}
-
-func (cs ControlState) ResetError() {
-	cs.RecentError = nil
-	cs.ErrorCount = 0
-}
-
-func (cs ControlState) IncrementQueueSize() uint32 {
-	return atomic.AddUint32(&cs.QueueSize, 1)
-}
-
-func (cs ControlState) DecrementQueueSize() uint32 {
-	return atomic.AddUint32(&cs.QueueSize, ^uint32(0)) // TODO avoid overflow
 }
 
 func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReader,
@@ -95,7 +54,7 @@ func NewInvocationController(invokeCache fes.CacheReader, wfCache fes.CacheReade
 
 		// States maintains an active cache of currently running invocations, with execution related data.
 		// This state information is considered preemptable and can be removed or lost at any time.
-		states: map[string]ControlState{},
+		states: map[string]*ControlState{},
 	}
 }
 
@@ -139,14 +98,17 @@ func (cr *InvocationController) Init(sctx context.Context) error {
 			case action := <-cr.workQueue:
 
 				go func() { // TODO limit goroutine pool size
+					cs := cr.controlState(action.Id())
 					err := action.Apply()
 					if err != nil {
-						wfiLog.WithField("action", action).Errorf("action failed: %v", err)
-						cr.states[action.Id()].AddError(err)
+						wfiLog.WithFields(logrus.Fields{
+							"action": fmt.Sprintf("%T", action),
+						}).Errorf("action failed: %v", err)
+						cs.AddError(err)
 					} else {
-						cr.states[action.Id()].ResetError()
+						cs.ResetError()
 					}
-					cr.states[action.Id()].DecrementQueueSize()
+					cs.DecrementQueueSize()
 				}()
 
 			case <-ctx.Done():
@@ -163,7 +125,7 @@ func (cr *InvocationController) HandleNotification(msg *fes.Notification) error 
 	wfiLog.WithFields(logrus.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
-	}).Info("Handling notification!")
+	}).Info("Handling invocation notification!")
 
 	switch msg.EventType {
 	case events.Invocation_INVOCATION_CREATED.String():
@@ -176,7 +138,6 @@ func (cr *InvocationController) HandleNotification(msg *fes.Notification) error 
 		if !ok {
 			panic(msg)
 		}
-
 		cr.evaluate(invoc.WorkflowInvocation)
 	default:
 		wfiLog.WithField("type", msg.EventType).Warn("Controller ignores unknown event.")
@@ -198,6 +159,7 @@ func (cr *InvocationController) HandleTick() error {
 			return err
 		}
 
+		// Also lock for actions
 		cr.evaluate(wi.WorkflowInvocation)
 	}
 	return nil
@@ -205,55 +167,9 @@ func (cr *InvocationController) HandleTick() error {
 
 // TODO return error
 func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
-	state := cr.states[invoc.Metadata.Id]
+	state := cr.controlState(invoc.Metadata.Id)
 	state.Lock()
 	defer state.Unlock()
-
-	// Check if there are still open actions for this invocation
-	if state.QueueSize > 0 {
-		return
-	}
-
-	// Check if we actually need to evaluate
-	if invoc.Status.Finished() {
-		// TODO remove finished wfi from active cache
-		return
-	}
-
-	// TODO check if workflow invocation is in a back-off
-
-	// Check if the graph has been failing too often
-	if state.ErrorCount > MaxErrorCount {
-		wfiLog.Infof("canceling due to error count %v exceeds max error count  %v", state.ErrorCount, MaxErrorCount)
-		ok := cr.submit(&abortAction{
-			api:          cr.invocationApi,
-			invocationId: invoc.Metadata.Id,
-		})
-		if !ok {
-			wfiLog.Error("failed to cancel timed out invocation.")
-		}
-		return
-	}
-
-	// Check if the workflow invocation is in the right state
-	if invoc.Status.Finished() {
-		wfiLog.Infof("No need to evaluate finished invocation %v", invoc.Metadata.Id)
-		return
-	}
-
-	// For now: kill after 10 min
-	duration := time.Now().Unix() - invoc.Metadata.CreatedAt.Seconds
-	if duration > int64(InvocationTimeout.Seconds()) {
-		wfiLog.Infof("cancelling due to timeout; %v exceeds max timeout %v", duration, int64(InvocationTimeout.Seconds()))
-		ok := cr.submit(&abortAction{
-			api:          cr.invocationApi,
-			invocationId: invoc.Metadata.Id,
-		})
-		if !ok {
-			wfiLog.Error("failed to cancel timed out invocation.")
-		}
-		return
-	}
 
 	// Fetch the workflow relevant to the invocation
 	wf := aggregates.NewWorkflow(invoc.Spec.WorkflowId, nil)
@@ -262,66 +178,51 @@ func (cr *InvocationController) evaluate(invoc *types.WorkflowInvocation) {
 		wfiLog.Errorf("Controller failed to get workflow for invocation '%s': %v", invoc.Spec.WorkflowId, err)
 		return
 	}
+	wfi := &types.WorkflowInstance{
+		Workflow:   wf.Workflow,
+		Invocation: invoc,
+	}
 
-	// Check if workflow is in the right state to use.
-	if wf.Status.Status != types.WorkflowStatus_READY {
-		// TODO backoff
-		wfiLog.WithField("wf.status", wf.Status.Status).Error("Workflow has not been parsed yet.")
+	if wfi.Invocation.Status.Finished() {
+		wfiLog.Debugf("No need to evaluate finished invocation %v", wfi.Invocation.Metadata.Id)
 		return
 	}
 
-	// Check if the workflow invocation is complete
-	tasks := types.Tasks(wf.Workflow, invoc)
-	finished := true
-	for id := range tasks {
-		t, ok := invoc.Status.Tasks[id]
-		if !ok || !t.Status.Finished() {
-			finished = false
-			break
-		}
+	// TODO move to constructor
+	ff := &UntilNotEmptyFilter{
+		filters: []Filter{
+			&PendingActionsFilter{},
+			&ErrorLimitExceededFilter{
+				invocationApi: cr.invocationApi,
+			},
+			&CompletedFilter{},
+			&TimeoutFilter{
+				invocationApi: cr.invocationApi,
+			},
+			&WorkflowReadyFilter{},
+			&CheckCompletedFilter{
+				invocationApi: cr.invocationApi,
+			},
+			&ScheduleFilter{
+				scheduler:     cr.scheduler,
+				invocationApi: cr.invocationApi,
+				functionApi:   cr.functionApi,
+				exprParser:    cr.exprParser,
+			},
+		},
 	}
-	if finished {
-		var finalOutput *types.TypedValue
-		if len(wf.Spec.OutputTask) != 0 {
-			t, ok := invoc.Status.Tasks[wf.Spec.OutputTask]
-			if !ok {
-				panic("Could not find output task status in completed invocation")
-			}
-			finalOutput = t.Status.Output
-		}
-
-		err := cr.invocationApi.MarkCompleted(invoc.Metadata.Id, finalOutput) // TODO just submit?
-		if err != nil {
-			wfiLog.Errorf("failed to mark invocation as complete: %v", err)
-			return
-		}
+	actions, err := ff.Filter(wfi, state)
+	if err != nil {
+		// TODO implement retries
+		wfiLog.Errorf("Invocation failed: %v", err)
+		actions = []Action{&action.Fail{
+			Api:          cr.invocationApi,
+			InvocationId: wfi.Invocation.Id(),
+		}}
 	}
-
-	// Request a execution plan from the scheduler
-	schedule, err := cr.scheduler.Evaluate(&scheduler.ScheduleRequest{
-		Invocation: invoc,
-		Workflow:   wf.Workflow,
-	})
-
-	// Execute the actions as specified in the execution plan
-	for _, action := range schedule.Actions {
-		switch action.Type {
-		case scheduler.ActionType_ABORT:
-			cr.submit(&abortAction{
-				api:          cr.invocationApi,
-				invocationId: invoc.Metadata.Id,
-			})
-		case scheduler.ActionType_INVOKE_TASK:
-			invokeAction := &scheduler.InvokeTaskAction{}
-			ptypes.UnmarshalAny(action.Payload, invokeAction)
-			cr.submit(&invokeTaskAction{
-				wf:   wf.Workflow,
-				wfi:  invoc,
-				expr: cr.exprParser,
-				api:  cr.functionApi,
-				task: invokeAction,
-			})
-		}
+	ok := cr.submit(actions...)
+	if !ok {
+		wfiLog.Warn("Not all actions could be submitted (work queue full)")
 	}
 }
 
@@ -338,106 +239,194 @@ func (cr *InvocationController) Close() error {
 	return nil
 }
 
-func (cr *InvocationController) submit(action Action) (submitted bool) {
-	select {
-	case cr.workQueue <- action:
-		// Ok
-		cr.states[action.Id()].IncrementQueueSize()
-		submitted = true
-		wfiLog.WithField("wfi", action.Id()).
-			Infof("submitted action: '%s'", reflect.TypeOf(action))
-	default:
-		// Action overflow
+func (cr *InvocationController) submit(actions ...Action) (submitted bool) {
+	for _, action := range actions {
+		select {
+		case cr.workQueue <- action:
+			// Ok
+			cr.controlState(action.Id()).IncrementQueueSize()
+			submitted = true
+			wfiLog.WithField("wfi", action.Id()).
+				Infof("submitted action: '%s'", reflect.TypeOf(action))
+		default:
+			// Action overflow
+			submitted = false
+		}
 	}
 	return submitted
 }
 
+func (cr *InvocationController) controlState(id string) *ControlState {
+	s, ok := cr.states[id]
+	if ok {
+		return s
+	} else {
+		return NewControlState()
+	}
+}
+
 //
-// Actions
+// Filters
 //
 
-// abortAction aborts an invocation
-type abortAction struct {
-	api          *invocation.Api
-	invocationId string
+type UntilNotEmptyFilter struct {
+	filters []Filter
 }
 
-func (a *abortAction) Id() string {
-	return a.invocationId // Invocation
-}
-
-func (a *abortAction) Apply() error {
-	wfiLog.WithField("wfi", a.Id()).Info("Applying abort action")
-	return a.api.Cancel(a.invocationId)
-}
-
-// invokeTaskAction invokes a function
-type invokeTaskAction struct {
-	wf   *types.Workflow
-	wfi  *types.WorkflowInvocation
-	expr expr.Resolver
-	api  *function.Api
-	task *scheduler.InvokeTaskAction
-}
-
-func (a *invokeTaskAction) Id() string {
-	return a.wfi.Metadata.Id // Invocation
-}
-
-func (a *invokeTaskAction) Apply() error {
-	actionLog := wfiLog.WithField("wfi", a.Id())
-	// Find task (static or dynamic)
-	task, ok := a.wfi.Status.DynamicTasks[a.task.Id]
-	if !ok {
-		task, ok = a.wf.Spec.Tasks[a.task.Id]
-		if !ok {
-			return fmt.Errorf("unknown task '%v'", a.task.Id)
+func (cf *UntilNotEmptyFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	for _, f := range cf.filters {
+		fa, err := f.Filter(wfi, status)
+		if fa != nil && len(fa) > 0 {
+			for _, v := range fa {
+				actions = append(actions, v)
+			}
+		}
+		if err != nil || actions != nil {
+			break
 		}
 	}
-	actionLog.Infof("Invoking function '%s' for task '%s'", task.FunctionRef, a.task.Id)
+	return actions, err
+}
 
-	// Resolve type of the task
-	taskDef, ok := a.wf.Status.ResolvedTasks[task.FunctionRef]
-	if !ok {
-		return fmt.Errorf("no resolved task could be found for FunctionRef '%v'", task.FunctionRef)
+type PendingActionsFilter struct{}
+
+func (fp *PendingActionsFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	// Check if there are still open actions for this invocation
+	if status.QueueSize > 0 {
+		wfiLog.Info("Invocation still has pending actions.")
+		actions = []Action{}
 	}
+	return actions, err
+}
 
-	// Resolve the inputs
-	inputs := map[string]*types.TypedValue{}
-	queryScope := expr.NewScope(a.wf, a.wfi)
-	for inputKey, val := range a.task.Inputs {
-		resolvedInput, err := a.expr.Resolve(queryScope, a.task.Id, val)
-		if err != nil {
-			actionLog.WithFields(logrus.Fields{
-				"val":      val,
-				"inputKey": inputKey,
-			}).Errorf("Failed to parse input: %v", err)
-			return err
+type ErrorLimitExceededFilter struct {
+	invocationApi *invocation.Api
+}
+
+func (el *ErrorLimitExceededFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	// Check if the graph has been failing too often
+	if status.ErrorCount > MaxErrorCount {
+		wfiLog.Infof("canceling due to error count %v exceeds max error count  %v",
+			status.ErrorCount, MaxErrorCount)
+		actions = append(actions, &action.Fail{
+			Api:          el.invocationApi,
+			InvocationId: wfi.Invocation.Id(),
+		})
+	}
+	return actions, err
+}
+
+type CompletedFilter struct {
+}
+
+func (cf *CompletedFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	if wfi.Invocation.Status.Finished() {
+		wfiLog.Infof("No need to evaluate finished invocation %v", wfi.Invocation.Metadata.Id)
+		actions = []Action{}
+	}
+	return actions, err
+}
+
+type TimeoutFilter struct {
+	invocationApi *invocation.Api
+}
+
+func (tf *TimeoutFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	// For now: kill after 10 min
+	duration := time.Now().Unix() - wfi.Invocation.Metadata.CreatedAt.Seconds
+	if duration > int64(InvocationTimeout.Seconds()) {
+		wfiLog.Infof("cancelling due to timeout; %v exceeds max timeout %v", duration, int64(InvocationTimeout.Seconds()))
+		actions = append(actions, &action.Fail{
+			Api:          tf.invocationApi,
+			InvocationId: wfi.Invocation.Id(),
+		})
+	}
+	return actions, err
+}
+
+type WorkflowReadyFilter struct {
+}
+
+func (wr *WorkflowReadyFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	// Check if workflow is in the right state to use.
+	if !wfi.Workflow.Status.Ready() {
+		// TODO backoff
+		wfiLog.WithField("wf.status", wfi.Workflow.Status.Status).Error("Workflow is not ready yet.")
+		actions = []Action{}
+	}
+	return actions, err
+}
+
+type ScheduleFilter struct {
+	scheduler     *scheduler.WorkflowScheduler
+	invocationApi *invocation.Api
+	functionApi   *function.Api
+	exprParser    expr.Resolver
+}
+
+func (sf *ScheduleFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+
+	// Request a execution plan from the scheduler
+	schedule, err := sf.scheduler.Evaluate(&scheduler.ScheduleRequest{
+		Invocation: wfi.Invocation,
+		Workflow:   wfi.Workflow,
+	})
+
+	// Execute the actions as specified in the execution plan
+	for _, a := range schedule.Actions {
+		switch a.Type {
+		case scheduler.ActionType_ABORT:
+			actions = append(actions, &action.Fail{
+				Api:          sf.invocationApi,
+				InvocationId: wfi.Invocation.Id(),
+			})
+		case scheduler.ActionType_INVOKE_TASK:
+			invokeAction := &scheduler.InvokeTaskAction{}
+			err := ptypes.UnmarshalAny(a.Payload, invokeAction)
+			if err != nil {
+				wfiLog.Errorf("Failed to unpack scheduler action: %v", err)
+			}
+			actions = append(actions, &action.InvokeTask{
+				Wf:   wfi.Workflow,
+				Wfi:  wfi.Invocation,
+				Expr: sf.exprParser,
+				Api:  sf.functionApi,
+				Task: invokeAction,
+			})
+		default:
+			logrus.Warnf("Unknown scheduler action: '%v'", a)
+		}
+	}
+	return actions, err
+}
+
+type CheckCompletedFilter struct {
+	invocationApi *invocation.Api
+}
+
+func (cc *CheckCompletedFilter) Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error) {
+	// Check if the workflow invocation is complete
+	tasks := types.GetTasks(wfi.Workflow, wfi.Invocation)
+	finished := true
+	for id := range tasks {
+		t, ok := wfi.Invocation.Status.Tasks[id]
+		if !ok || !t.Status.Finished() {
+			finished = false
+			break
+		}
+	}
+	if finished {
+		var finalOutput *types.TypedValue
+		if len(wfi.Workflow.Spec.OutputTask) != 0 {
+			t, ok := wfi.Invocation.Status.Tasks[wfi.Workflow.Spec.OutputTask]
+			if !ok {
+				panic("Could not find output task status in completed invocation")
+			}
+			finalOutput = t.Status.Output
 		}
 
-		inputs[inputKey] = resolvedInput
-		actionLog.WithFields(logrus.Fields{
-			"val":      val,
-			"key":      inputKey,
-			"resolved": resolvedInput,
-		}).Infof("Resolved expression")
+		// TODO submit instead of executing
+		err = cc.invocationApi.MarkCompleted(wfi.Invocation.Id(), finalOutput)
 	}
-
-	// Invoke
-	fnSpec := &types.TaskInvocationSpec{
-		TaskId: a.task.Id,
-		Type:   taskDef,
-		Inputs: inputs,
-	}
-
-	_, err := a.api.Invoke(a.wfi.Metadata.Id, fnSpec)
-	if err != nil {
-		actionLog.WithFields(logrus.Fields{
-			"id":  a.wfi.Metadata.Id,
-			"err": err,
-		}).Errorf("Failed to execute task")
-		return err
-	}
-
-	return nil
+	return actions, err
 }

@@ -68,7 +68,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 			Spec: spec,
 			Status: &types.WorkflowStatus{
 				// TODO Nest into own state machine
-				Status:    types.WorkflowStatus_UNKNOWN,
+				Status:    types.WorkflowStatus_PENDING,
 				UpdatedAt: event.GetTimestamp(),
 			},
 		}
@@ -80,7 +80,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		}
 		wf.Status.UpdatedAt = event.GetTimestamp()
 		wf.Status.Status = types.WorkflowStatus_READY
-		wf.Status.ResolvedTasks = status.ResolvedTasks
+		wf.Status.Tasks = status.Tasks
 	default:
 		log.WithFields(log.Fields{
 			"event": event,

@@ -2,7 +2,6 @@ package invocation
 
 import (
 	"errors"
-
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -79,19 +78,46 @@ func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) erro
 		return err
 	}
 
-	err = ia.es.Append(&fes.Event{
+	return ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_COMPLETED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
 		Hints:     &fes.EventHints{Completed: true},
 	})
+}
+
+func (ia *Api) Fail(invocationId string, errMsg error) error {
+	var msg string
+	if errMsg != nil {
+		msg = errMsg.Error()
+	}
+	data, err := proto.Marshal(&types.Error{
+		Message: msg,
+	})
+	if err != nil {
+		data = []byte{}
+	}
+	return ia.es.Append(&fes.Event{
+		Type:      events.Invocation_INVOCATION_FAILED.String(),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Timestamp: ptypes.TimestampNow(),
+		Data:      data,
+		Hints:     &fes.EventHints{Completed: true},
+	})
+}
+
+func (ia *Api) AddTask(invocationId string, task *types.Task) error {
+	data, err := proto.Marshal(task)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-func (ia *Api) MarkFailed(invocationId string) {
-	panic("not implemented")
+	// Submit dynamic task
+	return ia.es.Append(&fes.Event{
+		Type:      events.Invocation_INVOCATION_TASK_ADDED.String(),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Timestamp: ptypes.TimestampNow(),
+		Data:      data,
+	})
 }

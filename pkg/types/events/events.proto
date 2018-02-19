@@ -14,6 +14,8 @@ enum Invocation {
     INVOCATION_CREATED = 0; // origin: User
     INVOCATION_COMPLETED = 1; // origin: Engine
     INVOCATION_CANCELED = 2; // origin: User
+    INVOCATION_TASK_ADDED = 3;
+    INVOCATION_FAILED = 4;
 }
 
 enum Function {

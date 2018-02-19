@@ -267,9 +267,11 @@ dump_function_pod_logs() {
 dump_logs() {
     ns=$1
     fns=$2
+    buildns=$3
 
     dump_all_fission_resources $ns
     dump_env_pods $fns
+    dump_env_pods $buildns
     dump_fission_logs $ns $fns controller
     dump_fission_logs $ns $fns router
     dump_fission_logs $ns $fns buildermgr

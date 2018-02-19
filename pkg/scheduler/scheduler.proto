@@ -17,6 +17,12 @@ message Schedule {
     // TODO Future: Expected next evaluation
 }
 
+
+message ScheduleRequest {
+    Workflow workflow = 1;
+    WorkflowInvocation invocation = 2;
+}
+
 // ActionType contains all possible types of actions the scheduler can undertake.
 //
 // Each action can have a seperate datastructure defined here.
@@ -28,9 +34,13 @@ enum ActionType {
 
     // Abort cancels the invocation, leading to an ABORTED status.
     ABORT = 1;
+
+    // Notify a task
+    NOTIFY_TASK = 2;
 }
 
-// Action is the generic container of an action (signalled by ActionType) and the relevant message as a payload
+// Action is the generic container of an action (signalled by ActionType) and
+// the relevant message as a payload.
 message Action {
     ActionType type = 1;
     google.protobuf.Any payload = 4;
@@ -47,7 +57,7 @@ message InvokeTaskAction {
     // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
 }
 
-message ScheduleRequest {
-    Workflow workflow = 1;
-    WorkflowInvocation invocation = 2;
+message NotifyTaskAction {
+    string id = 1;
+    google.protobuf.Timestamp expectedAt = 2;
 }

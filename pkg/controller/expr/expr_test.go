@@ -99,18 +99,20 @@ func TestScope(t *testing.T) {
 		Status: &types.WorkflowStatus{
 			Status:    types.WorkflowStatus_READY,
 			UpdatedAt: ptypes.TimestampNow(),
-			ResolvedTasks: map[string]*types.TaskTypeDef{
+			Tasks: map[string]*types.TaskStatus{
 				"fooTask": {
-					Src:      "fissionFunction",
-					Runtime:  "fission",
-					Resolved: "resolvedFissionFunction",
+					Resolved: &types.ResolvedTask{
+						Src:      "fissionFunction",
+						Runtime:  "fission",
+						Resolved: "resolvedFissionFunction",
+					},
 				},
 			},
 		},
 		Spec: &types.WorkflowSpec{
 			ApiVersion: "1",
 			OutputTask: "fooTask",
-			Tasks: map[string]*types.Task{
+			Tasks: map[string]*types.TaskSpec{
 				"fooTask": {
 					FunctionRef: "fissionFunction",
 				},

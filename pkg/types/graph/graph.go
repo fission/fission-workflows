@@ -8,10 +8,6 @@ import (
 	"gonum.org/v1/gonum/graph/simple"
 )
 
-var (
-	hasher = fnv.New64a()
-)
-
 type LinkedNode interface {
 	graph.Node
 	Links() []int64
@@ -22,12 +18,13 @@ type TaskInstanceNode struct {
 }
 
 func (n *TaskInstanceNode) ID() int64 {
-	return createId(n.Task.Id)
+	return createId(n.Task.Id())
 }
 
 func (n *TaskInstanceNode) Links() []int64 {
 	var links []int64
-	for k := range n.Task.Requires {
+
+	for k := range n.Task.Spec.Requires {
 		links = append(links, createId(k))
 	}
 	return links
@@ -135,7 +132,7 @@ func Parse(it Iterator) graph.Directed {
 		case *TaskSpecNode:
 			deps[n.ID()] = n.Requires
 		case *TaskInstanceNode:
-			deps[n.ID()] = n.Task.Requires
+			deps[n.ID()] = n.Task.Spec.Requires
 		}
 	}
 	for _, v := range depGraph.Nodes() {
@@ -157,9 +154,9 @@ func Roots(g graph.Directed) []graph.Node {
 }
 
 func createId(s string) int64 {
-	hasher.Reset()
-	hasher.Write([]byte(s))
-	return int64(hasher.Sum64())
+	h := fnv.New64a()
+	h.Write([]byte(s))
+	return int64(h.Sum64())
 }
 
 func injectDynamicTask(depGraph *simple.DirectedGraph, dynamic graph.Node,

@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParse(t *testing.T) {
+func TestRead(t *testing.T) {
 
 	data := `
 apiversion: 123
@@ -24,7 +25,7 @@ tasks:
     run: bla
     inputs: $.invocation.inputs 		# Inputs takes a map or literal, when inputs are referenced it defaults to the 'default' key
 `
-	wf, err := Parse(strings.NewReader(strings.TrimSpace(data)))
+	wf, err := Read(strings.NewReader(strings.TrimSpace(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +34,7 @@ tasks:
 	assert.Equal(t, len(wf.Tasks), 2)
 }
 
-func TestTransform(t *testing.T) {
+func TestParseSimple(t *testing.T) {
 
 	data := `
 apiversion: 123
@@ -44,19 +45,19 @@ tasks:
     run: someSh
   bar:
     run: bla
-    inputs: $.invocation.inputs 		# Inputs takes a map or literal, when inputs are referenced it defaults to the 'default' key
+    inputs: $.invocation.inputs
   acme:
     run: abc
     inputs:
       default:
         a: b
 `
-	wfd, err := Parse(strings.NewReader(strings.TrimSpace(data)))
+	wfd, err := Read(strings.NewReader(strings.TrimSpace(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wf, err := Transform(wfd)
+	wf, err := ParseWorkflow(wfd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,12 +80,9 @@ tasks:
 		}
 		assert.Equal(t, len(wf.Tasks[id].Inputs), expectedInputLength, fmt.Sprintf("was: %v", task.Inputs))
 
-		assert.Equal(t, wf.Tasks[id].Id, id)
 		assert.Equal(t, len(wf.Tasks[id].Requires), len(task.Requires))
 		assert.Equal(t, int(wf.Tasks[id].Await), len(task.Requires))
 
-		//assert.IsType(t, wf.Tasks["acme"].Inputs, map[string]interface{}{})
-		//acmeInputs := wf.Tasks["acme"].Inputs.(map[string]interface{})
 		acmeDefaultInput := wf.Tasks["acme"].Inputs["default"]
 		assert.Equal(t, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_OBJECT), acmeDefaultInput.Type)
 		i, err := typedvalues.Format(acmeDefaultInput)
@@ -93,4 +91,39 @@ tasks:
 			"a": "b",
 		})
 	}
+}
+
+func TestParseDynamicWorkflow(t *testing.T) {
+
+	data := `
+apiversion: 123
+output: $.tasks.foo.output
+tasks:
+  nothing: ~
+  foo:
+    run: someSh
+  bar:
+    run: bla
+    inputs: 
+      default:
+        apiversion: v42
+        output: $.tasks.inner.dynamic
+        tasks:
+          inner:
+            run: dynamic
+            inputs: foobar
+`
+
+	wf, err := Parse(ioutil.NopCloser(strings.NewReader(data)))
+	assert.NoError(t, err)
+	barTask, ok := wf.Tasks["bar"]
+	assert.True(t, ok)
+	wfInput, ok := barTask.Inputs["default"]
+	assert.True(t, ok)
+	innerWf, err := typedvalues.FormatWorkflow(wfInput)
+	assert.NoError(t, err)
+	assert.Equal(t, "$.tasks.inner.dynamic", innerWf.OutputTask)
+	assert.Equal(t, "v42", innerWf.ApiVersion)
+	assert.Equal(t, "foobar", typedvalues.UnsafeFormat(innerWf.Tasks["inner"].Inputs["default"]))
+	assert.Equal(t, "dynamic", innerWf.Tasks["inner"].FunctionRef)
 }

@@ -1,0 +1,17 @@
+# This whale shows of how to nest workflows into each other
+apiVersion: 1
+output: MyScope
+tasks:
+  MyScope:
+    run: noop
+    inputs:
+      default:
+        output: WhaleIt
+        tasks:
+          GenerateFortune:
+            run: fortune
+          WhaleIt:
+            run: echowhale
+            inputs: "{output('GenerateFortune')}"
+            requires:
+            - GenerateFortune

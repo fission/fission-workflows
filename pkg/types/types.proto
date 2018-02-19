@@ -4,20 +4,170 @@ option go_package = "types";
 
 import "google/protobuf/timestamp.proto";
 
-// Common
-message ObjectMetadata {
-    string id = 1;
-    google.protobuf.Timestamp createdAt = 3;
-}
-
+//
 // Workflow Model
+//
 message Workflow {
     ObjectMetadata metadata = 1;
     WorkflowSpec spec = 2;
     WorkflowStatus status = 3;
 }
 
+// Workflow Definition
+//
+// The workflowDefinition contains the definition of a workflow.
+//
+// Ideally the source code (json, yaml) can be converted directly to this message.
+// Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
+// to the user/system upon the creation of a workflow.
+message WorkflowSpec {
+
+    // apiVersion describes what version is of the workflow definition.
+    // By default the workflow engine will assume the latest version to be used.
+    string apiVersion = 1;
+
+    // Tasks contains the specs of the tasks, with the key being the task id.
+    //
+    // Note: Dependency graph is build into the tasks.
+    map<string, TaskSpec> tasks = 2; // key = taskId
+
+    // From which task should the workflow return the output? Future: multiple? Implicit?
+    string outputTask = 3;
+
+    string description = 4;
+
+    // The UID that the workflow should have. Only use this in case you want to force a specific UID.
+    string forceId = 5;
+
+    // Name is solely for human-readablity
+    string name = 6;
+
+    // Internal indicates whether is a workflow should be visible to a human (default) or not.
+    //
+    bool internal = 7;
+}
+
+message WorkflowStatus {
+    enum Status {
+        PENDING = 0;
+        //        PARSING = 1; // During validation/parsing
+        READY = 2;
+        FAILED = 3;
+        DELETED = 4;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+
+    // Tasks contains the status of the tasks, with the key being the task id.
+    map<string, TaskStatus> tasks = 3; // Key = taskId
+    Error error = 4;
+}
+
+//
+// Workflow Invocation Model
+//
+message WorkflowInvocation {
+    ObjectMetadata metadata = 1;
+    WorkflowInvocationSpec spec = 2;
+    WorkflowInvocationStatus status = 3;
+}
+
+// Workflow Invocation Model
+message WorkflowInvocationSpec {
+    string workflowId = 1;
+    map<string, TypedValue> inputs = 2;
+
+    // ParentId contains the id of the encapsulating workflow invocation.
+    //
+    // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
+    string parentId = 3;
+}
+
+message WorkflowInvocationStatus {
+    enum Status {
+        UNKNOWN = 0;
+        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        IN_PROGRESS = 2; // Scheduled
+        SUCCEEDED = 3;
+        FAILED = 4;
+        ABORTED = 5;
+        //PAUSED = 6;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    map<string, TaskInvocation> tasks = 3;
+    TypedValue output = 4;
+
+    // In case the task ID also exists in the workflow spec, the dynamic task will be
+    // used as an overlay over the static task.
+    map<string, Task> dynamicTasks = 5;
+    Error error = 6; // Only set when status == failed
+}
+
+message DependencyConfig {
+    // Dependencies for this task to execute
+    map<string, TaskDependencyParameters> requires = 1;
+
+    // Number of dependencies to wait for
+    int32 await = 2;
+}
+
+//
+// Task Model
+//
+message Task {
+    ObjectMetadata metadata = 1;
+    TaskSpec spec = 2;
+    TaskStatus status = 3;
+}
+
+// A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
+//
+// A task as a number of inputs and exactly two outputs
+// Id is specified outside of TaskSpec
+message TaskSpec {
+
+    // Name/identifier of the function
+    string functionRef = 1; // TODO refactor to fission.FunctionRef struct here
+
+    map<string, TypedValue> inputs = 2;
+
+    // Dependencies for this task to execute
+    map<string, TaskDependencyParameters> requires = 3;
+
+    // Number of dependencies to wait for
+    int32 await = 4;
+
+    // Transform the output, or override the output with a literal
+    TypedValue output = 5;
+}
+
+message TaskStatus {
+    enum Status {
+        STARTED = 0;
+        READY = 1;
+        FAILED = 2;
+    }
+    Status status = 1;
+    google.protobuf.Timestamp updatedAt = 2;
+    ResolvedTask resolved = 3;
+    Error error = 4; // Only set when status == failed
+}
+
+message TaskDependencyParameters {
+
+    enum DependencyType {
+        DATA = 0;
+        CONTROL = 1;
+        DYNAMIC_OUTPUT = 2;
+    }
+    DependencyType type = 1;
+    string alias = 2;
+}
+
+//
 // Task Invocation Model
+//
 message TaskInvocation {
     ObjectMetadata metadata = 1;
     TaskInvocationSpec spec = 2;
@@ -26,7 +176,7 @@ message TaskInvocation {
 
 message TaskInvocationSpec {
     // Id of the task to be invoked (no ambiguatity at this point
-    TaskTypeDef type = 1;
+    ResolvedTask type = 1;
     string taskId = 2; // task in workflow
     map<string, TypedValue> inputs = 3;
 }
@@ -47,123 +197,12 @@ message TaskInvocationStatus {
     Error error = 4; // Only set when status == failed
 }
 
-// Workflow Invocation Model
-message WorkflowInvocationSpec {
-    string workflowId = 1;
-    map<string, TypedValue> inputs = 3;
-}
-
-message WorkflowInvocationStatus {
-    enum Status {
-        UNKNOWN = 0;
-        SCHEDULED = 1; // Arrived at engine, but not yet schedu
-        IN_PROGRESS = 2; // Scheduled
-        SUCCEEDED = 3;
-        FAILED = 4;
-        ABORTED = 5;
-        //PAUSED = 6;
-    }
-    Status status = 1;
-    google.protobuf.Timestamp updatedAt = 2;
-    map<string, TaskInvocation> tasks = 3;
-    TypedValue output = 4;
-    map<string, Task> dynamicTasks = 5;
-    Error error = 6; // Only set when status == failed
-}
-
-
-message WorkflowInvocation {
-    ObjectMetadata metadata = 1;
-    WorkflowInvocationSpec spec = 2;
-    WorkflowInvocationStatus status = 3;
-}
-
-// Workflow Definition
 //
-// The workflowDefinition contains the definition of a workflow.
+// Common
 //
-// Ideally the source code (json, yaml) can be converted directly to this message.
-// Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
-// to the user/system upon the creation of a workflow.
-message WorkflowSpec {
-
-    // apiVersion describes what version is of the workflow definition.
-    // By default the workflow engine will assume the latest version to be used.
-    string apiVersion = 1;
-
-    // TODO Parameters
-    // Dependency graph is build into the tasks
-    map<string, Task> tasks = 2; // key = taskId
-
-    // From which task should the workflow return the output? Future: multiple? Implicit?
-    string outputTask = 3;
-
-    string description = 4;
-
-    // TODO move outside of spec
-    // The UID that the workflow should have. Only use this in case you want to force a specific UID.
-    string id = 5;
-
-    // Name is solely for human-readablity
-    string name = 6;
-}
-
-// A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
-//
-// A task as a number of inputs and exactly two outputs
-// Id is specified outside of task
-message Task {
-
-    // Same as the string in the map<string, Task> definition. One needs to be set.
-    //
-    // If there is a conflict the map key gets precendence over this field.
+message ObjectMetadata {
     string id = 1;
-
-    // Name/identifier of the function
-    string functionRef = 3; // TODO refactor to fission.FunctionRef struct here
-
-    map<string, TypedValue> inputs = 4;
-
-    // Dependencies for this task to execute
-    map<string, TaskDependencyParameters> requires = 5;
-
-    // Number of dependencies to wait for
-    int32 await = 6;
-
-    // Transform the output, or override the output with a literal
-    TypedValue output = 7;
-}
-
-message TaskDependencyParameters {
-
-    enum DependencyType {
-        DATA = 0;
-        CONTROL = 1;
-        DYNAMIC_OUTPUT = 2;
-    }
-    DependencyType type = 1;
-    string alias = 2;
-}
-
-// Internal
-message WorkflowStatus {
-    enum Status {
-        UNKNOWN = 0;
-//        PARSING = 1; // During validation/parsing
-        READY = 2;
-        FAILED = 3;
-        DELETED = 4;
-    }
-    Status status = 1;
-    google.protobuf.Timestamp updatedAt = 2;
-    map<string, TaskTypeDef> resolvedTasks = 3; // Key = taskId
-    Error error = 4;
-}
-
-message TaskTypeDef {
-    string src = 1; // TODO allow fission.FunctionRef struct here
-    string runtime = 2; // Function Execution Runtime
-    string resolved = 3; // Address (Uid) to the function
+    google.protobuf.Timestamp createdAt = 3;
 }
 
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
@@ -177,4 +216,16 @@ message TypedValue {
 message Error {
     string code = 1;
     string message = 2;
+}
+
+message ResolvedTask {
+    // Src contains the function reference that was resolved.
+    // TODO allow fission.FunctionRef struct here
+    string src = 1;
+
+    // Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
+    string runtime = 2;
+
+    // Resolved contains the address (UID) to the function.
+    string resolved = 3;
 }
