@@ -5,7 +5,7 @@
 #
 
 # Configs
-FISSION_VERSION=0.4.1
+FISSION_VERSION=0.5.0
 FISSION_WORKFLOWS_VERSION=0.2.0
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

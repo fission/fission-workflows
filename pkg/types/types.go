@@ -15,6 +15,7 @@ const (
 	INPUT_METHOD       = "method"
 
 	typedValueShortMaxLen = 32
+	WorkflowApiVersion    = "v1"
 )
 
 // InvocationEvent
@@ -67,4 +68,11 @@ func (tv TypedValue) Short() string {
 
 func (m *Error) Error() string {
 	return m.Message
+}
+
+type TaskSpec = Task
+
+type TaskInstance struct {
+	Task       *TaskSpec
+	Invocation *TaskInvocation
 }

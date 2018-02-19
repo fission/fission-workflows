@@ -1,5 +1,5 @@
-hash: 85c7264693e84b8352542e0018e4e3d609fdb4681b5435f38d8db7db1ed97def
-updated: 2018-02-12T11:02:55.971444+01:00
+hash: dbff9efd05e00f3d15b3a68fb92742fd6152cca30d16e41a628195a5b6471c0c
+updated: 2018-02-18T12:23:26.60748+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -69,7 +69,7 @@ imports:
   subpackages:
   - base64vlq
 - name: github.com/gogo/protobuf
-  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
+  version: 1adfc126b41513cc696b209667c8656ea7aac67c
   subpackages:
   - gogoproto
   - jsonpb
@@ -151,7 +151,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 68cec9f21fbf3ea8d8f98c044bc6ce05f17b267a
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/ugorji/go
@@ -204,6 +204,30 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: gonum.org/v1/gonum
+  version: 996b88e8f8941c9defdbb338bea5e239a230e742
+  repo: http://github.com/gonum/gonum
+  subpackages:
+  - blas
+  - blas/blas64
+  - blas/gonum
+  - floats
+  - graph
+  - graph/internal/linear
+  - graph/internal/ordered
+  - graph/internal/set
+  - graph/internal/uid
+  - graph/simple
+  - graph/topo
+  - graph/traverse
+  - internal/asm/c128
+  - internal/asm/f32
+  - internal/asm/f64
+  - internal/math32
+  - lapack
+  - lapack/gonum
+  - lapack/lapack64
+  - mat
 - name: google.golang.org/appengine
   version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
   subpackages:

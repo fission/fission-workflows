@@ -40,11 +40,7 @@ eval $(minikube docker-env)
 # Install helm on cluster
 if ! helm list >/dev/null 2>&1 ; then
     echo "Installing helm..."
-    kubectl -n kube-system create sa tiller
-
-    kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
-
-    helm init --service-account tiller
+    helm init
 
     printf "Waiting for Helm"
     until helm list >/dev/null 2>&1
