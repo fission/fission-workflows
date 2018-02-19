@@ -60,7 +60,7 @@ func (fe *FunctionEnv) Resolve(fnName string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("could not resolve internal function '%s'", fnName)
 	}
-	log.WithField("name", fnName).WithField("uid", fnName).Info("Resolved internal function")
+	log.WithField("name", fnName).WithField("uid", fnName).Debug("Resolved internal function")
 	return fnName, nil
 }
 

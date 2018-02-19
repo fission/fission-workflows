@@ -80,7 +80,7 @@ func (ps *Resolver) resolveTaskAndInputs(task *types.Task, resolvedC chan resolv
 	}
 	resolvedC <- resolvedFn{task.FunctionRef, t}
 	for _, input := range task.Inputs {
-		if input.Type == typedvalues.TYPE_FLOW {
+		if input.Type == typedvalues.TypeTask {
 			f, err := typedvalues.Format(input)
 			if err != nil {
 				return err

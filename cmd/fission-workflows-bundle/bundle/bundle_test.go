@@ -191,13 +191,13 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 				FunctionRef: "if",
 				Inputs: map[string]*types.TypedValue{
 					"condition": typedvalues.Expr("{$.Invocation.Inputs.default == 'FOO'}"),
-					"consequent": typedvalues.Flow(&types.Task{
+					"consequent": typedvalues.ParseTask(&types.Task{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'consequent'"),
 						},
 					}),
-					"alternative": typedvalues.Flow(&types.Task{
+					"alternative": typedvalues.ParseTask(&types.Task{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
 							types.INPUT_MAIN: typedvalues.Expr("'alternative'"),

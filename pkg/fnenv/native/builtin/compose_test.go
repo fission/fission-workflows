@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 )
 
 func TestFunctionComposePassInput(t *testing.T) {
@@ -12,7 +13,7 @@ func TestFunctionComposePassInput(t *testing.T) {
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				ComposeInput: parseUnsafe(expected),
+				ComposeInput: typedvalues.UnsafeParse(expected),
 			},
 		},
 		expected)
@@ -32,9 +33,9 @@ func TestFunctionComposeObject(t *testing.T) {
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo":     parseUnsafe(true),
-				"bar":     parseUnsafe(false),
-				"default": parseUnsafe("hello"),
+				"foo":     typedvalues.UnsafeParse(true),
+				"bar":     typedvalues.UnsafeParse(false),
+				"default": typedvalues.UnsafeParse("hello"),
 			},
 		},
 		map[string]interface{}{

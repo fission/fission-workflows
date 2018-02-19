@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	Compose      = "compose"
 	ComposeInput = types.INPUT_MAIN
 )
 

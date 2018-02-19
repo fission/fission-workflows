@@ -136,7 +136,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 
 	// Handle dynamic tasks
 	output := ti.TaskInvocation.Status.Output
-	if output != nil && output.Type == typedvalues.TYPE_FLOW {
+	if output != nil && output.Type == typedvalues.TypeTask {
 		i, _ := typedvalues.Format(output)
 		dynamicTask := i.(*types.Task)
 		id := util.CreateScopeId(taskId, dynamicTask.Id)
