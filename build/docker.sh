@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 #
 # Builds all docker images. Usage docker.sh [<repo>] [<tag>]
@@ -17,28 +17,38 @@ if [ -z "$IMAGE_TAG" ]; then
     IMAGE_TAG=latest
 fi
 
-# Check preconditions
-if [ ! -f ./fission-workflows-bundle ]; then
-    echo "Executable './fission-workflows-bundle' not found!"
-    exit 1;
+# Build bundle images
+bundleImage=${IMAGE_REPO}/fission-workflows-bundle
+pushd ${BUILD_ROOT}/..
+if [ ! -z "$NOBUILD" ]; then
+    if [ ! -f ./fission-workflows-bundle ]; then
+        echo "Executable './fission-workflows-bundle' not found!"
+        exit 1;
+    fi
+
+    if [ ! -f ./wfcli ]; then
+        echo "Executable './wfcli' not found!"
+        exit 1;
+    fi
 fi
+echo "Building bundle..."
+docker build --tag="${bundleImage}:${IMAGE_TAG}" -f ${BUILD_ROOT}/Dockerfile \
+    --build-arg NOBUILD="${NOBUILD}" .
+popd
 
-if [ ! -f ./wfcli ]; then
-    echo "Executable './wfcli' not found!"
-    exit 1;
-fi
+# Build bundle-dependent images
+echo "Building Fission runtime env..."
+docker build --tag="${IMAGE_REPO}/workflow-env:${IMAGE_TAG}" ${BUILD_ROOT}/runtime-env/ \
+    --build-arg BUNDLE_IMAGE=${bundleImage} \
+    --build-arg BUNDLE_TAG=${IMAGE_TAG}
+echo "Building Fission build env..."
+docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}/build-env/ \
+    --build-arg BUNDLE_IMAGE=${bundleImage} \
+    --build-arg BUNDLE_TAG=${IMAGE_TAG}
+echo "Building wfcli..."
+docker build --tag="${IMAGE_REPO}/wfcli:${IMAGE_TAG}" ${BUILD_ROOT}/wfcli/ \
+    --build-arg BUNDLE_IMAGE=${bundleImage} \
+    --build-arg BUNDLE_TAG=${IMAGE_TAG}
 
-# Prepare fs
-rm -f ${BUILD_ROOT}/bundle/fission-workflows-bundle
-rm -f ${BUILD_ROOT}/env/fission-workflows-bundle
-rm -f ${BUILD_ROOT}/build-env/wfcli
-chmod +x fission-workflows-bundle
-chmod +x wfcli
-yes | cp fission-workflows-bundle ${BUILD_ROOT}/env/
-yes | cp fission-workflows-bundle ${BUILD_ROOT}/bundle/
-yes | cp wfcli ${BUILD_ROOT}/build-env/
-
-# Build images
-docker build --tag="${IMAGE_REPO}/fission-workflows-bundle:${IMAGE_TAG}" ${BUILD_ROOT}/bundle/
-docker build --tag="${IMAGE_REPO}/workflow-env:${IMAGE_TAG}" ${BUILD_ROOT}/env/
-docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}/build-env/
+# Remove intermediate images
+# docker rmi $(docker images -f "dangling=true" -q)

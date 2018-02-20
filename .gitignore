@@ -1,4 +1,7 @@
 vendor/
 bazel-*
+data/
 
 *.tgz
+/fission-workflows-bundle
+/wfcli

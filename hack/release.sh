@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 
+set -e
+
 #
 # release.sh - Generate all artifacts for a release
 #
 
 # wfcli
-echo "Building wfcli..."
-GOOS=darwin GOARCH=386 CGO_ENABLED=0 go build -o wfcli-osx github.com/fission/fission-workflows/cmd/wfcli/
-GOOS=windows GOARCH=386 CGO_ENABLED=0 go build -o wfcli-windows.exe github.com/fission/fission-workflows/cmd/wfcli/
-GOOS=linux GOARCH=386 CGO_ENABLED=0 go build -o wfcli-linux github.com/fission/fission-workflows/cmd/wfcli/
+echo "Building linux binaries..."
+build/build-linux.sh
+mv fission-workflows-bundle fission-workflows-bundle-linux
+mv wfcli wfcli-linux
+echo "Building windows binaries..."
+build/build-windows.sh
+echo "Building osx binaries..."
+build/build-osx.sh
 
 # Deployments
 echo "Packaging chart..."
