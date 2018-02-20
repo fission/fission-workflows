@@ -108,17 +108,17 @@ emph "Fission deployed!"
 #
 # Build
 #
-emph "Building binaries..."
-bash ${ROOT}/build/build-linux.sh
-
-# Ensure cli is in path
-emph "Copying wfcli to '${BIN_DIR}/wfcli'..."
-cp wfcli ${BIN_DIR}/wfcli
-wfcli -h > /dev/null
-
 # Build docker images
 emph "Building images..."
 bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
+
+# Ensure cli is in path
+emph "Copying wfcli to '${BIN_DIR}/wfcli'..."
+bundleImage=${DOCKER_REPO}/fission-workflows-bundle:${TAG}
+bundleContainer=$(docker create ${bundleImage} tail /dev/null)
+docker cp ${bundleContainer}:/wfcli ${BIN_DIR}/wfcli
+docker rm -v ${bundleContainer}
+wfcli -h > /dev/null
 
 # Publish to gcloud
 emph "Pushing images to container registry..."

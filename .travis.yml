@@ -31,8 +31,8 @@ install:
 - sudo apt-get -y install google-cloud-sdk
 - sudo apt-get -y install coreutils
 - test/e2e/travis-kube-setup.sh
-- glide -h > /dev/null || go get github.com/Masterminds/glide
 # Needed for some integration tests
+- glide -h > /dev/null || go get github.com/Masterminds/glide
 - nats-streaming-server -h > /dev/null || go get github.com/nats-io/nats-streaming-server
 
 before_script:
@@ -48,6 +48,7 @@ script:
 # Unit and Integration tests
 - test/runtests.sh
 # End-to-end tests
+# TODO no need to rebuild (tag images with test ID and check if they exist before starting to rebuild)
 - test/e2e/travis-buildtest.sh
 
 notifications:
