@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse/yaml"
+	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/urfave/cli"
 )

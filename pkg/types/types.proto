@@ -150,7 +150,7 @@ message TaskStatus {
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
-    ResolvedTask resolved = 3;
+    FnRef fnRef = 3;
     Error error = 4; // Only set when status == failed
 }
 
@@ -176,7 +176,7 @@ message TaskInvocation {
 
 message TaskInvocationSpec {
     // Id of the task to be invoked (no ambiguatity at this point
-    ResolvedTask type = 1;
+    FnRef fnRef = 1;
     string taskId = 2; // task in workflow
     map<string, TypedValue> inputs = 3;
 }
@@ -218,14 +218,13 @@ message Error {
     string message = 2;
 }
 
-message ResolvedTask {
-    // Src contains the function reference that was resolved.
-    // TODO allow fission.FunctionRef struct here
-    string src = 1;
-
+// FnRef is an immutable, unique reference to a function on a specific function runtime environment.
+//
+// The string representation (via String or Format): runtime://runtimeId
+message FnRef {
     // Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
     string runtime = 2;
 
-    // Resolved contains the address (UID) to the function.
-    string resolved = 3;
+    // RuntimeId is the runtime-specific identifier of the function.
+    string runtimeId = 3;
 }

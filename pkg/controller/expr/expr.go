@@ -22,7 +22,7 @@ var (
 	ErrTimeOut = errors.New("expression resolver timed out")
 )
 
-// Resolver resolves an expression within a given context/scope.
+// resolver resolves an expression within a given context/scope.
 type Resolver interface {
 	Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error)
 }

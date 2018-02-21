@@ -69,10 +69,9 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 }
 
-func ResolvedWorkflow(wfId string) *types.ResolvedTask {
-	return &types.ResolvedTask{
-		Src:      wfId,
-		Runtime:  Name,
-		Resolved: wfId,
+func CreateFnRef(wfId string) *types.FnRef {
+	return &types.FnRef{
+		Runtime:   Name,
+		RuntimeId: wfId,
 	}
 }

@@ -161,14 +161,6 @@ func NewTaskInvocation(id string) *TaskInvocation {
 	}
 }
 
-func WorkflowReference(wfId string) *ResolvedTask {
-	return &ResolvedTask{
-		Src:      wfId,
-		Runtime:  "",
-		Resolved: wfId,
-	}
-}
-
 func SingleInput(key string, t *TypedValue) map[string]*TypedValue {
 	return map[string]*TypedValue{
 		key: t,

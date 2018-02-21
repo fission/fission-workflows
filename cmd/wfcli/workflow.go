@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/workflow_api"
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse/yaml"
+	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/go-openapi/strfmt"
 	"github.com/urfave/cli"
 )

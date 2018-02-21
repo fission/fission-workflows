@@ -1,7 +1,6 @@
 package yaml
 
 import (
-	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -25,7 +24,7 @@ tasks:
     run: bla
     inputs: $.invocation.inputs 		# Inputs takes a map or literal, when inputs are referenced it defaults to the 'default' key
 `
-	wf, err := Read(strings.NewReader(strings.TrimSpace(data)))
+	wf, err := read(strings.NewReader(strings.TrimSpace(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,12 +51,12 @@ tasks:
       default:
         a: b
 `
-	wfd, err := Read(strings.NewReader(strings.TrimSpace(data)))
+	wfd, err := read(strings.NewReader(strings.TrimSpace(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wf, err := ParseWorkflow(wfd)
+	wf, err := parseWorkflow(wfd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +113,7 @@ tasks:
             inputs: foobar
 `
 
-	wf, err := Parse(ioutil.NopCloser(strings.NewReader(data)))
+	wf, err := Parse(strings.NewReader(data))
 	assert.NoError(t, err)
 	barTask, ok := wf.Tasks["bar"]
 	assert.True(t, ok)

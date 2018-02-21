@@ -28,7 +28,7 @@ type Runtime struct {
 }
 
 func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
-	fnName := spec.GetType().GetResolved()
+	fnName := spec.FnRef.RuntimeId
 
 	if _, ok := mk.Functions[fnName]; !ok {
 		return "", fmt.Errorf("could not invoke unknown function '%s'", fnName)
@@ -63,7 +63,7 @@ func (mk *Runtime) MockComplete(fnInvocationID string) error {
 		return fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationID)
 	}
 
-	fnName := invocation.Spec.GetType().GetResolved()
+	fnName := invocation.Spec.FnRef.RuntimeId
 	fn, ok := mk.Functions[fnName]
 	if !ok {
 		return fmt.Errorf("could not invoke unknown function '%s'", fnName)
@@ -127,7 +127,7 @@ func (mk *Runtime) Status(fnInvocationID string) (*types.TaskInvocationStatus, e
 	return invocation.Status, nil
 }
 
-func (mk *Runtime) Notify(taskID string, fn types.ResolvedTask, expectedAt time.Time) error {
+func (mk *Runtime) Notify(taskID string, fn types.FnRef, expectedAt time.Time) error {
 	return nil
 }
 

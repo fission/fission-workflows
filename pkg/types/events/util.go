@@ -8,7 +8,7 @@ var (
 	ErrUnknownEvent = errors.New("unknown event")
 )
 
-// Resolve attempts to convert a string-based flag to the appropriate InvocationEvent.
+// ResolveTask attempts to convert a string-based flag to the appropriate InvocationEvent.
 func ParseInvocation(event string) (Invocation, error) {
 	val, ok := Invocation_value[event]
 	if !ok {

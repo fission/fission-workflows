@@ -3,8 +3,8 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
@@ -17,11 +17,11 @@ import (
 
 type Api struct {
 	es       fes.EventStore
-	Resolver *parse.Resolver
+	resolver fnenv.Resolver
 }
 
-func NewApi(esClient fes.EventStore, parser *parse.Resolver) *Api {
-	return &Api{esClient, parser}
+func NewApi(esClient fes.EventStore, resolver fnenv.Resolver) *Api {
+	return &Api{esClient, resolver}
 }
 
 // TODO check if id already exists
@@ -70,18 +70,16 @@ func (wa *Api) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
 		return nil, err
 	}
 
-	resolvedFns, err := wa.Resolver.ResolveMap(workflow.Spec.Tasks)
+	resolvedFns, err := fnenv.ResolveTasks(wa.resolver, workflow.Spec.Tasks)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse workflow: %v", err)
+		return nil, fmt.Errorf("failed to resolve tasks in workflow: %v", err)
 	}
 
 	wfStatus := types.NewWorkflowStatus()
 	for id, t := range workflow.Spec.Tasks {
-		resolved := resolvedFns[t.FunctionRef]
-
 		wfStatus.AddTaskStatus(id, &types.TaskStatus{
 			UpdatedAt: ptypes.TimestampNow(),
-			Resolved:  resolved,
+			FnRef:     resolvedFns[t.FunctionRef],
 			Status:    types.TaskStatus_READY,
 		})
 	}
