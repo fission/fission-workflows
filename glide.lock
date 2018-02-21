@@ -1,5 +1,5 @@
-hash: dbff9efd05e00f3d15b3a68fb92742fd6152cca30d16e41a628195a5b6471c0c
-updated: 2018-02-18T12:23:26.60748+01:00
+hash: 6cc403155c897151a1d328eaa0a410d1374536fbabbfc3fdb4ac5bbfea2328f2
+updated: 2018-02-21T22:34:19.160163+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -273,7 +273,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apiextensions-apiserver
-  version: fcd622fe88a4a6efcb5aea9e94ee87324ac1b036
+  version: 0965a40c0530e110459750a7fcb9cfa4910fb944
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
@@ -281,7 +281,7 @@ imports:
   - pkg/client/clientset/clientset/scheme
   - pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 - name: k8s.io/apimachinery
-  version: 8ab5f3d8a330c2e9baaf84e39042db8d49034ae2
+  version: 80184f5f100c67bfcda6b8a848e0243fe4bc2772
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -419,6 +419,6 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
   subpackages:
   - assert
