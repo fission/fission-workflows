@@ -92,12 +92,13 @@ func (a *InvokeTask) Apply() error {
 
 	// Invoke
 	fnSpec := &types.TaskInvocationSpec{
-		TaskId: a.Task.Id,
-		FnRef:  task.Status.FnRef,
-		Inputs: inputs,
+		FnRef:        task.Status.FnRef,
+		TaskId:       a.Task.Id,
+		InvocationId: a.Wfi.Id(),
+		Inputs:       inputs,
 	}
 
-	_, err := a.Api.Invoke(a.Wfi.Metadata.Id, fnSpec)
+	_, err := a.Api.Invoke(fnSpec)
 	if err != nil {
 		actionLog.WithFields(logrus.Fields{
 			"id": a.Wfi.Metadata.Id,

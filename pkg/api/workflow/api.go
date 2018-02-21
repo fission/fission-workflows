@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -12,7 +13,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/sirupsen/logrus"
 )
 
 type Api struct {
@@ -28,7 +28,6 @@ func NewApi(esClient fes.EventStore, resolver fnenv.Resolver) *Api {
 func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 	err := validate.WorkflowSpec(workflow)
 	if err != nil {
-		logrus.Info(validate.Format(err))
 		return "", err
 	}
 
@@ -57,6 +56,10 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 }
 
 func (wa *Api) Delete(id string) error {
+	if len(id) == 0 {
+		return errors.New("id is required")
+	}
+
 	return wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_DELETED.String(),
 		Aggregate: aggregates.NewWorkflowAggregate(id),

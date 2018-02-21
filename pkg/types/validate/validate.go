@@ -25,6 +25,11 @@ var (
 	ErrInvalidOutputTask            = errors.New("unknown output task")
 	ErrNoParentTaskDependency       = errors.New("dynamic task does not contain parent dependency")
 	ErrMultipleParentTaskDependency = errors.New("dynamic task contains multiple parent tasks")
+	ErrNoWorkflowInvocation         = errors.New("workflow invocation id is required")
+	ErrNoFnRef                      = errors.New("function reference is required")
+	ErrNoWorkflow                   = errors.New("workflow id is required")
+	ErrNoId                         = errors.New("id is required")
+	ErrNoStatus                     = errors.New("status is required")
 )
 
 type Error struct {
@@ -70,9 +75,7 @@ func (ie *Error) append(err error) {
 
 // WorkflowSpec validates the Workflow Specification.
 func WorkflowSpec(spec *types.WorkflowSpec) error {
-	errs := Error{
-		val: "WorkflowSpec",
-	}
+	errs := Error{val: "WorkflowSpec"}
 
 	if spec == nil {
 		errs.append(ErrObjectEmpty)
@@ -136,12 +139,15 @@ func WorkflowSpec(spec *types.WorkflowSpec) error {
 	return errs.GetOrNil()
 }
 
-func TaskSpec(task *types.TaskSpec) error {
-	errs := Error{
-		val: "TaskSpec",
+func TaskSpec(spec *types.TaskSpec) error {
+	errs := Error{val: "TaskSpec"}
+
+	if spec == nil {
+		errs.append(ErrObjectEmpty)
+		return errs.GetOrNil()
 	}
 
-	if len(task.FunctionRef) == 0 {
+	if len(spec.FunctionRef) == 0 {
 		errs.append(ErrTaskRequiresFnRef)
 	}
 
@@ -168,6 +174,70 @@ func DynamicTaskSpec(task *types.TaskSpec) error {
 		errs.append(ErrNoParentTaskDependency)
 	} else if parents > 1 {
 		errs.append(ErrMultipleParentTaskDependency)
+	}
+	return errs.GetOrNil()
+}
+
+func Task(task *types.Task) error {
+	errs := Error{val: "Task"}
+	if task == nil {
+		errs.append(ErrObjectEmpty)
+		return errs.GetOrNil()
+	}
+
+	errs.append(TaskSpec(task.Spec))
+	errs.append(ObjectMetadata(task.Metadata))
+
+	if task.Status == nil {
+		errs.append(ErrNoStatus)
+	}
+
+	return errs.GetOrNil()
+}
+
+func ObjectMetadata(o *types.ObjectMetadata) error {
+	errs := Error{val: "WorkflowInvocationSpec"}
+
+	if o == nil {
+		errs.append(ErrObjectEmpty)
+		return errs.GetOrNil()
+	}
+	if len(o.Id) == 0 {
+		errs.append(ErrNoId)
+	}
+
+	return errs.GetOrNil()
+}
+
+func WorkflowInvocationSpec(spec *types.WorkflowInvocationSpec) error {
+	errs := Error{val: "WorkflowInvocationSpec"}
+
+	if spec == nil {
+		errs.append(ErrObjectEmpty)
+		return errs.GetOrNil()
+	}
+
+	if len(spec.WorkflowId) == 0 {
+		errs.append(ErrNoWorkflow)
+	}
+
+	return errs.GetOrNil()
+}
+
+func TaskInvocationSpec(spec *types.TaskInvocationSpec) error {
+	errs := Error{val: "TaskInvocationSpec"}
+
+	if spec == nil {
+		errs.append(ErrObjectEmpty)
+		return errs.GetOrNil()
+	}
+
+	if len(spec.InvocationId) == 0 {
+		errs.append(ErrNoWorkflowInvocation)
+	}
+
+	if spec.FnRef == nil {
+		errs.append(ErrNoFnRef)
 	}
 	return errs.GetOrNil()
 }

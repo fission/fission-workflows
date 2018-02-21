@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
@@ -30,12 +31,17 @@ func NewApi(runtime map[string]fnenv.Runtime, esClient fes.EventStore, api *dyna
 	}
 }
 
-func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
-	aggregate := aggregates.NewWorkflowInvocationAggregate(invocationId)
-	id := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+	err := validate.TaskInvocationSpec(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
+	taskId := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
 	fn := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
-			Id:        id,
+			Id:        taskId,
 			CreatedAt: ptypes.TimestampNow(),
 		},
 		Spec: spec,
@@ -49,7 +55,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 	err = ap.es.Append(&fes.Event{
 		Type:      events.Function_TASK_STARTED.String(),
 		Parent:    aggregate,
-		Aggregate: aggregates.NewTaskInvocationAggregate(id),
+		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      fnAny,
 	})
@@ -60,11 +66,11 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec)
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
-		logrus.WithField("task", invocationId).Infof("ParseTask failed: %v", err)
+		logrus.WithField("task", spec.InvocationId).Infof("ParseTask failed: %v", err)
 		esErr := ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_FAILED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(id),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnAny,
 		})
@@ -85,7 +91,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 			}
 
 			// add task
-			err = ap.dynamicApi.AddDynamicTask(invocationId, id, taskSpec)
+			err = ap.dynamicApi.AddDynamicTask(spec.InvocationId, taskId, taskSpec)
 			if err != nil {
 				return nil, err
 			}
@@ -95,7 +101,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 			if err != nil {
 				return nil, err
 			}
-			err = ap.dynamicApi.AddDynamicWorkflow(invocationId, id, workflowSpec)
+			err = ap.dynamicApi.AddDynamicWorkflow(spec.InvocationId, taskId, workflowSpec)
 			if err != nil {
 				return nil, err
 			}
@@ -112,7 +118,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 		err = ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_SUCCEEDED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(id),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
 		})
@@ -120,7 +126,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 		err = ap.es.Append(&fes.Event{
 			Type:      events.Function_TASK_FAILED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(id),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
 		})

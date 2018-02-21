@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/events"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -22,12 +23,12 @@ func NewApi(esClient fes.EventStore) *Api {
 }
 
 func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
-	if len(invocation.WorkflowId) == 0 {
-		return "", errors.New("workflowId is required")
+	err := validate.WorkflowInvocationSpec(invocation)
+	if err != nil {
+		return "", err
 	}
 
 	id := fmt.Sprintf("wi-%s", util.Uid())
-
 	data, err := proto.Marshal(invocation)
 	if err != nil {
 		return "", err
@@ -88,6 +89,10 @@ func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) erro
 }
 
 func (ia *Api) Fail(invocationId string, errMsg error) error {
+	if len(invocationId) == 0 {
+		return errors.New("invocationId is required")
+	}
+
 	var msg string
 	if errMsg != nil {
 		msg = errMsg.Error()
@@ -108,6 +113,14 @@ func (ia *Api) Fail(invocationId string, errMsg error) error {
 }
 
 func (ia *Api) AddTask(invocationId string, task *types.Task) error {
+	if len(invocationId) == 0 {
+		return errors.New("invocationId is required")
+	}
+	err := validate.Task(task)
+	if err != nil {
+		return err
+	}
+
 	data, err := proto.Marshal(task)
 	if err != nil {
 		return err
