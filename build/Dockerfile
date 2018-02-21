@@ -9,7 +9,7 @@ COPY . .
 
 RUN if [ "_$NOBUILD" = "_" ] ; then \
         go get github.com/Masterminds/glide; \
-        glide install; \
+        glide install -v; \
         build/build-linux.sh; \
     else \
         echo "NOBUILD provided; assuming binaries exist in context."; \

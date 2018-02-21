@@ -41,7 +41,7 @@ before_script:
 - hack/verify-govet.sh
 - hack/verify-gofmt.sh
 # Build
-- glide install
+- glide install -v
 - build/build-linux.sh
 
 script:
