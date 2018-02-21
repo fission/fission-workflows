@@ -97,7 +97,12 @@ func (cr *InvocationController) Init(sctx context.Context) error {
 			select {
 			case action := <-cr.workQueue:
 
-				go func() { // TODO limit goroutine pool size
+				// TODO limit goroutine pool size
+				go func() {
+					wfiLog.WithFields(logrus.Fields{
+						"type":   fmt.Sprintf("%T", action),
+						"action": fmt.Sprintf("%v", action),
+					}).Info("Executing action...")
 					cs := cr.controlState(action.Id())
 					err := action.Apply()
 					if err != nil {

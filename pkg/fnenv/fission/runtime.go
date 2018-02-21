@@ -1,6 +1,7 @@
 package fission
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -46,8 +47,14 @@ func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
 	// Get fission function url
 	// TODO use router instead once we can route to a specific function uid
-	ctxLog := log.WithField("fn", spec.GetType())
-	reqUrl, err := fe.getFnUrl(spec.GetType())
+	// TODO extract validation to validation package
+	ctxLog := log.WithField("fn", spec.FnRef)
+	if spec.FnRef == nil {
+		return nil, errors.New("invocation does not contain FnRef")
+	}
+	fnRef := *spec.FnRef
+
+	reqUrl, err := fe.getFnUrl(fnRef)
 
 	// Construct request and add body
 	ctxLog.Infof("Invoking Fission function: '%v'.", reqUrl)
@@ -60,7 +67,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	formatRequest(req, spec.Inputs)
 
 	// Add parameters normally added by Fission
-	meta := createFunctionMeta(spec.GetType())
+	meta := createFunctionMeta(fnRef)
 	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
 
 	// Perform request
@@ -99,8 +106,8 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 }
 
 // Notify signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(taskID string, fn types.ResolvedTask, expectedAt time.Time) error {
-	reqUrl, err := fe.getFnUrl(&fn)
+func (fe *FunctionEnv) Notify(taskID string, fn types.FnRef, expectedAt time.Time) error {
+	reqUrl, err := fe.getFnUrl(fn)
 	if err != nil {
 		return err
 	}
@@ -116,7 +123,7 @@ func (fe *FunctionEnv) Notify(taskID string, fn types.ResolvedTask, expectedAt t
 	return nil
 }
 
-func (fe *FunctionEnv) getFnUrl(fn *types.ResolvedTask) (*url.URL, error) {
+func (fe *FunctionEnv) getFnUrl(fn types.FnRef) (*url.URL, error) {
 	meta := createFunctionMeta(fn)
 	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
 	if err != nil {
@@ -135,10 +142,10 @@ func (fe *FunctionEnv) getFnUrl(fn *types.ResolvedTask) (*url.URL, error) {
 	return reqUrl, nil
 }
 
-func createFunctionMeta(fn *types.ResolvedTask) *metav1.ObjectMeta {
+func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
 	return &metav1.ObjectMeta{
-		Name:      fn.GetSrc(),
-		UID:       k8stypes.UID(fn.GetResolved()),
+		//Name:      name, // TODO check if we can leave this out
+		UID:       k8stypes.UID(fn.RuntimeId),
 		Namespace: metav1.NamespaceDefault,
 	}
 }

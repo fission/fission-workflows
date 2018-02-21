@@ -57,7 +57,7 @@ func (ap *Api) Invoke(invocationId string, spec *types.TaskInvocationSpec) (*typ
 		return nil, err
 	}
 
-	fnResult, err := ap.runtime[spec.Type.Runtime].Invoke(spec)
+	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec)
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
 		logrus.WithField("task", invocationId).Infof("ParseTask failed: %v", err)

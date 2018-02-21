@@ -3,7 +3,6 @@ package dynamic
 import (
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/api/workflow"
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
@@ -13,16 +12,14 @@ import (
 
 // Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
 type Api struct {
-	wfApi    *workflow.Api
-	wfiApi   *invocation.Api
-	resolver *parse.Resolver
+	wfApi  *workflow.Api
+	wfiApi *invocation.Api
 }
 
 func NewApi(wfApi *workflow.Api, wfiApi *invocation.Api) *Api {
 	return &Api{
-		wfApi:    wfApi,
-		wfiApi:   wfiApi,
-		resolver: wfApi.Resolver,
+		wfApi:  wfApi,
+		wfiApi: wfiApi,
 	}
 }
 
@@ -71,7 +68,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentId string, wfSpec *
 	proxyTask := types.NewTask(proxyTaskId)
 	proxyTask.Spec = proxyTaskSpec
 	proxyTask.Status.Status = types.TaskStatus_READY
-	proxyTask.Status.Resolved = workflows.ResolvedWorkflow(wfId)
+	proxyTask.Status.FnRef = workflows.CreateFnRef(wfId)
 
 	// Ensure that the only link of the dynamic task is with its parent
 	proxyTaskSpec.Requires = map[string]*types.TaskDependencyParameters{

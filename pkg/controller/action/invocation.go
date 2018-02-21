@@ -65,11 +65,11 @@ func (a *InvokeTask) Apply() error {
 	actionLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
 
 	// Check if resolved
-	if task.Status.Resolved == nil {
+	if task.Status.FnRef == nil {
 		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
 	}
 
-	// Resolve the inputs
+	// ResolveTask the inputs
 	inputs := map[string]*types.TypedValue{}
 	queryScope := expr.NewScope(a.Wf, a.Wfi)
 	for inputKey, val := range a.Task.Inputs {
@@ -93,7 +93,7 @@ func (a *InvokeTask) Apply() error {
 	// Invoke
 	fnSpec := &types.TaskInvocationSpec{
 		TaskId: a.Task.Id,
-		Type:   task.Status.Resolved,
+		FnRef:  task.Status.FnRef,
 		Inputs: inputs,
 	}
 

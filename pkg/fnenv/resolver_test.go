@@ -1,11 +1,10 @@
-package parse
+package fnenv
 
 import (
 	"errors"
 	"strings"
 	"testing"
 
-	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/stretchr/testify/assert"
@@ -15,12 +14,12 @@ func TestResolve(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]fnenv.Resolver{
+	clients := map[string]RuntimeResolver{
 		fooClient: uppercaseResolver,
 		"failing": failingResolver,
 	}
 
-	resolver := NewResolver(clients)
+	resolver := NewMetaResolver(clients)
 
 	task1 := "task1"
 	task1Name := "lowercase"
@@ -29,12 +28,9 @@ func TestResolve(t *testing.T) {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.ResolveMap(tasks)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, wf[task1Name].Resolved, strings.ToUpper(task1Name))
+	wf, err := ResolveTasks(resolver, tasks)
+	assert.NoError(t, err)
+	assert.Equal(t, wf[task1Name].RuntimeId, strings.ToUpper(task1Name))
 	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
@@ -42,27 +38,25 @@ func TestResolveForced(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]fnenv.Resolver{
+	clients := map[string]RuntimeResolver{
 		"bar":     uppercaseResolver,
 		fooClient: uppercaseResolver,
 		"failing": failingResolver,
 	}
 
-	resolver := NewResolver(clients)
+	resolver := NewMetaResolver(clients)
 
 	task1 := "task1"
-	task1Name := "foo:lowercase"
+	task1Ref := types.NewFnRef(fooClient, "lowercase")
+	task1Name := task1Ref.Format()
 	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.ResolveMap(tasks)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, wf[task1Name].Resolved, strings.ToUpper(task1Name))
+	wf, err := ResolveTasks(resolver, tasks)
+	assert.NoError(t, err)
+	assert.Equal(t, strings.ToUpper(task1Ref.RuntimeId), wf[task1Name].RuntimeId)
 	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
@@ -70,12 +64,12 @@ func TestResolveInputs(t *testing.T) {
 
 	fooClient := "foo"
 
-	clients := map[string]fnenv.Resolver{
+	clients := map[string]RuntimeResolver{
 		fooClient: uppercaseResolver,
 		fooClient: uppercaseResolver,
 	}
 
-	resolver := NewResolver(clients)
+	resolver := NewMetaResolver(clients)
 
 	task1 := "task1"
 	task1Name := "lowercase"
@@ -97,25 +91,23 @@ func TestResolveInputs(t *testing.T) {
 		},
 	}
 
-	wf, err := resolver.ResolveMap(tasks)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	assert.Equal(t, strings.ToUpper(task1Name), wf[task1Name].Resolved)
-	assert.Equal(t, strings.ToUpper(nestedTaskName), wf[nestedTaskName].Resolved)
-	assert.Equal(t, strings.ToUpper(nestedNestedTaskName), wf[nestedNestedTaskName].Resolved)
-	assert.Equal(t, fooClient, wf[nestedNestedTaskName].Runtime)
+	wf, err := ResolveTasks(resolver, tasks)
+	assert.NoError(t, err)
+	assert.Equal(t, strings.ToUpper(task1Name), wf[task1Name].RuntimeId)
+	//assert.Equal(t, strings.ToUpper(nestedTaskName), wf[nestedTaskName].RuntimeId)
+	//assert.Equal(t, strings.ToUpper(nestedNestedTaskName), wf[nestedNestedTaskName].RuntimeId)
+	//assert.Equal(t, fooClient, wf[nestedNestedTaskName].Runtime)
+	assert.Nil(t, wf[nestedTaskName])
 }
 
 func TestResolveNotFound(t *testing.T) {
 
-	clients := map[string]fnenv.Resolver{
+	clients := map[string]RuntimeResolver{
 		"bar":     uppercaseResolver,
 		"failing": failingResolver,
 	}
 
-	resolver := NewResolver(clients)
+	resolver := NewMetaResolver(clients)
 
 	task1 := "task1"
 	task1Name := "foo:lowercase"
@@ -124,10 +116,8 @@ func TestResolveNotFound(t *testing.T) {
 			FunctionRef: task1Name,
 		},
 	}
-	wf, err := resolver.ResolveMap(tasks)
-	if err == nil {
-		t.Fatal(wf)
-	}
+	_, err := ResolveTasks(resolver, tasks)
+	assert.Error(t, err)
 }
 
 var (

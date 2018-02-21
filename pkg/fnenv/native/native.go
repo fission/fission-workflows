@@ -9,6 +9,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	Name = "native"
+)
+
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
 	Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
@@ -30,7 +34,7 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	fnId := spec.GetType().GetResolved()
+	fnId := spec.FnRef.RuntimeId
 	fn, ok := fe.fns[fnId]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnId)

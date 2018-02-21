@@ -10,7 +10,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/api/workflow"
-	"github.com/fission/fission-workflows/pkg/api/workflow/parse"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -98,7 +97,7 @@ func Run(ctx context.Context, opts *Options) error {
 	// Resolvers and runtimes
 	invocationApi := invocation.NewApi(es)
 	reflectiveRuntime := workflows.NewRuntime(invocationApi, wfiCache())
-	resolvers := map[string]fnenv.Resolver{}
+	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
 	runtimes[workflows.Name] = reflectiveRuntime
 	if opts.InternalRuntime {
@@ -279,8 +278,9 @@ func runAdminApiServer(s *grpc.Server) {
 	log.Infof("Serving admin gRPC API at %s.", gRPCAddress)
 }
 
-func runWorkflowApiServer(s *grpc.Server, es fes.EventStore, resolvers map[string]fnenv.Resolver, wfCache fes.CacheReader) {
-	workflowParser := parse.NewResolver(resolvers)
+func runWorkflowApiServer(s *grpc.Server, es fes.EventStore, resolvers map[string]fnenv.RuntimeResolver,
+	wfCache fes.CacheReader) {
+	workflowParser := fnenv.NewMetaResolver(resolvers)
 	workflowApi := workflow.NewApi(es, workflowParser)
 	workflowServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, wfCache)
 	apiserver.RegisterWorkflowAPIServer(s, workflowServer)
@@ -328,9 +328,9 @@ func runHttpGateway(ctx context.Context, gwSrv *http.Server, adminApiAddr string
 }
 
 func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.EventStore, wfiCache fes.CacheReader,
-	wfCache fes.CacheReader, resolvers map[string]fnenv.Resolver) {
+	wfCache fes.CacheReader, resolvers map[string]fnenv.RuntimeResolver) {
 
-	workflowParser := parse.NewResolver(resolvers)
+	workflowParser := fnenv.NewMetaResolver(resolvers)
 	workflowApi := workflow.NewApi(es, workflowParser)
 	wfServer := apiserver.NewGrpcWorkflowApiServer(workflowApi, wfCache)
 	wfiApi := invocation.NewApi(es)
@@ -345,8 +345,8 @@ func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.EventStore, wfiCac
 }
 
 func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.EventStore,
-	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.Resolver) *controller.InvocationController {
-	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
+	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *controller.InvocationController {
+	workflowApi := workflow.NewApi(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationApi := invocation.NewApi(es)
 	dynamicApi := dynamic.NewApi(workflowApi, invocationApi)
 	functionApi := function.NewApi(fnRuntimes, es, dynamicApi)
@@ -355,8 +355,9 @@ func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.Cach
 	return controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
 }
 
-func setupWorkflowController(wfCache fes.CacheReader, es fes.EventStore, fnResolvers map[string]fnenv.Resolver) *controller.WorkflowController {
-	workflowApi := workflow.NewApi(es, parse.NewResolver(fnResolvers))
+func setupWorkflowController(wfCache fes.CacheReader, es fes.EventStore,
+	fnResolvers map[string]fnenv.RuntimeResolver) *controller.WorkflowController {
+	workflowApi := workflow.NewApi(es, fnenv.NewMetaResolver(fnResolvers))
 	return controller.NewWorkflowController(wfCache, workflowApi)
 }
 

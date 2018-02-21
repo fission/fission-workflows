@@ -206,7 +206,7 @@ func (m *TaskSpec) Parent() (string, bool) {
 
 func (m *TaskInvocationSpec) ToWorkflowSpec() *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
-		WorkflowId: m.Type.Resolved,
+		WorkflowId: m.FnRef.RuntimeId,
 		Inputs:     m.Inputs,
 	}
 }
