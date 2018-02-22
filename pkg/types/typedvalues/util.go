@@ -70,3 +70,11 @@ func FormatString(t *types.TypedValue) (string, error) {
 	}
 	return s, nil
 }
+
+type Inputs map[string]*types.TypedValue
+
+func Input(i interface{}) Inputs {
+	in := Inputs{}
+	in[types.INPUT_MAIN] = UnsafeParse(i)
+	return in
+}

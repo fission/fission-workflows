@@ -2,6 +2,7 @@ package apiserver
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/fission/fission-workflows/pkg/api/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -9,6 +10,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/sirupsen/logrus"
+
 	"golang.org/x/net/context"
 )
 
@@ -30,6 +33,7 @@ func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, spec *types.Workflo
 
 	id, err := ga.api.Create(spec)
 	if err != nil {
+		logrus.Info(strings.Replace(validate.Format(err), "\n", "; ", -1))
 		return nil, err
 	}
 
@@ -62,6 +66,7 @@ func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*S
 func (ga *GrpcWorkflowApiServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
 	err := validate.WorkflowSpec(spec)
 	if err != nil {
+		logrus.Info(strings.Replace(validate.Format(err), "\n", "; ", -1))
 		return nil, err
 	}
 	return &empty.Empty{}, nil

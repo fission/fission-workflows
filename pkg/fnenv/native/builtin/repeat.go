@@ -77,8 +77,8 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 		do := proto.Clone(task).(*types.TaskSpec)
 		if n > 0 {
 			prev := taskId(n - 1)
-			do.AddDependency(prev)
-			do.AddInput(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
+			do.Require(prev)
+			do.Input(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
 		}
 		tasks[id] = do
 	}

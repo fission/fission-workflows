@@ -1,6 +1,8 @@
 package types
 
-import "github.com/golang/protobuf/ptypes"
+import (
+	"github.com/golang/protobuf/ptypes"
+)
 
 // GetTasks gets all tasks in a workflow. This includes the dynamic tasks added during
 // the invocation.
@@ -110,34 +112,38 @@ func NewWorkflow(id string) *Workflow {
 	}
 }
 
-func NewWorkflowSpec() *WorkflowSpec {
-	return &WorkflowSpec{}
-}
-
 func NewWorkflowStatus() *WorkflowStatus {
 	return &WorkflowStatus{
 		UpdatedAt: ptypes.TimestampNow(),
 	}
 }
 
-func NewWorkflowInvocation(id string) *WorkflowInvocation {
+func NewWorkflowInvocation(wfId string, invocId string) *WorkflowInvocation {
 	return &WorkflowInvocation{
-		Metadata: NewObjectMetadata(id),
-		Spec:     &WorkflowInvocationSpec{},
+		Metadata: NewObjectMetadata(invocId),
+		Spec:     NewWorkflowInvocationSpec(wfId),
 		Status:   &WorkflowInvocationStatus{},
 	}
 }
 
-func NewTask(id string) *Task {
+func NewWorkflowInvocationSpec(wfId string) *WorkflowInvocationSpec {
+	return &WorkflowInvocationSpec{
+		WorkflowId: wfId,
+	}
+}
+
+func NewTask(id string, fn string) *Task {
 	return &Task{
 		Metadata: NewObjectMetadata(id),
-		Spec:     NewTaskSpec(),
+		Spec:     NewTaskSpec(fn),
 		Status:   NewTaskStatus(),
 	}
 }
 
-func NewTaskSpec() *TaskSpec {
-	return &TaskSpec{}
+func NewTaskSpec(fn string) *TaskSpec {
+	return &TaskSpec{
+		FunctionRef: fn,
+	}
 }
 
 func NewTaskStatus() *TaskStatus {
@@ -169,4 +175,40 @@ func SingleInput(key string, t *TypedValue) map[string]*TypedValue {
 
 func SingleDefaultInput(t *TypedValue) map[string]*TypedValue {
 	return SingleInput(INPUT_MAIN, t)
+}
+
+type Requires map[string]*TaskDependencyParameters
+
+func (r Requires) Add(s ...string) Requires {
+	if s != nil {
+		for _, v := range s {
+			r[v] = nil
+		}
+	}
+	return r
+}
+
+func Require(s ...string) Requires {
+	return Requires{}.Add(s...)
+}
+
+func NewWorkflowSpec() *WorkflowSpec {
+	return &WorkflowSpec{
+		ApiVersion: WorkflowApiVersion,
+	}
+}
+
+type Tasks map[string]*TaskSpec
+
+type WorkflowInstance struct {
+	Workflow *Workflow
+
+	// Invocation is nil if not yet invoked
+	Invocation *WorkflowInvocation
+}
+
+type TaskInstance struct {
+	Task *Task
+	// Invocation is nil if not yet invoked
+	Invocation *TaskInvocation
 }

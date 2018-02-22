@@ -94,6 +94,13 @@ service WorkflowInvocationAPI {
             get: "/invocation/{id}"
         };
     }
+
+    rpc Validate (WorkflowInvocationSpec) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/invocation/validate"
+            body: "*"
+        };
+    }
 }
 
 message WorkflowInvocationIdentifier {
