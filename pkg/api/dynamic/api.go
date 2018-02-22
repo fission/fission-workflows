@@ -41,9 +41,8 @@ func (ap *Api) AddDynamicTask(invocationId string, parentId string, taskSpec *ty
 }
 
 func (ap *Api) AddDynamicWorkflow(invocationId string, parentTaskId string, workflowSpec *types.WorkflowSpec) error {
-	taskSpec := types.NewTaskSpec()
 	// TODO add inputs to WorkflowSpec
-	return ap.addDynamicWorkflow(invocationId, parentTaskId, workflowSpec, taskSpec)
+	return ap.addDynamicWorkflow(invocationId, parentTaskId, workflowSpec, &types.TaskSpec{})
 }
 
 func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSpec *types.WorkflowSpec,
@@ -63,9 +62,9 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfId
-	proxyTaskSpec.AddInput("_parent", typedvalues.ParseString(invocationId))
+	proxyTaskSpec.Input("_parent", typedvalues.ParseString(invocationId))
 	proxyTaskId := parentTaskId + "_child"
-	proxyTask := types.NewTask(proxyTaskId)
+	proxyTask := types.NewTask(proxyTaskId, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec
 	proxyTask.Status.Status = types.TaskStatus_READY
 	proxyTask.Status.FnRef = workflows.CreateFnRef(wfId)

@@ -2,12 +2,14 @@ package apiserver
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -21,6 +23,15 @@ const (
 type grpcInvocationApiServer struct {
 	api      *invocation.Api
 	wfiCache fes.CacheReader
+}
+
+func (gi *grpcInvocationApiServer) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
+	err := validate.WorkflowInvocationSpec(spec)
+	if err != nil {
+		logrus.Info(strings.Replace(validate.Format(err), "\n", "; ", -1))
+		return nil, err
+	}
+	return &empty.Empty{}, nil
 }
 
 func NewGrpcInvocationApiServer(api *invocation.Api, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {

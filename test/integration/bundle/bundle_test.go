@@ -13,7 +13,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/test/integration"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
@@ -25,6 +24,11 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	if testing.Short() {
+		fmt.Println("Skipping bundle tests...")
+		return
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
 	integration.SetupBundle(ctx)
 
@@ -283,8 +287,6 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 		},
 	}
 	wfResp, err := cl.Create(ctx, wfSpec)
-	fmt.Printf("%v\n", validate.Format(err))
-	fmt.Println("-----")
 	assert.NoError(t, err)
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)
@@ -299,9 +301,73 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Successful())
 	assert.Equal(t, 3, len(wfi.Status.Tasks))
 
-	output, err := typedvalues.Format(wfi.Status.Output)
+	_, err = typedvalues.Format(wfi.Status.Output)
 	assert.NoError(t, err)
-	fmt.Printf("Output: '%v'\n", output)
-	fmt.Printf("Tasks: '%v'\n", wfi.Status.Tasks)
-	assert.Equal(t, "inner1", output)
+}
+
+func TestLongRunningWorkflowInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowApiVersion,
+		OutputTask: "final",
+		Tasks: types.Tasks{
+			"longSleep": {
+				FunctionRef: builtin.Sleep,
+				Inputs:      typedvalues.Input("5s"),
+			},
+			"afterSleep": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ '4' }"),
+				Requires:    types.Require("longSleep"),
+			},
+			"parallel1": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ '1' }"),
+				Requires:    types.Require("longSleep"),
+			},
+			"parallel2": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ output('parallel1') + '2' }"),
+				Requires:    types.Require("parallel1"),
+			},
+			"parallel3": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ output('parallel2') + '3' }"),
+				Requires:    types.Require("parallel2"),
+			},
+			"merge": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ output('parallel3') + output('afterSleep') }"),
+				Requires:    types.Require("parallel3", "afterSleep"),
+			},
+			"final": {
+				FunctionRef: builtin.Noop,
+				Inputs:      typedvalues.Input("{ output('merge') }"),
+				Requires:    types.Require("merge"),
+			},
+		},
+	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	assert.NoError(t, err, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
+
+	output := typedvalues.UnsafeFormat(wfi.Status.Output)
+	assert.Equal(t, "1234", output)
 }

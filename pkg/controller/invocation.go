@@ -244,21 +244,22 @@ func (cr *InvocationController) Close() error {
 	return nil
 }
 
-func (cr *InvocationController) submit(actions ...Action) (submitted bool) {
+func (cr *InvocationController) submit(actions ...Action) (allSubmitted bool) {
+	allSubmitted = true
 	for _, action := range actions {
 		select {
 		case cr.workQueue <- action:
 			// Ok
 			cr.controlState(action.Id()).IncrementQueueSize()
-			submitted = true
+			allSubmitted = true
 			wfiLog.WithField("wfi", action.Id()).
 				Infof("submitted action: '%s'", reflect.TypeOf(action))
 		default:
 			// Action overflow
-			submitted = false
+			allSubmitted = false
 		}
 	}
-	return submitted
+	return allSubmitted
 }
 
 func (cr *InvocationController) controlState(id string) *ControlState {

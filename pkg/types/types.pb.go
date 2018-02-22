@@ -700,10 +700,13 @@ func (m *TaskInvocation) GetStatus() *TaskInvocationStatus {
 
 type TaskInvocationSpec struct {
 	// Id of the task to be invoked (no ambiguatity at this point
-	FnRef        *FnRef                 `protobuf:"bytes,1,opt,name=fnRef" json:"fnRef,omitempty"`
-	TaskId       string                 `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
-	Inputs       map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	InvocationId string                 `protobuf:"bytes,4,opt,name=invocationId" json:"invocationId,omitempty"`
+	FnRef *FnRef `protobuf:"bytes,1,opt,name=fnRef" json:"fnRef,omitempty"`
+	// TaskId is the id of the task within the workflow
+	TaskId string `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
+	// Inputs contain all inputs to the task invocation
+	Inputs map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	//
+	InvocationId string `protobuf:"bytes,4,opt,name=invocationId" json:"invocationId,omitempty"`
 }
 
 func (m *TaskInvocationSpec) Reset()                    { *m = TaskInvocationSpec{} }
