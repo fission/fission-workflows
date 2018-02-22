@@ -16,11 +16,11 @@ import (
 )
 
 type Api struct {
-	es       fes.EventStore
+	es       fes.Backend
 	resolver fnenv.Resolver
 }
 
-func NewApi(esClient fes.EventStore, resolver fnenv.Resolver) *Api {
+func NewApi(esClient fes.Backend, resolver fnenv.Resolver) *Api {
 	return &Api{esClient, resolver}
 }
 

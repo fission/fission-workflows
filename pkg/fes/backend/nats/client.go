@@ -7,22 +7,61 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
+	nats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	defaultClient = "fes"
+)
+
 type EventStore struct {
 	pubsub.Publisher
-	conn *WildcardConn
-	sub  map[fes.Aggregate]stan.Subscription
+	conn   *WildcardConn
+	sub    map[fes.Aggregate]stan.Subscription
+	Config Config
 }
 
-func NewEventStore(conn *WildcardConn) *EventStore {
+type Config struct {
+	//Cluster: clusterId,
+	//Client:  "someClient",
+	//Url:     fmt.Sprintf("nats://%s:%d", address, port),
+	Cluster string
+	Client  string
+
+	// Example: nats://localhost:9300
+	Url string
+}
+
+func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 	return &EventStore{
 		Publisher: pubsub.NewPublisher(),
 		conn:      conn,
 		sub:       map[fes.Aggregate]stan.Subscription{},
+		Config:    cfg,
 	}
+}
+
+func Connect(cfg Config) (*EventStore, error) {
+	if cfg.Client == "" {
+		cfg.Client = defaultClient
+	}
+	if cfg.Url == "" {
+		cfg.Url = nats.DefaultURL
+	}
+	natsUrl := stan.NatsURL(cfg.Url)
+	conn, err := stan.Connect(cfg.Cluster, cfg.Client, natsUrl)
+	if err != nil {
+		return nil, err
+	}
+	wconn := NewWildcardConn(conn)
+	logrus.WithField("cluster", cfg.Cluster).
+		WithField("url", "!redacted!").
+		WithField("client", cfg.Client).
+		Info("connected to NATS")
+
+	return NewEventStore(wconn, cfg), nil
 }
 
 // Watch a aggregate type
@@ -77,7 +116,7 @@ func (es *EventStore) Append(event *fes.Event) error {
 		"aggregate.id":   event.Aggregate.Id,
 		"aggregate.type": event.Aggregate.Type,
 		"nats.Subject":   subject,
-	}).Info("EventStore client appending event.")
+	}).Info("Backend client appending event.")
 
 	return es.conn.Publish(subject, data)
 }

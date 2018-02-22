@@ -1,12 +1,10 @@
+// Bundle package contains integration tests that run using the bundle
 package bundle
 
 import (
 	"context"
 	"fmt"
-	"io"
-	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -16,18 +14,19 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/fission/fission-workflows/test/integration"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats-streaming"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )
 
-func TestMain(m *testing.M) {
+const (
+	gRPCAddress = ":5555"
+)
 
+func TestMain(m *testing.M) {
 	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
-	setup(ctx)
+	integration.SetupBundle(ctx)
 
 	time.Sleep(time.Duration(4) * time.Second)
 
@@ -305,97 +304,4 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 	fmt.Printf("Output: '%v'\n", output)
 	fmt.Printf("Tasks: '%v'\n", wfi.Status.Tasks)
 	assert.Equal(t, "inner1", output)
-}
-
-func setup(ctx context.Context) {
-
-	natsOptions := setupEventStore(ctx)
-
-	go Run(ctx, &Options{
-		// No fission for now
-		InternalRuntime:       true,
-		InvocationController:  true,
-		WorkflowController:    true,
-		ApiHttp:               true,
-		ApiWorkflowInvocation: true,
-		ApiWorkflow:           true,
-		ApiAdmin:              true,
-		Nats:                  natsOptions,
-	})
-}
-
-func setupEventStore(ctx context.Context) *NatsOptions {
-	clusterId := fmt.Sprintf("fission-workflows-tests-%d", time.Now().UnixNano())
-	port, err := findFreePort()
-	if err != nil {
-		panic(err)
-	}
-	address := "127.0.0.1"
-	flags := strings.Split(fmt.Sprintf("-cid %s -p %d -a %s", clusterId, port, address), " ")
-	logrus.Info(flags)
-	cmd := exec.CommandContext(ctx, "nats-streaming-server", flags...)
-	stdOut, _ := cmd.StdoutPipe()
-	stdErr, _ := cmd.StderrPipe()
-	go io.Copy(os.Stdout, stdOut)
-	go io.Copy(os.Stdout, stdErr)
-	err = cmd.Start()
-	if err != nil {
-		panic(err)
-	}
-	esOpts := &NatsOptions{
-		Cluster: clusterId,
-		Client:  "someClient",
-		Url:     fmt.Sprintf("nats://%s:%d", address, port),
-	}
-
-	logrus.WithField("config", esOpts).Info("Setting up NATS server")
-
-	// wait for a bit to set it up
-	awaitCtx, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
-	defer cancel()
-	err = waitForNats(awaitCtx, esOpts.Url, esOpts.Cluster)
-	if err != nil {
-		logrus.Error(err)
-	}
-	logrus.WithField("config", esOpts).Info("NATS Server running")
-
-	return esOpts
-}
-
-// Wait for NATS to come online, ignoring ErrNoServer as it could mean that NATS is still being setup
-func waitForNats(ctx context.Context, url string, cluster string) error {
-	conn, err := stan.Connect(cluster, "setupEventStore-alive-test", stan.NatsURL(url),
-		stan.ConnectWait(time.Duration(10)*time.Second))
-	if err == nats.ErrNoServers {
-		logrus.WithFields(logrus.Fields{
-			"cluster": cluster,
-			"url":     url,
-		}).Warnf("retrying due to err: %v", err)
-		select {
-		case <-time.After(time.Duration(1) * time.Second):
-			return waitForNats(ctx, url, cluster)
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	return nil
-}
-
-func findFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	listener, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer listener.Close()
-	tcpAddr := listener.Addr().(*net.TCPAddr)
-	return tcpAddr.Port, nil
 }

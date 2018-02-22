@@ -211,7 +211,7 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 // FallbackCache looks into a backing data store in case there is a cache miss
 type FallbackCache struct {
 	cache  CacheReaderWriter
-	client EventStore
+	client Backend
 	domain StringMatcher
 	target func() Aggregator // TODO extract to a TypedSubscription
 }

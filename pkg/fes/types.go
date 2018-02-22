@@ -27,8 +27,8 @@ type EventAppender interface {
 	Append(event *Event) error
 }
 
-// EventStore is a persistent store for events
-type EventStore interface {
+// Backend is a persistent store for events
+type Backend interface {
 	EventAppender
 	Get(aggregate *Aggregate) ([]*Event, error)
 	List(matcher StringMatcher) ([]Aggregate, error)
