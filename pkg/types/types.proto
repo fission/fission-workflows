@@ -177,8 +177,15 @@ message TaskInvocation {
 message TaskInvocationSpec {
     // Id of the task to be invoked (no ambiguatity at this point
     FnRef fnRef = 1;
-    string taskId = 2; // task in workflow
+
+    // TaskId is the id of the task within the workflow
+    string taskId = 2;
+
+    // Inputs contain all inputs to the task invocation
     map<string, TypedValue> inputs = 3;
+
+    //
+    string invocationId = 4;
 }
 
 message TaskInvocationStatus {

@@ -40,13 +40,13 @@ func (ap *Api) AddDynamicTask(invocationId string, parentId string, taskSpec *ty
 	return ap.addDynamicWorkflow(invocationId, parentId, wfSpec, taskSpec)
 }
 
-func (ap *Api) AddDynamicWorkflow(invocationId string, parentId string, workflowSpec *types.WorkflowSpec) error {
+func (ap *Api) AddDynamicWorkflow(invocationId string, parentTaskId string, workflowSpec *types.WorkflowSpec) error {
 	taskSpec := types.NewTaskSpec()
 	// TODO add inputs to WorkflowSpec
-	return ap.addDynamicWorkflow(invocationId, parentId, workflowSpec, taskSpec)
+	return ap.addDynamicWorkflow(invocationId, parentTaskId, workflowSpec, taskSpec)
 }
 
-func (ap *Api) addDynamicWorkflow(invocationId string, parentId string, wfSpec *types.WorkflowSpec,
+func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSpec *types.WorkflowSpec,
 	stubTask *types.TaskSpec) error {
 
 	// Clean-up WorkflowSpec and submit
@@ -64,7 +64,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentId string, wfSpec *
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfId
 	proxyTaskSpec.AddInput("_parent", typedvalues.ParseString(invocationId))
-	proxyTaskId := parentId + "_child"
+	proxyTaskId := parentTaskId + "_child"
 	proxyTask := types.NewTask(proxyTaskId)
 	proxyTask.Spec = proxyTaskSpec
 	proxyTask.Status.Status = types.TaskStatus_READY
@@ -72,7 +72,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentId string, wfSpec *
 
 	// Ensure that the only link of the dynamic task is with its parent
 	proxyTaskSpec.Requires = map[string]*types.TaskDependencyParameters{
-		parentId: {
+		parentTaskId: {
 			Type: types.TaskDependencyParameters_DYNAMIC_OUTPUT,
 		},
 	}
