@@ -19,11 +19,11 @@ import (
 // Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
 type Api struct {
 	runtime    map[string]fnenv.Runtime // TODO support AsyncRuntime
-	es         fes.EventStore
+	es         fes.Backend
 	dynamicApi *dynamic.Api
 }
 
-func NewApi(runtime map[string]fnenv.Runtime, esClient fes.EventStore, api *dynamic.Api) *Api {
+func NewApi(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *dynamic.Api) *Api {
 	return &Api{
 		runtime:    runtime,
 		es:         esClient,

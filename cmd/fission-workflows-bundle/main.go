@@ -1,13 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"os"
 
-	"context"
-
-	"fmt"
-
 	"github.com/fission/fission-workflows/cmd/fission-workflows-bundle/bundle"
+	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	"github.com/fission/fission-workflows/pkg/util"
 	natsio "github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
@@ -55,7 +54,7 @@ func parseFissionOptions(c *cli.Context) *bundle.FissionOptions {
 	}
 }
 
-func parseNatsOptions(c *cli.Context) *bundle.NatsOptions {
+func parseNatsOptions(c *cli.Context) *nats.Config {
 	if !c.Bool("nats") {
 		return nil
 	}
@@ -65,7 +64,7 @@ func parseNatsOptions(c *cli.Context) *bundle.NatsOptions {
 		client = fmt.Sprintf("workflow-bundle-%s", util.Uid())
 	}
 
-	return &bundle.NatsOptions{
+	return &nats.Config{
 		Url:     c.String("nats-url"),
 		Cluster: c.String("nats-cluster"),
 		Client:  client,

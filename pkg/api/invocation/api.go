@@ -15,10 +15,10 @@ import (
 )
 
 type Api struct {
-	es fes.EventStore
+	es fes.Backend
 }
 
-func NewApi(esClient fes.EventStore) *Api {
+func NewApi(esClient fes.Backend) *Api {
 	return &Api{esClient}
 }
 
