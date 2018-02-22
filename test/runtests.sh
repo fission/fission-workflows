@@ -8,4 +8,4 @@ if [ -z "$1" ]; then
 fi
 
 # Run unit and integration tests, exclude dependencies
-go test -race -v $(go list ./... | grep -v '/vendor/')
+go test -race -v $(go list ./... | grep -v '/vendor/') "$@"

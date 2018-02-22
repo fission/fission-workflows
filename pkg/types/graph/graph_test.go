@@ -10,7 +10,7 @@ import (
 func TestParse(t *testing.T) {
 	it := NewTaskInstanceIterator(map[string]*types.TaskInstance{
 		"a": {
-			Task: types.NewTask("a"),
+			Task: types.NewTask("a", "noop"),
 		},
 		"b": {
 			Task: &types.Task{
@@ -53,7 +53,7 @@ func TestParse(t *testing.T) {
 func TestParseDynamic(t *testing.T) {
 	it := NewTaskInstanceIterator(map[string]*types.TaskInstance{
 		"a": {
-			Task: types.NewTask("a"),
+			Task: types.NewTask("a", "noop"),
 		},
 		"b": {
 			Task: &types.Task{

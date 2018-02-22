@@ -8,6 +8,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+var DefaultParser = &Parser{}
+
+func Parse(r io.Reader) (*types.WorkflowSpec, error) {
+	return DefaultParser.Parse(r)
+}
+
 // Parser implements the parse.Parser interface to parse workflow specs from a protobuf encoding.
 type Parser struct {
 }

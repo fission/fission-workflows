@@ -24,6 +24,11 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	if testing.Short() {
+		fmt.Println("Skipping bundle tests...")
+		return
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
 	integration.SetupBundle(ctx)
 

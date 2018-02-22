@@ -13,13 +13,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	defaultFunctionRef = builtin.Noop
-)
+const defaultFunctionRef = builtin.Noop
 
-var (
-	DefaultParser = Parser{}
-)
+var DefaultParser = &Parser{}
 
 func Parse(r io.Reader) (*types.WorkflowSpec, error) {
 	return DefaultParser.Parse(r)

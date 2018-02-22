@@ -14,7 +14,7 @@ parse() {
 }
 
 echo  "Building with v$(wfcli --version)..."
-if [[ -f $SRC_PKG ]] ; then
+if [[ -f ${SRC_PKG} ]] ; then
     # Package is a single file
     parse ${SRC_PKG} ${DEPLOY_PKG}
 elif [[ -d ${SRC_PKG} ]] ; then
@@ -25,7 +25,7 @@ elif [[ -d ${SRC_PKG} ]] ; then
         parse ${wf} > ${DEPLOY_PKG}/dst
     done
 else
-    echo "Unknown file type: '${SRC_PKG}'"
+    echo "Invalid file type: '${SRC_PKG}'"
     exit 11
 fi
 echo "Build succeeded."

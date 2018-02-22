@@ -25,7 +25,7 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 			},
 		},
 	}
-	invocation := NewWorkflowInvocation("wfi-45")
+	invocation := NewWorkflowInvocation("wf-1", "wfi-45")
 	invocation.Status.DynamicTasks = map[string]*Task{
 		"some_dynamic_task": {
 			Metadata: NewObjectMetadata("some_dynamic_task"),
