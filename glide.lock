@@ -1,5 +1,5 @@
-hash: 6cc403155c897151a1d328eaa0a410d1374536fbabbfc3fdb4ac5bbfea2328f2
-updated: 2018-02-21T22:34:19.160163+01:00
+hash: f53001c4fe0ea1ed8af0f9b1646f76d311bb63488c25592ccabfe93ef674082c
+updated: 2018-02-22T11:22:04.816245+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -33,7 +33,7 @@ imports:
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
 - name: github.com/fission/fission
-  version: b2678783b63b4dccda8e6b02ca1adf292e1bb183
+  version: f5f4209345ecf477c79d5a5e30e618476713050c
   subpackages:
   - cache
   - controller/client
@@ -80,7 +80,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 0a4f71a498b7c4812f64969510bcb4eca251e33a
+  version: 925541529c1fa6821df4e44ce2723319eb2be768
   subpackages:
   - jsonpb
   - proto
@@ -159,7 +159,7 @@ imports:
   subpackages:
   - codec
 - name: github.com/urfave/cli
-  version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
+  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
 - name: golang.org/x/crypto
   version: d172538b2cfce0c13cee31e647d0367aa8cd2486
   subpackages:
@@ -246,17 +246,26 @@ imports:
   - googleapis/api/annotations
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: b8669c35455183da6d5c474ea6e72fbf55183274
+  version: 8e4536a86ab602859c20df5ebfd0bd4228d08655
   subpackages:
+  - balancer
+  - balancer/base
+  - balancer/roundrobin
   - codes
+  - connectivity
   - credentials
-  - grpclb/grpc_lb_v1
+  - encoding
+  - encoding/proto
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - internal
   - keepalive
   - metadata
   - naming
   - peer
+  - resolver
+  - resolver/dns
+  - resolver/passthrough
   - stats
   - status
   - tap
@@ -269,7 +278,7 @@ imports:
   - bson
   - internal/json
 - name: gopkg.in/sourcemap.v1
-  version: 9753370bfb4cbdcab8e6ecd5551ffe8684e3e5b5
+  version: 81e7d9acf11ecfe90083a9eb2204fc0d5c39b38b
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apiextensions-apiserver
