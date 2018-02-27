@@ -1,5 +1,5 @@
-hash: f53001c4fe0ea1ed8af0f9b1646f76d311bb63488c25592ccabfe93ef674082c
-updated: 2018-02-22T11:22:04.816245+01:00
+hash: 07d3556d9858a81553d499abb269f5f24aa7546d925c371f4892454c1000e5db
+updated: 2018-02-27T15:03:14.338445+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -185,6 +185,7 @@ imports:
 - name: golang.org/x/sync
   version: fd80eb99c8f653c847d294a001bdf2a3a6f768f5
   subpackages:
+  - semaphore
   - syncmap
 - name: golang.org/x/sys
   version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9

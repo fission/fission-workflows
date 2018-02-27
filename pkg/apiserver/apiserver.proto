@@ -26,6 +26,13 @@ service WorkflowAPI {
         };
     }
 
+
+    rpc Delete (WorkflowIdentifier) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            delete: "/workflow/{id}"
+        };
+    }
+
     rpc Validate (WorkflowSpec) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/workflow/validate"

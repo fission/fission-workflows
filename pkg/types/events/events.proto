@@ -18,11 +18,9 @@ enum Invocation {
     INVOCATION_FAILED = 4;
 }
 
-enum Function {
+enum Task {
     TASK_STARTED = 0; // origin: Engine
     TASK_SKIPPED = 1; // origin: Engine
-    TASK_HEARTBEAT_REQUEST = 2; // origin: Engine
-    TASK_HEARTBEAT_RESPONSE = 3; // origin: Task
     TASK_SUCCEEDED = 4; // origin: Task
     TASK_FAILED = 5; // origin: Task
     TASK_ABORTED = 6; // origin: Engine

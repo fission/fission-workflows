@@ -90,7 +90,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 		return err
 	}
 
-	logrus.Infof("Eventstore client watches:' %s'", subject)
+	logrus.Infof("Backend client watches:' %s'", subject)
 	es.sub[aggregate] = sub
 	return nil
 }

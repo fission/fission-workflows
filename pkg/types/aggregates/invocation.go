@@ -20,9 +20,10 @@ type WorkflowInvocation struct {
 	*types.WorkflowInvocation
 }
 
-func NewWorkflowInvocation(invocationId string, wi *types.WorkflowInvocation) *WorkflowInvocation {
-	wia := &WorkflowInvocation{
-		WorkflowInvocation: wi,
+func NewWorkflowInvocation(invocationId string, wi ...*types.WorkflowInvocation) *WorkflowInvocation {
+	wia := &WorkflowInvocation{}
+	if len(wi) > 0 {
+		wia.WorkflowInvocation = wi[0]
 	}
 
 	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowInvocationAggregate(invocationId))

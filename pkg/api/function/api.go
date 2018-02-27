@@ -53,7 +53,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	}
 
 	err = ap.es.Append(&fes.Event{
-		Type:      events.Function_TASK_STARTED.String(),
+		Type:      events.Task_TASK_STARTED.String(),
 		Parent:    aggregate,
 		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 		Timestamp: ptypes.TimestampNow(),
@@ -68,7 +68,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 		// TODO improve error handling here (retries? internal or task related error?)
 		logrus.WithField("task", spec.InvocationId).Infof("ParseTask failed: %v", err)
 		esErr := ap.es.Append(&fes.Event{
-			Type:      events.Function_TASK_FAILED.String(),
+			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
@@ -116,7 +116,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
 		err = ap.es.Append(&fes.Event{
-			Type:      events.Function_TASK_SUCCEEDED.String(),
+			Type:      events.Task_TASK_SUCCEEDED.String(),
 			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
@@ -124,7 +124,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 		})
 	} else {
 		err = ap.es.Append(&fes.Event{
-			Type:      events.Function_TASK_FAILED.String(),
+			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,
 			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 			Timestamp: ptypes.TimestampNow(),
@@ -141,7 +141,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 
 func (ap *Api) Fail(invocationId string, taskId string) error {
 	return ap.es.Append(&fes.Event{
-		Type:      events.Function_TASK_FAILED.String(),
+		Type:      events.Task_TASK_FAILED.String(),
 		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
 		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
 		Timestamp: ptypes.TimestampNow(),

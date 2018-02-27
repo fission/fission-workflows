@@ -19,8 +19,13 @@ const (
 )
 
 var (
-	ErrTimeOut = errors.New("expression resolver timed out")
+	ErrTimeOut      = errors.New("expression resolver timed out")
+	DefaultResolver = NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
 )
+
+func Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error) {
+	return DefaultResolver.Resolve(rootScope, currentTask, expr)
+}
 
 // resolver resolves an expression within a given context/scope.
 type Resolver interface {

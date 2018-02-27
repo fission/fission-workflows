@@ -26,8 +26,13 @@ type Publisher interface {
 }
 
 type SubscriptionOptions struct {
-	Buf           int
-	LabelSelector labels.Selector
+	// Buffer is the size of the buffer kept for incoming messages. In case the buffer is full, subsequent messages will
+	// be dropped. The default size of the buffer is 10.
+	Buffer int
+
+	// Selector allows subscribers to narrow the selection of messages that they are notified of. By default there is no
+	// selector; the subscriber will receive all messages published by the publisher.
+	Selector labels.Selector
 }
 
 type Subscription struct {
@@ -103,12 +108,12 @@ func (pu *DefaultPublisher) Subscribe(opts ...SubscriptionOptions) *Subscription
 		subOpts = opts[0]
 	}
 
-	if subOpts.Buf <= 0 {
-		subOpts.Buf = defaultSubscriptionBuffer
+	if subOpts.Buffer <= 0 {
+		subOpts.Buffer = defaultSubscriptionBuffer
 	}
 
 	sub := &Subscription{
-		Ch:                  make(chan Msg, subOpts.Buf),
+		Ch:                  make(chan Msg, subOpts.Buffer),
 		SubscriptionOptions: subOpts,
 	}
 
@@ -120,7 +125,7 @@ func (pu *DefaultPublisher) Publish(msg Msg) error {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	for _, sub := range pu.subs {
-		if sub.LabelSelector != nil && !sub.LabelSelector.Matches(msg.Labels()) {
+		if sub.Selector != nil && !sub.Selector.Matches(msg.Labels()) {
 			continue
 		}
 		select {

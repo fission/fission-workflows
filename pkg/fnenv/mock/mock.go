@@ -27,6 +27,13 @@ type Runtime struct {
 	ManualExecution bool
 }
 
+func NewRuntime() *Runtime {
+	return &Runtime{
+		Functions:    map[string]Func{},
+		AsyncResults: map[string]*types.TaskInvocation{},
+	}
+}
+
 func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
 	fnName := spec.FnRef.RuntimeId
 
@@ -131,7 +138,7 @@ func (mk *Runtime) Notify(taskID string, fn types.FnRef, expectedAt time.Time) e
 	return nil
 }
 
-// Resolver is a mocked implementation of a resolver.
+// Resolver is a mocked implementation of a RuntimeResolver.
 //
 // Use FnNameIDs to setup a mapping to mock resolving function references to IDs.
 type Resolver struct {
@@ -145,4 +152,10 @@ func (mf *Resolver) Resolve(fnName string) (string, error) {
 	}
 
 	return fnID, nil
+}
+
+func NewResolver() *Resolver {
+	return &Resolver{
+		FnNameIDs: map[string]string{},
+	}
 }

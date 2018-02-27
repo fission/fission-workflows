@@ -46,12 +46,25 @@ func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowId
 		return nil, errors.New("no id provided")
 	}
 
-	entity := aggregates.NewWorkflow(id, nil)
+	entity := aggregates.NewWorkflow(id)
 	err := ga.cache.Get(entity)
 	if err != nil {
 		return nil, err
 	}
 	return entity.Workflow, nil
+}
+
+func (ga *GrpcWorkflowApiServer) Delete(ctx context.Context, workflowId *WorkflowIdentifier) (*empty.Empty, error) {
+	id := workflowId.GetId()
+	if len(id) == 0 {
+		return nil, errors.New("no id provided")
+	}
+
+	err := ga.api.Delete(id)
+	if err != nil {
+		return nil, err
+	}
+	return &empty.Empty{}, nil
 }
 
 func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
