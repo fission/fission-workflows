@@ -11,6 +11,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	PubSubLabelEventId       = "event.id"
+	PubSubLabelEventType     = "event.type"
+	PubSubLabelAggregateType = "aggregate.type"
+	PubSubLabelAggregateId   = "aggregate.id"
+)
+
 var (
 	ErrNotFound = errors.New("could not find entity")
 )
@@ -138,7 +145,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 					logrus.WithField("msg", msg).Error("Received a malformed message. Ignoring.")
 					continue
 				}
-				logrus.WithField("msg", msg.Labels()).Debug("Cache received new event.")
+				logrus.WithField("msg", msg.Labels()).Debug("EvalCache received new event.")
 				err := c.ApplyEvent(event)
 				if err != nil {
 					logrus.WithField("err", err).Error("Failed to handle event. Continuing.")
@@ -152,10 +159,10 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 
 func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
-		"event.id":       event.Id,
-		"aggregate.id":   event.Aggregate.Id,
-		"aggregate.type": event.Aggregate.Type,
-		"event.type":     event.Type,
+		PubSubLabelEventId:       event.Id,
+		PubSubLabelEventType:     event.Type,
+		PubSubLabelAggregateId:   event.Aggregate.Id,
+		PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
 	cached, err := uc.GetAggregate(*event.GetAggregate())
@@ -202,7 +209,7 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 			"aggregate.id":      event.Aggregate.Id,
 			"aggregate.type":    event.Aggregate.Type,
 			"notification.type": n.EventType,
-		}).Debug("Cache handling done. Sending out Notification.")
+		}).Debug("EvalCache handling done. Sending out Notification.")
 		err = uc.Publisher.Publish(n)
 	}
 	return err
@@ -251,7 +258,7 @@ func (c *FallbackCache) GetAggregate(a Aggregate) (Aggregator, error) {
 	cached, err := c.cache.GetAggregate(a)
 	if err != nil {
 		if err == ErrNotFound {
-			logrus.WithField("entity", a).Info("Cache miss! Checking backing event store.")
+			logrus.WithField("entity", a).Info("EvalCache miss! Checking backing event store.")
 			entity := c.target()
 			err := c.getFromEventStore(a, entity)
 			if err != nil {
@@ -267,7 +274,7 @@ func (c *FallbackCache) Get(entity Aggregator) error {
 	err := c.cache.Get(entity)
 	if err != nil {
 		if err == ErrNotFound {
-			logrus.WithField("entity", entity.Aggregate()).Info("Cache miss! Checking backing event store.")
+			logrus.WithField("entity", entity.Aggregate()).Info("EvalCache miss! Checking backing event store.")
 			return c.getFromEventStore(entity.Aggregate(), entity)
 		} else {
 			return err
@@ -292,7 +299,7 @@ func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Aggregator
 		return err
 	}
 
-	// Cache target
+	// EvalCache target
 	err = c.cache.Put(target) // TODO ensure target is a copy
 	if err != nil {
 		logrus.WithField("target", target).WithField("err", err).Warn("Failed to cache fetched target")

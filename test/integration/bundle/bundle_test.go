@@ -61,11 +61,12 @@ func TestWorkflowCreate(t *testing.T) {
 		},
 	}
 	wfId, err := cl.Create(ctx, spec)
+	defer cl.Delete(ctx, wfId)
 	assert.NoError(t, err)
 	assert.NotNil(t, wfId)
 	assert.NotEmpty(t, wfId.GetId())
 
-	time.Sleep(time.Duration(10) * time.Second)
+	time.Sleep(time.Duration(2) * time.Second)
 	// Test workflow list
 	l, err := cl.List(ctx, &empty.Empty{})
 	assert.NoError(t, err)
@@ -142,7 +143,7 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Test invocation get, give some slack to actually invoke it
 	var invocation *types.WorkflowInvocation
-	deadline := time.Now().Add(time.Duration(1) * time.Second)
+	deadline := time.Now().Add(time.Duration(10) * time.Second)
 	tick := time.NewTicker(time.Duration(100) * time.Millisecond)
 	for ti := range tick.C {
 		invoc, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wiId})
@@ -153,7 +154,6 @@ func TestWorkflowInvocation(t *testing.T) {
 			break
 		}
 	}
-
 	assert.Equal(t, wiSpec, invocation.Spec)
 	assert.Equal(t, etv, invocation.Status.Output)
 	assert.True(t, invocation.Status.Successful())
@@ -213,6 +213,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 		},
 	}
 	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
 	assert.NoError(t, err)
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)
@@ -287,6 +288,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 		},
 	}
 	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
 	assert.NoError(t, err)
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)
@@ -356,6 +358,7 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 		},
 	}
 	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
 	assert.NoError(t, err, err)
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)

@@ -42,7 +42,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	defer cancelFn()
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(wfiId, &types.WorkflowInvocation{})
+		wi := aggregates.NewWorkflowInvocation(wfiId)
 		err := rt.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)

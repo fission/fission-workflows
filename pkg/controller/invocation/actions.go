@@ -1,68 +1,76 @@
-package action
+package invocation
 
 import (
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
-// Abort aborts an invocation.
-type Abort struct {
+//
+// Invocation-specific actions
+//
+
+// ActonAbort aborts an invocation.
+type ActonAbort struct {
 	Api          *invocation.Api
 	InvocationId string
 }
 
-func (a *Abort) Id() string {
-	return a.InvocationId // Invocation
+func (a *ActonAbort) Eval(cec controller.EvalContext) controller.Action {
+	ec := EnsureInvocationContext(cec)
+	a.InvocationId = ec.Invocation().Id()
+	return a
 }
 
-func (a *Abort) Apply() error {
-	logrus.WithField("Wfi", a.Id()).Info("Applying abort action")
+func (a *ActonAbort) Apply() error {
+	wfiLog.Info("Applying action: abort")
 	return a.Api.Cancel(a.InvocationId)
 }
 
-// Fail halts an invocation.
-type Fail struct {
+// ActionFail halts an invocation.
+type ActionFail struct {
 	Api          *invocation.Api
 	InvocationId string
 	Err          error
 }
 
-func (a *Fail) Id() string {
-	return a.InvocationId // Invocation
+func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
+	ec := EnsureInvocationContext(cec)
+	a.InvocationId = ec.Invocation().Id()
+	return a
 }
 
-func (a *Fail) Apply() error {
-	logrus.WithField("Wfi", a.Id()).Info("Executing fail action")
+func (a *ActionFail) Apply() error {
+	wfiLog.Info("Applying action: fail")
 	return a.Api.Fail(a.InvocationId, a.Err)
 }
 
-// InvokeTask invokes a function
-type InvokeTask struct {
+// ActionInvokeTask invokes a function
+type ActionInvokeTask struct {
 	Wf   *types.Workflow
 	Wfi  *types.WorkflowInvocation
-	Expr expr.Resolver
 	Api  *function.Api
 	Task *scheduler.InvokeTaskAction
 }
 
-func (a *InvokeTask) Id() string {
-	return a.Wfi.Id() // Invocation
+func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
+	panic("not implemented")
 }
 
-func (a *InvokeTask) Apply() error {
-	actionLog := logrus.WithField("Wfi", a.Id())
+func (a *ActionInvokeTask) Apply() error {
+	wfiLog.Infof("Invoking task: %v", a.Task.Id)
 	// Find Task (static or dynamic)
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
 	if !ok {
-		return fmt.Errorf("task '%v' could not be found", a.Id())
+		return fmt.Errorf("task '%v' could not be found", a.Wfi.Id())
 	}
-	actionLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
+	wfiLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
 
 	// Check if resolved
 	if task.Status.FnRef == nil {
@@ -73,9 +81,9 @@ func (a *InvokeTask) Apply() error {
 	inputs := map[string]*types.TypedValue{}
 	queryScope := expr.NewScope(a.Wf, a.Wfi)
 	for inputKey, val := range a.Task.Inputs {
-		resolvedInput, err := a.Expr.Resolve(queryScope, a.Task.Id, val)
+		resolvedInput, err := expr.Resolve(queryScope, a.Task.Id, val)
 		if err != nil {
-			actionLog.WithFields(logrus.Fields{
+			wfiLog.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
 			}).Errorf("Failed to parse input: %v", err)
@@ -83,7 +91,7 @@ func (a *InvokeTask) Apply() error {
 		}
 
 		inputs[inputKey] = resolvedInput
-		actionLog.WithFields(logrus.Fields{
+		wfiLog.WithFields(logrus.Fields{
 			"val":      val,
 			"key":      inputKey,
 			"resolved": resolvedInput,
@@ -100,7 +108,7 @@ func (a *InvokeTask) Apply() error {
 
 	_, err := a.Api.Invoke(fnSpec)
 	if err != nil {
-		actionLog.WithFields(logrus.Fields{
+		wfiLog.WithFields(logrus.Fields{
 			"id": a.Wfi.Metadata.Id,
 		}).Errorf("Failed to execute task: %v", err)
 		return err

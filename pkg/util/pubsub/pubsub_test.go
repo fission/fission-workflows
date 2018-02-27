@@ -21,7 +21,7 @@ func TestPublisherSubscribe(t *testing.T) {
 func TestPublish(t *testing.T) {
 	pub := NewPublisher()
 	sub := pub.Subscribe(SubscriptionOptions{
-		Buf: 1,
+		Buffer: 1,
 	})
 
 	msg := NewGenericMsg(labels.SetLabels{"foo": "bar"}, time.Now(), "TestMsg")
@@ -37,10 +37,10 @@ func TestPublish(t *testing.T) {
 func TestPublishBufferOverflow(t *testing.T) {
 	pub := NewPublisher()
 	sub := pub.Subscribe(SubscriptionOptions{
-		Buf: 1,
+		Buffer: 1,
 	})
 	sub2 := pub.Subscribe(SubscriptionOptions{
-		Buf: 10,
+		Buffer: 10,
 	})
 
 	firstMsg := NewGenericMsg(labels.SetLabels(map[string]string{"foo": "bar"}), time.Now(), "TestMsg1")

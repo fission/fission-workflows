@@ -6,6 +6,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 )
 
+var DefaultParserFormatter = newDefaultParserFormatter()
+
 type Parser interface {
 	Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error)
 }
@@ -49,8 +51,6 @@ func IsFormat(targetValueType string, format string) bool {
 	f, _ := ParseType(targetValueType)
 	return strings.EqualFold(f, format)
 }
-
-var DefaultParserFormatter = newDefaultParserFormatter()
 
 func Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
 	return DefaultParserFormatter.Parse(i, allowedTypes...)

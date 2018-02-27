@@ -12,7 +12,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/workflow"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
-	"github.com/fission/fission-workflows/pkg/controller/expr"
+	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
+	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -22,7 +23,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
@@ -110,12 +110,12 @@ func Run(ctx context.Context, opts *Options) error {
 	// Controller
 	if opts.InvocationController || opts.WorkflowController {
 		var ctrls []controller.Controller
-		if opts.InvocationController {
+		if opts.WorkflowController {
 			log.Info("Using controller: workflow")
 			ctrls = append(ctrls, setupWorkflowController(wfCache(), es, resolvers))
 		}
 
-		if opts.WorkflowController {
+		if opts.InvocationController {
 			log.Info("Using controller: invocation")
 			ctrls = append(ctrls, setupInvocationController(wfiCache(), wfCache(), es, runtimes, resolvers))
 		}
@@ -241,13 +241,13 @@ func setupNatsEventStoreClient(url string, cluster string, clientId string) *nat
 
 func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub.Publisher) *fes.SubscribedCache {
 	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buf: 50,
-		LabelSelector: labels.OrSelector(
-			labels.InSelector("aggregate.type", "invocation"),
+		Buffer: 50,
+		Selector: labels.OrSelector(
+			labels.InSelector(fes.PubSubLabelAggregateType, "invocation"),
 			labels.InSelector("parent.type", "invocation")),
 	})
 	wi := func() fes.Aggregator {
-		return aggregates.NewWorkflowInvocation("", nil)
+		return aggregates.NewWorkflowInvocation("")
 	}
 
 	return fes.NewSubscribedCache(ctx, fes.NewMapCache(), wi, invokeSub)
@@ -255,11 +255,11 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 
 func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
 	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buf:           10,
-		LabelSelector: labels.InSelector("aggregate.type", "workflow"),
+		Buffer:   10,
+		Selector: labels.InSelector(fes.PubSubLabelAggregateType, "workflow"),
 	})
 	wb := func() fes.Aggregator {
-		return aggregates.NewWorkflow("", nil)
+		return aggregates.NewWorkflow("")
 	}
 	return fes.NewSubscribedCache(ctx, fes.NewMapCache(), wb, wfSub)
 }
@@ -337,20 +337,19 @@ func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.Backend, wfiCache 
 }
 
 func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.Backend,
-	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *controller.InvocationController {
+	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
 	workflowApi := workflow.NewApi(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationApi := invocation.NewApi(es)
 	dynamicApi := dynamic.NewApi(workflowApi, invocationApi)
 	functionApi := function.NewApi(fnRuntimes, es, dynamicApi)
 	s := &scheduler.WorkflowScheduler{}
-	ep := expr.NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
-	return controller.NewInvocationController(invocationCache, wfCache, s, functionApi, invocationApi, ep)
+	return wfictr.NewController(invocationCache, wfCache, s, functionApi, invocationApi)
 }
 
 func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,
-	fnResolvers map[string]fnenv.RuntimeResolver) *controller.WorkflowController {
+	fnResolvers map[string]fnenv.RuntimeResolver) *wfctr.Controller {
 	workflowApi := workflow.NewApi(es, fnenv.NewMetaResolver(fnResolvers))
-	return controller.NewWorkflowController(wfCache, workflowApi)
+	return wfctr.NewController(wfCache, workflowApi)
 }
 
 func runController(ctx context.Context, ctrls ...controller.Controller) {

@@ -54,7 +54,7 @@ type andSelector struct {
 	Selectors []Selector // And
 }
 
-func NewAndSelector(reqs ...Selector) *andSelector {
+func AndSelector(reqs ...Selector) *andSelector {
 	return &andSelector{reqs}
 }
 

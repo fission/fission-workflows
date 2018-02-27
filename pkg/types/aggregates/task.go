@@ -38,13 +38,13 @@ func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 
 func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 
-	eventType, err := events.ParseFunction(event.Type)
+	eventType, err := events.ParseTask(event.Type)
 	if err != nil {
 		return err
 	}
 
 	switch eventType {
-	case events.Function_TASK_STARTED:
+	case events.Task_TASK_STARTED:
 		fn := &types.TaskInvocation{}
 		err = proto.Unmarshal(event.Data, fn)
 		if err != nil {
@@ -59,7 +59,7 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 				UpdatedAt: event.Timestamp,
 			},
 		}
-	case events.Function_TASK_SUCCEEDED:
+	case events.Task_TASK_SUCCEEDED:
 		invoc := &types.TaskInvocation{}
 		err = proto.Unmarshal(event.Data, invoc)
 		if err != nil {
@@ -69,10 +69,10 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.Output = invoc.Status.Output
 		ti.Status.Status = types.TaskInvocationStatus_SUCCEEDED
 		ti.Status.UpdatedAt = event.Timestamp
-	case events.Function_TASK_ABORTED:
+	case events.Task_TASK_ABORTED:
 		ti.Status.Status = types.TaskInvocationStatus_ABORTED
 		ti.Status.UpdatedAt = event.Timestamp
-	case events.Function_TASK_FAILED:
+	case events.Task_TASK_FAILED:
 		fnErr := &types.Error{}
 		err = proto.Unmarshal(event.Data, fnErr)
 		if err != nil {
@@ -84,7 +84,7 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.Status = types.TaskInvocationStatus_FAILED
 		ti.Status.Error = fnErr
 		ti.Status.UpdatedAt = event.Timestamp
-	case events.Function_TASK_SKIPPED:
+	case events.Task_TASK_SKIPPED:
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
 		ti.Status.UpdatedAt = event.Timestamp
 	default:

@@ -2,85 +2,118 @@ package controller
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
+	"errors"
+	"io"
+	"reflect"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
-	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	NotificationBuffer = 100
-	WorkQueueSize      = 50
-	InvocationTimeout  = time.Duration(10) * time.Minute
-	MaxErrorCount      = 0
+	TickInterval = time.Duration(1) * time.Second
 )
 
-var log = logrus.New().WithFields(logrus.Fields{
-	"component": "controller",
-})
+var (
+	log     = logrus.New().WithFields(logrus.Fields{"component": "controller"})
+	metaLog = log.WithField("controller", "controller-meta")
+)
 
 type Controller interface {
 	Init(ctx context.Context) error
-	HandleTick() error
-	HandleNotification(msg *fes.Notification) error
+	Tick(tick uint64) error
+	Notify(msg *fes.Notification) error
+	Evaluate(id string)
 }
 
 type Action interface {
-	Id() string
 	Apply() error
 }
 
-// TODO maybe an explanation func or argument?
-type Filter interface {
-	Filter(wfi *types.WorkflowInstance, status *ControlState) (actions []Action, err error)
+type Rule interface {
+	Eval(cec EvalContext) Action
 }
 
-type ControlState struct {
-	ErrorCount  uint32
-	RecentError error
-	QueueSize   uint32
-	lock        *sync.Mutex
-	// TODO record timestamp/version of used model
+type EvalContext interface {
+	EvalState() *EvalState
 }
 
-func NewControlState() *ControlState {
-	return &ControlState{
-		lock: &sync.Mutex{},
+// MetaController is a 'controller for controllers', allowing for composition with controllers. It allows users to
+// interface with the metacontroller, instead of needing to control the lifecycle of all underlying controllers.
+type MetaController struct {
+	ctrls []Controller
+}
+
+func NewMetaController(ctrls ...Controller) *MetaController {
+	return &MetaController{ctrls: ctrls}
+}
+
+func (mc *MetaController) Init(ctx context.Context) error {
+	metaLog.Info("Running MetaController init.")
+	for _, ctrl := range mc.ctrls {
+		err := ctrl.Init(ctx)
+		if err != nil {
+			return err
+		}
+		metaLog.Infof("'%s' controller init done.", reflect.TypeOf(ctrl))
+	}
+
+	metaLog.Info("Finished MetaController init.")
+	return nil
+}
+
+func (mc *MetaController) Run(ctx context.Context) error {
+	metaLog.Debug("Running controller init...")
+	err := mc.Init(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Control lane
+	ticker := time.NewTicker(TickInterval)
+	tick := uint64(0)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			mc.Tick(tick)
+			tick += 1
+		}
 	}
 }
 
-func (cs *ControlState) Lock() {
-	if cs.lock == nil {
-		cs.lock = &sync.Mutex{}
+func (mc *MetaController) Tick(tick uint64) error {
+	var err error
+	for _, ctrl := range mc.ctrls {
+		err = ctrl.Tick(tick)
 	}
-	cs.lock.Lock()
+	return err
 }
 
-func (cs *ControlState) Unlock() {
-	if cs.lock == nil {
-		cs.lock = &sync.Mutex{}
-	} else {
-		cs.lock.Unlock()
+func (mc *MetaController) Notify(msg *fes.Notification) error {
+	if msg == nil {
+		return errors.New("cannot handle empty message")
 	}
+
+	// Future: Might need smarter event router, to avoid bothering controllers with notifications that don't concern them
+	var err error
+	for _, ctrl := range mc.ctrls {
+		metaLog.WithField("msg", msg.EventType).Debugf("Routing msg to %v", ctrl)
+		err = ctrl.Notify(msg)
+	}
+	return err
 }
 
-func (cs *ControlState) AddError(err error) uint32 {
-	cs.RecentError = err
-	return atomic.AddUint32(&cs.ErrorCount, 1)
-}
-
-func (cs *ControlState) ResetError() {
-	cs.RecentError = nil
-	cs.ErrorCount = 0
-}
-
-func (cs *ControlState) IncrementQueueSize() uint32 {
-	return atomic.AddUint32(&cs.QueueSize, 1)
-}
-
-func (cs *ControlState) DecrementQueueSize() uint32 {
-	return atomic.AddUint32(&cs.QueueSize, ^uint32(0)) // TODO avoid overflow
+func (mc *MetaController) Close() error {
+	metaLog.Info("Closing metacontroller and its controllers...")
+	var err error
+	for _, ctrl := range mc.ctrls {
+		if closer, ok := ctrl.(io.Closer); ok {
+			err = closer.Close()
+		}
+	}
+	metaLog.Info("Closed MetaController")
+	return err
 }

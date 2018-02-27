@@ -17,9 +17,10 @@ type Workflow struct {
 	*types.Workflow
 }
 
-func NewWorkflow(workflowId string, wi *types.Workflow) *Workflow {
-	wia := &Workflow{
-		Workflow: wi,
+func NewWorkflow(workflowId string, wi ...*types.Workflow) *Workflow {
+	wia := &Workflow{}
+	if len(wi) > 0 {
+		wia.Workflow = wi[0]
 	}
 
 	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowAggregate(workflowId))
@@ -81,6 +82,8 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.UpdatedAt = event.GetTimestamp()
 		wf.Status.Status = types.WorkflowStatus_READY
 		wf.Status.Tasks = status.Tasks
+	case events.Workflow_WORKFLOW_DELETED:
+		wf.Status.Status = types.WorkflowStatus_DELETED
 	default:
 		log.WithFields(log.Fields{
 			"event": event,

@@ -26,21 +26,21 @@ import:
   version: 1.0.0
   subpackages:
   - gogoproto
-- package: github.com/robertkrimen/otto # Not versioned
+- package: github.com/robertkrimen/otto
 - package: gopkg.in/sourcemap.v1
   version: ~v2.0.0
 - package: gopkg.in/yaml.v2
 - package: golang.org/x/sync
   subpackages:
   - syncmap
+  - semaphore
 - package: gonum.org/v1/gonum
   version: 996b88e8f8941c9defdbb338bea5e239a230e742
-  repo:    http://github.com/gonum/gonum
+  repo: http://github.com/gonum/gonum
   subpackages:
   - graph
   - graph/topo
   - graph/simple
-# Due to the old version of the kubernetes client we need to fix the openapi versions to avoid incompatible interfaces.
 - package: google.golang.org/grpc
   version: ~1.10.0
 - package: github.com/golang/protobuf

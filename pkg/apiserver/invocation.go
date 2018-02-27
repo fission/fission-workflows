@@ -57,7 +57,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 	timeout, _ := context.WithTimeout(ctx, invokeSyncTimeout)
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(wfiId, &types.WorkflowInvocation{})
+		wi := aggregates.NewWorkflowInvocation(wfiId)
 		err := gi.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
@@ -93,7 +93,7 @@ func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *Wor
 }
 
 func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
-	wi := aggregates.NewWorkflowInvocation(invocationId.GetId(), &types.WorkflowInvocation{})
+	wi := aggregates.NewWorkflowInvocation(invocationId.GetId())
 	err := gi.wfiCache.Get(wi)
 	if err != nil {
 		return nil, err

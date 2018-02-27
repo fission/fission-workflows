@@ -11,7 +11,6 @@ import (
 
 var log = logrus.WithField("component", "scheduler")
 
-// TODO document other approach: scheduler as a controller
 type WorkflowScheduler struct {
 }
 
@@ -55,26 +54,6 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
 	horizon := graph.Roots(depGraph)
 
-	// Determine horizon (aka tasks that can be executed now)
-	//horizon := map[string]*types.TaskInstance{}
-	//for id, task := range openTasks {
-	//	// TODO replace graph implementation, with marked and await counter
-	//	completedDeps := len(task.Task.Spec.Requires) - len(depGraph.To(graph.Get(depGraph, id)))
-	//
-	//	ctxLog.WithFields(logrus.Fields{
-	//		"completedDeps": completedDeps,
-	//		"task":          id,
-	//		"max":           int(math.Max(float64(task.Task.Spec.Await), float64(len(task.Task.Spec.Requires)-1))),
-	//	}).Infof("Checking if dependencies have been satisfied")
-	//	if completedDeps >= int(math.Max(float64(task.Task.Spec.Await), float64(len(task.Task.Spec.Requires)))) {
-	//		log.WithField("task", task.Task.Id()).Info("task found on horizon")
-	//		horizon = append(horizon, &graph.TaskInstanceNode{TaskInstance: task})
-	//	}
-	//	// TODO fix graph representation (how to find second horizon)
-	//}
-
-	ctxLog.WithField("horizon", horizon).Info("Determined horizon")
-
 	// Determine schedule nodes
 	for _, node := range horizon {
 		taskDef := node.(*graph.TaskInstanceNode)
@@ -92,10 +71,6 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		})
 	}
 
-	if len(schedule.Actions) > 0 {
-		ctxLog.WithField("schedule", len(schedule.Actions)).
-			WithField("invocation", schedule.InvocationId).
-			Info("Determined schedule")
-	}
+	ctxLog.WithField("schedule", len(schedule.Actions)).Info("Determined schedule")
 	return schedule, nil
 }

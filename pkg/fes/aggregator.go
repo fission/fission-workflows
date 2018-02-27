@@ -59,3 +59,7 @@ func NewAggregatorMixin(thiz Aggregator, aggregate Aggregate) *AggregatorMixin {
 		parent:    thiz,
 	}
 }
+
+func ValidateAggregate(a *Aggregate) bool {
+	return a != nil && len(a.Type) != 0 && len(a.Id) != 0
+}

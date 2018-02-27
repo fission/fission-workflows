@@ -268,7 +268,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	}
 	wfID := resp.Id
 
-	// Cache the ID so we don't have to check whether the workflow engine already has it.
+	// EvalCache the ID so we don't have to check whether the workflow engine already has it.
 	fp.fissionIds.Store(fissionId, true)
 
 	return wfID, nil

@@ -25,10 +25,10 @@ func ParseWorkflow(flag string) (Workflow, error) {
 	return Workflow(val), nil
 }
 
-func ParseFunction(event string) (Function, error) {
-	val, ok := Function_value[event]
+func ParseTask(event string) (Task, error) {
+	val, ok := Task_value[event]
 	if !ok {
 		return -1, ErrUnknownEvent
 	}
-	return Function(val), nil
+	return Task(val), nil
 }
