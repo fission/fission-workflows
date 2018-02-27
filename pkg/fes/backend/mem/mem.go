@@ -82,3 +82,17 @@ func (b *Backend) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
 	}
 	return results, nil
 }
+
+func (b *Backend) Snapshot() map[fes.Aggregate][]*fes.Event {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	results := map[fes.Aggregate][]*fes.Event{}
+	for aggregate, events := range b.contents {
+		var eventsCopy []*fes.Event
+		for _, event := range events {
+			eventsCopy = append(eventsCopy, event)
+		}
+		results[aggregate] = eventsCopy
+	}
+	return results
+}

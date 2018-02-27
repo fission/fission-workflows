@@ -378,7 +378,7 @@ func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.Cach
 	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
-	dynamicAPI := api.NewDynamicApi(workflowAPI, invocationAPI)
+	dynamicAPI := api.NewDynamicAPI(workflowAPI, invocationAPI)
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
 	s := &scheduler.WorkflowScheduler{}
 	stateStore := expr.NewStore()

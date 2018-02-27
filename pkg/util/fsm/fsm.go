@@ -52,7 +52,7 @@ func (f *Fsm) NodeExists(i interface{}) bool {
 	return ok
 }
 
-func (f *Fsm) FindTransition(src, dst interface{}) *Transition {
+func (f *Fsm) GetTransition(src, dst interface{}) *Transition {
 	for _, t := range f.Transitions[src] {
 		if t.Dst == dst {
 			return &t

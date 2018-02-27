@@ -25,7 +25,7 @@ func TestController_Lifecycle(t *testing.T) {
 
 	wfiAPI := api.NewInvocationAPI(es)
 	wfAPI := api.NewWorkflowAPI(es, mockResolver)
-	dynamicAPI := api.NewDynamicApi(wfAPI, wfiAPI)
+	dynamicAPI := api.NewDynamicAPI(wfAPI, wfiAPI)
 	taskAPI := api.NewTaskAPI(map[string]fnenv.Runtime{
 		"mock": mockRuntime,
 	}, es, dynamicAPI)

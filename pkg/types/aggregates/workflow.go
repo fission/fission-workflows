@@ -40,7 +40,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		return err
 	}
 	switch wfEvent {
-	case events.Workflow_WORKFLOW_PARSING_FAILED:
+	case events.Workflow_WORKFLOW_PARSING_FAILED: // Expects payload: types.Error
 		wfErr := &types.Error{}
 		err := proto.Unmarshal(event.Data, wfErr)
 		if err != nil {
@@ -51,11 +51,16 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.Error = wfErr
 		wf.Status.UpdatedAt = event.GetTimestamp()
 		wf.Status.Status = types.WorkflowStatus_FAILED
-	case events.Workflow_WORKFLOW_CREATED:
+	case events.Workflow_WORKFLOW_CREATED: // Expects payload: types.WorkflowSpec
 		spec := &types.WorkflowSpec{}
 		err := proto.Unmarshal(event.Data, spec)
 		if err != nil {
 			return err
+		}
+
+		// Ensure that this is the first workflow created event
+		if wf.Workflow != nil && wf.Workflow.Spec != nil {
+			return ErrIllegalEvent
 		}
 
 		// Setup object
@@ -67,12 +72,11 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 			},
 			Spec: spec,
 			Status: &types.WorkflowStatus{
-				// TODO Nest into own state machine
 				Status:    types.WorkflowStatus_PENDING,
 				UpdatedAt: event.GetTimestamp(),
 			},
 		}
-	case events.Workflow_WORKFLOW_PARSED:
+	case events.Workflow_WORKFLOW_PARSED: // Expects payload: types.WorkflowStatus
 		status := &types.WorkflowStatus{}
 		err := proto.Unmarshal(event.Data, status)
 		if err != nil {
@@ -81,7 +85,10 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.UpdatedAt = event.GetTimestamp()
 		wf.Status.Status = types.WorkflowStatus_READY
 		wf.Status.Tasks = status.Tasks
-	case events.Workflow_WORKFLOW_DELETED:
+	case events.Workflow_WORKFLOW_DELETED: // Expects payload: nil
+		if wf.Workflow == nil || wf.Workflow.Status == nil {
+			return ErrIllegalEvent
+		}
 		wf.Status.Status = types.WorkflowStatus_DELETED
 	default:
 		log.WithFields(log.Fields{

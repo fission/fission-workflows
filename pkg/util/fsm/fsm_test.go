@@ -22,10 +22,10 @@ func TestFsm_FindTransition(t *testing.T) {
 		{"a", 1, 2},
 	})
 
-	assert.Equal(t, machine.FindTransition(1, 2).Event, "a")
-	assert.Empty(t, machine.FindTransition(1, 4))
-	assert.Empty(t, machine.FindTransition(4, 1))
-	assert.Empty(t, machine.FindTransition(3, 3))
+	assert.Equal(t, machine.GetTransition(1, 2).Event, "a")
+	assert.Empty(t, machine.GetTransition(1, 4))
+	assert.Empty(t, machine.GetTransition(4, 1))
+	assert.Empty(t, machine.GetTransition(3, 3))
 }
 
 func TestFsm_NewInstance(t *testing.T) {

@@ -42,11 +42,11 @@ func NewAggregate(entityType string, entityID string) Aggregate {
 	}
 }
 
-func NewEvent(aggregate Aggregate, data []byte) *Event {
+func NewEvent(eventId string, eventType string, subject Aggregate, data []byte) *Event {
 	return &Event{
-		Id:        aggregate.Id,
-		Type:      aggregate.Type,
-		Aggregate: &aggregate,
+		Id:        eventId,
+		Type:      eventType,
+		Aggregate: &subject,
 		Data:      data,
 		Timestamp: ptypes.TimestampNow(),
 		Parent:    nil,

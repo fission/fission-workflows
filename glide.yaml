@@ -24,6 +24,7 @@ import:
   version: 6e620057a207bd61e992c1c5b6a2de7b6a4cb010
 - package: github.com/robertkrimen/otto
 - package: gopkg.in/yaml.v2
+- package: github.com/mitchellh/hashstructure
 - package: golang.org/x/sync
   subpackages:
   - syncmap

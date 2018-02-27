@@ -15,6 +15,10 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+var (
+	ErrWorkflowAlreadyExists = errors.New("workflow already exists")
+)
+
 // Workflow contains the API functionality for controlling workflow definitions.
 // This includes creating and parsing workflows.
 type Workflow struct {
@@ -30,7 +34,6 @@ func NewWorkflowAPI(esClient fes.Backend, resolver fnenv.Resolver) *Workflow {
 // Create creates a new workflow based on the provided workflowSpec.
 // The function either returns the id of the workflow or an error.
 // The error can be a validate.Err, proto marshall error, or a fes error.
-// TODO check if id already exists
 func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	err := validate.WorkflowSpec(workflow)
 	if err != nil {
@@ -42,6 +45,14 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	if len(id) == 0 {
 		id = fmt.Sprintf("wf-%s", util.UID())
 	}
+	key := aggregates.NewWorkflowAggregate(id)
+
+	// Check if the workflow already exists
+	// TODO improve performance (e.g. caching, exists() option)
+	e, _ := wa.es.Get(key)
+	if e != nil && len(e) != 0 {
+		return id, ErrWorkflowAlreadyExists
+	}
 
 	data, err := proto.Marshal(workflow)
 	if err != nil {
@@ -50,7 +61,7 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 
 	err = wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_CREATED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(id),
+		Aggregate: key,
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
 	})

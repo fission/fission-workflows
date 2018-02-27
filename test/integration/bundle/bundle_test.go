@@ -15,6 +15,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/test/integration"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )
@@ -29,8 +30,13 @@ func TestMain(m *testing.M) {
 		return
 	}
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
+	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(10)*time.Minute)
 	integration.SetupBundle(ctx)
+	go func() {
+		<-ctx.Done()
+		logrus.Error("Test timeout")
+		os.Exit(10)
+	}()
 
 	time.Sleep(time.Duration(4) * time.Second)
 

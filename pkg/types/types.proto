@@ -42,9 +42,9 @@ message WorkflowSpec {
     // Name is solely for human-readablity
     string name = 6;
 
-    // Internal indicates whether is a workflow should be visible to a human (default) or not.
+    // Dynamic indicates whether the workflow was defined statically (default) or dynamically.
     //
-    bool internal = 7;
+    bool dynamic = 7;
 }
 
 message WorkflowStatus {

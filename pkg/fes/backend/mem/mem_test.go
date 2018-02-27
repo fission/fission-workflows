@@ -12,25 +12,25 @@ import (
 func TestBackend_Append(t *testing.T) {
 	mem := NewBackend()
 
-	event := fes.NewEvent(fes.NewAggregate("type", "id"), []byte("event 1"))
+	event := createEvent(fes.NewAggregate("type", "id"), []byte("event 1"))
 	err := mem.Append(event)
 	assert.NoError(t, err)
 	assert.Len(t, mem.contents, 1)
 
-	event2 := fes.NewEvent(fes.Aggregate{}, []byte("event 1"))
+	event2 := createEvent(fes.Aggregate{}, []byte("event 1"))
 	err = mem.Append(event2)
 	assert.EqualError(t, err, ErrInvalidAggregate.Error())
 	assert.Len(t, mem.contents, 1)
 
 	// Event under existing aggregate
-	event3 := fes.NewEvent(fes.NewAggregate("type", "id"), []byte("event 2"))
+	event3 := createEvent(fes.NewAggregate("type", "id"), []byte("event 2"))
 	err = mem.Append(event3)
 	assert.NoError(t, err)
 	assert.Len(t, mem.contents, 1)
 	assert.Len(t, mem.contents[fes.NewAggregate("type", "id")], 2)
 
 	// Event under new aggregate
-	event4 := fes.NewEvent(fes.NewAggregate("Type", "other"), []byte("event 1"))
+	event4 := createEvent(fes.NewAggregate("Type", "other"), []byte("event 1"))
 	err = mem.Append(event4)
 	assert.NoError(t, err)
 	assert.Len(t, mem.contents, 2)
@@ -42,9 +42,9 @@ func TestBackend_GetMultiple(t *testing.T) {
 	mem := NewBackend()
 	key := fes.NewAggregate("type", "id")
 	events := []*fes.Event{
-		fes.NewEvent(key, []byte("event 1")),
-		fes.NewEvent(key, []byte("event 2")),
-		fes.NewEvent(key, []byte("event 3")),
+		createEvent(key, []byte("event 1")),
+		createEvent(key, []byte("event 2")),
+		createEvent(key, []byte("event 3")),
 	}
 
 	for k := range events {
@@ -73,9 +73,9 @@ func TestBackend_Subscribe(t *testing.T) {
 	})
 
 	events := []*fes.Event{
-		fes.NewEvent(key, []byte("event 1")),
-		fes.NewEvent(key, []byte("event 2")),
-		fes.NewEvent(key, []byte("event 3")),
+		createEvent(key, []byte("event 1")),
+		createEvent(key, []byte("event 2")),
+		createEvent(key, []byte("event 3")),
 	}
 	for k := range events {
 		err := mem.Append(events[k])
@@ -90,4 +90,8 @@ func TestBackend_Subscribe(t *testing.T) {
 		receivedEvents = append(receivedEvents, event)
 	}
 	assert.EqualValues(t, events, receivedEvents)
+}
+
+func createEvent(a fes.Aggregate, data []byte) *fes.Event {
+	return fes.NewEvent(a.Id, a.Type, a, data)
 }
