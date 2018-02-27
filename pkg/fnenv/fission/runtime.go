@@ -29,7 +29,7 @@ var log = logrus.WithField("component", "fnenv.fission")
 type FunctionEnv struct {
 	executor         *executor.Client
 	routerURL        string
-	timedExecService *TimedExecPool
+	timedExecService *timedExecPool
 }
 
 const (
