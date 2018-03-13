@@ -52,7 +52,7 @@ func TestBackend_GetMultiple(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	getEvents, err := mem.Get(&key)
+	getEvents, err := mem.Get(key)
 	assert.NoError(t, err)
 	assert.EqualValues(t, events, getEvents)
 }
@@ -60,7 +60,7 @@ func TestBackend_GetMultiple(t *testing.T) {
 func TestBackend_GetNonexistent(t *testing.T) {
 	mem := NewBackend()
 	key := fes.NewAggregate("type", "id")
-	getEvents, err := mem.Get(&key)
+	getEvents, err := mem.Get(key)
 	assert.NoError(t, err)
 	assert.EqualValues(t, []*fes.Event{}, getEvents)
 }

@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -23,7 +22,7 @@ import (
 // By default the bundle runs with all components are enabled, setting up a NATS cluster as the
 // backing event store, and internal fnenv and workflow runtime
 func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
-	nats := SetupNatsCluster(ctx)
+	nats := RunNatsStreaming(ctx)
 	var bundleOpts bundle.Options
 	if len(opts) > 0 {
 		bundleOpts = opts[0]
@@ -44,7 +43,7 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 }
 
 // TODO check if there is a nats instance already is running
-func SetupNatsCluster(ctx context.Context) fesnats.Config {
+func RunNatsStreaming(ctx context.Context) fesnats.Config {
 	id := util.UID()
 	clusterId := fmt.Sprintf("fission-workflows-tests-%s", id)
 	port, err := findFreePort()
@@ -52,16 +51,31 @@ func SetupNatsCluster(ctx context.Context) fesnats.Config {
 		panic(err)
 	}
 	address := "127.0.0.1"
-	flags := strings.Split(fmt.Sprintf("-cid %s -p %d -a %s", clusterId, port, address), " ")
-	cmd := exec.CommandContext(ctx, "nats-streaming-server", flags...)
-	stdOut, _ := cmd.StdoutPipe()
-	stdErr, _ := cmd.StderrPipe()
-	go io.Copy(os.Stdout, stdOut)
-	go io.Copy(os.Stdout, stdErr)
-	err = cmd.Start()
-	if err != nil {
-		panic(err)
+	args := []string{
+		"run",
+		"--rm",
+		"-i",
+		"-p", fmt.Sprintf("%d:%d", port, port),
+		"nats-streaming:0.8.0-beta",
+		"-cid", clusterId,
+		"-p", fmt.Sprintf("%d", port),
 	}
+
+	go func() {
+		fmt.Printf("> docker %s\n", strings.Join(args, " "))
+		cmd := exec.CommandContext(ctx, "docker", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		err = cmd.Start()
+		if err != nil {
+			panic(err)
+		}
+		err = cmd.Wait()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	cfg := fesnats.Config{
 		Cluster: clusterId,
 		Client:  fmt.Sprintf("client-%s", id),

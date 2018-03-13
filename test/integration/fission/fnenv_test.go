@@ -24,6 +24,11 @@ var fissionResolver *fission.Resolver
 var resolver fnenv.Resolver
 
 func TestMain(m *testing.M) {
+	if testing.Short() {
+		fmt.Println("Skipping Fission integration tests...")
+		return
+	}
+
 	fissionControllerAddr := os.Getenv("FNENV_FISSION_CONTROLLER")
 	if len(fissionControllerAddr) == 0 {
 		fissionControllerAddr = defaultFissionControllerAddr
@@ -33,6 +38,11 @@ func TestMain(m *testing.M) {
 	if len(fissionExecutorAddr) == 0 {
 		fissionExecutorAddr = defaultFissionExecutorAddr
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"controller": fissionControllerAddr,
+		"executor":   fissionExecutorAddr,
+	}).Infof("Checking if Fission is reachable")
 
 	var fissionMissing bool
 	_, err := http.Get(fissionControllerAddr)
@@ -46,8 +56,7 @@ func TestMain(m *testing.M) {
 		fissionMissing = true
 	}
 	if fissionMissing {
-		fmt.Println("Fission not available; skipping Fission integration test")
-		return
+		panic("Fission integration test failed: Fission not available or reachable")
 	}
 
 	// Setup Fission connection

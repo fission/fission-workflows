@@ -25,7 +25,7 @@ const (
 
 func TestMain(m *testing.M) {
 	if testing.Short() {
-		fmt.Println("Skipping bundle tests...")
+		fmt.Println("Skipping bundle integration tests...")
 		return
 	}
 
