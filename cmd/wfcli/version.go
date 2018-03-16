@@ -15,17 +15,18 @@ var versionPrinter = func(c *cli.Context) error {
 	u := parseUrl(c.GlobalString("url"))
 	client := createTransportClient(u)
 	adminApi := admin_api.New(client, strfmt.Default)
-	_, err := adminApi.Status(nil)
+	resp, err := adminApi.Version(admin_api.NewVersionParams())
 	if err != nil {
 		fmt.Printf("server: failed to get version (%v)\n", err)
 	} else {
-		fmt.Printf("server: %s\n", "UNKNOWN")
+		fmt.Printf("server: %s\n", resp.Payload.Version)
 	}
 	return nil
 }
 
 var cmdVersion = cli.Command{
 	Name:    "version",
+	Usage:   "Print version of both client and server",
 	Aliases: []string{"v"},
 	Flags:   []cli.Flag{},
 	Action:  versionPrinter,
