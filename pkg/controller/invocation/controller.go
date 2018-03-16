@@ -210,7 +210,7 @@ func (cr *Controller) Evaluate(invocationId string) {
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfiLog.Infof("Failed to obtain access to invocation %s", invocationId)
+		wfiLog.Debugf("Failed to obtain access to invocation %s", invocationId)
 		return
 	}
 	log.Debugf("evaluating invocation %s", invocationId)

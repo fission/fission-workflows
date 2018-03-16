@@ -141,7 +141,7 @@ func (c *Controller) Evaluate(workflowId string) {
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfLog.Infof("Failed to obtain access to workflow %s", workflowId)
+		wfLog.Debugf("Failed to obtain access to workflow %s", workflowId)
 		return
 	}
 	wfLog.Debugf("evaluating workflow %s", workflowId)
