@@ -27,7 +27,7 @@ export PATH=$HOME/testbin:${PATH}
 if ! command -v kubectl >/dev/null 2>&1; then
    curl -sLO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
    chmod +x ./kubectl
-   mv kubectl ${BIN_DIR}/kubectl
+   mv -f kubectl ${BIN_DIR}/kubectl
 fi
 mkdir ${HOME}/.kube
 
@@ -36,11 +36,11 @@ if ! command -v helm >/dev/null 2>&1 ; then
     curl -sLO https://storage.googleapis.com/kubernetes-helm/helm-${HELM_VERSION}-linux-amd64.tar.gz
     tar xzvf helm-*.tar.gz
     chmod +x linux-amd64/helm
-    mv linux-amd64/helm ${BIN_DIR}/helm
+    mv -f linux-amd64/helm ${BIN_DIR}/helm
 fi
 
 # Get Fission binary
-curl -sLo fission https://github.com/fission/fission/releases/download/0.4.1/fission-cli-linux
+curl -sLo fission https://github.com/fission/fission/releases/download/0.6.0/fission-cli-linux
 chmod +x fission
 mv -f fission ${BIN_DIR}/fission
 
@@ -60,7 +60,7 @@ gcloud container clusters get-credentials fission-workflows-ci-1 --zone us-centr
 kubectl version
 gcloud version
 helm version -c
-fission -v
+# fission -v - Do not test because it expects a Fission cluster to be present
 # END DEBUG
 
 # does it work?

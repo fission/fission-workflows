@@ -32,9 +32,16 @@ generate_test_id() {
 
 set_environment() {
     ns=$1
+    port=$2
 
-    export FISSION_URL=http://$(kubectl -n ${ns} get svc controller -o jsonpath='{...ip}')
-    export FISSION_ROUTER=$(kubectl -n ${ns} get svc router -o jsonpath='{...ip}')
+#    export FISSION_ROUTER=$(kubectl -n ${ns} get svc router -o jsonpath='{...ip}')
+
+    # Port forawrd the router to the local port which is the default of the `fission` 
+    kubectl get pods -l svc="router" -o name --namespace $ns | \
+        sed 's/^.*\///' | \
+        xargs -I{} kubectl port-forward {} $port:$port -n $ns &
+
+    export FISSION_ROUTER="127.0.0.1:{$port}"
 }
 
 #run_all_tests() {
@@ -239,7 +246,6 @@ dump_system_info() {
     helm version
     echo "--- fission ---"
     fission -v
-    curl -s ${FISSION_URL} || true
     echo "--- wfcli ---"
     wfcli -v
     echo "--- End System Info ---"

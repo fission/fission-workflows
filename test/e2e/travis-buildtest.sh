@@ -27,10 +27,11 @@ if ! helm repo list | grep fission-charts >/dev/null 2>&1 ; then
     until helm fetch fission-charts/fission-all >/dev/null 2>&1
     do
         printf "."
-        helm repo update
     done
     printf "\n"
 fi
+
+helm repo update
 
 # Build and run tests
 . $(dirname $0)/buildtest.sh

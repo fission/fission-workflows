@@ -51,6 +51,9 @@ script:
 # TODO no need to rebuild (tag images with test ID and check if they exist before starting to rebuild)
 - test/e2e/travis-buildtest.sh
 
+after_script:
+- test/e2e/cleanup.sh
+
 notifications:
   slack:
     rooms:

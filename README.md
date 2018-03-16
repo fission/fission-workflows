@@ -152,7 +152,7 @@ See the [compilation guide](./compiling.md).
 
 This is an early release for community participation and user
 feedback. It is under active development; none of the interfaces are
-stable yet. It should not be used in production.
+stable yet. It should not be used in production!
 
 Contributions are welcome in whatever form, including testing,
 examples, use cases, or adding features. For an overview of current

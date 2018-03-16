@@ -18,70 +18,11 @@ NS_FUNCTION=fission-function
 NS_BUILDER=fission-builder
 fissionHelmId=fission
 fissionWorkflowsHelmId=fission-workflows
-FISSION_VERSION=0.4.1
+FISSION_VERSION=0.6.0
 TAG=test
 TEST_STATUS=0
 TEST_LOGFILE_PATH=tests.log
 BIN_DIR="${BIN_DIR:-$HOME/testbin}"
-
-
-cleanup() {
-    emph "Removing Fission and Fission Workflow deployments..."
-    helm_uninstall_release ${fissionWorkflowsHelmId} || true
-    helm_uninstall_release ${fissionHelmId} || true
-
-    emph "Removing custom resources..."
-    clean_tpr_crd_resources || true
-
-    # Trigger deletion of all namespaces before waiting - for concurrency of deletion
-    emph "Forcing deletion of namespaces..."
-    kubectl delete ns/${NS} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_BUILDER} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_FUNCTION} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-
-    # Wait until all namespaces are actually deleted!
-    emph "Awaiting deletion of namespaces..."
-    retry kubectl delete ns/${NS} 2>&1  | grep -qv "Error from server (Conflict):"
-    retry kubectl delete ns/${NS_BUILDER} 2>&1 | grep -qv "Error from server (Conflict):"
-    retry kubectl delete ns/${NS_FUNCTION} 2>&1  | grep -qv "Error from server (Conflict):"
-
-    emph "Cleaning up local filesystem..."
-    rm -f ./fission-workflows-bundle ./wfcli
-    sleep 5
-}
-
-print_report() {
-    emph "--- Test Report ---"
-    cat ${TEST_LOGFILE_PATH} | grep '\(FAILURE\|SUCCESS\).*|'
-    emph "--- End Test Report ---"
-}
-
-on_exit() {
-    emph "[Buildtest exited]"
-    # Dump all the logs
-    dump_logs ${NS} ${NS_FUNCTION} ${NS_BUILDER} || true
-
-    # Ensure teardown after tests finish
-    # TODO provide option to not cleanup the test setup after tests (e.g. for further tests)
-    emph "Cleaning up cluster..."
-    retry cleanup
-
-    # Print a short test report
-    print_report
-
-    # Ensure correct exist status
-    echo "TEST_STATUS: ${TEST_STATUS}"
-    if [ ${TEST_STATUS} -ne 0 ]; then
-        exit 1
-    fi
-}
-
-# Ensure that minikube cluster is cleaned (in case it is an existing cluster)
-emph "Cleaning up cluster..."
-retry cleanup
-
-# Ensure printing of report
-trap on_exit EXIT
 
 #
 # Deploy Fission
@@ -95,8 +36,8 @@ routerPort=31235
 helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=${controllerPort},routerPort=${routerPort},pullPolicy=Always,analytics=false"
 
 # Direct CLI to the deployed cluster
-set_environment ${NS} ${controllerPort} ${routerPort}
-emph "Fission environment: FISSION_URL: '${FISSION_URL}' and FISSION_ROUTER: '${FISSION_ROUTER}'"
+set_environment ${NS} ${routerPort}
+emph "Fission environment: FISSION_URL: '${FISSION_URL:-EMPTY}' and FISSION_ROUTER: '${FISSION_ROUTER:-EMPTY}'"
 
 # Wait for Fission to get ready
 emph "Waiting for fission to be ready..."

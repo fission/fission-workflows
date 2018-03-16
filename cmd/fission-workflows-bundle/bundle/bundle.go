@@ -310,7 +310,7 @@ func runHttpGateway(ctx context.Context, gwSrv *http.Server, adminApiAddr string
 		}
 	}
 
-	gwSrv.Handler = handlers.LoggingHandler(os.Stdout, mux)
+	gwSrv.Handler = mux
 	go func() {
 		err := gwSrv.ListenAndServe()
 		log.WithField("err", err).Info("HTTP Gateway exited")
