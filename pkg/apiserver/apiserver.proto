@@ -138,6 +138,20 @@ service AdminAPI {
             get: "/version"
         };
     }
+
+    rpc Resume  (google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/resume"
+        };
+    }
+
+    rpc Halt (google.protobuf.Empty) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/halt"
+        };
+    }
+
+    // TODO add config view / edit
 }
 
 message Health {

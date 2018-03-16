@@ -42,6 +42,10 @@ type EvalContext interface {
 // MetaController is a 'controller for controllers', allowing for composition with controllers. It allows users to
 // interface with the metacontroller, instead of needing to control the lifecycle of all underlying controllers.
 type MetaController struct {
+	// suspended indicates whether this metacontroller is suspended from running.
+	suspended bool
+
+	// ctrls contains the controllers that the metacontroller manages.
 	ctrls []Controller
 }
 
@@ -63,13 +67,17 @@ func (mc *MetaController) Init(ctx context.Context) error {
 	return nil
 }
 
+// Run essentially is Init followed by Start
 func (mc *MetaController) Run(ctx context.Context) error {
-	metaLog.Debug("Running controller init...")
 	err := mc.Init(ctx)
 	if err != nil {
 		return err
 	}
 
+	return mc.Start(ctx)
+}
+
+func (mc *MetaController) Start(ctx context.Context) error {
 	// Control lane
 	ticker := time.NewTicker(TickInterval)
 	tick := uint64(0)
@@ -78,8 +86,10 @@ func (mc *MetaController) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			mc.Tick(tick)
-			tick += 1
+			if !mc.suspended {
+				mc.Tick(tick)
+				tick += 1
+			}
 		}
 	}
 }
@@ -116,4 +126,12 @@ func (mc *MetaController) Close() error {
 	}
 	metaLog.Info("Closed MetaController")
 	return err
+}
+
+func (mc *MetaController) Halt() {
+	mc.suspended = false
+}
+
+func (mc *MetaController) Resume() {
+	mc.suspended = true
 }
