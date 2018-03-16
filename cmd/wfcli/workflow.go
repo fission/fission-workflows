@@ -26,7 +26,7 @@ var cmdWorkflow = cli.Command{
 				switch c.NArg() {
 				case 0:
 					// List workflows
-					resp, err := wfApi.List0(workflow_api.NewList0Params())
+					resp, err := wfApi.WfList(workflow_api.NewWfListParams())
 					if err != nil {
 						panic(err)
 					}
@@ -34,7 +34,7 @@ var cmdWorkflow = cli.Command{
 					sort.Strings(wfs)
 					var rows [][]string
 					for _, wfId := range wfs {
-						resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
+						resp, err := wfApi.WfGet(workflow_api.NewWfGetParams().WithID(wfId))
 						if err != nil {
 							panic(err)
 						}
@@ -50,7 +50,7 @@ var cmdWorkflow = cli.Command{
 					// Get Workflow
 					wfId := c.Args().Get(0)
 					println(wfId)
-					resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
+					resp, err := wfApi.WfGet(workflow_api.NewWfGetParams().WithID(wfId))
 					if err != nil {
 						panic(err)
 					}
@@ -65,7 +65,7 @@ var cmdWorkflow = cli.Command{
 				default:
 					wfId := c.Args().Get(0)
 					taskId := c.Args().Get(1)
-					resp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfId))
+					resp, err := wfApi.WfGet(workflow_api.NewWfGetParams().WithID(wfId))
 					if err != nil {
 						panic(err)
 					}

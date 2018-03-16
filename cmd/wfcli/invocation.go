@@ -42,7 +42,7 @@ var cmdInvocation = cli.Command{
 				case 1:
 					// Get Workflow invocation
 					wfiId := c.Args().Get(0)
-					resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
+					resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
 					if err != nil {
 						panic(err)
 					}
@@ -57,7 +57,7 @@ var cmdInvocation = cli.Command{
 				default:
 					wfiId := c.Args().Get(0)
 					taskId := c.Args().Get(1)
-					resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
+					resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
 					if err != nil {
 						panic(err)
 					}
@@ -152,13 +152,13 @@ var cmdInvocation = cli.Command{
 				wfApi := workflow_api.New(client, strfmt.Default)
 				wfiApi := workflow_invocation_api.New(client, strfmt.Default)
 
-				wfiResp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
+				wfiResp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
 				if err != nil {
 					panic(err)
 				}
 				wfi := wfiResp.Payload
 
-				wfResp, err := wfApi.Get0(workflow_api.NewGet0Params().WithID(wfi.Spec.WorkflowID))
+				wfResp, err := wfApi.WfGet(workflow_api.NewWfGetParams().WithID(wfi.Spec.WorkflowID))
 				if err != nil {
 					panic(err)
 				}
@@ -177,7 +177,11 @@ var cmdInvocation = cli.Command{
 
 				var rows [][]string
 				rows = collectStatus(wf.Spec.Tasks, wfi.Status.Tasks, rows)
-				rows = collectStatus(wfi.Status.DynamicTasks, wfi.Status.Tasks, rows)
+				dynamicTaskSpecs := map[string]models.TaskSpec{}
+				for k, v := range wfi.Status.DynamicTasks {
+					dynamicTaskSpecs[k] = *v.Spec
+				}
+				rows = collectStatus(dynamicTaskSpecs, wfi.Status.Tasks, rows)
 
 				table(os.Stdout, []string{"TASK", "STATUS", "STARTED", "UPDATED"}, rows)
 				return nil
@@ -188,7 +192,7 @@ var cmdInvocation = cli.Command{
 
 func invocationsList(out io.Writer, wfiApi *workflow_invocation_api.Client, since time.Time) {
 	// List workflows invocations
-	resp, err := wfiApi.List(workflow_invocation_api.NewListParams())
+	resp, err := wfiApi.WfiList(workflow_invocation_api.NewWfiListParams())
 	if err != nil {
 		panic(err)
 	}
@@ -196,7 +200,7 @@ func invocationsList(out io.Writer, wfiApi *workflow_invocation_api.Client, sinc
 	sort.Strings(wis.Invocations)
 	var rows [][]string
 	for _, wfiId := range wis.Invocations {
-		resp, err := wfiApi.Get(workflow_invocation_api.NewGetParams().WithID(wfiId))
+		resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
 		if err != nil {
 			panic(err)
 		}
@@ -217,7 +221,8 @@ func invocationsList(out io.Writer, wfiApi *workflow_invocation_api.Client, sinc
 
 }
 
-func collectStatus(tasks map[string]models.Task, taskStatus map[string]models.TaskInvocation, rows [][]string) [][]string {
+func collectStatus(tasks map[string]models.TaskSpec, taskStatus map[string]models.TaskInvocation,
+	rows [][]string) [][]string {
 	var ids []string
 	for id := range tasks {
 		ids = append(ids, id)
