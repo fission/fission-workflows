@@ -8,7 +8,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/fission/fission-workflows/pkg/version"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/urfave/cli"
 )
@@ -16,12 +15,12 @@ import (
 // This is a prototype of the CLI (and will be integrated into the Fission CLI eventually).
 func main() {
 	app := cli.NewApp()
-	app.Version = version.VERSION
 	app.Author = "Erwin van Eyk"
 	app.Email = "erwin@platform9.com"
 	app.EnableBashCompletion = true
 	app.Usage = "Fission Workflows CLI"
 	app.Description = "CLI for Fission Workflows"
+	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "url, u",
@@ -41,6 +40,8 @@ func main() {
 		cmdWorkflow,
 		cmdInvocation,
 		cmdValidate,
+		cmdAdmin,
+		cmdVersion,
 	}
 
 	app.Run(os.Args)
