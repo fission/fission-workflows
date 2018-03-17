@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	subjectActivity          = "_activity"
-	mostRecentMsg     uint64 = 0
-	firstMsg          uint64 = 1
-	rangeFetchTimeout        = time.Duration(1) * time.Minute
+	subjectActivity                 = "_activity"
+	mostRecentMsg            uint64 = 0
+	firstMsg                 uint64 = 1
+	rangeFetchTimeout               = time.Duration(5) * time.Second
+	rangeFindBoundaryTimeout        = time.Duration(5) * time.Second
 )
 
 type eventType int32
@@ -74,7 +75,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		defer leftSub.Close()
 		select {
 		case seqEnd = <-rightBound:
-		case <-time.After(time.Duration(10) * time.Second):
+		case <-time.After(rangeFindBoundaryTimeout):
 			return nil, fmt.Errorf("timed out while finding boundary for Subject '%s'", subject)
 		}
 	}
