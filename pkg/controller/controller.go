@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TickInterval = time.Duration(1) * time.Second
+	TickInterval = time.Duration(100) * time.Millisecond
 )
 
 var (
