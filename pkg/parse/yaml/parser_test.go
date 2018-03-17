@@ -34,12 +34,10 @@ tasks:
 }
 
 func TestParseSimple(t *testing.T) {
-
 	data := `
 apiversion: 123
 output: $.tasks.foo.output
 tasks:
-  nothing: ~
   foo:
     run: someSh
   bar:

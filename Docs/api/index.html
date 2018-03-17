@@ -196,11 +196,15 @@ font-style: italic;
   <div class="method-summary"></div>
   <h4><a href="#AdminAPI">AdminAPI</a></h4>
   <ul>
+  <li><a href="#halt"><code><span class="http-method">get</span> /halt</code></a></li>
+  <li><a href="#resume"><code><span class="http-method">get</span> /resume</code></a></li>
   <li><a href="#status"><code><span class="http-method">get</span> /status</code></a></li>
+  <li><a href="#version"><code><span class="http-method">get</span> /version</code></a></li>
   </ul>
   <h4><a href="#WorkflowAPI">WorkflowAPI</a></h4>
   <ul>
   <li><a href="#create"><code><span class="http-method">post</span> /workflow</code></a></li>
+  <li><a href="#delete"><code><span class="http-method">delete</span> /workflow/{id}</code></a></li>
   <li><a href="#get"><code><span class="http-method">get</span> /workflow/{id}</code></a></li>
   <li><a href="#list"><code><span class="http-method">get</span> /workflow</code></a></li>
   <li><a href="#validate"><code><span class="http-method">post</span> /workflow/validate</code></a></li>
@@ -210,12 +214,99 @@ font-style: italic;
   <li><a href="#cancel"><code><span class="http-method">delete</span> /invocation/{id}</code></a></li>
   <li><a href="#get"><code><span class="http-method">get</span> /invocation/{id}</code></a></li>
   <li><a href="#invoke"><code><span class="http-method">post</span> /invocation</code></a></li>
-  <li><a href="#invokeSync"><code><span class="http-method">get</span> /invocation/sync</code></a></li>
-  <li><a href="#invokeSync_1"><code><span class="http-method">post</span> /invocation/sync</code></a></li>
+  <li><a href="#invokeSync"><code><span class="http-method">post</span> /invocation/sync</code></a></li>
+  <li><a href="#invokeSync2"><code><span class="http-method">get</span> /invocation/sync</code></a></li>
   <li><a href="#list"><code><span class="http-method">get</span> /invocation</code></a></li>
+  <li><a href="#validate"><code><span class="http-method">post</span> /invocation/validate</code></a></li>
   </ul>
 
   <h1><a name="AdminAPI">AdminAPI</a></h1>
+  <div class="method"><a name="halt"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /halt</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">halt</span>)</div>
+    <div class="method-notes"></div>
+
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="resume"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /resume</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">resume</span>)</div>
+    <div class="method-notes"></div>
+
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="status"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -245,7 +336,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "status" : "aeiou"
+  "status" : "status"
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -259,6 +350,51 @@ font-style: italic;
     <h4 class="field-label">200</h4>
     
         <a href="#apiserverHealth">apiserverHealth</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="version"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /version</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">version</span>)</div>
+    <div class="method-notes"></div>
+
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#apiserverVersionResp">apiserverVersionResp</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "version" : "version"
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#apiserverVersionResp">apiserverVersionResp</a>
   </div> <!-- method -->
   <hr/>
   <h1><a name="WorkflowAPI">WorkflowAPI</a></h1>
@@ -298,7 +434,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "id" : "aeiou"
+  "id" : "id"
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -312,6 +448,55 @@ font-style: italic;
     <h4 class="field-label">200</h4>
     
         <a href="#apiserverWorkflowIdentifier">apiserverWorkflowIdentifier</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="delete"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /workflow/{id}</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">delete</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">id (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  </div>
+    </div>  <!-- field-items -->
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="get"/>
@@ -351,29 +536,32 @@ font-style: italic;
     <pre class="example"><code>{
   "metadata" : {
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
-    "id" : "aeiou"
+    "id" : "id"
   },
   "spec" : {
-    "apiVersion" : "aeiou",
-    "outputTask" : "aeiou",
-    "name" : "aeiou",
-    "description" : "aeiou",
-    "id" : "aeiou",
+    "internal" : true,
+    "apiVersion" : "apiVersion",
+    "outputTask" : "outputTask",
+    "name" : "name",
+    "description" : "description",
+    "forceId" : "forceId",
     "tasks" : {
       "key" : {
-        "functionRef" : "aeiou",
-        "output" : "",
+        "functionRef" : "functionRef",
+        "output" : {
+          "type" : "type",
+          "value" : "value"
+        },
         "inputs" : {
           "key" : {
-            "type" : "aeiou",
-            "value" : "aeiou"
+            "type" : "type",
+            "value" : "value"
           }
         },
         "await" : 0,
-        "id" : "aeiou",
         "requires" : {
           "key" : {
-            "alias" : "aeiou",
+            "alias" : "alias",
             "type" : { }
           }
         }
@@ -381,16 +569,23 @@ font-style: italic;
     }
   },
   "status" : {
-    "resolvedTasks" : {
-      "key" : {
-        "src" : "aeiou",
-        "runtime" : "aeiou",
-        "resolved" : "aeiou"
-      }
-    },
     "error" : {
-      "code" : "aeiou",
-      "message" : "aeiou"
+      "code" : "code",
+      "message" : "message"
+    },
+    "tasks" : {
+      "key" : {
+        "fnRef" : {
+          "runtime" : "runtime",
+          "runtimeId" : "runtimeId"
+        },
+        "error" : {
+          "code" : "code",
+          "message" : "message"
+        },
+        "status" : { },
+        "updatedAt" : "2000-01-23T04:56:07.000+00:00"
+      }
     },
     "status" : { },
     "updatedAt" : "2000-01-23T04:56:07.000+00:00"
@@ -439,7 +634,7 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "workflows" : [ "aeiou" ]
+  "workflows" : [ "workflows", "workflows" ]
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -595,56 +790,95 @@ To lighten the request load, consider using a more specific request.</div>
     <pre class="example"><code>{
   "metadata" : {
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
-    "id" : "aeiou"
+    "id" : "id"
   },
   "spec" : {
     "inputs" : {
       "key" : {
-        "type" : "aeiou",
-        "value" : "aeiou"
+        "type" : "type",
+        "value" : "value"
       }
     },
-    "workflowId" : "aeiou"
+    "workflowId" : "workflowId",
+    "parentId" : "parentId"
   },
   "status" : {
-    "output" : "",
+    "output" : {
+      "type" : "type",
+      "value" : "value"
+    },
     "dynamicTasks" : {
       "key" : {
-        "functionRef" : "aeiou",
-        "output" : "",
-        "inputs" : {
-          "key" : ""
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
         },
-        "await" : 0,
-        "id" : "aeiou",
-        "requires" : {
-          "key" : {
-            "alias" : "aeiou",
-            "type" : { }
+        "spec" : {
+          "functionRef" : "functionRef",
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
+          "inputs" : {
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
+          },
+          "await" : 0,
+          "requires" : {
+            "key" : {
+              "alias" : "alias",
+              "type" : { }
+            }
           }
+        },
+        "status" : {
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
+          },
+          "error" : {
+            "code" : "code",
+            "message" : "message"
+          },
+          "status" : { },
+          "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
       }
     },
-    "error" : "",
+    "error" : {
+      "code" : "code",
+      "message" : "message"
+    },
     "tasks" : {
       "key" : {
-        "metadata" : "",
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
+        },
         "spec" : {
           "inputs" : {
-            "key" : ""
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
           },
-          "type" : {
-            "src" : "aeiou",
-            "runtime" : "aeiou",
-            "resolved" : "aeiou"
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
           },
-          "taskId" : "aeiou"
+          "invocationId" : "invocationId",
+          "taskId" : "taskId"
         },
         "status" : {
-          "output" : "",
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
           "error" : {
-            "code" : "aeiou",
-            "message" : "aeiou"
+            "code" : "code",
+            "message" : "message"
           },
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
@@ -705,7 +939,7 @@ To lighten the request load, consider using a more specific request.</div>
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "id" : "aeiou"
+  "id" : "id"
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -724,119 +958,8 @@ To lighten the request load, consider using a more specific request.</div>
   <div class="method"><a name="invokeSync"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /invocation/sync</code></pre></div>
-    <div class="method-summary"> (<span class="nickname">invokeSync</span>)</div>
-    <div class="method-notes"></div>
-
-
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-
-
-    <h3 class="field-label">Query parameters</h3>
-    <div class="field-items">
-      <div class="param">workflowId (optional)</div>
-
-      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  </div>
-    </div>  <!-- field-items -->
-
-
-    <h3 class="field-label">Return type</h3>
-    <div class="return-type">
-      <a href="#WorkflowInvocation">WorkflowInvocation</a>
-      
-    </div>
-
-    <!--Todo: process Response Object and its headers, schema, examples -->
-
-    <h3 class="field-label">Example data</h3>
-    <div class="example-data-content-type">Content-Type: application/json</div>
-    <pre class="example"><code>{
-  "metadata" : {
-    "createdAt" : "2000-01-23T04:56:07.000+00:00",
-    "id" : "aeiou"
-  },
-  "spec" : {
-    "inputs" : {
-      "key" : {
-        "type" : "aeiou",
-        "value" : "aeiou"
-      }
-    },
-    "workflowId" : "aeiou"
-  },
-  "status" : {
-    "output" : "",
-    "dynamicTasks" : {
-      "key" : {
-        "functionRef" : "aeiou",
-        "output" : "",
-        "inputs" : {
-          "key" : ""
-        },
-        "await" : 0,
-        "id" : "aeiou",
-        "requires" : {
-          "key" : {
-            "alias" : "aeiou",
-            "type" : { }
-          }
-        }
-      }
-    },
-    "error" : "",
-    "tasks" : {
-      "key" : {
-        "metadata" : "",
-        "spec" : {
-          "inputs" : {
-            "key" : ""
-          },
-          "type" : {
-            "src" : "aeiou",
-            "runtime" : "aeiou",
-            "resolved" : "aeiou"
-          },
-          "taskId" : "aeiou"
-        },
-        "status" : {
-          "output" : "",
-          "error" : {
-            "code" : "aeiou",
-            "message" : "aeiou"
-          },
-          "status" : { },
-          "updatedAt" : "2000-01-23T04:56:07.000+00:00"
-        }
-      }
-    },
-    "status" : { },
-    "updatedAt" : "2000-01-23T04:56:07.000+00:00"
-  }
-}</code></pre>
-
-    <h3 class="field-label">Produces</h3>
-    This API call produces the following media types according to the <span class="header">Accept</span> request header;
-    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-    <h3 class="field-label">Responses</h3>
-    <h4 class="field-label">200</h4>
-    
-        <a href="#WorkflowInvocation">WorkflowInvocation</a>
-  </div> <!-- method -->
-  <hr/>
-  <div class="method"><a name="invokeSync_1"/>
-    <div class="method-path">
-    <a class="up" href="#__Methods">Up</a>
     <pre class="post"><code class="huge"><span class="http-method">post</span> /invocation/sync</code></pre></div>
-    <div class="method-summary"> (<span class="nickname">invokeSync_1</span>)</div>
+    <div class="method-summary"> (<span class="nickname">invokeSync</span>)</div>
     <div class="method-notes"></div>
 
 
@@ -870,56 +993,249 @@ To lighten the request load, consider using a more specific request.</div>
     <pre class="example"><code>{
   "metadata" : {
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
-    "id" : "aeiou"
+    "id" : "id"
   },
   "spec" : {
     "inputs" : {
       "key" : {
-        "type" : "aeiou",
-        "value" : "aeiou"
+        "type" : "type",
+        "value" : "value"
       }
     },
-    "workflowId" : "aeiou"
+    "workflowId" : "workflowId",
+    "parentId" : "parentId"
   },
   "status" : {
-    "output" : "",
+    "output" : {
+      "type" : "type",
+      "value" : "value"
+    },
     "dynamicTasks" : {
       "key" : {
-        "functionRef" : "aeiou",
-        "output" : "",
-        "inputs" : {
-          "key" : ""
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
         },
-        "await" : 0,
-        "id" : "aeiou",
-        "requires" : {
-          "key" : {
-            "alias" : "aeiou",
-            "type" : { }
+        "spec" : {
+          "functionRef" : "functionRef",
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
+          "inputs" : {
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
+          },
+          "await" : 0,
+          "requires" : {
+            "key" : {
+              "alias" : "alias",
+              "type" : { }
+            }
           }
+        },
+        "status" : {
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
+          },
+          "error" : {
+            "code" : "code",
+            "message" : "message"
+          },
+          "status" : { },
+          "updatedAt" : "2000-01-23T04:56:07.000+00:00"
         }
       }
     },
-    "error" : "",
+    "error" : {
+      "code" : "code",
+      "message" : "message"
+    },
     "tasks" : {
       "key" : {
-        "metadata" : "",
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
+        },
         "spec" : {
           "inputs" : {
-            "key" : ""
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
           },
-          "type" : {
-            "src" : "aeiou",
-            "runtime" : "aeiou",
-            "resolved" : "aeiou"
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
           },
-          "taskId" : "aeiou"
+          "invocationId" : "invocationId",
+          "taskId" : "taskId"
         },
         "status" : {
-          "output" : "",
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
           "error" : {
-            "code" : "aeiou",
-            "message" : "aeiou"
+            "code" : "code",
+            "message" : "message"
+          },
+          "status" : { },
+          "updatedAt" : "2000-01-23T04:56:07.000+00:00"
+        }
+      }
+    },
+    "status" : { },
+    "updatedAt" : "2000-01-23T04:56:07.000+00:00"
+  }
+}</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#WorkflowInvocation">WorkflowInvocation</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="invokeSync2"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /invocation/sync</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">invokeSync2</span>)</div>
+    <div class="method-notes"></div>
+
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">workflowId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  </div><div class="param">parentId (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; <p>ParentId contains the id of the encapsulating workflow invocation.</p>
+<p>This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.</p>
+ </div>
+    </div>  <!-- field-items -->
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#WorkflowInvocation">WorkflowInvocation</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{
+  "metadata" : {
+    "createdAt" : "2000-01-23T04:56:07.000+00:00",
+    "id" : "id"
+  },
+  "spec" : {
+    "inputs" : {
+      "key" : {
+        "type" : "type",
+        "value" : "value"
+      }
+    },
+    "workflowId" : "workflowId",
+    "parentId" : "parentId"
+  },
+  "status" : {
+    "output" : {
+      "type" : "type",
+      "value" : "value"
+    },
+    "dynamicTasks" : {
+      "key" : {
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
+        },
+        "spec" : {
+          "functionRef" : "functionRef",
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
+          "inputs" : {
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
+          },
+          "await" : 0,
+          "requires" : {
+            "key" : {
+              "alias" : "alias",
+              "type" : { }
+            }
+          }
+        },
+        "status" : {
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
+          },
+          "error" : {
+            "code" : "code",
+            "message" : "message"
+          },
+          "status" : { },
+          "updatedAt" : "2000-01-23T04:56:07.000+00:00"
+        }
+      }
+    },
+    "error" : {
+      "code" : "code",
+      "message" : "message"
+    },
+    "tasks" : {
+      "key" : {
+        "metadata" : {
+          "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "id" : "id"
+        },
+        "spec" : {
+          "inputs" : {
+            "key" : {
+              "type" : "type",
+              "value" : "value"
+            }
+          },
+          "fnRef" : {
+            "runtime" : "runtime",
+            "runtimeId" : "runtimeId"
+          },
+          "invocationId" : "invocationId",
+          "taskId" : "taskId"
+        },
+        "status" : {
+          "output" : {
+            "type" : "type",
+            "value" : "value"
+          },
+          "error" : {
+            "code" : "code",
+            "message" : "message"
           },
           "status" : { },
           "updatedAt" : "2000-01-23T04:56:07.000+00:00"
@@ -973,7 +1289,7 @@ To lighten the request load, consider using a more specific request.</div>
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "invocations" : [ "aeiou" ]
+  "invocations" : [ "invocations", "invocations" ]
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -989,6 +1305,56 @@ To lighten the request load, consider using a more specific request.</div>
         <a href="#apiserverWorkflowInvocationList">apiserverWorkflowInvocationList</a>
   </div> <!-- method -->
   <hr/>
+  <div class="method"><a name="validate"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /invocation/validate</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">validate</span>)</div>
+    <div class="method-notes"></div>
+
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#WorkflowInvocationSpec">WorkflowInvocationSpec</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
+  </div> <!-- method -->
+  <hr/>
 
   <h2><a name="__Models">Models</a></h2>
   [ Jump to <a href="#__Methods">Methods</a> ]
@@ -996,29 +1362,33 @@ To lighten the request load, consider using a more specific request.</div>
   <h3>Table of Contents</h3>
   <ol>
     <li><a href="#Error"><code>Error</code> - </a></li>
+    <li><a href="#FnRef"><code>FnRef</code> - </a></li>
     <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
-    <li><a href="#Task"><code>Task</code> - </a></li>
+    <li><a href="#Task"><code>Task</code> - Task Model</a></li>
     <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
     <li><a href="#TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a></li>
     <li><a href="#TaskInvocation"><code>TaskInvocation</code> - Task Invocation Model</a></li>
     <li><a href="#TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a></li>
     <li><a href="#TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a></li>
     <li><a href="#TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a></li>
-    <li><a href="#TaskTypeDef"><code>TaskTypeDef</code> - </a></li>
+    <li><a href="#TaskSpec"><code>TaskSpec</code> - </a></li>
+    <li><a href="#TaskStatus"><code>TaskStatus</code> - </a></li>
+    <li><a href="#TaskStatusStatus"><code>TaskStatusStatus</code> - </a></li>
     <li><a href="#TypedValue"><code>TypedValue</code> - </a></li>
     <li><a href="#Workflow"><code>Workflow</code> - Workflow Model</a></li>
-    <li><a href="#WorkflowInvocation"><code>WorkflowInvocation</code> - </a></li>
+    <li><a href="#WorkflowInvocation"><code>WorkflowInvocation</code> - Workflow Invocation Model</a></li>
     <li><a href="#WorkflowInvocationSpec"><code>WorkflowInvocationSpec</code> - Workflow Invocation Model</a></li>
     <li><a href="#WorkflowInvocationStatus"><code>WorkflowInvocationStatus</code> - </a></li>
     <li><a href="#WorkflowInvocationStatusStatus"><code>WorkflowInvocationStatusStatus</code> - </a></li>
     <li><a href="#WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a></li>
-    <li><a href="#WorkflowStatus"><code>WorkflowStatus</code> - Internal</a></li>
+    <li><a href="#WorkflowStatus"><code>WorkflowStatus</code> - </a></li>
     <li><a href="#WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - <ul>
 <li>READY: PARSING = 1; // During validation/parsing</li>
 </ul>
 </a></li>
     <li><a href="#apiserverHealth"><code>apiserverHealth</code> - </a></li>
     <li><a href="#apiserverSearchWorkflowResponse"><code>apiserverSearchWorkflowResponse</code> - </a></li>
+    <li><a href="#apiserverVersionResp"><code>apiserverVersionResp</code> - </a></li>
     <li><a href="#apiserverWorkflowIdentifier"><code>apiserverWorkflowIdentifier</code> - </a></li>
     <li><a href="#apiserverWorkflowInvocationIdentifier"><code>apiserverWorkflowInvocationIdentifier</code> - </a></li>
     <li><a href="#apiserverWorkflowInvocationList"><code>apiserverWorkflowInvocationList</code> - </a></li>
@@ -1036,6 +1406,16 @@ or the response type of an API method. For instance:</a></li>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
+    <h3><a name="FnRef"><code>FnRef</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>FnRef is an immutable, unique reference to a function on a specific function runtime environment.</p>
+<p>The string representation (via String or Format): runtime://runtimeId</p>
+</div>
+    <div class="field-items">
+      <div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Runtime is the Function Runtime environment (fnenv) that was used to resolve the function. </div>
+<div class="param">runtimeId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> RuntimeId is the runtime-specific identifier of the function. </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
     <h3><a name="ObjectMetadata"><code>ObjectMetadata</code> - Common</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
@@ -1044,20 +1424,12 @@ or the response type of an API method. For instance:</a></li>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="Task"><code>Task</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
-<p>A task as a number of inputs and exactly two outputs
-Id is specified outside of task</p>
-</div>
+    <h3><a name="Task"><code>Task</code> - Task Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>Same as the string in the map&lt;string, Task&gt; definition. One needs to be set.</p>
-<p>If there is a conflict the map key gets precendence over this field.</p>
- </div>
-<div class="param">functionRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
-<div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
-<div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
+      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskSpec">TaskSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatus">TaskStatus</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1087,9 +1459,10 @@ Id is specified outside of task</p>
     <h3><a name="TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskTypeDef">TaskTypeDef</a></span>  </div>
+      <div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#FnRef">FnRef</a></span>  </div>
 <div class="param">taskId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
+<div class="param">invocationId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1109,13 +1482,34 @@ Id is specified outside of task</p>
           </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="TaskTypeDef"><code>TaskTypeDef</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="TaskSpec"><code>TaskSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
+<p>A task as a number of inputs and exactly two outputs
+Id is specified outside of TaskSpec</p>
+</div>
+    <div class="field-items">
+      <div class="param">functionRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
+<div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
+<div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskStatus"><code>TaskStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">src (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">resolved (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatusStatus">TaskStatusStatus</a></span>  </div>
+<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#FnRef">FnRef</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="TaskStatusStatus"><code>TaskStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
   </div>
   <div class="model">
     <h3><a name="TypedValue"><code>TypedValue</code> - </a> <a class="up" href="#__Models">Up</a></h3>
@@ -1135,7 +1529,7 @@ Id is specified outside of task</p>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="WorkflowInvocation"><code>WorkflowInvocation</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="WorkflowInvocation"><code>WorkflowInvocation</code> - Workflow Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
@@ -1149,6 +1543,9 @@ Id is specified outside of task</p>
     <div class="field-items">
       <div class="param">workflowId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
+<div class="param">parentId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>ParentId contains the id of the encapsulating workflow invocation.</p>
+<p>This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.</p>
+ </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1159,7 +1556,8 @@ Id is specified outside of task</p>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
 <div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocation">map[String, TaskInvocation]</a></span>  </div>
 <div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
-<div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span>  </div>
+<div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> In case the task ID also exists in the workflow spec, the dynamic task will be
+used as an overlay over the static task. </div>
 <div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
@@ -1179,21 +1577,23 @@ to the user/system upon the creation of a workflow.</p>
     <div class="field-items">
       <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> apiVersion describes what version is of the workflow definition.
 By default the workflow engine will assume the latest version to be used. </div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> Dependency graph is build into the tasks </div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskSpec">map[String, TaskSpec]</a></span> <p>Tasks contains the specs of the tasks, with the key being the task id.</p>
+<p>Note: Dependency graph is build into the tasks.</p>
+ </div>
 <div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">description (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> TODO move outside of spec
-The UID that the workflow should have. Only use this in case you want to force a specific UID. </div>
+<div class="param">forceId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> The UID that the workflow should have. Only use this in case you want to force a specific UID. </div>
 <div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">internal (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span> Internal indicates whether is a workflow should be visible to a human (default) or not. format: boolean</div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="WorkflowStatus"><code>WorkflowStatus</code> - Internal</a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="WorkflowStatus"><code>WorkflowStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowStatusStatus">WorkflowStatusStatus</a></span>  </div>
 <div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">resolvedTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskTypeDef">map[String, TaskTypeDef]</a></span>  </div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatus">map[String, TaskStatus]</a></span> Tasks contains the status of the tasks, with the key being the task id. </div>
 <div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
@@ -1218,6 +1618,13 @@ The UID that the workflow should have. Only use this in case you want to force a
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">workflows (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="apiserverVersionResp"><code>apiserverVersionResp</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">version (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
