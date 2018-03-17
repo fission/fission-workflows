@@ -56,6 +56,10 @@ func parseWorkflow(def *workflowSpec) (*types.WorkflowSpec, error) {
 	tasks := map[string]*types.TaskSpec{}
 
 	for id, task := range def.Tasks {
+		if task == nil {
+			continue
+		}
+
 		p, err := parseTask(id, task)
 		if err != nil {
 			return nil, err
