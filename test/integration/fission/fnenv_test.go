@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
-	"github.com/fission/fission-workflows/pkg/fnenv/fission"
+	fissionenv "github.com/fission/fission-workflows/pkg/fnenv/fission"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -19,8 +19,8 @@ const (
 	defaultFissionExecutorAddr   = "http://executor.fission"
 )
 
-var fissionRuntime *fission.FunctionEnv
-var fissionResolver *fission.Resolver
+var fissionRuntime *fissionenv.FunctionEnv
+var fissionResolver *fissionenv.Resolver
 var resolver fnenv.Resolver
 
 func TestMain(m *testing.M) {
@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 		fissionControllerAddr = defaultFissionControllerAddr
 	}
 
-	fissionExecutorAddr := os.Getenv("FNENV_FISSION_Executor")
+	fissionExecutorAddr := os.Getenv("FNENV_FISSION_EXECUTOR")
 	if len(fissionExecutorAddr) == 0 {
 		fissionExecutorAddr = defaultFissionExecutorAddr
 	}
@@ -60,8 +60,8 @@ func TestMain(m *testing.M) {
 	}
 
 	// Setup Fission connection
-	fissionRuntime = fission.SetupRuntime(fissionExecutorAddr)
-	fissionResolver = fission.SetupResolver(fissionControllerAddr)
+	fissionRuntime = fissionenv.SetupRuntime(fissionExecutorAddr)
+	fissionResolver = fissionenv.SetupResolver(fissionControllerAddr)
 	resolver = fnenv.NewMetaResolver(map[string]fnenv.RuntimeResolver{
 		"fission": fissionResolver,
 	})

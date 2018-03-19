@@ -70,3 +70,5 @@ testImport:
   version: 1.1.4
   subpackages:
   - assert
+- package: gopkg.in/ory-am/dockertest.v3
+  version: v3.1.6
