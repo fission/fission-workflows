@@ -247,7 +247,7 @@ dump_system_info() {
     echo "--- fission ---"
     fission -v
     echo "--- wfcli ---"
-    wfcli -v
+    wfcli version
     echo "--- End System Info ---"
 }
 
