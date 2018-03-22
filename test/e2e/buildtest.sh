@@ -36,7 +36,7 @@ routerPort=31235
 helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=${controllerPort},routerPort=${routerPort},pullPolicy=Always,analytics=false"
 
 # Direct CLI to the deployed cluster
-set_environment ${NS} ${routerPort}
+#set_environment ${NS} ${routerPort}
 emph "Fission environment: FISSION_URL: '${FISSION_URL:-EMPTY}' and FISSION_ROUTER: '${FISSION_ROUTER:-EMPTY}'"
 
 # Wait for Fission to get ready

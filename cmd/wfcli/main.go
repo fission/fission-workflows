@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/fission/fission-workflows/pkg/version"
 	"github.com/urfave/cli"
 )
 
@@ -28,6 +29,7 @@ func main() {
 	app := cli.NewApp()
 	app.Author = "Erwin van Eyk"
 	app.Email = "erwin@platform9.com"
+	app.Version = version.VERSION
 	app.EnableBashCompletion = true
 	app.Usage = "Fission Workflows CLI"
 	app.Description = "CLI for Fission Workflows"
@@ -71,10 +73,6 @@ func table(writer io.Writer, headings []string, rows [][]string) {
 		panic(err)
 	}
 }
-
-//func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
-//	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
-//}
 
 func fail(msg ...interface{}) {
 	for _, line := range msg {
