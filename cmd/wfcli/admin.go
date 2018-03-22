@@ -1,8 +1,10 @@
 package main
 
 import (
-	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/admin_api"
-	"github.com/go-openapi/strfmt"
+	"context"
+	"net/http"
+
+	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/urfave/cli"
 )
 
@@ -16,10 +18,10 @@ var cmdAdmin = cli.Command{
 			Name:  "halt",
 			Usage: "Stop the workflow engine from evaluating anything",
 			Action: func(c *cli.Context) error {
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				adminApi := admin_api.New(client, strfmt.Default)
-				_, err := adminApi.Halt(admin_api.NewHaltParams())
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				admin := httpclient.NewAdminApi(url.String(), http.Client{})
+				err := admin.Halt(ctx)
 				if err != nil {
 					panic(err)
 				}
@@ -30,10 +32,10 @@ var cmdAdmin = cli.Command{
 			Name:  "resume",
 			Usage: "Resume the workflow engine evaluations",
 			Action: func(c *cli.Context) error {
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				adminApi := admin_api.New(client, strfmt.Default)
-				_, err := adminApi.Resume(admin_api.NewResumeParams())
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				admin := httpclient.NewAdminApi(url.String(), http.Client{})
+				err := admin.Resume(ctx)
 				if err != nil {
 					panic(err)
 				}

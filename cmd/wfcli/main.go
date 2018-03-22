@@ -8,7 +8,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/urfave/cli"
 )
 
@@ -61,9 +60,9 @@ func table(writer io.Writer, headings []string, rows [][]string) {
 	}
 }
 
-func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
-	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
-}
+//func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
+//	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
+//}
 
 func fail(msg ...interface{}) {
 	for _, line := range msg {
