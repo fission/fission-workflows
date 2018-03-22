@@ -1,18 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
 	"time"
 
-	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/workflow_api"
-	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/workflow_invocation_api"
-	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/models"
+	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/go-openapi/strfmt"
 	"github.com/urfave/cli"
 )
 
@@ -32,9 +31,12 @@ var cmdInvocation = cli.Command{
 				},
 			},
 			Action: func(c *cli.Context) error {
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				//u := parseUrl(c.GlobalString("url"))
+				//client := createTransportClient(u)
+				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
 				switch c.NArg() {
 				case 0:
 					since := c.Duration("history")
@@ -42,11 +44,10 @@ var cmdInvocation = cli.Command{
 				case 1:
 					// Get Workflow invocation
 					wfiId := c.Args().Get(0)
-					resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
+					wfi, err := wfiApi.Get(ctx, wfiId)
 					if err != nil {
 						panic(err)
 					}
-					wfi := resp.Payload
 					b, err := yaml.Marshal(wfi)
 					if err != nil {
 						panic(err)
@@ -57,11 +58,10 @@ var cmdInvocation = cli.Command{
 				default:
 					wfiId := c.Args().Get(0)
 					taskId := c.Args().Get(1)
-					resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
+					wfi, err := wfiApi.Get(ctx, wfiId)
 					if err != nil {
 						panic(err)
 					}
-					wfi := resp.Payload
 					ti, ok := wfi.Status.Tasks[taskId]
 					if !ok {
 						fmt.Println("Task invocation not found.")
@@ -82,14 +82,16 @@ var cmdInvocation = cli.Command{
 			Usage: "cancel <workflow-invocation-id>",
 			Action: func(c *cli.Context) error {
 				wfiId := c.Args().Get(0)
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				resp, err := wfiApi.Cancel(workflow_invocation_api.NewCancelParams().WithID(wfiId))
+				//u := parseUrl(c.GlobalString("url"))
+				//client := createTransportClient(u)
+				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
+				err := wfiApi.Cancel(ctx, wfiId)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Println(resp)
 				return nil
 			},
 		},
@@ -109,31 +111,32 @@ var cmdInvocation = cli.Command{
 			},
 			Action: func(c *cli.Context) error {
 				wfId := c.Args().Get(0)
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				body := &models.WorkflowInvocationSpec{
-					WorkflowID: wfId,
-					Inputs:     map[string]models.TypedValue{},
+				//u := parseUrl(c.GlobalString("url"))
+				//client := createTransportClient(u)
+				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
+				spec := &types.WorkflowInvocationSpec{
+					WorkflowId: wfId,
+					Inputs:     map[string]*types.TypedValue{},
 				}
 				if c.Bool("sync") {
-					params := workflow_invocation_api.NewInvokeSyncParams().WithBody(body)
-					resp, err := wfiApi.InvokeSync(params)
+					resp, err := wfiApi.InvokeSync(ctx, spec)
 					if err != nil {
 						panic(err)
 					}
-					bs, err := yaml.Marshal(resp.Payload)
+					bs, err := yaml.Marshal(resp)
 					if err != nil {
 						panic(err)
 					}
 					fmt.Println(string(bs))
 				} else {
-					params := workflow_invocation_api.NewInvokeParams().WithBody(body)
-					resp, err := wfiApi.Invoke(params)
+					resp, err := wfiApi.Invoke(ctx, spec)
 					if err != nil {
 						panic(err)
 					}
-					fmt.Println(resp.Payload.ID)
+					fmt.Println(resp.Id)
 				}
 				return nil
 			},
@@ -147,28 +150,30 @@ var cmdInvocation = cli.Command{
 					return nil
 				}
 				wfiId := c.Args().Get(0)
-				u := parseUrl(c.GlobalString("url"))
-				client := createTransportClient(u)
-				wfApi := workflow_api.New(client, strfmt.Default)
-				wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				//u := parseUrl(c.GlobalString("url"))
+				//client := createTransportClient(u)
+				//wfApi := workflow_api.New(client, strfmt.Default)
+				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
+				ctx := context.TODO()
+				url := parseUrl(c.GlobalString("url"))
+				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
+				wfApi := httpclient.NewWorkflowApi(url.String(), http.Client{})
 
-				wfiResp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
+				wfi, err := wfiApi.Get(ctx, wfiId)
 				if err != nil {
 					panic(err)
 				}
-				wfi := wfiResp.Payload
 
-				wfResp, err := wfApi.WfGet(workflow_api.NewWfGetParams().WithID(wfi.Spec.WorkflowID))
+				wf, err := wfApi.Get(ctx, wfi.Spec.WorkflowId)
 				if err != nil {
 					panic(err)
 				}
-				wf := wfResp.Payload
 
 				wfiUpdated := wfi.Status.UpdatedAt.String()
 				wfiCreated := wfi.Metadata.CreatedAt.String()
 				table(os.Stdout, nil, [][]string{
-					{"ID", wfi.Metadata.ID},
-					{"WORKFLOW_ID", wfi.Spec.WorkflowID},
+					{"ID", wfi.Metadata.Id},
+					{"WORKFLOW_ID", wfi.Spec.WorkflowId},
 					{"CREATED", wfiCreated},
 					{"UPDATED", wfiUpdated},
 					{"STATUS", string(wfi.Status.Status)},
@@ -177,9 +182,9 @@ var cmdInvocation = cli.Command{
 
 				var rows [][]string
 				rows = collectStatus(wf.Spec.Tasks, wfi.Status.Tasks, rows)
-				dynamicTaskSpecs := map[string]models.TaskSpec{}
+				dynamicTaskSpecs := map[string]*types.TaskSpec{}
 				for k, v := range wfi.Status.DynamicTasks {
-					dynamicTaskSpecs[k] = *v.Spec
+					dynamicTaskSpecs[k] = v.Spec
 				}
 				rows = collectStatus(dynamicTaskSpecs, wfi.Status.Tasks, rows)
 
@@ -190,30 +195,27 @@ var cmdInvocation = cli.Command{
 	},
 }
 
-func invocationsList(out io.Writer, wfiApi *workflow_invocation_api.Client, since time.Time) {
+func invocationsList(out io.Writer, wfiApi *httpclient.InvocationApi, since time.Time) {
 	// List workflows invocations
-	resp, err := wfiApi.WfiList(workflow_invocation_api.NewWfiListParams())
+	ctx := context.TODO()
+	wis, err := wfiApi.List(ctx)
 	if err != nil {
 		panic(err)
 	}
-	wis := resp.Payload
 	sort.Strings(wis.Invocations)
 	var rows [][]string
 	for _, wfiId := range wis.Invocations {
-		resp, err := wfiApi.WfiGet(workflow_invocation_api.NewWfiGetParams().WithID(wfiId))
+		wi, err := wfiApi.Get(ctx, wfiId)
 		if err != nil {
 			panic(err)
 		}
-		wi := resp.Payload
 		updated := wi.Status.UpdatedAt.String()
 		created := wi.Metadata.CreatedAt.String()
 
 		// TODO add filter params to endpoint instead
-		if isCompleted(wi.Status.Status) && since.Before(time.Time(wi.Status.UpdatedAt)) {
-			continue
-		}
+		// TODO filter old invocations and system invocations
 
-		rows = append(rows, []string{wfiId, wi.Spec.WorkflowID, string(wi.Status.Status),
+		rows = append(rows, []string{wfiId, wi.Spec.WorkflowId, string(wi.Status.Status),
 			created, updated})
 	}
 
@@ -221,7 +223,7 @@ func invocationsList(out io.Writer, wfiApi *workflow_invocation_api.Client, sinc
 
 }
 
-func collectStatus(tasks map[string]models.TaskSpec, taskStatus map[string]models.TaskInvocation,
+func collectStatus(tasks map[string]*types.TaskSpec, taskStatus map[string]*types.TaskInvocation,
 	rows [][]string) [][]string {
 	var ids []string
 	for id := range tasks {
@@ -244,10 +246,4 @@ func collectStatus(tasks map[string]models.TaskSpec, taskStatus map[string]model
 		rows = append(rows, []string{id, status, started, updated})
 	}
 	return rows
-}
-
-func isCompleted(status models.WorkflowInvocationStatusStatus) bool {
-	return status == models.WorkflowInvocationStatusStatusSUCCEEDED ||
-		status == models.WorkflowInvocationStatusStatusABORTED ||
-		status == models.WorkflowInvocationStatusStatusFAILED
 }

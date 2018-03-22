@@ -40,11 +40,9 @@ if ! command -v helm >/dev/null 2>&1 ; then
 fi
 
 # Get Fission binary
-if ! command -v fission >/dev/null 2>&1 ; then
-    curl -sLo fission https://github.com/fission/fission/releases/download/0.4.1/fission-cli-linux
-    chmod +x fission
-    mv fission ${BIN_DIR}/fission
-fi
+curl -sLo fission https://github.com/fission/fission/releases/download/0.4.1/fission-cli-linux
+chmod +x fission
+mv -f fission ${BIN_DIR}/fission
 
 # get gcloud credentials
 gcloud auth activate-service-account --key-file <(echo ${FISSION_WORKFLOWS_CI_SERVICE_ACCOUNT} | base64 -d)

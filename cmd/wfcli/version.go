@@ -1,25 +1,28 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 
-	"github.com/fission/fission-workflows/cmd/wfcli/swagger-client/client/admin_api"
+	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/version"
-	"github.com/go-openapi/strfmt"
 	"github.com/urfave/cli"
 )
 
 var versionPrinter = func(c *cli.Context) error {
+	// Print client version
 	fmt.Printf("client: %s\n", version.VERSION)
 
-	u := parseUrl(c.GlobalString("url"))
-	client := createTransportClient(u)
-	adminApi := admin_api.New(client, strfmt.Default)
-	resp, err := adminApi.Version(admin_api.NewVersionParams())
+	// Print server version
+	ctx := context.TODO()
+	url := parseUrl(c.GlobalString("url"))
+	admin := httpclient.NewAdminApi(url.String(), http.Client{})
+	resp, err := admin.Version(ctx)
 	if err != nil {
 		fmt.Printf("server: failed to get version (%v)\n", err)
 	} else {
-		fmt.Printf("server: %s\n", resp.Payload.Version)
+		fmt.Printf("server: %s\n", resp.Version)
 	}
 	return nil
 }
