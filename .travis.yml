@@ -30,7 +30,7 @@ install:
 - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 - sudo apt-get -y install google-cloud-sdk
 - sudo apt-get -y install coreutils
-- test/e2e/travis-kube-setup.sh
+- test/e2e/travis-setup.sh
 # Needed for some integration tests
 - glide -h > /dev/null || go get github.com/Masterminds/glide
 - nats-streaming-server -h > /dev/null || go get github.com/nats-io/nats-streaming-server
@@ -48,8 +48,7 @@ script:
 # Unit and Integration tests
 - test/runtests.sh
 # End-to-end tests
-# TODO no need to rebuild (tag images with test ID and check if they exist before starting to rebuild)
-- test/e2e/travis-buildtest.sh
+- NOBUILD=true test/e2e/buildtest.sh
 
 after_script:
 - test/e2e/cleanup.sh

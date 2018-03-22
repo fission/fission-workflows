@@ -24,27 +24,6 @@ TEST_STATUS=0
 TEST_LOGFILE_PATH=tests.log
 BIN_DIR="${BIN_DIR:-$HOME/testbin}"
 
-#
-# Deploy Fission
-# TODO use test specific namespace
-emph "Deploying Fission: helm chart '${fissionHelmId}' in namespace '${NS}'..."
-# Needs to be retried because k8s can still be busy with cleaning up
-# helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "serviceType=NodePort,pullPolicy=IfNotPresent,
-# analytics=false"
-controllerPort=31234
-routerPort=31235
-helm_install_fission ${fissionHelmId} ${NS} ${FISSION_VERSION} "controllerPort=${controllerPort},routerPort=${routerPort},pullPolicy=Always,analytics=false"
-
-# Direct CLI to the deployed cluster
-#set_environment ${NS} ${routerPort}
-emph "Fission environment: FISSION_URL: '${FISSION_URL:-EMPTY}' and FISSION_ROUTER: '${FISSION_ROUTER:-EMPTY}'"
-
-# Wait for Fission to get ready
-emph "Waiting for fission to be ready..."
-sleep 5
-retry fission fn list
-echo
-emph "Fission deployed!"
 
 #
 # Build

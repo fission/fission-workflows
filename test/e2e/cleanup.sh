@@ -16,17 +16,17 @@ BIN_DIR="${BIN_DIR:-$HOME/testbin}"
 
 cleanup() {
     emph "Removing Fission and Fission Workflow deployments..."
-    helm_uninstall_release ${fissionWorkflowsHelmId} || true
-    helm_uninstall_release ${fissionHelmId} || true
+    helm_uninstall_release ${fissionWorkflowsHelmId} &
+    helm_uninstall_release ${fissionHelmId} &
 
     emph "Removing custom resources..."
     clean_tpr_crd_resources || true
 
     # Trigger deletion of all namespaces before waiting - for concurrency of deletion
     emph "Forcing deletion of namespaces..."
-    kubectl delete ns/${NS} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_BUILDER} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_FUNCTION} > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS} > /dev/null 2>&1 & # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_BUILDER} > /dev/null 2>&1 & # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_FUNCTION} > /dev/null 2>&1 & # Sometimes it is not deleted by helm delete
 
     # Wait until all namespaces are actually deleted!
     emph "Awaiting deletion of namespaces..."
@@ -41,7 +41,9 @@ cleanup() {
 
 print_report() {
     emph "--- Test Report ---"
-    cat ${TEST_LOGFILE_PATH} | grep '\(FAILURE\|SUCCESS\).*|'
+    if ! cat ${TEST_LOGFILE_PATH} | grep '\(FAILURE\|SUCCESS\).*|' ; then
+        echo "No report found."
+    fi
     emph "--- End Test Report ---"
 }
 
@@ -64,10 +66,6 @@ on_exit() {
         exit 1
     fi
 }
-
-# Ensure that minikube cluster is cleaned (in case it is an existing cluster)
-emph "Cleaning up cluster..."
-retry cleanup
 
 # Ensure printing of report
 on_exit

@@ -1,7 +1,7 @@
 # To run (from repo root): docker build -t fission -f ./build/Dockerfile .
-ARG NOBUILD
 ARG GOLANG_VERSION=1.10.0
 FROM golang:$GOLANG_VERSION AS builder
+ARG NOBUILD
 
 WORKDIR /go/src/github.com/fission/fission-workflows
 

@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 #
 # Builds all docker images. Usage docker.sh [<repo>] [<tag>]
 #
 BUILD_ROOT=$(dirname $0)
-
-IMAGE_REPO=$1
-if [ -z "$IMAGE_REPO" ]; then
-    IMAGE_REPO=fission
-fi
-
-IMAGE_TAG=$2
-if [ -z "$IMAGE_TAG" ]; then
-    IMAGE_TAG=latest
-fi
+IMAGE_REPO=${1:-fission}
+IMAGE_TAG=${2:-latest}
 
 # Build bundle images
 bundleImage=${IMAGE_REPO}/fission-workflows-bundle
@@ -33,7 +25,7 @@ if [ ! -z "$NOBUILD" ]; then
 fi
 echo "Building bundle..."
 docker build --tag="${bundleImage}:${IMAGE_TAG}" -f ${BUILD_ROOT}/Dockerfile \
-    --build-arg NOBUILD="${NOBUILD}" .
+    --no-cache --build-arg NOBUILD="${NOBUILD}" .
 popd
 
 # Build bundle-dependent images

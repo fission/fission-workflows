@@ -18,7 +18,7 @@ helm_setup() {
 
 gcloud_login() {
     KEY=${HOME}/gcloud-service-key.json
-    if [ ! -f $KEY ]
+    if [ ! -f ${KEY} ]
     then
 	echo ${FISSION_CI_SERVICE_ACCOUNT} | base64 -d - > ${KEY}
     fi
@@ -27,7 +27,7 @@ gcloud_login() {
 }
 
 generate_test_id() {
-    echo $(date|md5sum|cut -c1-6)
+    echo $(date|md5sum|cut -c1-6) || echo $(date|md5|cut -c1-6)
 }
 
 set_environment() {
