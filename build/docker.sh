@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 
 #
 # Builds all docker images. Usage docker.sh [<repo>] [<tag>]
@@ -25,20 +25,24 @@ if [ ! -z "$NOBUILD" ]; then
 fi
 echo "Building bundle..."
 docker build --tag="${bundleImage}:${IMAGE_TAG}" -f ${BUILD_ROOT}/Dockerfile \
-    --no-cache --build-arg NOBUILD="${NOBUILD}" .
+    --no-cache \
+    --build-arg NOBUILD="${NOBUILD}" .
 popd
 
 # Build bundle-dependent images
 echo "Building Fission runtime env..."
 docker build --tag="${IMAGE_REPO}/workflow-env:${IMAGE_TAG}" ${BUILD_ROOT}/runtime-env/ \
+    --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
 echo "Building Fission build env..."
 docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}/build-env/ \
+    --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
 echo "Building wfcli..."
 docker build --tag="${IMAGE_REPO}/wfcli:${IMAGE_TAG}" ${BUILD_ROOT}/wfcli/ \
+    --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
 

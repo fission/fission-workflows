@@ -22,6 +22,7 @@ func main() {
 		kubeConfig := getKubeConfigPath()
 		localPort := setupPortForward(kubeConfig, fissionNamespace, "application=fission-api")
 		value = "http://127.0.0.1:" + localPort
+		fmt.Printf("Forwarded Fission API to %s.\n", value)
 	} else {
 		value = fissionUrl
 	}

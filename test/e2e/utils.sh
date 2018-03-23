@@ -12,6 +12,10 @@ clean_tpr_crd_resources() {
     kubectl --namespace default get crd| grep -v NAME| grep "fission.io"| awk '{print $1}'|xargs -I@ bash -c "kubectl --namespace default delete crd @"  || true
 }
 
+reset_fission_crd_resources() {
+    kubectl --namespace default get crd| grep -v NAME| grep "fission.io"| awk '{print $1}'|xargs -I@ bash -c "kubectl --namespace default delete @ --all"  || true
+}
+
 helm_setup() {
     helm init
 }
@@ -27,42 +31,14 @@ gcloud_login() {
 }
 
 generate_test_id() {
-    echo $(date|md5sum|cut -c1-6) || echo $(date|md5|cut -c1-6)
+    if command -v md5sum 2>/dev/null >/dev/null; then
+        # Linux
+        date|md5sum|cut -c1-6
+    else
+        # Mac OS X
+        date|md5|cut -c1-6
+    fi
 }
-
-set_environment() {
-    ns=$1
-    port=$2
-
-#    export FISSION_ROUTER=$(kubectl -n ${ns} get svc router -o jsonpath='{...ip}')
-
-    # Port forawrd the router to the local port which is the default of the `fission` 
-    kubectl get pods -l svc="router" -o name --namespace $ns | \
-        sed 's/^.*\///' | \
-        xargs -I{} kubectl port-forward {} $port:$port -n $ns &
-
-    export FISSION_ROUTER="127.0.0.1:{$port}"
-}
-
-#run_all_tests() {
-#    id=$1
-#
-#    export FISSION_NAMESPACE=f-${id}
-#    export FUNCTION_NAMESPACE=f-func-${id}
-#
-#    for file in ${ROOT}/test/tests/test_*
-#    do
-#    TEST_ID=$(generate_test_id)
-#	echo ------- Running ${file} -------
-#	if ${file}
-#	then
-#	    echo SUCCESS: ${file}
-#	else
-#	    echo FAILED: ${file}
-#	    export FAILURES=$(($FAILURES+1))
-#	fi
-#    done
-#}
 
 dump_all_resources_in_ns() {
     ns=$1
@@ -90,13 +66,7 @@ helm_install_fission() {
 }
 
 helm_uninstall_release() {
-    if [ ! -z ${FISSION_TEST_SKIP_DELETE:+} ]
-    then
-	echo "Fission uninstallation skipped"
-	return
-    fi
-    echo "Uninstalling $1"
-    helm delete --purge $1
+    helm delete --debug --purge $1
 }
 
 helm_install_fission_workflows() {
@@ -152,14 +122,14 @@ print_test_result() {
 # https://unix.stackexchange.com/questions/82598/how-do-i-write-a-retry-logic-in-script-to-keep-retrying-to-run-it-upto-5-times/82610
 function retry {
   local n=1
-  local max=5
-  local delay=5
+  RETRY_LIMIT=${RETRY_LIMIT:-5}
+  RETRY_DELAY=${RETRY_DELAY:-5}
   while true; do
     "$@" && break || {
-      if [[ ${n} -lt ${max} ]]; then
+      if [[ ${n} -lt ${RETRY_LIMIT} ]]; then
         ((n++))
-        echo "Command '$@' failed. Attempt $n/$max:"
-        sleep ${delay};
+        echo "Command '$@' failed. Attempt $n/${RETRY_LIMIT}:"
+        sleep ${RETRY_DELAY};
       else
         >&2 echo "The command has failed after $n attempts."
         exit 1;
@@ -218,7 +188,7 @@ dump_env_pods() {
     fns=$1
 
     echo --- All environment pods ---
-    kubectl -n $fns get pod -o yaml
+    kubectl -n ${fns} get pod -o yaml
     echo --- End environment pods ---
 }
 
@@ -226,7 +196,7 @@ dump_all_fission_resources() {
     ns=$1
 
     echo "--- All objects in the fission namespace $ns ---"
-    kubectl -n $ns get all
+    kubectl -n ${ns} get all
     echo "--- End objects in the fission namespace $ns ---"
 }
 
@@ -285,4 +255,11 @@ dump_logs() {
     dump_function_pod_logs $ns $fns
     dump_fission_crds
     dump_system_info
+}
+
+cleanup_fission_workflows() {
+    helmID=$1
+    emph "Removing Fission Workflow deployment..."
+    helm_uninstall_release ${helmID}
+    # TODO remove workflows?
 }

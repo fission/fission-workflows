@@ -5,3 +5,5 @@ data/
 *.tgz
 /fission-workflows-bundle
 /wfcli
+__pycache__/
+*.pyc

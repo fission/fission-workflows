@@ -79,9 +79,6 @@ func Run(ctx context.Context, opts *Options) error {
 		es = natsEs
 		esPub = natsEs
 	}
-	if es == nil {
-		panic("no event store provided")
-	}
 
 	// Caches
 	wfiCache := getWorkflowInvocationCache(ctx, esPub)
@@ -290,14 +287,14 @@ func runHttpGateway(ctx context.Context, gwSrv *http.Server, adminApiAddr string
 	mux := grpcruntime.NewServeMux()
 	grpcOpts := []grpc.DialOption{grpc.WithInsecure()}
 	if adminApiAddr != "" {
-		err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, adminApiAddr, grpcOpts)
+		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, adminApiAddr, grpcOpts)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	if wfApiAddr != "" {
-		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, wfApiAddr, grpcOpts)
+		err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, wfApiAddr, grpcOpts)
 		if err != nil {
 			panic(err)
 		}

@@ -13,17 +13,46 @@ DOCKER_REPO=gcr.io/fission-ci
 WORKFLOWS_ENV_IMAGE=${DOCKER_REPO}/workflow-env
 WORKFLOWS_BUILD_ENV_IMAGE=${DOCKER_REPO}/workflow-build-env
 WORKFLOWS_BUNDLE_IMAGE=${DOCKER_REPO}/fission-workflows-bundle
+TAG=test
 NS=fission
 NS_FUNCTION=fission-function
 NS_BUILDER=fission-builder
 fissionHelmId=fission
 fissionWorkflowsHelmId=fission-workflows
 FISSION_VERSION=0.6.0
-TAG=test
 TEST_STATUS=0
 TEST_LOGFILE_PATH=tests.log
 BIN_DIR="${BIN_DIR:-$HOME/testbin}"
 
+
+print_report() {
+    emph "--- Test Report ---"
+    if ! cat ${TEST_LOGFILE_PATH} | grep '\(FAILURE\|SUCCESS\).*|' ; then
+        echo "No report found."
+    fi
+    emph "--- End Test Report ---"
+}
+
+on_exit() {
+    emph "[Buildtest exited]"
+    # Dump all the logs
+    dump_logs ${NS} ${NS_FUNCTION} ${NS_BUILDER} || true
+
+    # Print a short test report
+    print_report
+
+    # Ensure correct exist status
+    echo "TEST_STATUS: ${TEST_STATUS}"
+    if [ ${TEST_STATUS} -ne 0 ]; then
+        exit 1
+    fi
+}
+
+emph "Starting buildtest..."
+
+trap on_exit EXIT
+
+cleanup_fission_workflows ${fissionWorkflowsHelmId} || true
 
 #
 # Build
@@ -50,7 +79,7 @@ gcloud docker -- push ${WORKFLOWS_BUNDLE_IMAGE}:${TAG}
 # Deploy Fission Workflows
 # TODO use test specific namespace
 emph "Deploying Fission Workflows '${fissionWorkflowsHelmId}' to ns '${NS}'..."
-helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=IfNotPresent,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
+helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=Always,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
 
 # Wait for Fission Workflows to get ready
 wfcli config
