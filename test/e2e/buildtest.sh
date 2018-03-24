@@ -19,7 +19,6 @@ NS_FUNCTION=fission-function
 NS_BUILDER=fission-builder
 fissionHelmId=fission
 fissionWorkflowsHelmId=fission-workflows
-FISSION_VERSION=0.6.0
 TEST_STATUS=0
 TEST_LOGFILE_PATH=tests.log
 BIN_DIR="${BIN_DIR:-$HOME/testbin}"

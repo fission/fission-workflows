@@ -132,7 +132,7 @@ function retry {
         sleep ${RETRY_DELAY};
       else
         >&2 echo "The command has failed after $n attempts."
-        exit 1;
+        return 1;
       fi
     }
   done
@@ -205,19 +205,26 @@ dump_system_info() {
     echo "--- System Info ---"
     echo "--- go ---"
     go version
+    echo
     echo "--- python ---"
     python --version
     python3 --version
+    echo
     echo "--- docker ---"
     docker version
+    echo
     echo "--- kubectl ---"
     kubectl version
+    echo
     echo "--- Helm ---"
     helm version
+    echo
     echo "--- fission ---"
     fission -v
+    echo
     echo "--- wfcli ---"
     wfcli version
+    echo
     echo "--- End System Info ---"
 }
 
