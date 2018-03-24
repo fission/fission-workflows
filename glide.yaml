@@ -5,7 +5,7 @@ excludeDirs:
 - local
 import:
 - package: github.com/fission/fission
-  version: ^0.4.1
+  version: ^0.6.0
 - package: github.com/sirupsen/logrus
   version: ~1.0.4
 - package: github.com/urfave/cli
@@ -59,6 +59,8 @@ import:
   version: 3b6d86cd965820f968760d5d419cb4add096bdd7
 - package: github.com/go-openapi/spec
   version: d8000b5bfbd1147255710505a27c735b6b2ae2ac
+- package: golang.org/x/sys
+  version: c488ab1dd8481ef762f96a79a9577c27825be697
 testImport:
 - package: github.com/stretchr/testify
   version: 1.1.4

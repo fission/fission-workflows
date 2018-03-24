@@ -11,12 +11,12 @@ cache:
   apt: true
   directories:
     - ${HOME}/.helm/
-    - ${HOME}/testbin/
+    - /tmp/fission-workflow-ci/bin
     - ${GOPATH}/bin/
     - ${GOPATH}/pkg/
 
 env:
-  - KUBECONFIG=${HOME}/.kube/config PATH=$HOME/testbin:${PATH} BIN_DIR=${HOME}/testbin
+  - KUBECONFIG=${HOME}/.kube/config PATH=/tmp/fission-workflow-ci/bin:${PATH} BIN_DIR=/tmp/fission-workflow-ci/bin
 
 services:
   - docker
@@ -28,28 +28,30 @@ before_install:
 
 install:
 - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
-- sudo apt-get -y install google-cloud-sdk
-- sudo apt-get -y install coreutils
-- test/e2e/travis-kube-setup.sh
+- sudo apt-get -y install coreutils google-cloud-sdk
+- test/e2e/install-clients.sh
 # Needed for some integration tests
-- glide -h > /dev/null || go get github.com/Masterminds/glide
-- nats-streaming-server -h > /dev/null || go get github.com/nats-io/nats-streaming-server
+- glide -h >/dev/null 2>&1 || go get github.com/Masterminds/glide
+- nats-streaming-server -h >/dev/null 2>&1 || go get github.com/nats-io/nats-streaming-server # TODO remove the need for this
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
 # Static code analysis
-- hack/verify-govet.sh
 - hack/verify-gofmt.sh
+- hack/verify-govet.sh
 # Build
 - glide install -v
 - build/build-linux.sh
+- test/e2e/travis-setup.sh
 
 script:
 # Unit and Integration tests
 - test/runtests.sh
 # End-to-end tests
-# TODO no need to rebuild (tag images with test ID and check if they exist before starting to rebuild)
-- test/e2e/travis-buildtest.sh
+- test/e2e/buildtest.sh
+
+after_script:
+- test/e2e/cleanup.sh
 
 notifications:
   slack:

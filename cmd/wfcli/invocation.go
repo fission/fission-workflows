@@ -25,7 +25,7 @@ var cmdInvocation = cli.Command{
 			Usage: "get <workflow-invocation-id> <task-invocation-id>",
 			Flags: []cli.Flag{
 				cli.DurationFlag{
-					Name:  "history, h",
+					Name:  "history",
 					Usage: "Amount history (non-active invocations) to show.",
 					Value: time.Duration(1) * time.Hour,
 				},

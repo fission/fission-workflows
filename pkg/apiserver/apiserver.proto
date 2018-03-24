@@ -129,7 +129,7 @@ message WorkflowInvocationGetReponse {
 service AdminAPI {
     rpc Status (google.protobuf.Empty) returns (Health) {
         option (google.api.http) = {
-            get: "/status"
+            get: "/healthz"
         };
     }
 

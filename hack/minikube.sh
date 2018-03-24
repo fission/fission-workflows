@@ -55,11 +55,12 @@ fi
 if ! helm repo list | grep fission-charts >/dev/null 2>&1 ; then
     echo "Setting up fission-charts Helm repo..."
     helm repo add fission-charts https://fission.github.io/fission-charts/
-    printf "Updating repo"
-    until helm fetch fission-charts/fission-all >/dev/null 2>&1
-    do
-        printf "."
-        helm repo update
-    done
-    printf "\n"
 fi
+
+printf "Updating repo"
+until helm fetch fission-charts/fission-all >/dev/null 2>&1
+do
+    printf "."
+done
+helm repo update
+printf "\n"

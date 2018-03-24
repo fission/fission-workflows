@@ -1,5 +1,5 @@
-hash: c2526512cec799628d8bad5da28aba3ca9a1d42f2778bae5cc1c7503cd5da0b3
-updated: 2018-03-22T01:16:29.753386+01:00
+hash: 907dcf84743a73a0e26ed9087066d90036e224ec6e1492cc5ca7bcbd21f519d9
+updated: 2018-03-22T14:07:15.634944+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -24,6 +24,10 @@ imports:
   subpackages:
   - digest
   - reference
+- name: github.com/docker/spdystream
+  version: 449fdfce4d962303d702fec724ef0ad181c92528
+  subpackages:
+  - spdy
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
@@ -147,7 +151,7 @@ imports:
 - name: github.com/urfave/cli
   version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
 - name: golang.org/x/crypto
-  version: 80db560fac1fb3e6ac81dbc7f8ae4c061f5257bd
+  version: d172538b2cfce0c13cee31e647d0367aa8cd2486
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -177,7 +181,6 @@ imports:
   version: c488ab1dd8481ef762f96a79a9577c27825be697
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: 88f656faf3f37f690df1a32515b479415e1a6769
   subpackages:
@@ -265,7 +268,7 @@ imports:
   subpackages:
   - base64vlq
 - name: gopkg.in/yaml.v2
-  version: 7f97868eec74b32b0982dd158a51a446d1da7eb5
+  version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apiextensions-apiserver
   version: d2a827762e85b433a8f34b819aef90fd68fc69d9
   subpackages:
@@ -308,10 +311,13 @@ imports:
   - pkg/util/diff
   - pkg/util/errors
   - pkg/util/framer
+  - pkg/util/httpstream
+  - pkg/util/httpstream/spdy
   - pkg/util/intstr
   - pkg/util/json
   - pkg/util/net
   - pkg/util/rand
+  - pkg/util/remotecommand
   - pkg/util/runtime
   - pkg/util/sets
   - pkg/util/validation
@@ -320,6 +326,7 @@ imports:
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
+  - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
   version: d92e8497f71b7b4e0494e5bd204b48d34bd6f254
@@ -401,8 +408,11 @@ imports:
   - tools/clientcmd/api/latest
   - tools/clientcmd/api/v1
   - tools/metrics
+  - tools/portforward
+  - tools/remotecommand
   - transport
   - util/cert
+  - util/exec
   - util/flowcontrol
   - util/homedir
   - util/integer

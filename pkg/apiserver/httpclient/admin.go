@@ -22,7 +22,7 @@ func NewAdminApi(endpoint string, client http.Client) *AdminApi {
 
 func (api *AdminApi) Status(ctx context.Context) (*apiserver.Health, error) {
 	result := &apiserver.Health{}
-	err := call(http.MethodGet, api.formatUrl("/status"), nil, result)
+	err := call(http.MethodGet, api.formatUrl("/healthz"), nil, result)
 	return result, err
 }
 

@@ -8,14 +8,29 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/fission/fission-workflows/pkg/version"
 	"github.com/urfave/cli"
 )
 
 // This is a prototype of the CLI (and will be integrated into the Fission CLI eventually).
 func main() {
+	// fetch the FISSION_URL env variable. If not set, port-forward to controller.
+	var value string
+	fissionUrl := os.Getenv("FISSION_URL")
+	if len(fissionUrl) == 0 {
+		fissionNamespace := getFissionNamespace()
+		kubeConfig := getKubeConfigPath()
+		localPort := setupPortForward(kubeConfig, fissionNamespace, "application=fission-api")
+		value = "http://127.0.0.1:" + localPort
+		fmt.Printf("Forwarded Fission API to %s.\n", value)
+	} else {
+		value = fissionUrl
+	}
+
 	app := cli.NewApp()
 	app.Author = "Erwin van Eyk"
 	app.Email = "erwin@platform9.com"
+	app.Version = version.VERSION
 	app.EnableBashCompletion = true
 	app.Usage = "Fission Workflows CLI"
 	app.Description = "CLI for Fission Workflows"
@@ -23,7 +38,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "url, u",
-			Value:  "http://localhost:31313",
+			Value:  value,
 			EnvVar: "FISSION_URL",
 			Usage:  "Url to the Fission apiserver",
 		},
@@ -59,10 +74,6 @@ func table(writer io.Writer, headings []string, rows [][]string) {
 		panic(err)
 	}
 }
-
-//func createTransportClient(baseUrl *url.URL) *httptransport.Runtime {
-//	return httptransport.New(baseUrl.Host, "/proxy/workflows-apiserver/", []string{baseUrl.Scheme})
-//}
 
 func fail(msg ...interface{}) {
 	for _, line := range msg {

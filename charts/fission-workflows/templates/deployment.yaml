@@ -35,6 +35,19 @@ spec:
           value: "{{ .Values.fnenv.fission.executor }}.{{ .Values.fnenv.fission.ns }}"
         - name: FNENV_FISSION_CONTROLLER
           value: "{{ .Values.fnenv.fission.controller }}.{{ .Values.fnenv.fission.ns }}"
+        readinessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 1
+          periodSeconds: 1
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: "/healthz"
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
 ---
 # TODO remove this service once all functionality is accessible through Fission
 apiVersion: v1
