@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"sort"
 	"time"
@@ -17,12 +16,12 @@ import (
 
 var cmdInvocation = cli.Command{
 	Name:    "invocation",
-	Aliases: []string{"wi", "invocations", "workflow-invocation", "wfi"},
-	Usage:   "Workflow Invocation-related commands",
+	Aliases: []string{"wi", "invocations", "Workflow-Invocation", "wfi"},
+	Usage:   "Workflow invocation-related commands",
 	Subcommands: []cli.Command{
 		{
 			Name:  "get",
-			Usage: "get <workflow-invocation-id> <task-invocation-id>",
+			Usage: "get <Workflow-Invocation-id> <task-Invocation-id>",
 			Flags: []cli.Flag{
 				cli.DurationFlag{
 					Name:  "history",
@@ -30,21 +29,16 @@ var cmdInvocation = cli.Command{
 					Value: time.Duration(1) * time.Hour,
 				},
 			},
-			Action: func(c *cli.Context) error {
-				//u := parseUrl(c.GlobalString("url"))
-				//client := createTransportClient(u)
-				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				ctx := context.TODO()
-				url := parseUrl(c.GlobalString("url"))
-				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
-				switch c.NArg() {
+			Action: commandContext(func(ctx Context) error {
+				client := getClient(ctx)
+				switch ctx.NArg() {
 				case 0:
-					since := c.Duration("history")
-					invocationsList(os.Stdout, wfiApi, time.Now().Add(-since))
+					since := ctx.Duration("history")
+					invocationsList(os.Stdout, client.Invocation, time.Now().Add(-since))
 				case 1:
-					// Get Workflow invocation
-					wfiId := c.Args().Get(0)
-					wfi, err := wfiApi.Get(ctx, wfiId)
+					// Get Workflow Invocation
+					wfiId := ctx.Args().Get(0)
+					wfi, err := client.Invocation.Get(ctx, wfiId)
 					if err != nil {
 						panic(err)
 					}
@@ -56,15 +50,15 @@ var cmdInvocation = cli.Command{
 				case 2:
 					fallthrough
 				default:
-					wfiId := c.Args().Get(0)
-					taskId := c.Args().Get(1)
-					wfi, err := wfiApi.Get(ctx, wfiId)
+					wfiId := ctx.Args().Get(0)
+					taskId := ctx.Args().Get(1)
+					wfi, err := client.Invocation.Get(ctx, wfiId)
 					if err != nil {
 						panic(err)
 					}
 					ti, ok := wfi.Status.Tasks[taskId]
 					if !ok {
-						fmt.Println("Task invocation not found.")
+						fmt.Println("Task Invocation not found.")
 						return nil
 					}
 					b, err := yaml.Marshal(ti)
@@ -75,30 +69,25 @@ var cmdInvocation = cli.Command{
 				}
 
 				return nil
-			},
+			}),
 		},
 		{
 			Name:  "cancel",
-			Usage: "cancel <workflow-invocation-id>",
-			Action: func(c *cli.Context) error {
-				wfiId := c.Args().Get(0)
-				//u := parseUrl(c.GlobalString("url"))
-				//client := createTransportClient(u)
-				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				ctx := context.TODO()
-				url := parseUrl(c.GlobalString("url"))
-				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
-				err := wfiApi.Cancel(ctx, wfiId)
+			Usage: "cancel <Workflow-Invocation-id>",
+			Action: commandContext(func(ctx Context) error {
+				client := getClient(ctx)
+				wfiId := ctx.Args().Get(0)
+				err := client.Invocation.Cancel(ctx, wfiId)
 				if err != nil {
 					panic(err)
 				}
 				return nil
-			},
+			}),
 		},
 		{
 			// TODO support input
 			Name:  "invoke",
-			Usage: "invoke <workflow-id>",
+			Usage: "invoke <Workflow-id>",
 			Flags: []cli.Flag{
 				cli.StringSliceFlag{
 					Name:  "input, i",
@@ -109,20 +98,15 @@ var cmdInvocation = cli.Command{
 					Usage: "Invoke synchronously",
 				},
 			},
-			Action: func(c *cli.Context) error {
-				wfId := c.Args().Get(0)
-				//u := parseUrl(c.GlobalString("url"))
-				//client := createTransportClient(u)
-				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				ctx := context.TODO()
-				url := parseUrl(c.GlobalString("url"))
-				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
+			Action: commandContext(func(ctx Context) error {
+				client := getClient(ctx)
+				wfId := ctx.Args().Get(0)
 				spec := &types.WorkflowInvocationSpec{
 					WorkflowId: wfId,
 					Inputs:     map[string]*types.TypedValue{},
 				}
-				if c.Bool("sync") {
-					resp, err := wfiApi.InvokeSync(ctx, spec)
+				if ctx.Bool("sync") {
+					resp, err := client.Invocation.InvokeSync(ctx, spec)
 					if err != nil {
 						panic(err)
 					}
@@ -132,39 +116,32 @@ var cmdInvocation = cli.Command{
 					}
 					fmt.Println(string(bs))
 				} else {
-					resp, err := wfiApi.Invoke(ctx, spec)
+					resp, err := client.Invocation.Invoke(ctx, spec)
 					if err != nil {
 						panic(err)
 					}
 					fmt.Println(resp.Id)
 				}
 				return nil
-			},
+			}),
 		},
 		{
 			Name:  "status",
-			Usage: "status <workflow-invocation-id> ",
-			Action: func(c *cli.Context) error {
-				if c.NArg() < 1 {
-					fmt.Println("Need workflow invocation id")
+			Usage: "status <Workflow-Invocation-id> ",
+			Action: commandContext(func(ctx Context) error {
+				if ctx.NArg() < 1 {
+					fmt.Println("Need Workflow Invocation id")
 					return nil
 				}
-				wfiId := c.Args().Get(0)
-				//u := parseUrl(c.GlobalString("url"))
-				//client := createTransportClient(u)
-				//wfApi := workflow_api.New(client, strfmt.Default)
-				//wfiApi := workflow_invocation_api.New(client, strfmt.Default)
-				ctx := context.TODO()
-				url := parseUrl(c.GlobalString("url"))
-				wfiApi := httpclient.NewInvocationApi(url.String(), http.Client{})
-				wfApi := httpclient.NewWorkflowApi(url.String(), http.Client{})
+				client := getClient(ctx)
+				wfiId := ctx.Args().Get(0)
 
-				wfi, err := wfiApi.Get(ctx, wfiId)
+				wfi, err := client.Invocation.Get(ctx, wfiId)
 				if err != nil {
 					panic(err)
 				}
 
-				wf, err := wfApi.Get(ctx, wfi.Spec.WorkflowId)
+				wf, err := client.Workflow.Get(ctx, wfi.Spec.WorkflowId)
 				if err != nil {
 					panic(err)
 				}
@@ -190,7 +167,7 @@ var cmdInvocation = cli.Command{
 
 				table(os.Stdout, []string{"TASK", "STATUS", "STARTED", "UPDATED"}, rows)
 				return nil
-			},
+			}),
 		},
 	},
 }

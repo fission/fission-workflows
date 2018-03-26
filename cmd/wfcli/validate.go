@@ -14,15 +14,15 @@ import (
 var cmdValidate = cli.Command{
 	Name:        "validate",
 	Usage:       "Validate <file>",
-	Description: "Validate a workflow",
-	Action: func(c *cli.Context) error {
+	Description: "Validate a Workflow",
+	Action: commandContext(func(ctx Context) error {
 		// Get path from args
-		if c.NArg() == 0 {
+		if ctx.NArg() == 0 {
 			fail("No file provided.")
 		}
 
 		var failed bool
-		for _, path := range c.Args() {
+		for _, path := range ctx.Args() {
 
 			printErr := func(msg string) {
 				fmt.Fprintf(os.Stderr, "%s: %s\n", path, msg)
@@ -61,5 +61,5 @@ var cmdValidate = cli.Command{
 		}
 
 		return nil
-	},
+	}),
 }

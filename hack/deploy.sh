@@ -5,8 +5,8 @@
 #
 
 # Configs
-FISSION_VERSION=0.6.0
-FISSION_WORKFLOWS_VERSION=0.2.0
+FISSION_VERSION=${FISSION_VERSION:-0.6.1}
+WORKFLOWS_VERSION=${WORKFLOWS_VERSION:-0.2.0}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Fission Workflows Deploy Script v1.4"
@@ -26,9 +26,9 @@ sleep 10
 
 # Install Fission Workflows
 if ! fission env get --name workflow >/dev/null 2>&1 ; then
-    echo "Installing Fission Workflows ${FISSION_WORKFLOWS_VERSION}..."
-    if [[ -z "${FISSION_WORKFLOWS_VERSION// }" ]] ; then
-        helm install --namespace fission -n fission-workflows fission-charts/fission-workflows --version ${FISSION_WORKFLOWS_VERSION} --wait
+    echo "Installing Fission Workflows ${WORKFLOWS_VERSION}..."
+    if [[ -z "${WORKFLOWS_VERSION// }" ]] ; then
+        helm install --namespace fission -n fission-workflows fission-charts/fission-workflows --version ${WORKFLOWS_VERSION} --wait
     else
         helm install --namespace fission -n fission-workflows fission-charts/fission-workflows --wait
     fi
@@ -46,5 +46,5 @@ helm version --short -c
 printf "Helm "
 helm version --short -s
 echo "Fission: ${FISSION_VERSION}"
-echo "Fission Workflows: ${FISSION_WORKFLOWS_VERSION}"
+echo "Fission Workflows: ${WORKFLOWS_VERSION}"
 echo "---------------------------"

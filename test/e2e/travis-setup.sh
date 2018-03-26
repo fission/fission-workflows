@@ -5,9 +5,7 @@ set -eu
 . $(dirname $0)/utils.sh
 
 BIN_DIR=/tmp/fission-workflow-ci/bin
-HELM_VERSION=2.8.2
-KUBECTL_VERSION=1.9.6
-FISSION_VERSION=0.6.0
+FISSION_VERSION=${FISSION_VERSION:-0.6.1}
 fissionHelmId=fission
 fissionWorkflowsHelmId=fission-workflows
 NS=fission
@@ -18,7 +16,6 @@ if [ ! -d ${BIN_DIR} ]
 then
     mkdir -p ${BIN_DIR}
 fi
-#export PATH=${BIN_DIR}:${PATH} Assume that this BIN_DIR is in path
 
 # Setup gcloud CI
 if [ -z "${FISSION_WORKFLOWS_CI_SERVICE_ACCOUNT:-}" ]
@@ -36,7 +33,8 @@ else
 fi
 
 # get kube config
-if ! cat ${HOME}/.kube/config | grep "current-context: gke_fission-ci_us-central1-a_fission-workflows-ci-1" ; then
+if ! cat ${HOME}/.kube/config >/dev/null 2>&1 | grep "current-context: gke_fission-ci_us-central1-a_fission-workflows-ci-1" ;
+then
     emph "Connecting to gcloud cluster..."
     gcloud container clusters get-credentials fission-workflows-ci-1 --zone us-central1-a --project fission-ci
 fi
@@ -92,10 +90,3 @@ retry fission fn list
 echo
 fission --version
 emph "Fission deployed!"
-
-# Verify clients
-ls -l ${BIN_DIR}
-kubectl version
-helm version
-fission --version
-emph "All clients available!"

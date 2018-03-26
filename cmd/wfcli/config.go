@@ -9,14 +9,14 @@ import (
 var cmdConfig = cli.Command{
 	Name:  "config",
 	Usage: "Print wfcli config",
-	Action: func(c *cli.Context) error {
+	Action: commandContext(func(ctx Context) error {
 		fmt.Println("cli:")
-		for _, flag := range c.GlobalFlagNames() {
-			fmt.Printf("  %s: %v\n", flag, c.GlobalGeneric(flag))
+		for _, flag := range ctx.GlobalFlagNames() {
+			fmt.Printf("  %s: %v\n", flag, ctx.GlobalGeneric(flag))
 		}
-		for _, flag := range c.FlagNames() {
-			fmt.Printf("  %s: %v\n", flag, c.Generic(flag))
+		for _, flag := range ctx.FlagNames() {
+			fmt.Printf("  %s: %v\n", flag, ctx.Generic(flag))
 		}
 		return nil
-	},
+	}),
 }

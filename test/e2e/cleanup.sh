@@ -22,32 +22,33 @@ cleanup_fission_workflows() {
 }
 
 cleanup_fission() {
-    # Trigger deletion of all namespaces before waiting - for concurrency of deletion
-    emph "Forcing deletion of namespaces..."
-    kubectl delete ns/${NS} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_BUILDER} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_FUNCTION} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-
     cleanup_fission_workflows
     emph "Removing Fission deployment..."
     helm_uninstall_release ${fissionHelmId}
 
     emph "Removing custom resources..."
     clean_tpr_crd_resources || true
+    kubectl delete all --all -n ${NS}
+    kubectl delete all --all -n ${NS_FUNCTION}
+    kubectl delete all --all -n ${NS_BUILDER}
+
+
+    # Trigger deletion of all namespaces before waiting - for concurrency of deletion
+    emph "Forcing deletion of namespaces..."
+    kubectl delete ns/${NS} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_BUILDER} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_FUNCTION} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
 
     # Wait until all namespaces are actually deleted!
-    sleep 10
     emph "Awaiting deletion of namespaces..."
     verify_ns_deleted() {
         kubectl delete ns/${1} --now 2>&1  | grep -qv "Error from server (Conflict):"
     }
     # Namespaces sometimes take a long time to delete for some reason
+    sleep 10
     RETRY_LIMIT=10 RETRY_DELAY=10 retry verify_ns_deleted ${NS_BUILDER}
     RETRY_LIMIT=10 RETRY_DELAY=10 retry verify_ns_deleted ${NS}
     RETRY_LIMIT=10 RETRY_DELAY=10 retry verify_ns_deleted ${NS_FUNCTION}
-
-    emph "Cleaning up local filesystem..."
-    rm -f ./fission-workflows-bundle ./wfcli
 }
 
 reset_fission_crd_resources() {

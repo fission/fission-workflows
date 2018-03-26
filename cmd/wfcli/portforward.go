@@ -3,12 +3,15 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
+	"github.com/sirupsen/logrus"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -17,6 +20,42 @@ import (
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/tools/remotecommand"
 )
+
+type client struct {
+	Admin      *httpclient.AdminApi
+	Workflow   *httpclient.WorkflowApi
+	Invocation *httpclient.InvocationApi
+}
+
+func getClient(ctx Context) client {
+
+	url := ctx.GlobalString("url")
+
+	// fetch the FISSION_URL env variable. If not set, port-forward to controller.
+	if len(url) == 0 {
+		fissionUrl := os.Getenv("FISSION_URL")
+		if len(fissionUrl) == 0 {
+			fissionNamespace := getFissionNamespace()
+			kubeConfig := getKubeConfigPath()
+			localPort := setupPortForward(kubeConfig, fissionNamespace, "application=fission-api")
+			url = "http://127.0.0.1:" + localPort
+			logrus.Debugf("Forwarded Fission API to %s.", url)
+		} else {
+			url = fissionUrl
+		}
+	}
+	path := ctx.GlobalString("path-prefix")
+	if path[0] != '/' {
+		path = "/" + path
+	}
+	url = url + strings.TrimSuffix(path, "/")
+	httpClient := http.Client{}
+	return client{
+		Admin:      httpclient.NewAdminApi(url, httpClient),
+		Workflow:   httpclient.NewWorkflowApi(url, httpClient),
+		Invocation: httpclient.NewInvocationApi(url, httpClient),
+	}
+}
 
 func getFissionNamespace() string {
 	fissionNamespace := os.Getenv("FISSION_NAMESPACE")
