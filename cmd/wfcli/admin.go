@@ -5,7 +5,7 @@ import (
 )
 
 var cmdAdmin = cli.Command{
-	Name:  "Admin",
+	Name:  "admin",
 	Usage: "Administrative commands",
 	Subcommands: []cli.Command{
 		cmdStatus,

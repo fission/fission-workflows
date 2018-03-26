@@ -15,9 +15,9 @@ import (
 )
 
 var cmdInvocation = cli.Command{
-	Name:    "Invocation",
+	Name:    "invocation",
 	Aliases: []string{"wi", "invocations", "Workflow-Invocation", "wfi"},
-	Usage:   "Workflow Invocation-related commands",
+	Usage:   "Workflow invocation-related commands",
 	Subcommands: []cli.Command{
 		{
 			Name:  "get",

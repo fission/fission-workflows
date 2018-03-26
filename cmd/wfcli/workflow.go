@@ -10,7 +10,7 @@ import (
 )
 
 var cmdWorkflow = cli.Command{
-	Name:    "Workflow",
+	Name:    "workflow",
 	Aliases: []string{"wf", "workflows"},
 	Usage:   "Workflow-related commands",
 	Subcommands: []cli.Command{

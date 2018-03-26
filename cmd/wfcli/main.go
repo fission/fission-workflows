@@ -31,6 +31,12 @@ func main() {
 			EnvVar: "FISSION_URL",
 			Usage:  "Url to the Fission apiserver",
 		},
+		cli.StringFlag{
+			Name:   "path-prefix",
+			EnvVar: "FISSION_PATH_PREFIX",
+			Value:  "/proxy/workflows-apiserver",
+			Usage:  "The path to prepend each of the commands",
+		},
 		cli.BoolFlag{
 			Name:   "debug, d",
 			EnvVar: "WFCLI_DEBUG",

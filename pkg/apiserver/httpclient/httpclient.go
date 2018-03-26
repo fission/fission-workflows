@@ -1,4 +1,4 @@
-// Package httpclient is a lightweight implementation of the HTTP gateway.
+// Package httpclient is a lightweight implementation of a client for the HTTP gateway.
 package httpclient
 
 import (
@@ -71,7 +71,7 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 		if resp.Body != nil {
 			data, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				logrus.Errorf("Failed to read debug body", err)
+				logrus.Errorf("Failed to read debug body: %v", err)
 			}
 			logrus.Debugf("Body: '%v'", string(data))
 		}
@@ -101,7 +101,6 @@ type BaseApi struct {
 	client   http.Client
 }
 
-// TODO remove hard-coded proxy
 func (api *BaseApi) formatUrl(path string) string {
-	return api.endpoint + "/proxy/workflows-apiserver" + path
+	return api.endpoint + path
 }

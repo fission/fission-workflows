@@ -44,7 +44,11 @@ func getClient(ctx Context) client {
 			url = fissionUrl
 		}
 	}
-
+	path := ctx.GlobalString("path-prefix")
+	if path[0] != '/' {
+		path = "/" + path
+	}
+	url = url + strings.TrimSuffix(path, "/")
 	httpClient := http.Client{}
 	return client{
 		Admin:      httpclient.NewAdminApi(url, httpClient),
