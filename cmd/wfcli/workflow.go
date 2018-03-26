@@ -1,38 +1,29 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"sort"
 
-	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/urfave/cli"
 )
 
 var cmdWorkflow = cli.Command{
-	Name:    "workflow",
+	Name:    "Workflow",
 	Aliases: []string{"wf", "workflows"},
 	Usage:   "Workflow-related commands",
 	Subcommands: []cli.Command{
 		{
 			Name:  "get",
-			Usage: "get <workflow-id> <task-id>",
-			Action: func(c *cli.Context) error {
-				//u := parseUrl(c.GlobalString("url"))
-				//client := createTransportClient(u)
-				//wfApi := workflow_api.New(client, strfmt.Default)
-				ctx := context.TODO()
-				url := parseUrl(c.GlobalString("url"))
-				wfApi := httpclient.NewWorkflowApi(url.String(), http.Client{})
+			Usage: "get <Workflow-id> <task-id>",
+			Action: commandContext(func(ctx Context) error {
+				client := getClient(ctx)
 
-				switch c.NArg() {
+				switch ctx.NArg() {
 				case 0:
 					// List workflows
-					resp, err := wfApi.List(ctx)
-					//resp, err := wf.(workflow_api.NewWfListParams())
+					resp, err := client.Workflow.List(ctx)
 					if err != nil {
 						panic(err)
 					}
@@ -40,7 +31,7 @@ var cmdWorkflow = cli.Command{
 					sort.Strings(wfs)
 					var rows [][]string
 					for _, wfId := range wfs {
-						wf, err := wfApi.Get(ctx, wfId)
+						wf, err := client.Workflow.Get(ctx, wfId)
 						if err != nil {
 							panic(err)
 						}
@@ -53,9 +44,9 @@ var cmdWorkflow = cli.Command{
 					table(os.Stdout, []string{"ID", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
 				case 1:
 					// Get Workflow
-					wfId := c.Args().Get(0)
+					wfId := ctx.Args().Get(0)
 					println(wfId)
-					wf, err := wfApi.Get(ctx, wfId)
+					wf, err := client.Workflow.Get(ctx, wfId)
 					if err != nil {
 						panic(err)
 					}
@@ -68,9 +59,9 @@ var cmdWorkflow = cli.Command{
 					// Get Workflow task
 					fallthrough
 				default:
-					wfId := c.Args().Get(0)
-					taskId := c.Args().Get(1)
-					wf, err := wfApi.Get(ctx, wfId)
+					wfId := ctx.Args().Get(0)
+					taskId := ctx.Args().Get(1)
+					wf, err := client.Workflow.Get(ctx, wfId)
 					if err != nil {
 						panic(err)
 					}
@@ -87,7 +78,7 @@ var cmdWorkflow = cli.Command{
 				}
 
 				return nil
-			},
+			}),
 		},
 	},
 }

@@ -23,18 +23,18 @@ var cmdParse = cli.Command{
 		},
 	},
 	Description: "Read YAML definitions to the executable JSON format (deprecated)",
-	Action: func(c *cli.Context) error {
+	Action: commandContext(func(ctx Context) error {
 
-		if c.NArg() == 0 {
-			panic("Need a path to a yaml workflow definition")
+		if ctx.NArg() == 0 {
+			panic("Need a path to a yaml Workflow definition")
 		}
 
-		parserType := c.String("type")
+		parserType := ctx.String("type")
 		if parserType != "" && !parse.Supports(parserType) {
 			fmt.Printf("Unknown parser '%s'; will try all parsers.", parserType)
 		}
 
-		for _, path := range c.Args() {
+		for _, path := range ctx.Args() {
 
 			fnName := strings.TrimSpace(path)
 
@@ -51,7 +51,7 @@ var cmdParse = cli.Command{
 			println(toFormattedJson(wfSpec))
 		}
 		return nil
-	},
+	}),
 }
 
 func toFormattedJson(spec *types.WorkflowSpec) string {

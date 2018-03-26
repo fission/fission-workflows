@@ -7,25 +7,15 @@ import (
 	"os"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/version"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 // This is a prototype of the CLI (and will be integrated into the Fission CLI eventually).
 func main() {
-	// fetch the FISSION_URL env variable. If not set, port-forward to controller.
-	var value string
-	fissionUrl := os.Getenv("FISSION_URL")
-	if len(fissionUrl) == 0 {
-		fissionNamespace := getFissionNamespace()
-		kubeConfig := getKubeConfigPath()
-		localPort := setupPortForward(kubeConfig, fissionNamespace, "application=fission-api")
-		value = "http://127.0.0.1:" + localPort
-		fmt.Printf("Forwarded Fission API to %s.\n", value)
-	} else {
-		value = fissionUrl
-	}
 
 	app := cli.NewApp()
 	app.Author = "Erwin van Eyk"
@@ -38,7 +28,6 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "url, u",
-			Value:  value,
 			EnvVar: "FISSION_URL",
 			Usage:  "Url to the Fission apiserver",
 		},
@@ -57,7 +46,6 @@ func main() {
 		cmdAdmin,
 		cmdVersion,
 	}
-
 	app.Run(os.Args)
 }
 
@@ -88,4 +76,38 @@ func parseUrl(rawUrl string) *url.URL {
 		fail(fmt.Sprintf("Invalid url '%s': %v", rawUrl, err))
 	}
 	return u
+}
+
+type Context struct {
+	*cli.Context
+}
+
+func (c Context) Deadline() (deadline time.Time, ok bool) {
+	return
+}
+
+func (c Context) Done() <-chan struct{} {
+	return nil
+}
+
+func (c Context) Err() error {
+	return nil
+}
+
+func (c Context) Value(key interface{}) interface{} {
+	if s, ok := key.(string); ok {
+		return c.Generic(s)
+	}
+	return nil
+}
+
+func commandContext(fn func(c Context) error) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
+		if c.GlobalBool("debug") {
+			logrus.SetLevel(logrus.DebugLevel)
+		} else {
+			logrus.SetLevel(logrus.InfoLevel)
+		}
+		return fn(Context{c})
+	}
 }
