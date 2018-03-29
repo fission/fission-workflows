@@ -1,0 +1,17 @@
+apiVersion: fission.io/v1
+kind: Environment
+metadata:
+  creationTimestamp: null
+  name: fission-runtime-test
+  namespace: default
+spec:
+  TerminationGracePeriod: 360
+  builder: {}
+  poolsize: 3
+  resources: {}
+  runtime:
+    functionendpointport: 0
+    image: fission/node-env
+    loadendpointpath: ""
+    loadendpointport: 0
+  version: 1

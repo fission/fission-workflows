@@ -24,7 +24,7 @@ func newTimedExecPool() *timedExecPool {
 func (ds *timedExecPool) Submit(fn func(), execAt time.Time) {
 	ds.fnsLock.Lock()
 	defer ds.fnsLock.Unlock()
-	ds.fnQueue.Push(timedFn{
+	ds.fnQueue.Push(&timedFn{
 		execAt: execAt,
 		fn:     fn,
 	})

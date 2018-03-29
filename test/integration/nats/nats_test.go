@@ -23,7 +23,7 @@ var (
 
 func TestMain(m *testing.M) {
 	if testing.Short() {
-		fmt.Println("Skipping NATS integration tests...")
+		log.Info("Short test; skipping NATS integration tests.")
 		return
 	}
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// pulls an image, creates a container based on it and runs it
-	id := util.Uid()
+	id := util.UID()
 	clusterId := fmt.Sprintf("fission-workflows-tests-%s", id)
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 
@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 		cfg := fesnats.Config{
 			Cluster: clusterId,
 			Client:  fmt.Sprintf("client-%s", id),
-			Url:     fmt.Sprintf("nats://%s:%s", "0.0.0.0", resource.GetPort("4222/tcp")),
+			URL:     fmt.Sprintf("nats://%s:%s", "0.0.0.0", resource.GetPort("4222/tcp")),
 		}
 
 		var err error
@@ -66,15 +66,14 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			return fmt.Errorf("failed to connect to cluster: %v", err)
 		}
-		return nil // TODO add ping
+		return nil
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	fmt.Println(backend)
-	fmt.Println("Setup done; running tests")
+	log.Info("Setup done; running tests")
 	status := m.Run()
-	fmt.Println("Cleaning up test message queue")
+	log.Info("Cleaning up test message queue")
 
 	// You can't defer this because os.Exit doesn't care for defer
 	cleanup()

@@ -40,8 +40,9 @@ const (
 
 func NewFunctionEnv(executor *executor.Client, routerURL string) *FunctionEnv {
 	return &FunctionEnv{
-		executor:  executor,
-		routerURL: routerURL,
+		executor:         executor,
+		routerURL:        routerURL,
+		timedExecService: newTimedExecPool(),
 	}
 }
 
@@ -110,7 +111,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 }
 
 // Notify signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(taskID string, fn types.FnRef, expectedAt time.Time) error {
+func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
 	reqURL, err := fe.getFnURL(fn)
 	if err != nil {
 		return err

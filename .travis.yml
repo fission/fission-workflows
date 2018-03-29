@@ -39,7 +39,6 @@ install:
 - test/e2e/install-clients.sh
 # Needed for some integration tests
 - glide -h >/dev/null 2>&1 || go get github.com/Masterminds/glide
-- nats-streaming-server -h >/dev/null 2>&1 || go get github.com/nats-io/nats-streaming-server # TODO remove the need for this
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}

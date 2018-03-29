@@ -3,7 +3,6 @@ package bundle
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/test/integration"
 	"github.com/golang/protobuf/ptypes/empty"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )
@@ -25,7 +25,7 @@ const (
 
 func TestMain(m *testing.M) {
 	if testing.Short() {
-		fmt.Println("Skipping bundle integration tests...")
+		log.Info("Short test; skipping bundle integration tests.")
 		return
 	}
 
