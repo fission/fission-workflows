@@ -16,7 +16,7 @@ const (
 	RepeatInputPrev  = "prev"
 )
 
-// TODO chose between unrolled loop and dynamic loop based on number of tasks
+// TODO minor: chose between unrolled loop and dynamic loop based on number of tasks for performance
 type FunctionRepeat struct{}
 
 func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

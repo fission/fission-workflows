@@ -27,7 +27,7 @@ func NewFunctionJavascript() *FunctionJavascript {
 }
 
 func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	exprVal, err := verifyInput(spec.Inputs, JavascriptInputExpr, "string")
+	exprVal, err := ensureInput(spec.Inputs, JavascriptInputExpr, "string")
 	argsVal, _ := spec.Inputs[JavascriptInputArgs]
 	if err != nil {
 		return nil, err

@@ -14,15 +14,20 @@ import (
 var DefaultBuiltinFunctions = map[string]native.InternalFunction{
 	If:         &FunctionIf{},
 	Noop:       &FunctionNoop{},
-	"nop":      &FunctionNoop{},
+	"nop":      &FunctionNoop{}, // nop is an alias for 'noop'
 	Compose:    &FunctionCompose{},
 	Sleep:      &FunctionSleep{},
 	Repeat:     &FunctionRepeat{},
 	Javascript: NewFunctionJavascript(),
+	Fail:       &FunctionFail{},
+	Http:       &FunctionHttp{},
+	Foreach:    &FunctionForeach{},
+	Switch:     &FunctionSwitch{},
+	While:      &FunctionWhile{},
 }
 
-// Utils
-func verifyInput(inputs map[string]*types.TypedValue, key string, validTypes ...string) (*types.TypedValue, error) {
+// ensureInput verifies that the input for the given key exists and is of one of the provided types.
+func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...string) (*types.TypedValue, error) {
 
 	i, ok := inputs[key]
 	if !ok {
@@ -60,4 +65,19 @@ func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types
 	if !reflect.DeepEqual(outputtedTask, expected) {
 		t.Errorf("Output '%v' does not match expected output '%v'", outputtedTask, expected)
 	}
+}
+
+// getFirstDefinedTypedValue returns the first input and key of the inputs argument that matches a field in fields.
+// For example, given inputs { a : b, c : d }, getFirstDefinedTypedValue(inputs, z, x, c, a) would return (c, d)
+func getFirstDefinedTypedValue(inputs map[string]*types.TypedValue, fields ...string) (string, *types.TypedValue) {
+	var result *types.TypedValue
+	var key string
+	for _, key = range fields {
+		val, ok := inputs[key]
+		if ok {
+			result = val
+			break
+		}
+	}
+	return key, result
 }

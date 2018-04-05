@@ -20,7 +20,7 @@ type FunctionIf struct{}
 func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 
 	// Verify and get condition
-	expr, err := verifyInput(spec.GetInputs(), IfInputCondition)
+	expr, err := ensureInput(spec.GetInputs(), IfInputCondition)
 	if err != nil {
 		return nil, err
 	}

@@ -64,11 +64,47 @@ func FormatString(t *types.TypedValue) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	s, ok := i.(string)
+	v, ok := i.(string)
 	if !ok {
 		return "", errors.New("invalid type")
 	}
-	return s, nil
+	return v, nil
+}
+
+func FormatBool(t *types.TypedValue) (bool, error) {
+	i, err := Format(t)
+	if err != nil {
+		return false, err
+	}
+	v, ok := i.(bool)
+	if !ok {
+		return false, errors.New("invalid type")
+	}
+	return v, nil
+}
+
+func FormatMap(t *types.TypedValue) (map[string]interface{}, error) {
+	i, err := Format(t)
+	if err != nil {
+		return nil, err
+	}
+	v, ok := i.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("invalid type")
+	}
+	return v, nil
+}
+
+func FormatNumber(t *types.TypedValue) (float64, error) {
+	i, err := Format(t)
+	if err != nil {
+		return 0, err
+	}
+	v, ok := i.(float64)
+	if !ok {
+		return 0, errors.New("invalid type")
+	}
+	return v, nil
 }
 
 type Inputs map[string]*types.TypedValue

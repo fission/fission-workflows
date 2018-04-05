@@ -81,3 +81,10 @@ func FormatWorkflow(v *types.TypedValue) (*types.WorkflowSpec, error) {
 	}
 	return t, nil
 }
+
+func IsControlFlowInput(tv *types.TypedValue) bool {
+	if tv == nil {
+		return false
+	}
+	return tv != nil && (tv.Type == TypeTask || tv.Type == TypeWorkflow)
+}
