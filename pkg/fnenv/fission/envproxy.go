@@ -193,6 +193,7 @@ func (fp *Proxy) Specialize(ctx context.Context, flr *fission.FunctionLoadReques
 	var wfIDs []string
 
 	// Create workflows for each detected workflow definition
+	logrus.Infof("Files: %v", wfPaths)
 	for _, wfPath := range wfPaths {
 		wfID, err := fp.createWorkflowFromFile(ctx, flr, wfPath)
 		if err != nil {
@@ -237,8 +238,7 @@ func (fp *Proxy) findWorkflowFiles(ctx context.Context, flr *fission.FunctionLoa
 }
 
 // createWorkflowFromFile creates a workflow given a path to the file containing the workflow definition
-func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.FunctionLoadRequest,
-	path string) (string, error) {
+func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.FunctionLoadRequest, path string) (string, error) {
 
 	rdr, err := os.Open(path)
 	if err != nil {
@@ -248,7 +248,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	if err != nil {
 		return "", fmt.Errorf("failed to read file '%v': %v", path, err)
 	}
-	logrus.Infof("received definition: %s", string(raw))
+	logrus.Infof("received definition: '%s'", string(raw))
 
 	wfSpec := &types.WorkflowSpec{}
 	err = jsonpb.Unmarshal(bytes.NewReader(raw), wfSpec)

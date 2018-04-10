@@ -3,6 +3,8 @@
 # Build command run by default.
 #
 
+set -e
+
 parse() {
     src=$1
     dst=$2
@@ -13,7 +15,7 @@ parse() {
     fi
 }
 
-echo  "Building with v$(wfcli --version)..."
+echo  "Building with $(wfcli version --client)..."
 if [[ -f ${SRC_PKG} ]] ; then
     # Package is a single file
     parse ${SRC_PKG} ${DEPLOY_PKG}
