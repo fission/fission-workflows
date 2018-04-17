@@ -1,6 +1,6 @@
 # Installation
 
-This document covers the installation of Fission Workflows.
+This document covers installing Fission Workflows.
 
 ### Prerequisites
 
@@ -69,7 +69,7 @@ curl ${FISSION_ROUTER}/fortunewhale
 ### wfcli client (optional)
 To use Fission Workflows there is no need to learn any other client other than the one you already use for function invocation - after all, a workflow is just another function.
 However, in many cases it is useful to have more insight in and control over the behaviour of the workflows (for example when developing/debugging workflows).
-To get these additional capabilities and insight, you can use the `wfcli` client.
+To get these more capabilities and insight, you can use the `wfcli` client.
 
 It has the following features:
 - Get insight into workflow and invocations statuses.
@@ -78,7 +78,7 @@ It has the following features:
 - validating workflow definitions locally.
 
 #### Installation
-To install `wfcli` either get a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
+To install `wfcli` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
 For example, to download and install version 0.2.0,  assuming that you use OS X:
 ```bash
 curl -o wfcli https://github.com/fission/fission-workflows/releases/download/0.2.0/wfcli-osx
@@ -92,7 +92,7 @@ go get -u github.com/fission/fission-workflows/cmd/wfcli
 ```
 
 The `wfcli` client uses the `FISSION_URL` environment variable to find the Fission controller server to use as a proxy to the workflow apiserver.
-By default `wfcli` uses ttp://localhost:31313 as the location of the Fission controller.
+By default `wfcli` uses ttp://localhost:31313 to locate the Fission controller.
 
 #### Examples
 Get all defined workflows loaded in the workflow engine:
