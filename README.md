@@ -34,7 +34,7 @@ There are several ways to compose functions.  A function could invoke
 another function using the Fission API or HTTP.  But this requires the
 calling function to handle serialization, networking, etc.
 
-Functions could also be set up to be invoked via message queue topics.
+You could also set up functions to be invoked using message queue topics.
 This requires less boilerplate within each function, but the structure
 of the application is not explicit; dependencies are buried inside
 mappings of message queue topics to functions.
@@ -44,7 +44,7 @@ terms of error analysis, performance debugging, upgrades, etc.
 
 Workflows have been popular in other domains, such as data processing
 and scientific applications, and recently got introduced into the
-serverless paradigm by AWS Step Functions and Azure Logic Apps.
+serverless model by AWS Step Functions and Azure Logic Apps.
 
 Fission Workflows is an open-source alternative to these workflow
 systems.  It allows users to compose Fission functions in powerful
@@ -71,9 +71,9 @@ triggering parallel execution of two _branches_ with tasks C and D,
 followed by a _synchronizing task_ E collecting the outputs of the
 parallel tasks.
 
-Finally the graph concludes once _final task_ F has been completed.
+Finally the graph concludes once _final task_ F completes.
 
-Although Fission Workflows has additional functionality such as
+Although Fission Workflows has more functionality such as
 conditional branches and advanced control flow options, it
 fundamentally executes a dependency graph.
 
@@ -96,17 +96,16 @@ tasks:
 Currently there are two options of executing tasks.  First, Fission is
 used as the main function execution runtime, using _fission functions_
 as tasks.  Second, for very small tasks, such as flow control
-constructs, _internal functions_ are executed within the workflow
-engine, in order to minimize the network overhead.
+constructs, _internal functions_ execute within the workflow
+engine to minimize the network overhead.
 
-A workflow execution is called a **(Workflow) Invocation**.  An
-invocation is assigned a UID and is stored, persistently, in the data
-store of Fission Workflow.  This allows users to reference the
-invocation during and after the execution, for example to view the
+A workflow execution is called a **(Workflow) Invocation**. The Fission Workflows engine
+assigns an UID invocation and stores it, persistently, in the data-store.  This allows
+users to reference the invocation during and after the execution, such as to view the
 progress so far.
 
 Finally, **selectors** and **data transformations** are _inline
-functions_ which can be used to manipulate data without having to
+functions_ which you can use to manipulate data without having to
 create a task for it.  These _inline functions_ consist of commonly
 used transformations, such as getting the length of an array or
 string.  Additionally, selectors allow users to only pass through
@@ -152,7 +151,7 @@ See the [compilation guide](./compiling.md).
 
 This is an early release for community participation and user
 feedback. It is under active development; none of the interfaces are
-stable yet. It should not be used in production!
+stable yet. It should not yet be used in production!
 
 Contributions are welcome in whatever form, including testing,
 examples, use cases, or adding features. For an overview of current

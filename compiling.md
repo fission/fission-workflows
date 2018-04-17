@@ -10,7 +10,7 @@ images by default.*
 - [glide](http://glide.sh/) package manager
 
 ## Compilation
-Ensure that all requirements are met, and checkout the repo from github.
+Ensure that your environment meets all prerequisite requirements, and checkout the repo from github.
 
 ```bash
 # Install dependencies
