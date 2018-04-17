@@ -130,7 +130,7 @@ func (m *TaskInvocation) Id() string {
 
 func (m *TaskInvocationSpec) ToWorkflowSpec() *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
-		WorkflowId: m.FnRef.RuntimeId,
+		WorkflowId: m.FnRef.ID,
 		Inputs:     m.Inputs,
 	}
 }

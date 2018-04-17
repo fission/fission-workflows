@@ -24,7 +24,7 @@ func (re *Resolver) Resolve(fnName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id := string(fn.Metadata.UID)
+	id := fnName + "-" + string(fn.Metadata.UID)
 
 	log.Infof("Resolved fission function %s to %s", fnName, id)
 

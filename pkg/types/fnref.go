@@ -25,11 +25,15 @@ func (m FnRef) Format() string {
 		runtime = m.Runtime + RuntimeDelimiter
 	}
 
-	return runtime + m.RuntimeId
+	return runtime + m.ID
 }
 
 func (m FnRef) IsValid() bool {
 	return IsFnRef(m.Format())
+}
+
+func (m FnRef) IsEmpty() bool {
+	return m.ID == "" && m.Runtime == ""
 }
 
 func IsFnRef(s string) bool {
@@ -37,13 +41,13 @@ func IsFnRef(s string) bool {
 	return err == nil
 }
 
-func NewFnRef(runtime string, runtimeId string) FnRef {
-	if len(runtimeId) == 0 {
+func NewFnRef(runtime string, id string) FnRef {
+	if len(id) == 0 {
 		panic("function reference needs a runtime id")
 	}
 	return FnRef{
-		Runtime:   runtime,
-		RuntimeId: runtimeId,
+		Runtime: runtime,
+		ID:      id,
 	}
 }
 
@@ -61,12 +65,12 @@ func ParseFnRef(s string) (FnRef, error) {
 
 	if len(matches[groupRuntime]) == 0 {
 		return FnRef{
-			RuntimeId: matches[groupRuntimeId],
+			ID: matches[groupRuntimeId],
 		}, ErrNoRuntime
 	}
 
 	return FnRef{
-		Runtime:   matches[groupRuntime],
-		RuntimeId: matches[groupRuntimeId],
+		Runtime: matches[groupRuntime],
+		ID:      matches[groupRuntimeId],
 	}, nil
 }

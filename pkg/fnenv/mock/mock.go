@@ -35,7 +35,7 @@ func NewRuntime() *Runtime {
 }
 
 func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
-	fnName := spec.FnRef.RuntimeId
+	fnName := spec.FnRef.ID
 
 	if _, ok := mk.Functions[fnName]; !ok {
 		return "", fmt.Errorf("could not invoke unknown function '%s'", fnName)
@@ -70,7 +70,7 @@ func (mk *Runtime) MockComplete(fnInvocationID string) error {
 		return fmt.Errorf("could not invoke unknown invocation '%s'", fnInvocationID)
 	}
 
-	fnName := invocation.Spec.FnRef.RuntimeId
+	fnName := invocation.Spec.FnRef.ID
 	fn, ok := mk.Functions[fnName]
 	if !ok {
 		return fmt.Errorf("could not invoke unknown function '%s'", fnName)

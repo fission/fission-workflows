@@ -34,7 +34,7 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	fnId := spec.FnRef.RuntimeId
+	fnId := spec.FnRef.ID
 	fn, ok := fe.fns[fnId]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnId)

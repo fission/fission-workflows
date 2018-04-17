@@ -28,6 +28,6 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	logrus.WithFields(logrus.Fields{
 		"spec":   spec,
 		"output": output,
-	}).Info("Internal Fail-function invoked.")
+	}).Info("Internal Noop-function invoked.")
 	return output, nil
 }

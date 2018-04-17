@@ -232,6 +232,6 @@ message FnRef {
     // Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
     string runtime = 2;
 
-    // RuntimeId is the runtime-specific identifier of the function.
-    string runtimeId = 3;
+    // ID is the runtime-specific identifier of the function.
+    string ID = 3;
 }

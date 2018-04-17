@@ -102,8 +102,8 @@ func TestScope(t *testing.T) {
 			Tasks: map[string]*types.TaskStatus{
 				"fooTask": {
 					FnRef: &types.FnRef{
-						Runtime:   "fission",
-						RuntimeId: "resolvedFissionFunction",
+						Runtime: "fission",
+						ID:      "resolvedFissionFunction",
 					},
 				},
 			},

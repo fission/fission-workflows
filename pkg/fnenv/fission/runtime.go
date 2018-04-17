@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -143,9 +144,14 @@ func (fe *FunctionEnv) getFnUrl(fn types.FnRef) (*url.URL, error) {
 }
 
 func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
+	parts := strings.SplitN(fn.ID, "-", 2)
+	if len(parts) < 2 {
+		panic(fmt.Sprintf("invalid function ref for kubernetes object: '%v'", fn))
+	}
+
 	return &metav1.ObjectMeta{
-		//Name:      name, // TODO check if we can leave this out
-		UID:       k8stypes.UID(fn.RuntimeId),
+		Name:      parts[0],
+		UID:       k8stypes.UID(parts[1]),
 		Namespace: metav1.NamespaceDefault,
 	}
 }
