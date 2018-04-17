@@ -82,6 +82,7 @@ To install `wfcli` either get a version of the binary from the [releases](https:
 For example, to download and install version 0.2.0,  assuming that you use OS X:
 ```bash
 curl -o wfcli https://github.com/fission/fission-workflows/releases/download/0.2.0/wfcli-osx
+chmod +x ./wfcli
 sudo mv ./wfcli /usr/local/bin
 ```
 
