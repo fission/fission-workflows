@@ -28,7 +28,7 @@ func (fp *MapParserFormatter) Parse(ctx Parser, i interface{}) (*types.TypedValu
 	var tvmp map[string]*types.TypedValue
 	switch t := i.(type) {
 	case map[string]interface{}:
-		mp, err := ParseStringInterface(ctx, t)
+		mp, err := ParseToTypedValueMap(ctx, t)
 		if err != nil {
 			return nil, err
 		}
@@ -41,19 +41,19 @@ func (fp *MapParserFormatter) Parse(ctx Parser, i interface{}) (*types.TypedValu
 			err: ErrUnsupportedType,
 		}
 	}
-	return ParseStringTypedValue(tvmp)
+	return ParseTypedValueMap(tvmp)
 }
 
 func (fp *MapParserFormatter) Format(ctx Formatter, v *types.TypedValue) (interface{}, error) {
-	mp, err := FormatTypedValue(v)
+	mp, err := FormatToTypedValueMap(v)
 	if err != nil {
 		return nil, err
 	}
 
-	return FormatStringTypedValue(ctx, mp)
+	return FormatTypedValueMap(ctx, mp)
 }
 
-func ParseStringInterface(ctx Parser, mp map[string]interface{}) (map[string]*types.TypedValue, error) {
+func ParseToTypedValueMap(ctx Parser, mp map[string]interface{}) (map[string]*types.TypedValue, error) {
 	tvmp := map[string]*types.TypedValue{}
 	for k, v := range mp {
 		tvv, err := ctx.Parse(ctx, v)
@@ -65,7 +65,7 @@ func ParseStringInterface(ctx Parser, mp map[string]interface{}) (map[string]*ty
 	return tvmp, nil
 }
 
-func ParseStringTypedValue(mp map[string]*types.TypedValue) (*types.TypedValue, error) {
+func ParseTypedValueMap(mp map[string]*types.TypedValue) (*types.TypedValue, error) {
 	pbv := &types.TypedValueMap{Value: mp}
 	v, err := proto.Marshal(pbv)
 	if err != nil {
@@ -77,7 +77,7 @@ func ParseStringTypedValue(mp map[string]*types.TypedValue) (*types.TypedValue, 
 	}, nil
 }
 
-func FormatTypedValue(v *types.TypedValue) (map[string]*types.TypedValue, error) {
+func FormatToTypedValueMap(v *types.TypedValue) (map[string]*types.TypedValue, error) {
 	if v.Type != TypeMap {
 		return nil, TypedValueErr{
 			src: v,
@@ -94,7 +94,7 @@ func FormatTypedValue(v *types.TypedValue) (map[string]*types.TypedValue, error)
 	return mp.Value, nil
 }
 
-func FormatStringTypedValue(ctx Formatter, mp map[string]*types.TypedValue) (map[string]interface{}, error) {
+func FormatTypedValueMap(ctx Formatter, mp map[string]*types.TypedValue) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	for k, v := range mp {
 		tvv, err := ctx.Format(ctx, v)
@@ -165,14 +165,14 @@ func ParseListTypedValue(l []*types.TypedValue) *types.TypedValue {
 }
 
 func FormatList(ctx Formatter, v *types.TypedValue) ([]interface{}, error) {
-	ltv, err := FormatListTypedValue(v)
+	ltv, err := FormatToTypedValueList(v)
 	if err != nil {
 		return nil, err
 	}
-	return FormatListInterface(ctx, ltv)
+	return FormatTypedValueList(ctx, ltv)
 }
 
-func FormatListTypedValue(v *types.TypedValue) ([]*types.TypedValue, error) {
+func FormatToTypedValueList(v *types.TypedValue) ([]*types.TypedValue, error) {
 	err := verifyTypedValue(v, TypeList)
 	if err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func FormatListTypedValue(v *types.TypedValue) ([]*types.TypedValue, error) {
 	return tvl.Value, nil
 }
 
-func FormatListInterface(ctx Formatter, vs []*types.TypedValue) ([]interface{}, error) {
+func FormatTypedValueList(ctx Formatter, vs []*types.TypedValue) ([]interface{}, error) {
 	result := []interface{}{}
 	for _, v := range vs {
 		i, err := ctx.Format(ctx, v)
