@@ -2,7 +2,7 @@
 # The purpose of this workflow is to show task dependencies in action
 #
 apiVersion: 1
-# No output expected, so no need to add 'output'
+output: F # TODO allow leaving out of output in case no output is expected
 tasks:
   A:
     run: sleep
