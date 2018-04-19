@@ -1,4 +1,4 @@
-# Input Expressions
+# Input and Output Expressions
 
 Often there are trivial data transformations between subsequent workflow steps.
 For example, you might need to select a field within a larger object or normalize the input text.
