@@ -1,0 +1,13 @@
+# Httpwhale shows the use of the built-in, internal HTTP function
+apiVersion: 1
+output: Whalify
+tasks:
+  FetchMyIp:
+    run: http
+    inputs: "http://ifconfig.co"
+
+  Whalify:
+    run: whalesay
+    inputs: "{output('FetchMyIp')}"
+    requires:
+    - FetchMyIp

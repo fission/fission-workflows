@@ -1,0 +1,13 @@
+# A whale that shows off how a switch-condition works in a workflow
+output: RespondToInput
+tasks:
+  RespondToInput:
+    run: switch
+    inputs:
+      switch: "{ param() }"
+      cases:
+      - case: hello
+        action: world!
+      - case: foo
+        action: bar
+      default: right...
