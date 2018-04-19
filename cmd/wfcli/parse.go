@@ -48,7 +48,7 @@ var cmdParse = cli.Command{
 				panic(err)
 			}
 
-			println(toFormattedJson(wfSpec))
+			fmt.Println(toFormattedJson(wfSpec))
 		}
 		return nil
 	}),
