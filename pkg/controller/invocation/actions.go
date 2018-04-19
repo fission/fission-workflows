@@ -78,6 +78,7 @@ func (a *ActionInvokeTask) Apply() error {
 	}
 
 	// ResolveTask the inputs
+	// TODO make recursive
 	inputs := map[string]*types.TypedValue{}
 	queryScope := expr.NewScope(a.Wf, a.Wfi)
 	for inputKey, val := range a.Task.Inputs {

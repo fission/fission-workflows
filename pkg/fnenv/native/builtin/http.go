@@ -49,11 +49,11 @@ func (fn *FunctionHttp) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	}
 	logrus.Infof("Executing request: %s %s - headers: {%v} - Body: %d", r.Method, r.URL, r.Header, body)
 	resp, err := http.DefaultClient.Do(r)
-	logrus.Infof("Received response: %s %s - headers: {%v} - Body: %d", resp.Status, resp.Request.URL, resp.Header,
-		resp.ContentLength)
 	if err != nil {
 		return nil, err
 	}
+	logrus.Infof("Received response: %s %s - headers: {%v} - Body: %d", resp.Status, resp.Request.URL, resp.Header, resp.ContentLength)
+
 	return parseBody(resp)
 }
 
@@ -71,9 +71,9 @@ func (fn *FunctionHttp) getMethod(inputs map[string]*types.TypedValue) (string, 
 }
 
 func (fn *FunctionHttp) getUri(inputs map[string]*types.TypedValue) (string, error) {
-	tv, err := ensureInput(inputs, HttpInputUri)
-	if err != nil {
-		return "", err
+	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUri, types.INPUT_MAIN)
+	if tv == nil {
+		return "", errors.New("target URI is required for HTTP function")
 	}
 	s, err := typedvalues.FormatString(tv)
 	if err != nil {
@@ -112,7 +112,7 @@ func (fn *FunctionHttp) getHeaders(inputs map[string]*types.TypedValue) (http.He
 
 func (fn *FunctionHttp) getBody(inputs map[string]*types.TypedValue) (io.ReadCloser, error) {
 	var input []byte
-	_, mainInput := getFirstDefinedTypedValue(inputs, HttpInputBody, types.INPUT_MAIN)
+	_, mainInput := getFirstDefinedTypedValue(inputs, HttpInputBody)
 	if mainInput != nil {
 		// TODO ensure that it is a byte-representation 1-1 of actual value not the representation in TypedValue
 		input = mainInput.Value

@@ -246,6 +246,9 @@ func (cr *Controller) Evaluate(invocationId string) {
 
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action
+	if action == nil {
+		return
+	}
 
 	// Execute action
 	err = action.Apply()

@@ -1,6 +1,8 @@
 package function
 
 import (
+	"errors"
+
 	"github.com/fission/fission-workflows/pkg/api/dynamic"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -64,6 +66,9 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	}
 
 	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec)
+	if fnResult == nil && err == nil {
+		err = errors.New("function crashed")
+	}
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
 		logrus.WithField("task", spec.InvocationId).Infof("ParseTask failed: %v", err)

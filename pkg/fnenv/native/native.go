@@ -3,6 +3,7 @@ package native
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/ptypes"
@@ -34,6 +35,15 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithFields(log.Fields{
+				"err": r,
+			}).Error("Internal function crashed.")
+			fmt.Println(string(debug.Stack()))
+		}
+	}()
+
 	fnId := spec.FnRef.ID
 	fn, ok := fe.fns[fnId]
 	if !ok {

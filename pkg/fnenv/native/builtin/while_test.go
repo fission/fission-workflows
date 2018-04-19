@@ -11,11 +11,11 @@ import (
 func TestFunctionWhile_Invoke(t *testing.T) {
 	out, err := (&FunctionWhile{}).Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			WhileInputExpr:  typedvalues.UnsafeParse(false),
-			WhileInputLimit: typedvalues.UnsafeParse(10),
-			"count":         typedvalues.UnsafeParse(4),
-			WhileInputDelay: typedvalues.UnsafeParse("1h"),
-			WhileInputAction: typedvalues.UnsafeParse(&types.TaskSpec{
+			WhileInputExpr:  typedvalues.MustParse(false),
+			WhileInputLimit: typedvalues.MustParse(10),
+			"count":         typedvalues.MustParse(4),
+			WhileInputDelay: typedvalues.MustParse("1h"),
+			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
 			}),
 		},
@@ -27,11 +27,11 @@ func TestFunctionWhile_Invoke(t *testing.T) {
 func TestFunctionWhile_InvokeCompletedInitial(t *testing.T) {
 	out, err := (&FunctionWhile{}).Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			WhileInputExpr:  typedvalues.UnsafeParse(true),
-			WhileInputLimit: typedvalues.UnsafeParse(10),
-			"count":         typedvalues.UnsafeParse(4),
-			WhileInputDelay: typedvalues.UnsafeParse("1h"),
-			WhileInputAction: typedvalues.UnsafeParse(&types.TaskSpec{
+			WhileInputExpr:  typedvalues.MustParse(true),
+			WhileInputLimit: typedvalues.MustParse(10),
+			"count":         typedvalues.MustParse(4),
+			WhileInputDelay: typedvalues.MustParse("1h"),
+			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
 			}),
 		},
@@ -41,14 +41,14 @@ func TestFunctionWhile_InvokeCompletedInitial(t *testing.T) {
 }
 
 func TestFunctionWhile_InvokeCompleted(t *testing.T) {
-	prev := typedvalues.UnsafeParse("prev result")
+	prev := typedvalues.MustParse("prev result")
 	out, err := (&FunctionWhile{}).Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			WhileInputExpr:  typedvalues.UnsafeParse(true),
-			WhileInputLimit: typedvalues.UnsafeParse(10),
-			"count":         typedvalues.UnsafeParse(4),
-			WhileInputDelay: typedvalues.UnsafeParse("1h"),
-			WhileInputAction: typedvalues.UnsafeParse(&types.TaskSpec{
+			WhileInputExpr:  typedvalues.MustParse(true),
+			WhileInputLimit: typedvalues.MustParse(10),
+			"count":         typedvalues.MustParse(4),
+			WhileInputDelay: typedvalues.MustParse("1h"),
+			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
 			}),
 			"prev": prev,
@@ -61,11 +61,11 @@ func TestFunctionWhile_InvokeCompleted(t *testing.T) {
 func TestFunctionWhile_Invoke_LimitExceeded(t *testing.T) {
 	out, err := (&FunctionWhile{}).Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			WhileInputExpr:  typedvalues.UnsafeParse(false),
-			WhileInputLimit: typedvalues.UnsafeParse(10),
-			"count":         typedvalues.UnsafeParse(11),
-			WhileInputDelay: typedvalues.UnsafeParse("1h"),
-			WhileInputAction: typedvalues.UnsafeParse(&types.TaskSpec{
+			WhileInputExpr:  typedvalues.MustParse(false),
+			WhileInputLimit: typedvalues.MustParse(10),
+			"count":         typedvalues.MustParse(11),
+			WhileInputDelay: typedvalues.MustParse("1h"),
+			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
 			}),
 		},

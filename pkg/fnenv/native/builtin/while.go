@@ -101,7 +101,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 			"wait": {
 				FunctionRef: Sleep,
 				Inputs: map[string]*types.TypedValue{
-					SleepInput: typedvalues.UnsafeParse(delay.String()),
+					SleepInput: typedvalues.MustParse(delay.String()),
 				},
 			},
 			"action": {
@@ -116,8 +116,8 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 					WhileInputDelay:  delayTv,
 					WhileInputLimit:  limitTv,
 					WhileInputAction: action,
-					"count":          typedvalues.UnsafeParse(count + 1),
-					"prev":           typedvalues.UnsafeParse("{output('action')}"),
+					"count":          typedvalues.MustParse(count + 1),
+					"prev":           typedvalues.MustParse("{output('action')}"),
 				},
 				Requires: types.Require("action"),
 			},
