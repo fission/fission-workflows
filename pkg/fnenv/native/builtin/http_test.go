@@ -29,7 +29,7 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", httpDefaultContentType)
-		fmt.Fprintln(w, string(data))
+		fmt.Fprint(w, "\""+string(data)+"\"")
 	}))
 	defer ts.Close()
 
@@ -37,14 +37,37 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			HttpInputMethod: typedvalues.UnsafeParse(http.MethodPost),
-			HttpInputUri:    typedvalues.UnsafeParse(ts.URL),
-			HttpInputBody:   typedvalues.UnsafeParse(body),
-			HttpInputHeaders: typedvalues.UnsafeParse(map[string]interface{}{
+			HttpInputMethod: typedvalues.MustParse(http.MethodPost),
+			HttpInputUri:    typedvalues.MustParse(ts.URL),
+			HttpInputBody:   typedvalues.MustParse(body),
+			HttpInputHeaders: typedvalues.MustParse(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, body, typedvalues.UnsafeFormat(out))
+	assert.Equal(t, body, typedvalues.MustFormat(out))
+}
+
+func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "expected error", 500)
+	}))
+	defer ts.Close()
+
+	fn := &FunctionHttp{}
+	body := "body"
+	out, err := fn.Invoke(&types.TaskInvocationSpec{
+		Inputs: map[string]*types.TypedValue{
+			HttpInputMethod: typedvalues.MustParse(http.MethodDelete),
+			HttpInputUri:    typedvalues.MustParse(ts.URL),
+			HttpInputBody:   typedvalues.MustParse(body),
+			HttpInputHeaders: typedvalues.MustParse(map[string]interface{}{
+				"Foo": "Bar",
+			}),
+		},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "expected error\n", string(typedvalues.MustFormat(out).([]byte)))
 }

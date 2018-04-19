@@ -44,7 +44,7 @@ func TestFormatRequest(t *testing.T) {
 	// Check body
 	bs, err := ioutil.ReadAll(target.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, "\""+body+"\"", string(bs))
+	assert.Equal(t, body, string(bs))
 
 	// Check headers
 	assert.Equal(t, headers["Header-Key"], target.Header["Header-Key"][0])

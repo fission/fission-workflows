@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 )
 
+// TODO move to more appropriate package
 func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.TypedValue {
 	val, ok := invoc.Status.Tasks[taskId]
 	if !ok {
@@ -17,7 +18,7 @@ func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.Ty
 		return nil
 	}
 
-	switch output.Type {
+	switch ValueType(output.Type) {
 	case TypeTask:
 		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
 			if dep, ok := outputTask.Spec.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
@@ -36,53 +37,6 @@ func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.Ty
 	return output
 }
 
-// MustParse transforms the value into a TypedValue or panics.
-func UnsafeParse(i interface{}) *types.TypedValue {
-	tv, err := Parse(i)
-	if err != nil {
-		panic(err)
-	}
-	return tv
-}
-
-// MustParse transforms the TypedValue into a value or panics.
-func UnsafeFormat(tv *types.TypedValue) interface{} {
-	i, err := Format(tv)
-	if err != nil {
-		panic(err)
-	}
-	return i
-}
-
-// TODO do not depend on json
-func ParseString(s string) *types.TypedValue {
-	return UnsafeParse("'" + s + "'")
-}
-
-func FormatString(t *types.TypedValue) (string, error) {
-	i, err := Format(t)
-	if err != nil {
-		return "", err
-	}
-	v, ok := i.(string)
-	if !ok {
-		return "", errors.New("invalid type")
-	}
-	return v, nil
-}
-
-func FormatBool(t *types.TypedValue) (bool, error) {
-	i, err := Format(t)
-	if err != nil {
-		return false, err
-	}
-	v, ok := i.(bool)
-	if !ok {
-		return false, errors.New("invalid type")
-	}
-	return v, nil
-}
-
 func FormatMap(t *types.TypedValue) (map[string]interface{}, error) {
 	i, err := Format(t)
 	if err != nil {
@@ -95,14 +49,14 @@ func FormatMap(t *types.TypedValue) (map[string]interface{}, error) {
 	return v, nil
 }
 
-func FormatNumber(t *types.TypedValue) (float64, error) {
+func FormatArray(t *types.TypedValue) ([]interface{}, error) {
 	i, err := Format(t)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	v, ok := i.(float64)
+	v, ok := i.([]interface{})
 	if !ok {
-		return 0, errors.New("invalid type")
+		return nil, errors.New("invalid type")
 	}
 	return v, nil
 }
@@ -111,6 +65,35 @@ type Inputs map[string]*types.TypedValue
 
 func Input(i interface{}) Inputs {
 	in := Inputs{}
-	in[types.INPUT_MAIN] = UnsafeParse(i)
+	in[types.INPUT_MAIN] = MustParse(i)
 	return in
+}
+
+func verifyTypedValue(v *types.TypedValue, acceptableTypes ...ValueType) error {
+	if v == nil {
+		return TypedValueErr{
+			src: v,
+			err: ErrUnsupportedType,
+		}
+	}
+	if !IsType(v, acceptableTypes...) {
+		return TypedValueErr{
+			src: v,
+			err: ErrUnsupportedType,
+		}
+	}
+	return nil
+}
+
+func IsType(v *types.TypedValue, ts ...ValueType) bool {
+	if v == nil {
+		return false
+	}
+	vt := ValueType(v.Type)
+	for _, t := range ts {
+		if t == vt {
+			return true
+		}
+	}
+	return false
 }

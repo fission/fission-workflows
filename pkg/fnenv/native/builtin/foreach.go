@@ -73,7 +73,7 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 		for inputKey, inputVal := range task.Inputs {
 			t.Input(inputKey, inputVal)
 		}
-		t.Input("_item", typedvalues.UnsafeParse(item))
+		t.Input("_item", typedvalues.MustParse(item))
 
 		wf.AddTask(fmt.Sprintf("do_%d", k), t)
 	}

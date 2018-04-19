@@ -60,7 +60,7 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVa
 
 	if times > 0 {
 		// TODO add context
-		return typedvalues.UnsafeParse(&types.WorkflowSpec{
+		return typedvalues.MustParse(&types.WorkflowSpec{
 			OutputTask: taskId(times - 1),
 			Tasks:      createRepeatTasks(doTask, times),
 		}), nil
@@ -78,7 +78,7 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 		if n > 0 {
 			prev := taskId(n - 1)
 			do.Require(prev)
-			do.Input(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
+			do.Input(RepeatInputPrev, typedvalues.MustParse(fmt.Sprintf("{output(%s)}", prev)))
 		}
 		tasks[id] = do
 	}

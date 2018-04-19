@@ -20,7 +20,7 @@ const (
 
 var (
 	ErrTimeOut      = errors.New("expression resolver timed out")
-	DefaultResolver = NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	DefaultResolver = NewJavascriptExpressionParser()
 )
 
 func Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error) {
@@ -38,17 +38,15 @@ type Function interface {
 }
 
 type JavascriptExpressionParser struct {
-	vm     *otto.Otto
-	parser typedvalues.Parser
+	vm *otto.Otto
 }
 
-func NewJavascriptExpressionParser(parser typedvalues.Parser) *JavascriptExpressionParser {
+func NewJavascriptExpressionParser() *JavascriptExpressionParser {
 	vm := otto.New()
 
 	// Load expression functions into Otto
 	return &JavascriptExpressionParser{
-		vm:     vm,
-		parser: parser,
+		vm: vm,
 	}
 }
 
@@ -94,7 +92,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 		return typedvalues.Parse(result)
 	}
 
-	if !typedvalues.IsExpression(expr) {
+	if !typedvalues.IsType(expr, typedvalues.TypeExpression) {
 		return expr, nil
 	}
 
@@ -120,7 +118,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 	}
 
 	i, _ := jsResult.Export() // Err is always nil
-	return oe.parser.Parse(i)
+	return typedvalues.Parse(i)
 }
 
 func injectFunctions(vm *otto.Otto, fns map[string]Function) {

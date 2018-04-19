@@ -9,26 +9,31 @@ import (
 )
 
 func TestFunctionSwitch_Invoke(t *testing.T) {
+	val := "case1Val"
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			SwitchInputCondition:   typedvalues.UnsafeParse("case1"),
-			"case1":                typedvalues.UnsafeParse("case1"),
-			SwitchInputDefaultCase: typedvalues.UnsafeParse("default"),
+			SwitchInputCondition: typedvalues.ParseString("case1"),
+			SwitchInputCases: typedvalues.MustParse([]interface{}{
+				switchCase("case1", val),
+			}),
+			SwitchInputDefaultCase: typedvalues.MustParse("default"),
 		},
 	}
 	out, err := fn.Invoke(spec)
 	assert.NoError(t, err)
-	assert.Equal(t, spec.Inputs["case1"], out)
+	assert.Equal(t, "case1Val", typedvalues.MustFormat(out))
 }
 
 func TestFunctionSwitch_InvokeDefaultCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			SwitchInputCondition:   typedvalues.UnsafeParse("case1"),
-			"case2":                typedvalues.UnsafeParse("case2"),
-			SwitchInputDefaultCase: typedvalues.UnsafeParse("default"),
+			SwitchInputCondition: typedvalues.ParseString("case1"),
+			SwitchInputCases: typedvalues.MustParse([]interface{}{
+				switchCase("case2", "case2"),
+			}),
+			SwitchInputDefaultCase: typedvalues.MustParse("default"),
 		},
 	}
 	out, err := fn.Invoke(spec)
@@ -40,8 +45,8 @@ func TestFunctionSwitch_InvokeNoCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			SwitchInputCondition: typedvalues.UnsafeParse("case1"),
-			"case2":              typedvalues.UnsafeParse("case2"),
+			SwitchInputCondition: typedvalues.MustParse("case1"),
+			"case2":              typedvalues.MustParse("case2"),
 		},
 	}
 	out, err := fn.Invoke(spec)
@@ -53,7 +58,7 @@ func TestFunctionSwitch_InvokeNoSwitch(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			"case2": typedvalues.UnsafeParse("case2"),
+			"case2": typedvalues.MustParse("case2"),
 		},
 	}
 	out, err := fn.Invoke(spec)

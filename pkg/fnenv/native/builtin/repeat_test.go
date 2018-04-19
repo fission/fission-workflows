@@ -11,14 +11,14 @@ import (
 func TestFunctionRepeat_Invoke(t *testing.T) {
 	taskToRepeat := &types.TaskSpec{
 		FunctionRef: Noop,
-		Inputs:      types.SingleDefaultInput(typedvalues.UnsafeParse("foo")),
+		Inputs:      types.SingleDefaultInput(typedvalues.MustParse("foo")),
 	}
 
 	repeatFn := &FunctionRepeat{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			RepeatInputDo:    typedvalues.UnsafeParse(taskToRepeat),
-			RepeatInputTimes: typedvalues.UnsafeParse(10),
+			RepeatInputDo:    typedvalues.MustParse(taskToRepeat),
+			RepeatInputTimes: typedvalues.MustParse(10),
 		},
 	}
 	result, err := repeatFn.Invoke(spec)

@@ -12,7 +12,7 @@ func TestFunctionFail_InvokeEmpty(t *testing.T) {
 	fn := &FunctionFail{}
 	out, err := fn.Invoke(&types.TaskInvocationSpec{})
 	assert.Nil(t, out)
-	assert.EqualError(t, err, typedvalues.UnsafeFormat(defaultErrMsg).(string))
+	assert.EqualError(t, err, typedvalues.MustFormat(defaultErrMsg).(string))
 
 }
 

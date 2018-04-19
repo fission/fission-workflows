@@ -11,30 +11,30 @@ import (
 func TestFunctionJavascript_InvokeMap(t *testing.T) {
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			JavascriptInputArgs: typedvalues.UnsafeParse(map[string]interface{}{
+			JavascriptInputArgs: typedvalues.MustParse(map[string]interface{}{
 				"left":  2,
 				"right": 5,
 			}),
-			JavascriptInputExpr: typedvalues.UnsafeParse("left * right"),
+			JavascriptInputExpr: typedvalues.MustParse("left * right"),
 		},
 	}
 
 	js := NewFunctionJavascript()
 	tv, err := js.Invoke(spec)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, int(typedvalues.UnsafeFormat(tv).(float64)))
+	assert.Equal(t, 10, int(typedvalues.MustFormat(tv).(float64)))
 }
 
 func TestFunctionJavascript_Invoke(t *testing.T) {
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			JavascriptInputArgs: typedvalues.UnsafeParse(10),
-			JavascriptInputExpr: typedvalues.UnsafeParse("arg * 2"),
+			JavascriptInputArgs: typedvalues.MustParse(10),
+			JavascriptInputExpr: typedvalues.MustParse("arg * 2"),
 		},
 	}
 
 	js := NewFunctionJavascript()
 	tv, err := js.Invoke(spec)
 	assert.NoError(t, err)
-	assert.Equal(t, 20, int(typedvalues.UnsafeFormat(tv).(float64)))
+	assert.Equal(t, 20, int(typedvalues.MustFormat(tv).(float64)))
 }

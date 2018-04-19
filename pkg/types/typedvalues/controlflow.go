@@ -1,44 +1,50 @@
 package typedvalues
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/proto"
 )
 
 const (
-	TypeTask     = "task"
-	TypeWorkflow = "workflow"
-)
-
-var (
-	ErrInvalidType = errors.New("invalid type")
+	TypeTask     ValueType = "task"
+	TypeWorkflow ValueType = "workflow"
 )
 
 type ControlFlowParserFormatter struct {
 }
 
-func (cf *ControlFlowParserFormatter) Parse(i interface{}, allowedTypes ...string) (*types.TypedValue, error) {
+func (pf *ControlFlowParserFormatter) Accepts() []ValueType {
+	return []ValueType{
+		TypeTask,
+		TypeWorkflow,
+	}
+}
+
+func (pf *ControlFlowParserFormatter) Parse(ctx Parser, i interface{}) (*types.TypedValue, error) {
 	switch cf := i.(type) {
 	case *types.TaskSpec:
 		return ParseTask(cf), nil
 	case *types.WorkflowSpec:
 		return ParseWorkflow(cf), nil
 	default:
-		return nil, fmt.Errorf("%s: %s", ErrInvalidType, cf)
+		return nil, TypedValueErr{
+			src: i,
+			err: ErrUnsupportedType,
+		}
 	}
 }
 
-func (cf *ControlFlowParserFormatter) Format(v *types.TypedValue) (interface{}, error) {
-	switch v.Type {
+func (pf *ControlFlowParserFormatter) Format(ctx Formatter, v *types.TypedValue) (interface{}, error) {
+	switch ValueType(v.Type) {
 	case TypeTask:
 		return FormatTask(v)
 	case TypeWorkflow:
 		return FormatWorkflow(v)
 	default:
-		return nil, fmt.Errorf("%s: %s", ErrInvalidType, v)
+		return nil, TypedValueErr{
+			src: v,
+			err: ErrUnsupportedType,
+		}
 	}
 }
 
@@ -48,7 +54,7 @@ func ParseTask(task *types.TaskSpec) *types.TypedValue {
 		panic(err)
 	}
 	return &types.TypedValue{
-		Type:  FormatType(TypeTask),
+		Type:  string(TypeTask),
 		Value: data,
 	}
 }
@@ -59,7 +65,7 @@ func ParseWorkflow(task *types.WorkflowSpec) *types.TypedValue {
 		panic(err)
 	}
 	return &types.TypedValue{
-		Type:  FormatType(TypeWorkflow),
+		Type:  string(TypeWorkflow),
 		Value: data,
 	}
 }
@@ -68,7 +74,10 @@ func FormatTask(v *types.TypedValue) (*types.TaskSpec, error) {
 	t := &types.TaskSpec{}
 	err := proto.Unmarshal(v.Value, t)
 	if err != nil {
-		return nil, err
+		return nil, TypedValueErr{
+			src: v,
+			err: err,
+		}
 	}
 	return t, nil
 }
@@ -77,14 +86,14 @@ func FormatWorkflow(v *types.TypedValue) (*types.WorkflowSpec, error) {
 	t := &types.WorkflowSpec{}
 	err := proto.Unmarshal(v.Value, t)
 	if err != nil {
-		return nil, err
+		return nil, TypedValueErr{
+			src: v,
+			err: err,
+		}
 	}
 	return t, nil
 }
 
-func IsControlFlowInput(tv *types.TypedValue) bool {
-	if tv == nil {
-		return false
-	}
-	return tv != nil && (tv.Type == TypeTask || tv.Type == TypeWorkflow)
+func IsControlFlow(v ValueType) bool {
+	return v == TypeTask || v == TypeWorkflow
 }

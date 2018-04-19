@@ -21,9 +21,9 @@ var rootScope = map[string]interface{}{
 
 func TestResolveTestRootScopePath(t *testing.T) {
 
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
-	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr("{$.currentScope.bit}"))
+	resolved, err := exprParser.Resolve(rootScope, "", mustParseExpr("{$.currentScope.bit}"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,9 +39,9 @@ func TestResolveTestRootScopePath(t *testing.T) {
 
 func TestResolveTestScopePath(t *testing.T) {
 	currentTask := "fooTask"
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
-	resolved, err := exprParser.Resolve(rootScope, currentTask, typedvalues.Expr(varCurrentTask))
+	resolved, err := exprParser.Resolve(rootScope, currentTask, mustParseExpr("{"+varCurrentTask+"}"))
 	assert.NoError(t, err)
 
 	resolvedString, err := typedvalues.Format(resolved)
@@ -52,10 +52,10 @@ func TestResolveTestScopePath(t *testing.T) {
 
 func TestResolveLiteral(t *testing.T) {
 
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
 	expected := "foobar"
-	resolved, err := exprParser.Resolve(rootScope, "output", typedvalues.Expr(fmt.Sprintf("'%s'", expected)))
+	resolved, err := exprParser.Resolve(rootScope, "output", mustParseExpr(fmt.Sprintf("{'%s'}", expected)))
 	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
@@ -64,11 +64,11 @@ func TestResolveLiteral(t *testing.T) {
 
 func TestResolveTransformation(t *testing.T) {
 
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
 	src := "foobar"
 	expected := strings.ToUpper(src)
-	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr(fmt.Sprintf("'%s'.toUpperCase()", src)))
+	resolved, err := exprParser.Resolve(rootScope, "", mustParseExpr(fmt.Sprintf("{'%s'.toUpperCase()}", src)))
 	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
@@ -77,9 +77,9 @@ func TestResolveTransformation(t *testing.T) {
 
 func TestResolveInjectedFunction(t *testing.T) {
 
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
-	resolved, err := exprParser.Resolve(rootScope, "", typedvalues.Expr("uid()"))
+	resolved, err := exprParser.Resolve(rootScope, "", mustParseExpr("{uid()}"))
 	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
@@ -138,11 +138,20 @@ func TestScope(t *testing.T) {
 		},
 	})
 
-	exprParser := NewJavascriptExpressionParser(typedvalues.DefaultParserFormatter)
+	exprParser := NewJavascriptExpressionParser()
 
-	resolved, err := exprParser.Resolve(actualScope, "fooTask", typedvalues.Expr("{$.Tasks.fooTask.Output}"))
+	resolved, err := exprParser.Resolve(actualScope, "fooTask", mustParseExpr("{$.Tasks.fooTask.Output}"))
 	assert.NoError(t, err)
 
 	resolvedString, _ := typedvalues.Format(resolved)
 	assert.Equal(t, expected, resolvedString)
+}
+
+func mustParseExpr(s string) *types.TypedValue {
+	tv := typedvalues.MustParse(s)
+	if !typedvalues.IsType(tv, typedvalues.TypeExpression) {
+		panic(fmt.Sprintf("Should be an expression, but was '%v'", tv.Type))
+	}
+
+	return tv
 }

@@ -13,7 +13,7 @@ func TestFunctionNoopPassInput(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				NoopInput: typedvalues.UnsafeParse(expected),
+				NoopInput: typedvalues.MustParse(expected),
 			},
 		},
 		expected)
@@ -33,9 +33,9 @@ func TestFunctionNoopObject(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo":            typedvalues.UnsafeParse(true),
-				"bar":            typedvalues.UnsafeParse(false),
-				types.INPUT_MAIN: typedvalues.UnsafeParse("hello"),
+				"foo":            typedvalues.MustParse(true),
+				"bar":            typedvalues.MustParse(false),
+				types.INPUT_MAIN: typedvalues.MustParse("hello"),
 			},
 		},
 		"hello")

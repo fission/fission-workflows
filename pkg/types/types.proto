@@ -235,3 +235,15 @@ message FnRef {
     // ID is the runtime-specific identifier of the function.
     string ID = 3;
 }
+
+// Utility wrapper for a TypedValue map
+message TypedValueMap {
+    map<string,TypedValue> Value = 1;
+}
+
+// Utility wrapper for a TypedValue list
+message TypedValueList {
+    repeated TypedValue Value = 1;
+}
+
+

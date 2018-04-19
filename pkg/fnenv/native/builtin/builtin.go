@@ -3,7 +3,6 @@ package builtin
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
@@ -27,28 +26,21 @@ var DefaultBuiltinFunctions = map[string]native.InternalFunction{
 }
 
 // ensureInput verifies that the input for the given key exists and is of one of the provided types.
-func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...string) (*types.TypedValue, error) {
+func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...typedvalues.ValueType) (*types.TypedValue, error) {
 
-	i, ok := inputs[key]
+	tv, ok := inputs[key]
 	if !ok {
 		return nil, fmt.Errorf("input '%s' is not set", key)
 	}
 
 	if len(validTypes) > 0 {
-		var valid bool
-		for _, t := range validTypes {
-			if strings.Contains(i.Type, t) {
-				valid = true
-				break
-			}
-		}
+		valid := typedvalues.IsType(tv, validTypes...)
 		if !valid {
-			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %s)", key,
-				strings.Join(validTypes, "|"))
+			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %v)", key, validTypes)
 		}
 	}
 
-	return i, nil
+	return tv, nil
 }
 
 func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types.TaskInvocationSpec, expected interface{}) {

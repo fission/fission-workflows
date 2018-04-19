@@ -87,7 +87,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 
 	// TODO to a middleware component
 	if fnResult.Output != nil {
-		switch fnResult.Output.Type {
+		switch typedvalues.ValueType(fnResult.Output.Type) {
 		case typedvalues.TypeTask:
 			logrus.Info("Adding dynamic task")
 			taskSpec, err := typedvalues.FormatTask(fnResult.Output)

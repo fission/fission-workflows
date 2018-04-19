@@ -13,7 +13,7 @@ func TestFunctionComposePassInput(t *testing.T) {
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				ComposeInput: typedvalues.UnsafeParse(expected),
+				ComposeInput: typedvalues.MustParse(expected),
 			},
 		},
 		expected)
@@ -33,9 +33,9 @@ func TestFunctionComposeObject(t *testing.T) {
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo":     typedvalues.UnsafeParse(true),
-				"bar":     typedvalues.UnsafeParse(false),
-				"default": typedvalues.UnsafeParse("hello"),
+				"foo":     typedvalues.MustParse(true),
+				"bar":     typedvalues.MustParse(false),
+				"default": typedvalues.MustParse("hello"),
 			},
 		},
 		map[string]interface{}{

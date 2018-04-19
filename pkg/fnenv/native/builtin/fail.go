@@ -13,8 +13,15 @@ const (
 	FailInputMsg = types.INPUT_MAIN
 )
 
-var defaultErrMsg = typedvalues.UnsafeParse("fail function triggered")
+var defaultErrMsg = typedvalues.MustParse("fail function triggered")
 
+// FunctionFail is a function that always fails. This can be used to short-circuit workflows in
+// specific branches. Optionally you can provide a custom message to the failure.
+//
+// For example:
+// foo:
+//   run: fail
+//   inputs: "all has failed"
 type FunctionFail struct{}
 
 func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

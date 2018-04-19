@@ -81,7 +81,7 @@ tasks:
 		assert.Equal(t, int(wf.Tasks[id].Await), len(task.Requires))
 
 		acmeDefaultInput := wf.Tasks["acme"].Inputs["default"]
-		assert.Equal(t, typedvalues.FormatType(typedvalues.FORMAT_JSON, typedvalues.TYPE_OBJECT), acmeDefaultInput.Type)
+		assert.Equal(t, typedvalues.TypeMap, acmeDefaultInput.Type)
 		i, err := typedvalues.Format(acmeDefaultInput)
 		assert.NoError(t, err)
 		assert.Equal(t, i, map[string]interface{}{
@@ -121,6 +121,42 @@ tasks:
 	assert.NoError(t, err)
 	assert.Equal(t, "$.tasks.inner.dynamic", innerWf.OutputTask)
 	assert.Equal(t, "v42", innerWf.ApiVersion)
-	assert.Equal(t, "foobar", typedvalues.UnsafeFormat(innerWf.Tasks["inner"].Inputs["default"]))
+	assert.Equal(t, "foobar", typedvalues.MustFormat(innerWf.Tasks["inner"].Inputs["default"]))
 	assert.Equal(t, "dynamic", innerWf.Tasks["inner"].FunctionRef)
+}
+
+func TestParseWorkflowWithArray(t *testing.T) {
+
+	data := `
+tasks:
+  taskWithArray:
+    run: bla
+    inputs:
+      cases:
+      - case: a
+        value: b
+      - case: b
+        value: c
+`
+
+	wf, err := Parse(strings.NewReader(data))
+	assert.NoError(t, err)
+	assert.NotNil(t, wf)
+}
+
+func TestParseWorkflowWithMap(t *testing.T) {
+
+	data := `
+tasks:
+  taskWithArray:
+    run: bla
+    inputs:
+      cases:
+        a: b
+        c: d
+`
+
+	wf, err := Parse(strings.NewReader(data))
+	assert.NoError(t, err)
+	assert.NotNil(t, wf)
 }
