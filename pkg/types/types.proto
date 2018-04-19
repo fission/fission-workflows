@@ -216,8 +216,7 @@ message ObjectMetadata {
 message TypedValue {
     string type = 1; // (string, bool, int...)
     bytes value = 2;
-    // TODO encoding (json, xml, binary)
-    // TODO annotations (content-type: application/xml)
+    map<string, string> labels = 3;
 }
 
 message Error {

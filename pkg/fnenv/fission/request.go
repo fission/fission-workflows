@@ -2,7 +2,6 @@ package fission
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
@@ -53,12 +53,12 @@ func parseRequest(r *http.Request, target map[string]*types.TypedValue) error {
 	logrus.WithField("url", r.URL).WithField(headerContentType, contentType).Info("Request Content-Type")
 
 	// Map body to "main" input
-	bodyInput, err := parseBody(r.Body, contentType)
+	bodyInput, err := httpconv.ParseBody(r.Body, contentType)
 	defer r.Body.Close()
 	if err != nil {
 		return fmt.Errorf("failed to parse request: %v", err)
 	}
-	target[types.INPUT_MAIN] = bodyInput
+	target[types.INPUT_MAIN] = &bodyInput
 
 	// Map query to "query.x"
 	err = parseQuery(r, target)
@@ -79,32 +79,6 @@ func parseRequest(r *http.Request, target map[string]*types.TypedValue) error {
 	}
 
 	return nil
-}
-
-// parseBody maps the body from a request to the "main" key in the target map
-func parseBody(body io.Reader, contentType string) (*types.TypedValue, error) {
-	bs, err := ioutil.ReadAll(body)
-	if err != nil {
-		return nil, errors.New("failed to read body")
-	}
-
-	var i interface{} = bs
-	// TODO fix this, remove the hardcoded JSON transform
-	if strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/json") {
-		err = json.Unmarshal(bs, &i)
-		if err != nil {
-			logrus.WithField("body", len(bs)).Infof("Input is not json: %v", err)
-			i = bs
-		}
-	}
-
-	parsedInput, err := typedvalues.Parse(i)
-	if err != nil {
-		logrus.Errorf("Failed to parse body: %v", err)
-		return parsedInput, errors.New("failed to parse body")
-	}
-
-	return parsedInput, nil
 }
 
 // parseHeaders maps the headers from a request to the "headers" key in the target map

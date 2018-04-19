@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fission/fission-workflows/pkg/types"
@@ -78,7 +79,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 
 	// Parse output
-	output, err := parseBody(resp.Body, resp.Header.Get("Content-Type"))
+	output, err := httpconv.ParseBody(resp.Body, resp.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse output: %v", err)
 	}
@@ -89,7 +90,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
-		msg, _ := typedvalues.Format(output)
+		msg, _ := typedvalues.Format(&output)
 		ctxLog.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
@@ -102,7 +103,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 	return &types.TaskInvocationStatus{
 		Status: types.TaskInvocationStatus_SUCCEEDED,
-		Output: output,
+		Output: &output,
 	}, nil
 }
 

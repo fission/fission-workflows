@@ -28,8 +28,8 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 			panic("Header 'Foo: Bar' not present")
 		}
 
-		w.Header().Set("Content-Type", httpDefaultContentType)
-		fmt.Fprint(w, "\""+string(data)+"\"")
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, string(data))
 	}))
 	defer ts.Close()
 
@@ -37,10 +37,10 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			HttpInputMethod: typedvalues.MustParse(http.MethodPost),
-			HttpInputUri:    typedvalues.MustParse(ts.URL),
-			HttpInputBody:   typedvalues.MustParse(body),
-			HttpInputHeaders: typedvalues.MustParse(map[string]interface{}{
+			types.INPUT_METHOD: typedvalues.MustParse(http.MethodPost),
+			HttpInputUrl:       typedvalues.MustParse(ts.URL),
+			types.INPUT_MAIN:   typedvalues.MustParse(body),
+			types.INPUT_HEADERS: typedvalues.MustParse(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
@@ -60,14 +60,14 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			HttpInputMethod: typedvalues.MustParse(http.MethodDelete),
-			HttpInputUri:    typedvalues.MustParse(ts.URL),
-			HttpInputBody:   typedvalues.MustParse(body),
-			HttpInputHeaders: typedvalues.MustParse(map[string]interface{}{
+			types.INPUT_METHOD: typedvalues.MustParse(http.MethodDelete),
+			HttpInputUrl:       typedvalues.MustParse(ts.URL),
+			types.INPUT_MAIN:   typedvalues.MustParse(body),
+			types.INPUT_HEADERS: typedvalues.MustParse(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, "expected error\n", string(typedvalues.MustFormat(out).([]byte)))
+	assert.Equal(t, "expected error\n", typedvalues.MustFormat(out))
 }
