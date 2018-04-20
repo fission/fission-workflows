@@ -214,7 +214,7 @@ message ObjectMetadata {
 
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
 message TypedValue {
-    string type = 1; // (string, bool, int...)
+    string type = 1;
     bytes value = 2;
     map<string, string> labels = 3;
 }

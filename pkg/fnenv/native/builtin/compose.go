@@ -11,6 +11,45 @@ const (
 	ComposeInput = types.INPUT_MAIN
 )
 
+/*
+FunctionCompose provides a way to merge, modify and create complex values from multiple inputs.
+Other than outputting the composed inputs, compose does not perform any other operation.
+This is useful when you want to merge the outputs from different tasks (for example in a MapReduce or scatter-gather
+scenario).
+
+**Specification**
+
+**input**   | required | types  | description
+------------|----------|--------|---------------------------------
+default     | no       | *      | the inputs to be merged into a single map or outputted if none other.
+*           | no       | *      | the inputs to be merged into a single map.
+
+**Note: custom message does not yet propagate back to the user**
+
+**output** (*) The composed map, single default input, or nothing.
+
+**Example**
+
+Compose with a single input, similar to `noop`:
+```yaml
+# ...
+foo:
+  run: compose
+  inputs: "all has failed"
+# ...
+```
+
+Composing a map inputs:
+```yaml
+# ...
+foo:
+  run: compose
+  inputs:
+    foo: bar
+    fission: workflows
+# ...
+```
+*/
 type FunctionCompose struct{}
 
 func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

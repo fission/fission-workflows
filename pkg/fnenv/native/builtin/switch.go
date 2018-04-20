@@ -18,6 +18,40 @@ const (
 	SwitchCaseValue = "action"
 )
 
+/*
+Switch is very similar to how switch-constructs are implemented in most languages.
+In this case the switch is limited to evaluating string keys.
+The string-switch is matched to one of the cases, or - if none of those match - the default case.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+switch          | yes      | string            | The string to match to one of the cases.
+cases           | no       | list              | List of cases to match to.
+default         | no       | *                 | The default value if there is no matching case.
+
+**output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
+
+**Example**
+
+```yaml
+# ...
+SwitchExample:
+  run: switch
+  inputs:
+    switch: "{ param() }"
+    cases:
+    - case: foo
+      action: bar
+    - case: ac
+      action: me
+    default: 42
+# ...
+```
+
+A complete example of this function can be found in the [switchwhale](../examples/whales/switchwhale.wf.yaml) example.
+*/
 type FunctionSwitch struct{}
 
 func (fn *FunctionSwitch) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

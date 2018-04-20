@@ -109,7 +109,7 @@ For example `$.Workflow.Status` is valid, whereas `$.workflow.Status` will error
 Note that in the case of `inputs`, if there is a single input without an explicit key defined, it will be stored 
 under the default key: `default`.
 
-### Built-in Functions
+### Built-in Expression Functions
 Besides the standard library of JavaScript, the expression interpreter provides a couple of additional utility 
 functions.
 These functions do not have access to any additional functionality not provided to the user; they are generally 

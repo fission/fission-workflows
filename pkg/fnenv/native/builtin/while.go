@@ -22,11 +22,44 @@ var (
 	ErrLimitExceeded = errors.New("while limit exceeded")
 )
 
-// FunctionWhile consists of a control flow construct that will execute a specific task as long as the condition has
-// not been met.
-// The results of the executed action can be accessed using the task ID "action".
-//
-// NOTE: the first evaluation is in a different scope than the next evaluations, which can be confusing. TODO fix this.
+/*
+FunctionWhile consists of a control flow construct that will execute a specific task as long as the condition has
+not been met.
+The results of the executed action can be accessed using the task ID "action".
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+expr            | yes      | bool              | The condition which determines whether to continue or halt the loop.
+do              | yes      | task/workflow     | The action to execute on each iteration.
+limit           | no       | number            | The max number of iterations of the loop. (default: unlimited)
+
+Notes:
+- we currently cannot reevaluate the expr.
+There needs to be support for looking up the source of an expression.
+Maybe we can add the original expression to the labels.
+- we might want to have a `prev` value here to reference the output of the previous iteration.
+
+
+**output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
+
+**Example**
+
+```yaml
+# ...
+SwitchExample:
+  run: while
+  inputs:
+    expr: "{ 42 > 0 }"
+    limit: 10
+    do:
+      run: noop
+# ...
+```
+
+A complete example of this function can be found in the [whilewhale](../examples/whales/whilewhale.wf.yaml) example.
+*/
 type FunctionWhile struct{}
 
 func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

@@ -1,0 +1,1 @@
+# Foreachwhale loops over an array of elements.

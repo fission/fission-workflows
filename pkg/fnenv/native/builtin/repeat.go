@@ -16,6 +16,38 @@ const (
 	RepeatInputPrev  = "prev"
 )
 
+/*
+FunctionRepeat, as the name suggests, repeatedly executes a specific function.
+The repeating is based on a static number, and is done sequentially.
+The subsequent tasks can access the output of the previous task with `prev`.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+times           | yes      | number            | Number of times to repeat the task.
+do              | yes      | task              | The task to execute.
+
+Note: the task `do` gets the output of the previous task injected into `prev`.
+
+**output** (*) The output of the last task.
+
+**Example**
+
+```yaml
+# ...
+RepeatExample:
+  run: repeat
+  inputs:
+    times: 5
+    do:
+      run: noop
+      inputs: { task().prev + 1 }}
+# ...
+```
+
+A complete example of this function can be found in the [repeatwhale](../examples/whales/repeatwhale.wf.yaml) example.
+*/
 // TODO minor: chose between unrolled loop and dynamic loop based on number of tasks for performance
 type FunctionRepeat struct{}
 
@@ -78,6 +110,7 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 		if n > 0 {
 			prev := taskId(n - 1)
 			do.Require(prev)
+			// TODO move prev to a reserved namespace, to avoid conflicts
 			do.Input(RepeatInputPrev, typedvalues.MustParse(fmt.Sprintf("{output(%s)}", prev)))
 		}
 		tasks[id] = do

@@ -16,6 +16,41 @@ const (
 	errTimeout          = "javascript time out"
 )
 
+/*
+FunctionJavascript allows you to create a task that evaluates an arbitrary JavaScript expression.
+The implementation is similar to the inline evaluation of JavaScript in [expressions](./expressions.md) in inputs.
+In that sense this implementations does not offer more functionality than inline expressions.
+However, as it allows you to implement the entire task in JavaScript, this function is useful for prototyping and
+stubbing particular functions.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+expr            | yes      | string            | The JavaScript expression
+args            | no       | *                 | The arguments that need to be present in the expression.
+
+Note: the `expr` is of type `string` - not a `expression` - to prevent the workflow engine from evaluating the
+expression prematurely.
+
+**output** (*) The output of the expression.
+
+**Example**
+
+```yaml
+# ...
+JsExample:
+  run: javascript
+  inputs:
+    expr: "a ^ b"
+    args:
+      a: 42
+      b: 10
+# ...
+```
+
+A complete example of this function can be found in the [fibonacci](../examples/misc/fibonacci.wf.yaml) example.
+*/
 type FunctionJavascript struct {
 	vm *otto.Otto
 }

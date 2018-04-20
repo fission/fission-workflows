@@ -21,7 +21,42 @@ const (
 	httpDefaultProtocol = "http"
 )
 
-// FunctionHttp supports simple HTTP calls.
+/*
+HttpFunction is a general utility function to perform simple HTTP requests.
+It is useful for prototyping and managing low overhead HTTP requests.
+To this end it offers basic functionality, such as setting headers, query, method, url, and body inputs.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+url/default     | yes      | string            | URL of the request.
+headers         | no       | map[string|string | The action to perform for every element.
+content-type    | no       | string            | Force a specific content-type for the request.
+method          | no       | string            | HTTP Method of the request. (default: GET)
+body            | no       | *                 | The body of the request. (default: application/octet-stream)
+
+Unless the content type is specified explicitly, the workflow engine will infer the content-type based on the body.
+
+**output** (*) the body of the response.
+
+Note: currently you cannot access the metadata of the response.
+
+**Example**
+
+```yaml
+# ...
+httpExample:
+  run: http
+  inputs:
+    url: http://fission.io
+    method: post
+    body: "foo"
+# ...
+```
+
+A complete example of this function can be found in the [httpwhale](../examples/whales/httpwhale.wf.yaml) example.
+*/
 type FunctionHttp struct{}
 
 func (fn *FunctionHttp) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
