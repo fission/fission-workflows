@@ -2,7 +2,6 @@ package expr
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
@@ -61,10 +60,9 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 		}
 	}()
 
-	// TODO fix and add array
 	// Handle composites
-	if strings.HasSuffix(expr.Type, "object") {
-		logrus.WithField("expr", expr).Info("Resolving object...")
+	if typedvalues.IsType(expr, typedvalues.TypeMap) {
+		logrus.WithField("expr", expr).Info("Resolving map...")
 		i, err := typedvalues.Format(expr)
 		if err != nil {
 			return nil, err
@@ -88,6 +86,35 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 				return nil, err
 			}
 			result[k] = actualVal
+		}
+		return typedvalues.Parse(result)
+	}
+
+	if typedvalues.IsType(expr, typedvalues.TypeList) {
+		logrus.WithField("expr", expr).Info("Resolving list...")
+		i, err := typedvalues.Format(expr)
+		if err != nil {
+			return nil, err
+		}
+
+		result := []interface{}{}
+		obj := i.([]interface{})
+		for _, v := range obj {
+			field, err := typedvalues.Parse(v)
+			if err != nil {
+				return nil, err
+			}
+
+			resolved, err := oe.Resolve(rootScope, currentTask, field)
+			if err != nil {
+				return nil, err
+			}
+
+			actualVal, err := typedvalues.Format(resolved)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, actualVal)
 		}
 		return typedvalues.Parse(result)
 	}
