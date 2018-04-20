@@ -2,6 +2,8 @@ package controller
 
 import (
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type evalContext struct {
@@ -50,7 +52,10 @@ func (el *RuleExceededErrorCount) Eval(ec EvalContext) Action {
 	var errorCount int
 	state := ec.EvalState()
 	for i := state.Count() - 1; i >= 0; i -= 1 {
-		record, _ := state.Get(i)
+		record, ok := state.Get(i)
+		if !ok {
+			panic("Illegal modification")
+		}
 		if record.Error == nil {
 			break
 		}
@@ -58,6 +63,7 @@ func (el *RuleExceededErrorCount) Eval(ec EvalContext) Action {
 	}
 
 	if errorCount > el.MaxErrorCount {
+		logrus.Infof("Error count exceeded, evaluating %T.", el.OnExceeded)
 		return evalIfNotNil(el.OnExceeded, ec)
 	}
 	return evalIfNotNil(el.OnNotExceeded, ec)

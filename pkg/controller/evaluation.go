@@ -116,7 +116,7 @@ func (e *EvalState) Count() int {
 func (e *EvalState) Get(i int) (EvalRecord, bool) {
 	e.dataLock.RLock()
 	defer e.dataLock.RUnlock()
-	if len(e.log) > i {
+	if i >= len(e.log) {
 		return EvalRecord{}, false
 	}
 	return e.log[i], true
