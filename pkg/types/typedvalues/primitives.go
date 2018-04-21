@@ -1,6 +1,8 @@
 package typedvalues
 
 import (
+	"reflect"
+
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -80,7 +82,6 @@ func (pf *NumberParserFormatter) Accepts() []ValueType {
 
 func (pf *NumberParserFormatter) Parse(ctx Parser, i interface{}) (*types.TypedValue, error) {
 	var f float64
-	// TODO annotate typedvalue with additional type info
 	switch t := i.(type) {
 	case float32:
 		f = float64(t)
@@ -96,7 +97,11 @@ func (pf *NumberParserFormatter) Parse(ctx Parser, i interface{}) (*types.TypedV
 			err: ErrUnsupportedType,
 		}
 	}
-	return ParseNumber(f), nil
+	tv := ParseNumber(f)
+
+	t := reflect.TypeOf(i)
+	tv.SetLabel("original_type", t.String())
+	return tv, nil
 }
 
 func (pf *NumberParserFormatter) Format(ctx Formatter, v *types.TypedValue) (interface{}, error) {
@@ -124,10 +129,7 @@ func FormatNumber(v *types.TypedValue) (float64, error) {
 		}
 	}
 	if v.Value == nil {
-		return 0, TypedValueErr{
-			src: v,
-			err: ErrValueConversion,
-		}
+		return 0, nil
 	}
 	w := &wrappers.DoubleValue{}
 	err := proto.Unmarshal(v.Value, w)
@@ -217,12 +219,6 @@ func FormatString(v *types.TypedValue) (string, error) {
 		return "", TypedValueErr{
 			src: v,
 			err: ErrUnsupportedType,
-		}
-	}
-	if v.Value == nil {
-		return "", TypedValueErr{
-			src: v,
-			err: ErrValueConversion,
 		}
 	}
 	return string(v.Value), nil
