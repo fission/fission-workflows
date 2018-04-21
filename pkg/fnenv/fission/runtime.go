@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
@@ -15,9 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 
 	executor "github.com/fission/fission/executor/client"
-	"github.com/fission/fission/router"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 var log = logrus.WithField("component", "fnenv.fission")
@@ -26,6 +23,7 @@ var log = logrus.WithField("component", "fnenv.fission")
 // to invoke Fission functions.
 type FunctionEnv struct {
 	executor         *executor.Client
+	routerUrl        string
 	timedExecService *TimedExecPool
 }
 
@@ -35,9 +33,10 @@ const (
 	provisionDuration = time.Duration(500) - time.Millisecond
 )
 
-func NewFunctionEnv(executor *executor.Client) *FunctionEnv {
+func NewFunctionEnv(executor *executor.Client, routerUrl string) *FunctionEnv {
 	return &FunctionEnv{
-		executor: executor,
+		executor:  executor,
+		routerUrl: routerUrl,
 	}
 }
 
@@ -56,26 +55,30 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 	fnRef := *spec.FnRef
 
-	reqUrl, err := fe.getFnUrl(fnRef)
+	//reqUrl, err := fe.getFnUrl(fnRef)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	// Construct request and add body
-	ctxLog.Infof("Invoking Fission function: '%v'.", reqUrl)
-	req, err := http.NewRequest(defaultHttpMethod, reqUrl.String(), nil)
+	url := fe.createRouterUrl(fnRef)
+	req, err := http.NewRequest(defaultHttpMethod, url, nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to make request for '%v': %v", reqUrl, err))
+		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
 	}
 
 	// Map task inputs to request
 	formatRequest(req, spec.Inputs)
 
 	// Add parameters normally added by Fission
-	meta := createFunctionMeta(fnRef)
-	router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
+	//meta := createFunctionMeta(fnRef)
+	//router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
 
 	// Perform request
+	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error for reqUrl '%v': %v", reqUrl, err)
+		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}
 
 	// Parse output
@@ -84,14 +87,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return nil, fmt.Errorf("failed to parse output: %v", err)
 	}
 
-	ctxLog.Infof("[response][status]: %v", meta.Name, resp.StatusCode)
-	ctxLog.Infof("[response][Content-Type]: %v ", meta.Name, resp.Header.Get("Content-Type"))
-	ctxLog.Debugf("[%s][output]: %v", meta.Name, output)
+	ctxLog.Infof("[%s][status]: %v", fnRef.ID, resp.StatusCode)
+	ctxLog.Infof("[%s][Content-Type]: %v ", fnRef.ID, resp.Header.Get("Content-Type"))
+	ctxLog.Infof("[%s][output]: '%s'", fnRef.ID, typedvalues.MustFormat(&output))
 
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
 		msg, _ := typedvalues.Format(&output)
-		ctxLog.Warn("[%s] Failed %v: %v", resp.StatusCode, msg)
+		ctxLog.Warnf("[%s] Failed %v: %v", resp.StatusCode, msg)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{
@@ -145,14 +148,13 @@ func (fe *FunctionEnv) getFnUrl(fn types.FnRef) (*url.URL, error) {
 }
 
 func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
-	parts := strings.SplitN(fn.ID, "-", 2)
-	if len(parts) < 2 {
-		panic(fmt.Sprintf("invalid function ref for kubernetes object: '%v'", fn))
-	}
 
 	return &metav1.ObjectMeta{
-		Name:      parts[0],
-		UID:       k8stypes.UID(parts[1]),
+		Name:      fn.ID,
 		Namespace: metav1.NamespaceDefault,
 	}
+}
+
+func (fe *FunctionEnv) createRouterUrl(fn types.FnRef) string {
+	return fe.routerUrl + "/fission-function/" + fn.ID
 }

@@ -245,7 +245,7 @@ func toString(tv *types.TypedValue) string {
 	}
 	i, err := typedvalues.Format(tv)
 	if err != nil {
-		logrus.Warn("Failed to format input: %v", err)
+		logrus.Warnf("Failed to format input: %v", err)
 	}
 
 	return fmt.Sprintf("%v", i)

@@ -56,6 +56,7 @@ type Options struct {
 type FissionOptions struct {
 	ExecutorAddress string
 	ControllerAddr  string
+	RouterAddr      string
 }
 
 // Run serves enabled components in a blocking way
@@ -100,7 +101,7 @@ func Run(ctx context.Context, opts *Options) error {
 			"controller": opts.Fission.ControllerAddr,
 			"executor":   opts.Fission.ExecutorAddress,
 		}).Infof("Using Function Runtime: Fission")
-		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress)
+		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress, opts.Fission.RouterAddr)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
 
@@ -201,9 +202,9 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 	return native.NewFunctionEnv(builtin.DefaultBuiltinFunctions)
 }
 
-func setupFissionFunctionRuntime(executorAddr string) *fission.FunctionEnv {
+func setupFissionFunctionRuntime(executorAddr string, routerAddr string) *fission.FunctionEnv {
 	client := executor.MakeClient(executorAddr)
-	return fission.NewFunctionEnv(client)
+	return fission.NewFunctionEnv(client, routerAddr)
 }
 
 func setupFissionFunctionResolver(controllerAddr string) *fission.Resolver {
