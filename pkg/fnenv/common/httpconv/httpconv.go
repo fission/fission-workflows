@@ -21,11 +21,12 @@ const (
 	inputContentType    = "content-type"
 	headerContentType   = "Content-Type"
 	contentTypeJson     = "application/json"
-	contentTypeText     = "plain/text"
-	contentTypeDefault  = "application/octet-stream"
+	contentTypeBytes    = "application/octet-stream"
+	contentTypeText     = "text/plain"
 	contentTypeTask     = "application/vnd.fission.workflows.workflow" // Default format: protobuf, +json for json
 	contentTypeWorkflow = "application/vnd.fission.workflows.task"     // Default format: protobuf, +json for json
 	contentTypeProtobuf = "application/protobuf"                       // Default format: protobuf, +json for json
+	contentTypeDefault  = contentTypeText
 	methodDefault       = http.MethodGet
 )
 
@@ -105,7 +106,7 @@ func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 	default:
 		// In other cases do not attempt to interpret the data
 		fallthrough
-	case contentTypeDefault:
+	case contentTypeBytes:
 		tv = *typedvalues.ParseBytes(bs)
 	}
 
@@ -264,7 +265,7 @@ func FormatBody(value types.TypedValue, contentType string) ([]byte, error) {
 		}
 	default:
 		fallthrough
-	case contentTypeDefault:
+	case contentTypeBytes:
 		var ok bool
 		bs, ok = i.([]byte)
 		if !ok {
@@ -306,7 +307,7 @@ func DetermineContentType(inputs map[string]*types.TypedValue) string {
 	}
 
 	// Finally, use default
-	return contentTypeDefault
+	return contentTypeBytes
 }
 
 // TODO support multi-headers at some point
