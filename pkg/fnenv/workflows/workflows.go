@@ -69,8 +69,8 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 }
 
-func CreateFnRef(wfId string) *types.FnRef {
-	return &types.FnRef{
+func CreateFnRef(wfId string) types.FnRef {
+	return types.FnRef{
 		Runtime: Name,
 		ID:      wfId,
 	}

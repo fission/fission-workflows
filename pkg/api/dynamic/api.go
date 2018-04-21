@@ -59,15 +59,18 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 		return err
 	}
 
+	// Create function reference to workflow
+	wfRef := workflows.CreateFnRef(wfId)
+
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
-	proxyTaskSpec.FunctionRef = wfId
+	proxyTaskSpec.FunctionRef = wfRef.Format()
 	proxyTaskSpec.Input("_parent", typedvalues.ParseString(invocationId))
 	proxyTaskId := parentTaskId + "_child"
 	proxyTask := types.NewTask(proxyTaskId, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec
 	proxyTask.Status.Status = types.TaskStatus_READY
-	proxyTask.Status.FnRef = workflows.CreateFnRef(wfId)
+	proxyTask.Status.FnRef = &wfRef
 
 	// Ensure that the only link of the dynamic task is with its parent
 	proxyTaskSpec.Requires = map[string]*types.TaskDependencyParameters{
@@ -82,6 +85,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	}
 
 	// Submit added task to workflow invocation
+	// TODO replace Task with TaskSpec + shortcircuit resolving of function (e.g. special label on fnref)
 	return ap.wfiApi.AddTask(invocationId, proxyTask)
 
 }
