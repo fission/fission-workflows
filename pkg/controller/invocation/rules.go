@@ -127,11 +127,14 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	tasks := types.GetTasks(wf, wfi)
 	var err error
 	finished := true
+	success := true
 	for id := range tasks {
 		t, ok := wfi.Status.Tasks[id]
 		if !ok || !t.Status.Finished() {
 			finished = false
 			break
+		} else {
+			success = success && t.Status.Status == types.TaskInvocationStatus_SUCCEEDED
 		}
 	}
 	if finished {
@@ -147,9 +150,15 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 		}
 
 		// TODO extract to action
-		err = cc.InvocationApi.MarkCompleted(wfi.Id(), finalOutput)
-		return &controller.ActionError{
-			Err: err,
+		if success {
+			err = cc.InvocationApi.MarkCompleted(wfi.Id(), finalOutput)
+		} else {
+			err = cc.InvocationApi.Fail(wfi.Id(), errors.New("not all tasks succeeded"))
+		}
+		if err != nil {
+			return &controller.ActionError{
+				Err: err,
+			}
 		}
 	}
 	return nil
