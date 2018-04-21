@@ -1,11 +1,12 @@
 package expr
 
 import (
+	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/sirupsen/logrus"
 )
 
 // Scope is the broadest view of the workflow invocation, which can be queried by the user.
@@ -64,7 +65,7 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 			ObjectMetadata: fn.Metadata,
 			Status:         fn.Status.Status.String(),
 			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
-			Inputs:         formatTypedValueMap(fn.Spec.Inputs),
+			Inputs:         mustFormatTypedMap(fn.Spec.Inputs),
 			Requires:       task.Spec.Requires,
 			Output:         output,
 		}
@@ -78,23 +79,19 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 		},
 		Invocation: &InvocationScope{
 			ObjectMetadata: formatMetadata(wfi.Metadata),
-			Inputs:         formatTypedValueMap(wfi.Spec.Inputs),
+			Inputs:         mustFormatTypedMap(wfi.Spec.Inputs),
 		},
 		Tasks: tasks,
 	}
 }
 
-func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {
-	result := map[string]interface{}{}
-	for k, v := range values {
-		i, err := typedvalues.Format(v)
-		if err != nil {
-			logrus.Errorf("Failed to format: %s=%v", k, v)
-			panic(err)
-		}
-		result[k] = i
+func mustFormatTypedMap(in map[string]*types.TypedValue) map[string]interface{} {
+	out, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, in)
+	if err != nil {
+		fmt.Println(in)
+		panic(err)
 	}
-	return result
+	return out
 }
 
 func formatMetadata(meta *types.ObjectMetadata) *ObjectMetadata {
