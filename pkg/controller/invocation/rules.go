@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/ptypes"
@@ -73,6 +74,7 @@ type RuleSchedule struct {
 	Scheduler     *scheduler.WorkflowScheduler
 	InvocationApi *invocation.Api
 	FunctionApi   *function.Api
+	StateStore    *expr.Store
 }
 
 func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
@@ -103,10 +105,11 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
 			return &ActionInvokeTask{
-				Wf:   wf,
-				Wfi:  wfi,
-				Api:  sf.FunctionApi,
-				Task: invokeAction,
+				Wf:         wf,
+				Wfi:        wfi,
+				Api:        sf.FunctionApi,
+				Task:       invokeAction,
+				StateStore: sf.StateStore,
 			}
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)

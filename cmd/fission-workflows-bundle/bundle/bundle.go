@@ -12,6 +12,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/workflow"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
 	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -341,7 +342,8 @@ func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.Cach
 	dynamicApi := dynamic.NewApi(workflowApi, invocationApi)
 	functionApi := function.NewApi(fnRuntimes, es, dynamicApi)
 	s := &scheduler.WorkflowScheduler{}
-	return wfictr.NewController(invocationCache, wfCache, s, functionApi, invocationApi)
+	stateStore := expr.NewStore()
+	return wfictr.NewController(invocationCache, wfCache, s, functionApi, invocationApi, stateStore)
 }
 
 func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,

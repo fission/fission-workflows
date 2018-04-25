@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,10 +54,11 @@ func (a *ActionFail) Apply() error {
 
 // ActionInvokeTask invokes a function
 type ActionInvokeTask struct {
-	Wf   *types.Workflow
-	Wfi  *types.WorkflowInvocation
-	Api  *function.Api
-	Task *scheduler.InvokeTaskAction
+	Wf         *types.Workflow
+	Wfi        *types.WorkflowInvocation
+	Api        *function.Api
+	Task       *scheduler.InvokeTaskAction
+	StateStore *expr.Store
 }
 
 func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
@@ -77,16 +79,28 @@ func (a *ActionInvokeTask) Apply() error {
 		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
 	}
 
-	// ResolveTask the inputs
+	// Resolve the inputs
+	scope := expr.NewScope(a.Wf, a.Wfi)
+	a.StateStore.Set(a.Wfi.Id(), scope)
+
+	// Inherit scope if this invocation is part of a dynamic decision
+	if len(a.Wfi.Spec.ParentId) != 0 {
+		parentScope, ok := a.StateStore.Get(a.Wfi.Spec.ParentId)
+		if ok {
+			err := mergo.Merge(scope, parentScope)
+			if err != nil {
+				logrus.Errorf("Failed to inherit parent scope: %v", err)
+			}
+		}
+	}
 	inputs := map[string]*types.TypedValue{}
-	queryScope := expr.NewScope(a.Wf, a.Wfi)
 	for inputKey, val := range a.Task.Inputs {
-		resolvedInput, err := expr.Resolve(queryScope, a.Task.Id, val)
+		resolvedInput, err := expr.Resolve(scope, a.Task.Id, val)
 		if err != nil {
 			wfiLog.WithFields(logrus.Fields{
 				"val":      val,
 				"inputKey": inputKey,
-			}).Errorf("Failed to parse input: %v", err)
+			}).Errorf("Failed to resolve input: %v", err)
 			return err
 		}
 

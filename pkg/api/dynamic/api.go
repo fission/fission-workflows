@@ -69,6 +69,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	proxyTaskId := parentTaskId + "_child"
 	proxyTask := types.NewTask(proxyTaskId, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec
+	// Shortcut resolving of the function reference
 	proxyTask.Status.Status = types.TaskStatus_READY
 	proxyTask.Status.FnRef = &wfRef
 
@@ -87,7 +88,6 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	// Submit added task to workflow invocation
 	// TODO replace Task with TaskSpec + shortcircuit resolving of function (e.g. special label on fnref)
 	return ap.wfiApi.AddTask(invocationId, proxyTask)
-
 }
 
 func sanitizeWorkflow(v *types.WorkflowSpec) {

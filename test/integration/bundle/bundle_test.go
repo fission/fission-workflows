@@ -196,13 +196,13 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 					builtin.IfInputThen: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
-							types.INPUT_MAIN: typedvalues.MustParse("consequent"),
+							types.INPUT_MAIN: typedvalues.MustParse("{'consequent: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 					builtin.IfInputElse: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
-							types.INPUT_MAIN: typedvalues.MustParse("alternative"),
+							types.INPUT_MAIN: typedvalues.MustParse("{'alternative: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 				},
@@ -232,9 +232,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.Equal(t, 4, len(wfi.Status.Tasks))
 
 	output := typedvalues.MustFormat(wfi.Status.Output)
-	fmt.Printf("Output: '%v'\n", output)
-	fmt.Printf("Tasks: '%v'\n", wfi.Status.Tasks)
-	assert.Equal(t, "alternative", output)
+	assert.Equal(t, "alternative: FOO", output)
 }
 
 func TestInlineWorkflowInvocation(t *testing.T) {
