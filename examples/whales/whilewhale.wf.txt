@@ -1,1 +1,0 @@
-# Countwhale uses a while-function to run a count-task until the desired number has been reached.

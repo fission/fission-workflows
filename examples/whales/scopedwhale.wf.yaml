@@ -1,4 +1,7 @@
-# This whale shows of how to nest workflows into each other
+# scopedwhale shows of how to nest workflows into each other
+#
+# Usage example: fission fn test --name scopedwhale
+# TODO werkt niet! --> arbitrary task execution
 apiVersion: 1
 output: MyScope
 tasks:

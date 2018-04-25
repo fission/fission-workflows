@@ -1,8 +1,9 @@
+# Sleepalot demonstrates how you can make various task depend on each other, to do fan-outs,
+# fan-ins, parallel execution, and force serial execution.
 #
-# The purpose of this workflow is to show task dependencies in action
-#
+# Example usage: fission fn test --name sleepalot
 apiVersion: 1
-output: F # TODO allow leaving out of output in case no output is expected
+output: F # Currently there needs to be an output task, even if there is no output
 tasks:
   A:
     run: sleep

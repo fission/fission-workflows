@@ -1,4 +1,6 @@
 # Failwhale shows how to use the fail function to force failure of a workflow.
+#
+# Usage example: fission fn test --name failwhale
 apiVersion: 1
 output: NeverReached
 tasks:

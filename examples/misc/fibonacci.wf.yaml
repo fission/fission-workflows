@@ -1,3 +1,7 @@
+# Fibonacci is a workflow that uses internal tasks only to calculate a fibonacci number.
+#
+# Example usage: fission fn test --name fibonacci -b '2'
+# TODO werkt niet `task()`
 apiVersion: v1
 output: ExtractResult
 tasks:

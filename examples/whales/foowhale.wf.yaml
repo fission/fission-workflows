@@ -1,0 +1,5 @@
+output: Bar
+tasks:
+  Bar:
+    run: noop
+    inputs: "{ input() }"

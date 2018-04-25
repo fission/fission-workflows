@@ -1,4 +1,6 @@
-# This whale shows how to access and reference with workflow parameters
+# Echowhale shows you how to access and reference workflow input parameters.
+#
+# Usage example: fission test --name echowhale -b 'Whale you ship me?'
 apiVersion: 1
 output: echowhale
 tasks:
