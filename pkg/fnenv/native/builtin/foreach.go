@@ -22,7 +22,7 @@ Currently, foreach does not gather or store the outputs of the tasks in any way.
 
 **input**       | required | types         | description
 ----------------|----------|---------------|--------------------------------------------------------
-foreach/default | yes      | list          | The list of elements that foreach should be looped over.
+foreach         | yes      | list          | The list of elements that foreach should be looped over.
 do              | yes      | task/workflow | The action to perform for every element.
 sequential      | no       | bool          | Whether to execute the tasks sequentially (default: false).
 
@@ -42,7 +42,7 @@ foo:
     - c
     do:
       run: noop
-      inputs: "{ task().element }"
+      inputs: "{ task().Inputs..element }"
 ```
 
 A complete example of this function can be found in the [foreachwhale](../examples/whales/foreachwhale.wf.yaml) example.

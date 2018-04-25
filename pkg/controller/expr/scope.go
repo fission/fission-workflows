@@ -37,7 +37,7 @@ type ObjectMetadata struct {
 
 // TaskScope holds information about a specific task execution within the current workflow invocation.
 type TaskScope struct {
-	*types.ObjectMetadata
+	*ObjectMetadata
 	Status    string // TaskInvocation status
 	UpdatedAt int64  // unix timestamp
 	Inputs    map[string]interface{}
@@ -50,22 +50,18 @@ type TaskScope struct {
 func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 
 	tasks := map[string]*TaskScope{}
-	for taskId, fn := range wfi.Status.Tasks {
-
+	for taskId, task := range types.GetTasks(wf, wfi) {
 		// Dep: pipe output of dynamic tasks
 		t := typedvalues.ResolveTaskOutput(taskId, wfi)
 		output, err := typedvalues.Format(t)
 		if err != nil {
 			panic(err)
 		}
-
-		task, _ := types.GetTask(wf, wfi, taskId)
-
 		tasks[taskId] = &TaskScope{
-			ObjectMetadata: fn.Metadata,
-			Status:         fn.Status.Status.String(),
-			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
-			Inputs:         mustFormatTypedMap(fn.Spec.Inputs),
+			ObjectMetadata: formatMetadata(task.Metadata),
+			Status:         task.Status.Status.String(),
+			UpdatedAt:      formatTimestamp(task.Status.UpdatedAt),
+			Inputs:         mustFormatTypedMap(task.Spec.Inputs),
 			Requires:       task.Spec.Requires,
 			Output:         output,
 		}

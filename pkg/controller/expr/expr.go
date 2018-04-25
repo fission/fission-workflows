@@ -4,8 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
 	"github.com/sirupsen/logrus"
@@ -145,6 +147,13 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 	}
 
 	i, _ := jsResult.Export() // Err is always nil
+	if structs.IsStruct(i) {
+		mp, err := util.ConvertStructsToMap(i)
+		if err != nil {
+			return nil, err
+		}
+		i = mp
+	}
 	return typedvalues.Parse(i)
 }
 

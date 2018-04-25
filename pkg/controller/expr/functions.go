@@ -139,3 +139,15 @@ func (qf *TaskFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		return result
 	}
 }
+
+func manualEval(vm *otto.Otto, s string) interface{} {
+	result, err := vm.Eval(s)
+	if err != nil {
+		panic(err)
+	}
+	i, err := result.Export()
+	if err != nil {
+		panic(err)
+	}
+	return i
+}

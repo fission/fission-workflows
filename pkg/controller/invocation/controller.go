@@ -132,6 +132,8 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		}
 		// TODO mark to clean up later instead
 		cr.stateStore.Delete(wfi.Id())
+		cr.evalCache.Del(wfi.Id())
+		log.Info("Removed invocation %v from eval state", wfi.Id())
 	case events.Task_TASK_FAILED.String():
 		fallthrough
 	case events.Task_TASK_SUCCEEDED.String():

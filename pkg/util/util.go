@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -34,5 +35,26 @@ func Wait(wg *sync.WaitGroup, timeout time.Duration) bool {
 		return true
 	case <-time.After(timeout):
 		return false
+	}
+}
+
+func ConvertStructsToMap(i interface{}) (map[string]interface{}, error) {
+	ds, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+	var mp map[string]interface{}
+	err = json.Unmarshal(ds, &mp)
+	if err != nil {
+		return nil, err
+	}
+	return mp, nil
+}
+
+func MustConvertStructsToMap(i interface{}) map[string]interface{} {
+	if result, err := ConvertStructsToMap(i); err != nil {
+		panic(err)
+	} else {
+		return result
 	}
 }
