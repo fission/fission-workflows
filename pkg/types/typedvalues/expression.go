@@ -11,7 +11,7 @@ const (
 )
 
 var (
-	ExpressionRe = regexp.MustCompile("\\{.*\\}")
+	ExpressionRe = regexp.MustCompile("^\\{(.*)\\}$")
 )
 
 type ExpressionParserFormatter struct{}
@@ -39,7 +39,7 @@ func (pf *ExpressionParserFormatter) Format(ctx Formatter, v *types.TypedValue) 
 }
 
 func ParseExpression(s string) (*types.TypedValue, error) {
-	if !ExpressionRe.MatchString(s) {
+	if !IsExpression(s) {
 		return nil, TypedValueErr{
 			src: s,
 			err: ErrUnsupportedType,
@@ -60,4 +60,12 @@ func FormatExpression(v *types.TypedValue) (string, error) {
 		}
 	}
 	return string(v.Value), nil
+}
+
+func RemoveExpressionDelimiters(expr string) string {
+	return ExpressionRe.ReplaceAllString(expr, "$1")
+}
+
+func IsExpression(s string) bool {
+	return ExpressionRe.MatchString(s)
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type TypedValue = types.TypedValue
+
 var (
 	// TODO unsupported -> non-fatal
 	ErrUnsupportedType = errors.New("unsupported type")  // Error to indicate parserFormatter cannot handle type

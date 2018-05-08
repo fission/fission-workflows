@@ -65,7 +65,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfRef.Format()
-	proxyTaskSpec.Input("_parent", typedvalues.ParseString(invocationId))
+	proxyTaskSpec.Input(types.InputParent, typedvalues.ParseString(invocationId))
 	proxyTaskId := parentTaskId + "_child"
 	proxyTask := types.NewTask(proxyTaskId, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec

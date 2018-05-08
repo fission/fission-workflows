@@ -10,12 +10,11 @@ import (
 
 // Types other than specified in protobuf
 const (
-	SUBJECT_INVOCATION = "invocation"
-	SUBJECT_WORKFLOW   = "workflows"
-	INPUT_MAIN         = "default"
-	INPUT_HEADERS      = "headers"
-	INPUT_QUERY        = "query"
-	INPUT_METHOD       = "method"
+	INPUT_MAIN    = "default"
+	INPUT_HEADERS = "headers"
+	INPUT_QUERY   = "query"
+	INPUT_METHOD  = "method"
+	InputParent   = "_parent"
 
 	typedValueShortMaxLen = 32
 	WorkflowApiVersion    = "v1"
@@ -51,14 +50,21 @@ func (tv TypedValue) Short() string {
 	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
 }
 
-func (tv TypedValue) SetLabel(k string, v string) {
+func (tv *TypedValue) SetLabel(k string, v string) {
+	if tv == nil {
+		return
+	}
 	if tv.Labels == nil {
 		tv.Labels = map[string]string{}
 	}
 	tv.Labels[k] = v
 }
 
-func (tv TypedValue) GetLabel(k string) (string, bool) {
+func (tv *TypedValue) GetLabel(k string) (string, bool) {
+	if tv == nil {
+		return "", false
+	}
+
 	if tv.Labels == nil {
 		tv.Labels = map[string]string{}
 	}

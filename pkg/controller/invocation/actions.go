@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
 )
@@ -66,7 +67,7 @@ func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
 }
 
 func (a *ActionInvokeTask) Apply() error {
-	wfiLog.Infof("Invoking task: %v", a.Task.Id)
+	wfiLog.Infof("Running task: %v", a.Task.Id)
 	// Find Task (static or dynamic)
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
 	if !ok {
@@ -81,6 +82,9 @@ func (a *ActionInvokeTask) Apply() error {
 
 	// Resolve the inputs
 	scope := expr.NewScope(a.Wf, a.Wfi)
+	logrus.Infof("%+v", scope.Tasks[a.Task.Id])
+	logrus.Infof("%+v", scope.Tasks[a.Task.Id].Inputs)
+	logrus.Infof("%+v", scope.Tasks[a.Task.Id].Inputs["_prev"])
 	a.StateStore.Set(a.Wfi.Id(), scope)
 
 	// Inherit scope if this invocation is part of a dynamic decision
@@ -94,22 +98,23 @@ func (a *ActionInvokeTask) Apply() error {
 		}
 	}
 	inputs := map[string]*types.TypedValue{}
-	for inputKey, val := range a.Task.Inputs {
-		resolvedInput, err := expr.Resolve(scope, a.Task.Id, val)
+	for _, input := range typedvalues.PrioritizeInputs(a.Task.Inputs) {
+		resolvedInput, err := expr.Resolve(scope, a.Task.Id, input.Val)
 		if err != nil {
 			wfiLog.WithFields(logrus.Fields{
-				"val":      val,
-				"inputKey": inputKey,
+				"val": input.Key,
+				"key": input.Val,
 			}).Errorf("Failed to resolve input: %v", err)
 			return err
 		}
 
-		inputs[inputKey] = resolvedInput
+		inputs[input.Key] = resolvedInput
 		wfiLog.WithFields(logrus.Fields{
-			"val":      val,
-			"key":      inputKey,
-			"resolved": resolvedInput,
-		}).Infof("Resolved expression")
+			"key": input.Key,
+		}).Infof("Resolved input: %v -> %v", typedvalues.MustFormat(input.Val), typedvalues.MustFormat(resolvedInput))
+
+		// Update the scope with the resolved type
+		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustFormat(resolvedInput)
 	}
 
 	// Invoke

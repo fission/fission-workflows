@@ -160,7 +160,7 @@ func (wi *WorkflowInvocation) handleTaskAdded(event *fes.Event) error {
 	log.WithFields(log.Fields{
 		"id":          task.Id(),
 		"functionRef": task.Spec.FunctionRef,
-	}).Info("Added dynamic task.")
+	}).Debug("Added dynamic task.")
 	return nil
 }
 

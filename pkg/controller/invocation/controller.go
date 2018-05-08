@@ -118,7 +118,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 	wfiLog.WithFields(log.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
-	}).Info("Handling invocation notification!")
+	}).Debug("Handling invocation notification!")
 
 	switch msg.EventType {
 	case events.Invocation_INVOCATION_COMPLETED.String():
@@ -133,7 +133,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		// TODO mark to clean up later instead
 		cr.stateStore.Delete(wfi.Id())
 		cr.evalCache.Del(wfi.Id())
-		log.Info("Removed invocation %v from eval state", wfi.Id())
+		log.Infof("Removed invocation %v from eval state", wfi.Id())
 	case events.Task_TASK_FAILED.String():
 		fallthrough
 	case events.Task_TASK_SUCCEEDED.String():
@@ -145,7 +145,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		}
 		cr.submitEval(wfi.Id())
 	default:
-		wfiLog.Infof("Controller ignored event type: %v", msg.EventType)
+		wfiLog.Debugf("Controller ignored event type: %v", msg.EventType)
 	}
 	return nil
 }

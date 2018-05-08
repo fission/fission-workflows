@@ -2,6 +2,7 @@ package expr
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fatih/structs"
@@ -64,7 +65,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 
 	// Handle composites
 	if typedvalues.IsType(expr, typedvalues.TypeMap) {
-		logrus.WithField("expr", expr).Info("Resolving map...")
+		logrus.WithField("expr", expr).Info("Resolving map")
 		i, err := typedvalues.Format(expr)
 		if err != nil {
 			return nil, err
@@ -72,7 +73,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 
 		result := map[string]interface{}{}
 		obj := i.(map[string]interface{})
-		for k, v := range obj {
+		for k, v := range obj { // TODO add priority here
 			field, err := typedvalues.Parse(v)
 			if err != nil {
 				return nil, err
@@ -93,7 +94,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 	}
 
 	if typedvalues.IsType(expr, typedvalues.TypeList) {
-		logrus.WithField("expr", expr).Info("Resolving list...")
+		logrus.WithField("expr", expr).Info("Resolving list")
 		i, err := typedvalues.Format(expr)
 		if err != nil {
 			return nil, err
@@ -101,7 +102,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 
 		result := []interface{}{}
 		obj := i.([]interface{})
-		for _, v := range obj {
+		for _, v := range obj { // TODO add priority here
 			field, err := typedvalues.Parse(v)
 			if err != nil {
 				return nil, err
@@ -141,7 +142,12 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 		}
 	}()
 
-	jsResult, err := scoped.Run(expr.Value)
+	e, err := typedvalues.FormatExpression(expr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to format expression for resolving (%v)", err)
+	}
+	cleanExpr := typedvalues.RemoveExpressionDelimiters(e)
+	jsResult, err := scoped.Run(cleanExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +162,8 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 	}
 	return typedvalues.Parse(i)
 }
+
+// TODO add updateScope function here or only reevaluate scope if there is a difference in priorities
 
 func injectFunctions(vm *otto.Otto, fns map[string]Function) {
 	for varName := range fns {

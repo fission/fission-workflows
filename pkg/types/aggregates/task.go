@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TypeTaskInvocation = "function"
+	TypeTaskInvocation = "task"
 )
 
 type TaskInvocation struct {

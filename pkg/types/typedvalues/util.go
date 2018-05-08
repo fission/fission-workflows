@@ -2,8 +2,11 @@ package typedvalues
 
 import (
 	"errors"
+	"sort"
+	"strconv"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/sirupsen/logrus"
 )
 
 // TODO move to more appropriate package
@@ -96,4 +99,47 @@ func IsType(v *types.TypedValue, ts ...ValueType) bool {
 		}
 	}
 	return false
+}
+
+type namedInput struct {
+	Key string
+	Val *types.TypedValue
+}
+
+func PrioritizeInputs(inputs map[string]*types.TypedValue) []namedInput {
+	var priorities []int
+	priorityBuckets := map[int][]namedInput{}
+	for k, v := range inputs {
+		var p int
+		if ps, ok := v.Labels["priority"]; ok {
+			i, err := strconv.Atoi(ps)
+			if err != nil {
+				logrus.Warnf("Ignoring invalid priority: %v", ps)
+			} else {
+				p = i
+			}
+		}
+		b, ok := priorityBuckets[p]
+		if !ok {
+			b = []namedInput{}
+			priorities = append(priorities, p)
+		}
+		b = append(b, namedInput{
+			Val: v,
+			Key: k,
+		})
+		priorityBuckets[p] = b
+	}
+
+	// Sort priorities in descending order
+	sort.Ints(priorities)
+	var result []namedInput
+	for i := len(priorities) - 1; i >= 0; i-- {
+		bucket := priorityBuckets[i]
+		for _, input := range bucket {
+			result = append(result, input)
+		}
+	}
+
+	return result
 }
