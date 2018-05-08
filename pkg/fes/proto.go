@@ -40,3 +40,7 @@ func (m *Event) BelongsTo(parent Aggregator) bool {
 	a := parent.Aggregate()
 	return *m.Aggregate != a && *m.Parent != a
 }
+
+func (m *Aggregate) Format() string {
+	return m.GetType() + "/" + m.GetId()
+}

@@ -25,7 +25,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		Actions:      []*Action{},
 	}
 
-	ctxLog.Info("Scheduler evaluating...")
+	ctxLog.Debug("Scheduler evaluating...")
 	cwf := types.GetTaskContainers(request.Workflow, request.Invocation)
 
 	// Fill open tasks

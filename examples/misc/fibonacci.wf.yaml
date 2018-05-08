@@ -1,8 +1,6 @@
 # Fibonacci is a workflow that uses internal tasks only to calculate a fibonacci number.
 #
 # Example usage: fission fn test --name fibonacci -b '2'
-# TODO werkt niet `task()`
-apiVersion: v1
 output: ExtractResult
 tasks:
   Fib:
@@ -12,15 +10,18 @@ tasks:
       do:
         run: javascript
         inputs:
+          _prev: # For the initial element, to avoid NPEs
+            fn1: 0
+            fn2: 1
           args:
-            fn: "{ task().Inputs.prev.fn || 1 }"
-            fn1: "{ task().Inputs.prev.fn1 || 0}"
-          expr: "{{ fn: (fn + fn1), fn1: prev }}"
-
-          # For the initial element, to avoid NPEs
-          prev: {}
+            fn1: "{ task().Inputs._prev.fn1 }"
+            fn2: "{ task().Inputs._prev.fn2 }"
+          expr: "({
+            'fn1': fn2,
+            'fn2': (fn1 + fn2)
+          })"
   ExtractResult:
     run: compose
-    inputs: "{ (output('Fib') || {}).fn || 0 }"
+    inputs: "{ (output('Fib') || {}).fn2 || 0 }"
     requires:
     - Fib
