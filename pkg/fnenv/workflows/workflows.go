@@ -11,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/sirupsen/logrus"
 )
 
@@ -35,9 +36,13 @@ func NewRuntime(api *invocation.Api, wfiCache fes.CacheReader) *Runtime {
 
 // TODO support async
 func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+	if err := validate.TaskInvocationSpec(spec); err != nil {
+		return nil, err
+	}
+
 	// Prepare inputs
 	wfSpec := spec.ToWorkflowSpec()
-	if parentTv, ok := spec.Inputs["_parent"]; ok {
+	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
 		parentId, err := typedvalues.FormatString(parentTv)
 		if err != nil {
 			return nil, fmt.Errorf("invalid parent id %v (%v)", parentTv, err)

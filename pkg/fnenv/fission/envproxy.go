@@ -14,6 +14,7 @@ import (
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
@@ -53,8 +54,8 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
+	// Fetch the workflow based on the received Fission function metadata
 	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
-
 	fnID := string(meta.UID)
 	if len(meta.UID) == 0 {
 		logrus.WithField("meta", meta).Error("Fission function name is missing")
@@ -89,6 +90,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Temporary: in case of query header 'X-Async' being present, make request async
+	logrus.WithField("url", r.URL).Info("Request Content-Type: %s", r.Header.Get("Content-Type"))
 	if len(r.Header.Get("X-Async")) > 0 {
 		invocationID, invokeErr := fp.invocationServer.Invoke(ctx, wfSpec)
 		if invokeErr != nil {
@@ -109,23 +111,17 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In case of an error, create an error response corresponding to Fission function errors
+	// Logging
 	if !wi.Status.Successful() {
 		logrus.Errorf("Invocation not successful, was '%v'", wi.Status.Status.String())
-		http.Error(w, wi.Status.Status.String(), 500)
-		return
+	} else if wi.Status.Output == nil {
+		logrus.Infof("Invocation '%v' has no output.", fnID)
+	} else {
+		logrus.Infof("Response Content-Type: %v", httpconv.DetermineContentType(wi.Status.Output))
 	}
 
-	// Otherwise, create a response corresponding to Fission function responses.
-	var resp []byte
-	if wi.Status.Output != nil {
-		resp = wi.Status.Output.Value
-		w.Header().Add("Content-Type", inferContentType(wi.Status.Output, defaultContentType))
-	} else {
-		logrus.Infof("Invocation '%v' has no output.", fnID)
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	// Format output or error to the response
+	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
 }
 
 func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {

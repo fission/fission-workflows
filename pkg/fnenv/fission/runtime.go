@@ -1,13 +1,13 @@
 package fission
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fission/fission-workflows/pkg/types"
@@ -46,19 +46,11 @@ func NewFunctionEnv(executor *executor.Client, routerUrl string) *FunctionEnv {
 // It returns the TaskInvocationStatus with a completed (FINISHED, FAILED, ABORTED) status.
 // An error is returned only when error occurs outside of the runtime's control.
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	// Get fission function url
-	// TODO use router instead once we can route to a specific function uid
-	// TODO extract validation to validation package
 	ctxLog := log.WithField("fn", spec.FnRef)
-	if spec.FnRef == nil {
-		return nil, errors.New("invocation does not contain FnRef")
+	if err := validate.TaskInvocationSpec(spec); err != nil {
+		return nil, err
 	}
 	fnRef := *spec.FnRef
-
-	//reqUrl, err := fe.getFnUrl(fnRef)
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	// Construct request and add body
 	url := fe.createRouterUrl(fnRef)
@@ -66,13 +58,11 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	if err != nil {
 		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
 	}
-
 	// Map task inputs to request
-	formatRequest(req, spec.Inputs)
-
-	// Add parameters normally added by Fission
-	//meta := createFunctionMeta(fnRef)
-	//router.MetadataToHeaders(router.HEADERS_FISSION_FUNCTION_PREFIX, meta, req)
+	err = formatRequest(req, spec.Inputs)
+	if err != nil {
+		return nil, err
+	}
 
 	// Perform request
 	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)

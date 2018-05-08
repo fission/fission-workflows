@@ -13,7 +13,7 @@ func TestFunctionWhile_Invoke(t *testing.T) {
 		Inputs: map[string]*types.TypedValue{
 			WhileInputExpr:  typedvalues.MustParse(false),
 			WhileInputLimit: typedvalues.MustParse(10),
-			"count":         typedvalues.MustParse(4),
+			"_count":        typedvalues.MustParse(4),
 			WhileInputDelay: typedvalues.MustParse("1h"),
 			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
@@ -29,7 +29,7 @@ func TestFunctionWhile_InvokeCompletedInitial(t *testing.T) {
 		Inputs: map[string]*types.TypedValue{
 			WhileInputExpr:  typedvalues.MustParse(true),
 			WhileInputLimit: typedvalues.MustParse(10),
-			"count":         typedvalues.MustParse(4),
+			"_count":        typedvalues.MustParse(4),
 			WhileInputDelay: typedvalues.MustParse("1h"),
 			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
@@ -46,12 +46,12 @@ func TestFunctionWhile_InvokeCompleted(t *testing.T) {
 		Inputs: map[string]*types.TypedValue{
 			WhileInputExpr:  typedvalues.MustParse(true),
 			WhileInputLimit: typedvalues.MustParse(10),
-			"count":         typedvalues.MustParse(4),
+			"_count":        typedvalues.MustParse(4),
 			WhileInputDelay: typedvalues.MustParse("1h"),
 			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,
 			}),
-			"prev": prev,
+			"_prev": prev,
 		},
 	})
 	assert.NoError(t, err)
@@ -63,7 +63,7 @@ func TestFunctionWhile_Invoke_LimitExceeded(t *testing.T) {
 		Inputs: map[string]*types.TypedValue{
 			WhileInputExpr:  typedvalues.MustParse(false),
 			WhileInputLimit: typedvalues.MustParse(10),
-			"count":         typedvalues.MustParse(11),
+			"_count":        typedvalues.MustParse(11),
 			WhileInputDelay: typedvalues.MustParse("1h"),
 			WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,

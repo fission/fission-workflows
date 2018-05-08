@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/robertkrimen/otto"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -62,7 +63,7 @@ func NewFunctionJavascript() *FunctionJavascript {
 }
 
 func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	exprVal, err := ensureInput(spec.Inputs, JavascriptInputExpr, "string")
+	exprVal, err := ensureInput(spec.Inputs, JavascriptInputExpr, typedvalues.TypeString)
 	argsVal, _ := spec.Inputs[JavascriptInputArgs]
 	if err != nil {
 		return nil, err
@@ -75,11 +76,14 @@ func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.Typ
 	if err != nil {
 		return nil, err
 	}
-
+	logrus.WithField("taskId", spec.TaskId).
+		Infof("[internal://%s] args: %v | expr: %v", Javascript, args, expr)
 	result, err := fn.exec(expr, args)
 	if err != nil {
 		return nil, err
 	}
+	logrus.WithField("taskId", spec.TaskId).
+		Infof("[internal://%s] %v => %v", Javascript, expr, result)
 
 	return typedvalues.Parse(result)
 }
@@ -121,5 +125,5 @@ func (fn *FunctionJavascript) exec(expr string, args interface{}) (interface{}, 
 		return nil, err
 	}
 	i, _ := jsResult.Export() // Err is always nil
-	return typedvalues.Parse(i)
+	return i, nil
 }

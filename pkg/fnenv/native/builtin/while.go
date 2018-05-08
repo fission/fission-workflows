@@ -86,7 +86,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 
 	// Counter
 	var count int64
-	if countTv, ok := spec.Inputs["count"]; ok {
+	if countTv, ok := spec.Inputs["_count"]; ok {
 		n, err := typedvalues.FormatNumber(countTv)
 		if err != nil {
 			return nil, err
@@ -118,7 +118,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 	// Logic
 	if expr {
 		// TODO support referencing of output in output value, to avoid needing to include 'prev' every time.
-		if prev, ok := spec.Inputs["prev"]; ok {
+		if prev, ok := spec.Inputs["_prev"]; ok {
 			return prev, nil
 		}
 		return nil, nil
@@ -149,8 +149,8 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 					WhileInputDelay:  delayTv,
 					WhileInputLimit:  limitTv,
 					WhileInputAction: action,
-					"count":          typedvalues.MustParse(count + 1),
-					"prev":           typedvalues.MustParse("{output('action')}"),
+					"_count":         typedvalues.MustParse(count + 1),
+					"_prev":          typedvalues.MustParse("{output('action')}"),
 				},
 				Requires: types.Require("action"),
 			},

@@ -13,7 +13,7 @@ const (
 	Repeat           = "repeat"
 	RepeatInputTimes = "times"
 	RepeatInputDo    = "do"
-	RepeatInputPrev  = "prev"
+	RepeatInputPrev  = "_prev"
 )
 
 /*
@@ -108,10 +108,12 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 		id := taskId(n)
 		do := proto.Clone(task).(*types.TaskSpec)
 		if n > 0 {
-			prev := taskId(n - 1)
-			do.Require(prev)
+			prevTask := taskId(n - 1)
+			do.Require(prevTask)
 			// TODO move prev to a reserved namespace, to avoid conflicts
-			do.Input(RepeatInputPrev, typedvalues.MustParse(fmt.Sprintf("{output(%s)}", prev)))
+			prev := typedvalues.MustParse(fmt.Sprintf("{output('%s')}", prevTask))
+			prev.SetLabel("priority", "100")
+			do.Input(RepeatInputPrev, prev)
 		}
 		tasks[id] = do
 	}

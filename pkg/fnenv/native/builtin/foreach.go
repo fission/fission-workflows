@@ -42,7 +42,7 @@ foo:
     - c
     do:
       run: noop
-      inputs: "{ task().Inputs..element }"
+      inputs: "{ task().Inputs.element }"
 ```
 
 A complete example of this function can be found in the [foreachwhale](../examples/whales/foreachwhale.wf.yaml) example.
@@ -62,7 +62,7 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 	if err != nil {
 		return nil, err
 	}
-	header, ok := i.([]interface{}) // TODO do we actually support headers?
+	header, ok := i.([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("condition '%v' needs to be a 'array', but was '%v'", i, headerTv.Type)
 	}
@@ -95,7 +95,7 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 		for inputKey, inputVal := range task.Inputs {
 			t.Input(inputKey, inputVal)
 		}
-		t.Input("_item", typedvalues.MustParse(item))
+		t.Input("element", typedvalues.MustParse(item))
 
 		wf.AddTask(fmt.Sprintf("do_%d", k), t)
 	}

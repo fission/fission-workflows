@@ -80,9 +80,9 @@ func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 		}
 		output = p
 	}
-	logrus.WithFields(logrus.Fields{
-		"spec":   spec,
-		"output": output,
-	}).Info("Internal Compose-function invoked.")
+	// Temporary: force the output of compose to be json (because it is by definition structured)
+	output.SetLabel("Content-Type", "application/json")
+	logrus.Infof("[internal://%s] %v (Type: %s, Labels: %v)", Compose, typedvalues.MustFormat(output), output.GetType(),
+		output.GetLabels())
 	return output, nil
 }

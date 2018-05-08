@@ -35,7 +35,6 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	target := map[string]*types.TypedValue{}
 	// Content-Type is a common problem, so log this for every request
 	contentType := r.Header.Get(headerContentType)
-	logrus.WithField("url", r.URL).WithField(headerContentType, contentType).Info("Request Content-Type")
 
 	// Map body to "main" input
 	bodyInput, err := ParseBody(r.Body, contentType)
@@ -137,13 +136,45 @@ func ParseQuery(r *http.Request) types.TypedValue {
 }
 
 // formatting logic
+func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *types.Error) {
+	if w == nil {
+		panic("cannot format response to nil")
+	}
+
+	if outputErr != nil {
+		// TODO provide different http codes based on error
+		w.Write([]byte(outputErr.Error()))
+		http.Error(w, outputErr.Message, http.StatusInternalServerError)
+		return
+	}
+
+	if output == nil {
+		w.WriteHeader(http.StatusNoContent)
+		output = typedvalues.ParseNil()
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	contentType := DetermineContentType(output)
+	w.Header().Set(headerContentType, contentType)
+	bs, err := FormatBody(*output, contentType)
+	if err != nil {
+		FormatResponse(w, nil, &types.Error{
+			Code:    "500",
+			Message: fmt.Sprintf("Failed to format response body: %v", err),
+		})
+	}
+	w.Write(bs)
+	return
+}
+
 func FormatRequest(source map[string]*types.TypedValue, target *http.Request) error {
 	if target == nil {
 		panic("cannot format request to nil")
 	}
 
 	// Map content-type to the request's content-type
-	contentType := DetermineContentType(source)
+	contentType := DetermineContentTypeInputs(source)
 
 	// Map main input to body
 	mainInput, ok := source[types.INPUT_MAIN]
@@ -275,7 +306,30 @@ func FormatBody(value types.TypedValue, contentType string) ([]byte, error) {
 	return bs, nil
 }
 
-func DetermineContentType(inputs map[string]*types.TypedValue) string {
+func DetermineContentType(value *types.TypedValue) string {
+	if value == nil {
+		return contentTypeBytes
+	}
+
+	ct, ok := value.GetLabel(headerContentType)
+	if ok && len(ct) > 0 {
+		return ct
+	}
+
+	// Otherwise, check for primitive types of the main input
+	switch typedvalues.ValueType(value.Type) {
+	case typedvalues.TypeNumber:
+		fallthrough
+	case typedvalues.TypeExpression:
+		fallthrough
+	case typedvalues.TypeString:
+		return contentTypeText
+	default:
+		return contentTypeBytes
+	}
+}
+
+func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 	// Check for forced contentType in inputs
 	ctTv, ok := inputs[inputContentType]
 	if ok && ctTv != nil {
@@ -288,26 +342,7 @@ func DetermineContentType(inputs map[string]*types.TypedValue) string {
 	}
 
 	// Otherwise, check for label on body input
-	mainInput, ok := inputs[types.INPUT_MAIN]
-	if ok && mainInput != nil {
-		ct, ok := mainInput.GetLabel(headerContentType)
-		if ok && len(ct) > 0 {
-			return ct
-		}
-
-		// Otherwise, check for primitive types of the main input
-		switch typedvalues.ValueType(mainInput.Type) {
-		case typedvalues.TypeNumber:
-			fallthrough
-		case typedvalues.TypeExpression:
-			fallthrough
-		case typedvalues.TypeString:
-			return contentTypeText
-		}
-	}
-
-	// Finally, use default
-	return contentTypeBytes
+	return DetermineContentType(inputs[types.INPUT_MAIN])
 }
 
 // TODO support multi-headers at some point

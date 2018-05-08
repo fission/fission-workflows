@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,9 +50,6 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 			break
 		}
 	}
-	logrus.WithFields(logrus.Fields{
-		"spec":   spec,
-		"output": output,
-	}).Info("Internal Noop-function invoked.")
+	logrus.Info("[internal://%s] %v", Noop, typedvalues.MustFormat(output))
 	return output, nil
 }

@@ -61,7 +61,7 @@ type FunctionHttp struct{}
 
 func (fn *FunctionHttp) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 	// Setup request
-	contentType := httpconv.DetermineContentType(spec.Inputs)
+	contentType := httpconv.DetermineContentTypeInputs(spec.Inputs)
 	headers := httpconv.FormatHeaders(spec.Inputs)
 	method := httpconv.FormatMethod(spec.Inputs)
 	// Get the actual url

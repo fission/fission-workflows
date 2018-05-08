@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
@@ -43,6 +44,10 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 			fmt.Println(string(debug.Stack()))
 		}
 	}()
+
+	if err := validate.TaskInvocationSpec(spec); err != nil {
+		return nil, err
+	}
 
 	fnId := spec.FnRef.ID
 	fn, ok := fe.fns[fnId]
