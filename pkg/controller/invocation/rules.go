@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
@@ -94,9 +95,15 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	for _, a := range schedule.Actions {
 		switch a.Type {
 		case scheduler.ActionType_ABORT:
+			invokeAction := &scheduler.AbortAction{}
+			err := ptypes.UnmarshalAny(a.Payload, invokeAction)
+			if err != nil {
+				log.Errorf("Failed to unpack Scheduler action: %v", err)
+			}
 			return &ActionFail{
 				Api:          sf.InvocationApi,
 				InvocationId: wfi.Id(),
+				Err:          errors.New(invokeAction.Reason),
 			}
 		case scheduler.ActionType_INVOKE_TASK:
 			invokeAction := &scheduler.InvokeTaskAction{}
@@ -143,13 +150,13 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	if finished {
 		var finalOutput *types.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
-			t, ok := wfi.Status.Tasks[wf.Spec.OutputTask]
-			if !ok {
-				return &controller.ActionError{
-					Err: errors.New("could not find output task status in completed invocation"),
-				}
-			}
-			finalOutput = t.Status.Output
+			//t, ok := wfi.Status.Tasks[wf.Spec.OutputTask]
+			//if !ok {
+			//	return &controller.ActionError{
+			//		Err: errors.New("could not find output task status in completed invocation"),
+			//	}
+			//}
+			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
 		}
 
 		// TODO extract to action

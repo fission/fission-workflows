@@ -82,9 +82,6 @@ func (a *ActionInvokeTask) Apply() error {
 
 	// Resolve the inputs
 	scope := expr.NewScope(a.Wf, a.Wfi)
-	logrus.Infof("%+v", scope.Tasks[a.Task.Id])
-	logrus.Infof("%+v", scope.Tasks[a.Task.Id].Inputs)
-	logrus.Infof("%+v", scope.Tasks[a.Task.Id].Inputs["_prev"])
 	a.StateStore.Set(a.Wfi.Id(), scope)
 
 	// Inherit scope if this invocation is part of a dynamic decision
