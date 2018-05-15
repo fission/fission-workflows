@@ -52,7 +52,6 @@ func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
 	// Fetch the workflow based on the received Fission function metadata
 	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
@@ -77,8 +76,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Map request to workflow inputs
-	inputs := map[string]*types.TypedValue{}
-	err := parseRequest(r, inputs)
+	inputs, err := httpconv.ParseRequest(r)
 	if err != nil {
 		logrus.Errorf("Failed to parse inputs: %v", err)
 		http.Error(w, "Failed to parse inputs", 400)
@@ -90,7 +88,6 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Temporary: in case of query header 'X-Async' being present, make request async
-	logrus.WithField("url", r.URL).Info("Request Content-Type: %s", r.Header.Get("Content-Type"))
 	if len(r.Header.Get("X-Async")) > 0 {
 		invocationID, invokeErr := fp.invocationServer.Invoke(ctx, wfSpec)
 		if invokeErr != nil {
@@ -111,16 +108,23 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Format output or error to the response
+	if !wi.Status.Successful() && wi.Status.Error == nil {
+		logrus.Warn("Failed invocation does not contain error")
+		wi.Status.Error = &types.Error{
+			Message: "Unknown error",
+		}
+	}
 	// Logging
 	if !wi.Status.Successful() {
-		logrus.Errorf("Invocation not successful, was '%v'", wi.Status.Status.String())
+		logrus.Errorf("Invocation not successful, was '%v': %v", wi.Status.Status.String(), wi.Status.Error.Error())
 	} else if wi.Status.Output == nil {
 		logrus.Infof("Invocation '%v' has no output.", fnID)
 	} else {
 		logrus.Infof("Response Content-Type: %v", httpconv.DetermineContentType(wi.Status.Output))
 	}
 
-	// Format output or error to the response
+	// Get output
 	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
 }
 

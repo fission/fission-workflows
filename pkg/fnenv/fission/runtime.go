@@ -59,7 +59,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
 	}
 	// Map task inputs to request
-	err = formatRequest(req, spec.Inputs)
+	err = httpconv.FormatRequest(spec.Inputs, req)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +88,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{
-				Code:    fmt.Sprintf("%v", resp.StatusCode),
-				Message: fmt.Sprintf("%v", msg),
+				Message: fmt.Sprintf("fission function error: %v", msg),
 			},
 		}, nil
 	}
