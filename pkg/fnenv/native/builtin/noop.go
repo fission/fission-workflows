@@ -50,6 +50,6 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 			break
 		}
 	}
-	logrus.Info("[internal://%s] %v", Noop, typedvalues.MustFormat(output))
+	logrus.Infof("[internal://%s] %v", Noop, typedvalues.MustFormat(output))
 	return output, nil
 }

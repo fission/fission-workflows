@@ -64,10 +64,8 @@ func FormatArray(t *types.TypedValue) ([]interface{}, error) {
 	return v, nil
 }
 
-type Inputs map[string]*types.TypedValue
-
-func Input(i interface{}) Inputs {
-	in := Inputs{}
+func Input(i interface{}) types.Inputs {
+	in := types.Inputs{}
 	in[types.INPUT_MAIN] = MustParse(i)
 	return in
 }
@@ -106,6 +104,7 @@ type namedInput struct {
 	Val *types.TypedValue
 }
 
+// PrioritizeInputs sorts the inputs based on the priority label (descending order)
 func PrioritizeInputs(inputs map[string]*types.TypedValue) []namedInput {
 	var priorities []int
 	priorityBuckets := map[int][]namedInput{}

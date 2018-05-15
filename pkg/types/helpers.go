@@ -217,3 +217,5 @@ type NamedTypedValue struct {
 	TypedValue
 	name string
 }
+
+type Inputs map[string]*TypedValue

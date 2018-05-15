@@ -97,3 +97,119 @@ func FormatWorkflow(v *types.TypedValue) (*types.WorkflowSpec, error) {
 func IsControlFlow(v ValueType) bool {
 	return v == TypeTask || v == TypeWorkflow
 }
+
+func FormatControlFlow(v *types.TypedValue) (*Flow, error) {
+	switch ValueType(v.Type) {
+	case TypeTask:
+		t, err := FormatTask(v)
+		if err != nil {
+			return nil, err
+		}
+		return FlowTask(t), nil
+	case TypeWorkflow:
+		wf, err := FormatWorkflow(v)
+		if err != nil {
+			return nil, err
+		}
+		return FlowWorkflow(wf), nil
+	default:
+		return nil, ErrUnsupportedType
+	}
+}
+
+func ParseControlFlow(i interface{}) (*types.TypedValue, error) {
+	switch t := i.(type) {
+	case *types.TaskSpec:
+		return ParseTask(t), nil
+	case *types.WorkflowSpec:
+		return ParseWorkflow(t), nil
+	default:
+		return nil, ErrUnsupportedType
+	}
+}
+
+// Flow is a generic data type to provide a common API to working with dynamic tasks and workflows
+type Flow struct {
+	task *types.TaskSpec
+	wf   *types.WorkflowSpec
+}
+
+func (f *Flow) Input(key string, i types.TypedValue) {
+	if f == nil {
+		return
+	}
+	if f.task != nil {
+		f.task.Input(key, &i)
+	}
+	if f.wf != nil {
+		// TODO support parameters in workflow spec
+	}
+}
+
+func (f *Flow) Proto() proto.Message {
+	if f == nil {
+		return nil
+	}
+	if f.task != nil {
+		return f.task
+	}
+	return f.wf
+}
+
+func (f *Flow) Clone() *Flow {
+	if f == nil {
+		return nil
+	}
+	if f.task != nil {
+		return FlowTask(proto.Clone(f.task).(*types.TaskSpec))
+	}
+	if f.wf != nil {
+		return FlowWorkflow(proto.Clone(f.wf).(*types.WorkflowSpec))
+	}
+	return nil
+}
+
+func (f *Flow) Task() *types.TaskSpec {
+	if f == nil {
+		return nil
+	}
+	return f.task
+}
+
+func (f *Flow) Workflow() *types.WorkflowSpec {
+	if f == nil {
+		return nil
+	}
+	return f.wf
+}
+
+func (f *Flow) ApplyTask(fn func(t *types.TaskSpec)) {
+	if f != nil && f.task != nil {
+		fn(f.task)
+	}
+}
+
+func (f *Flow) ApplyWorkflow(fn func(t *types.WorkflowSpec)) {
+	if f != nil && f.wf != nil {
+		fn(f.wf)
+	}
+}
+
+func FlowTask(task *types.TaskSpec) *Flow {
+	return &Flow{task: task}
+}
+
+func FlowWorkflow(wf *types.WorkflowSpec) *Flow {
+	return &Flow{wf: wf}
+}
+
+func FlowInterface(i interface{}) (*Flow, error) {
+	switch t := i.(type) {
+	case *types.WorkflowSpec:
+		return FlowWorkflow(t), nil
+	case *types.TaskSpec:
+		return FlowTask(t), nil
+	default:
+		return nil, ErrUnsupportedType
+	}
+}

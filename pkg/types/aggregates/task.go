@@ -73,16 +73,13 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.Status = types.TaskInvocationStatus_ABORTED
 		ti.Status.UpdatedAt = event.Timestamp
 	case events.Task_TASK_FAILED:
-		fnErr := &types.Error{}
-		err = proto.Unmarshal(event.Data, fnErr)
+		invoc := &types.TaskInvocation{}
+		err = proto.Unmarshal(event.Data, invoc)
 		if err != nil {
-			fnErr.Code = "error"
-			fnErr.Message = err.Error()
 			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
-
 		ti.Status.Status = types.TaskInvocationStatus_FAILED
-		ti.Status.Error = fnErr
+		ti.Status.Error = invoc.Status.Error
 		ti.Status.UpdatedAt = event.Timestamp
 	case events.Task_TASK_SKIPPED:
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED

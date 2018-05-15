@@ -15,7 +15,7 @@ const (
 	WhileInputDelay  = "delay"
 	WhileInputAction = "do"
 
-	WhileDefaultDelay = time.Duration(0)
+	WhileDefaultDelay = time.Duration(100) * time.Millisecond
 )
 
 var (
@@ -33,7 +33,7 @@ The results of the executed action can be accessed using the task ID "action".
 ----------------|----------|-------------------|--------------------------------------------------------
 expr            | yes      | bool              | The condition which determines whether to continue or halt the loop.
 do              | yes      | task/workflow     | The action to execute on each iteration.
-limit           | no       | number            | The max number of iterations of the loop. (default: unlimited)
+limit           | yes      | number            | The max number of iterations of the loop.
 
 Notes:
 - we currently cannot reevaluate the expr.
@@ -73,7 +73,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		return nil, err
 	}
 
-	// Limit TODO support setting of the limit
+	// Limit
 	limitTv, err := ensureInput(spec.Inputs, WhileInputLimit)
 	if err != nil {
 		return nil, err
@@ -110,13 +110,13 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 	}
 
 	// Action
-	action, err := ensureInput(spec.Inputs, WhileInputAction, typedvalues.TypeWorkflow, typedvalues.TypeTask)
+	action, err := ensureInput(spec.Inputs, WhileInputAction)
 	if err != nil {
 		return nil, err
 	}
 
-	// Logic
-	if expr {
+	// Logic: escape while loop when expression is no longer true.
+	if !expr {
 		// TODO support referencing of output in output value, to avoid needing to include 'prev' every time.
 		if prev, ok := spec.Inputs["_prev"]; ok {
 			return prev, nil
@@ -128,29 +128,45 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		return nil, ErrLimitExceeded
 	}
 
+	// Create the while-specific inputs
+	prevTv := typedvalues.MustParse("{output('action')}")
+	prevTv.SetLabel("priority", "1000")
+	countTv := typedvalues.MustParse(count + 1)
+	countTv.SetLabel("priority", "1000")
+
+	// If the action is a control flow construct add the while-specific inputs
+	if typedvalues.IsControlFlow(action.Type) {
+		flow, _ := typedvalues.FormatControlFlow(action)
+		flow.Input("_prev", *prevTv)
+		flow.Input("_count", *countTv)
+		action, _ = typedvalues.ParseControlFlow(flow)
+	}
+
 	wf := &types.WorkflowSpec{
 		OutputTask: "condition",
 		Tasks: map[string]*types.TaskSpec{
 			"wait": {
 				FunctionRef: Sleep,
-				Inputs: map[string]*types.TypedValue{
+				Inputs: types.Inputs{
 					SleepInput: typedvalues.MustParse(delay.String()),
 				},
 			},
 			"action": {
 				FunctionRef: Noop,
-				Inputs:      typedvalues.Input(action),
-				Requires:    types.Require("wait"),
+				Inputs: types.Inputs{
+					NoopInput: action,
+				},
+				Requires: types.Require("wait"),
 			},
 			"condition": {
 				FunctionRef: While,
-				Inputs: map[string]*types.TypedValue{
-					WhileInputExpr:   exprTv,
-					WhileInputDelay:  delayTv,
+				Inputs: types.Inputs{
+					WhileInputExpr: exprTv,
+					//WhileInputDelay:  delayTv, // TODO fix; crashes when no delay is provided
 					WhileInputLimit:  limitTv,
 					WhileInputAction: action,
-					"_count":         typedvalues.MustParse(count + 1),
-					"_prev":          typedvalues.MustParse("{output('action')}"),
+					"_count":         countTv,
+					"_prev":          prevTv,
 				},
 				Requires: types.Require("action"),
 			},
