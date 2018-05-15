@@ -36,8 +36,14 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 			continue
 		}
 		if t.Invocation.Status.Status == types.TaskInvocationStatus_FAILED {
+
+			msg := fmt.Sprintf("Task '%v' failed", t.Invocation.Id())
+			if err := t.Invocation.GetStatus().GetError(); err != nil {
+				msg = err.Message
+			}
+
 			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
-				Reason: fmt.Sprintf("taskContainer '%s' failed!", t.Invocation),
+				Reason: msg,
 			})
 
 			abortAction := &Action{

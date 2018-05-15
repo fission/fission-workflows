@@ -71,7 +71,10 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	}
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
-		logrus.WithField("task", spec.InvocationId).Infof("ParseTask failed: %v", err)
+		logrus.WithField("fn", spec.FnRef).
+			WithField("wi", spec.InvocationId).
+			WithField("task", spec.TaskId).
+			Infof("Failed to invoke task: %v", err)
 		esErr := ap.es.Append(&fes.Event{
 			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,

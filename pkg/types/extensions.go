@@ -38,7 +38,7 @@ var taskFinalStates = []TaskInvocationStatus_Status{
 // TypedValue
 //
 
-// Prints a short description of the value
+// Prints a short description of the Value
 func (tv TypedValue) Short() string {
 	var val string
 	if len(tv.Value) > typedValueShortMaxLen {

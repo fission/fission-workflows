@@ -64,6 +64,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return &types.TaskInvocationStatus{
 			UpdatedAt: ptypes.TimestampNow(),
 			Status:    types.TaskInvocationStatus_FAILED,
+			Error: &types.Error{
+				Message: err.Error(),
+			},
 		}, nil
 	}
 

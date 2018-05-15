@@ -53,7 +53,6 @@ func SetupNatsCluster(ctx context.Context) fesnats.Config {
 	}
 	address := "127.0.0.1"
 	flags := strings.Split(fmt.Sprintf("-cid %s -p %d -a %s", clusterId, port, address), " ")
-	logrus.Info(flags)
 	cmd := exec.CommandContext(ctx, "nats-streaming-server", flags...)
 	stdOut, _ := cmd.StdoutPipe()
 	stdErr, _ := cmd.StderrPipe()

@@ -91,7 +91,7 @@ func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 	case contentTypeTask:
 		fallthrough
 	case contentTypeWorkflow:
-		// TODO support json
+		// TODO support json-encoded workflow/task
 		var m proto.Message
 		err := proto.Unmarshal(bs, m)
 		if err != nil {
@@ -143,8 +143,7 @@ func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *
 
 	if outputErr != nil {
 		// TODO provide different http codes based on error
-		w.Write([]byte(outputErr.Error()))
-		http.Error(w, outputErr.Message, http.StatusInternalServerError)
+		http.Error(w, outputErr.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -160,7 +159,6 @@ func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *
 	bs, err := FormatBody(*output, contentType)
 	if err != nil {
 		FormatResponse(w, nil, &types.Error{
-			Code:    "500",
 			Message: fmt.Sprintf("Failed to format response body: %v", err),
 		})
 	}
@@ -318,6 +316,11 @@ func DetermineContentType(value *types.TypedValue) string {
 
 	// Otherwise, check for primitive types of the main input
 	switch typedvalues.ValueType(value.Type) {
+	// TODO task and workflow
+	case typedvalues.TypeMap:
+		fallthrough
+	case typedvalues.TypeList:
+		return contentTypeJson
 	case typedvalues.TypeNumber:
 		fallthrough
 	case typedvalues.TypeExpression:

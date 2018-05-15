@@ -63,7 +63,7 @@ func (el *RuleExceededErrorCount) Eval(ec EvalContext) Action {
 	}
 
 	if errorCount > el.MaxErrorCount {
-		logrus.Infof("Error count exceeded, evaluating %T.", el.OnExceeded)
+		logrus.Infof("Error count exceeded, evaluating %T", el.OnExceeded)
 		return evalIfNotNil(el.OnExceeded, ec)
 	}
 	return evalIfNotNil(el.OnNotExceeded, ec)

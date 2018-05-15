@@ -65,7 +65,7 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 					"err":     err,
 					"runtime": cName,
 					"fn":      targetFn,
-				}).Info("Function not found.")
+				}).Debug("Function not found.")
 				lastErr = err
 			} else {
 				resolved <- def

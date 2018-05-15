@@ -310,7 +310,6 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 			&controller.RuleExceededErrorCount{
 				OnExceeded: &ActionFail{
 					Api: ctr.invocationApi,
-					Err: errors.New("error count exceeded"),
 				},
 				MaxErrorCount: 0,
 			},

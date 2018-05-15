@@ -1,6 +1,7 @@
 package invocation
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/api/function"
@@ -45,11 +46,19 @@ type ActionFail struct {
 func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
 	a.InvocationId = ec.Invocation().Id()
+	if a.Err == nil {
+		if s, ok := ec.EvalState().Last(); ok {
+			a.Err = s.Error
+		}
+	}
+	if a.Err == nil {
+		a.Err = errors.New("unknown error has occurred")
+	}
 	return a
 }
 
 func (a *ActionFail) Apply() error {
-	wfiLog.Info("Applying action: fail")
+	wfiLog.Infof("Applying action: fail (%v)", a.Err)
 	return a.Api.Fail(a.InvocationId, a.Err)
 }
 

@@ -44,7 +44,6 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wfErr := &types.Error{}
 		err := proto.Unmarshal(event.Data, wfErr)
 		if err != nil {
-			wfErr.Code = "error"
 			wfErr.Message = err.Error()
 			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
