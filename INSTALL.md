@@ -2,6 +2,15 @@
 
 This document covers installing Fission Workflows.
 
+Fission and Workflows are under active development, which has lead to incompatible versions.
+Compatibility chart:
+
+Workflows | Compatible Fission versions 
+----------|---------------------------
+0.1.x     | 0.3.0 up to 0.6.1
+0.2.x     | 0.4.1 up to 0.6.1 
+0.3.0     | all (tested on 0.6.0, 0.6.1, and 0.7.2) 
+
 ### Prerequisites
 
 Fission Workflows requires the following to be installed on your host machine:
@@ -11,7 +20,7 @@ Fission Workflows requires the following to be installed on your host machine:
 
 Additionally, Fission Workflows requires a [Fission](https://github.com/fission/fission) 
 deployment on your Kubernetes cluster. If you do not have a Fission deployment, follow
-[Fission's installation guide](http://fission.io/docs/0.4.0/install/).
+[Fission's installation guide](http://fission.io/docs/0.7.2/install/).
 
 **(Note that Fission Workflows requires Fission 0.4.1 or higher, with the NATS component installed!)**
 
@@ -33,7 +42,7 @@ helm repo update
 helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.4.1
 
 # Install Fission Workflows
-helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.2.0
+helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.3.0
 ```
 
 ### Creating your first workflow
@@ -79,9 +88,9 @@ It has the following features:
 
 #### Installation
 To install `wfcli` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
-For example, to download and install version 0.2.0,  assuming that you use OS X:
+For example, to download and install version 0.3.0,  assuming that you use OS X:
 ```bash
-curl -o wfcli https://github.com/fission/fission-workflows/releases/download/0.2.0/wfcli-osx
+curl -o wfcli https://github.com/fission/fission-workflows/releases/download/0.3.0/wfcli-osx
 chmod +x ./wfcli
 sudo mv ./wfcli /usr/local/bin
 ```

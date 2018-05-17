@@ -11,7 +11,7 @@ envImage: fission/workflow-env
 # Image of the Fission build environment for Fission Workflows
 buildEnvImage: fission/workflow-build-env
 
-tag: 0.2.0
+tag: 0.3.0
 
 pullPolicy: IfNotPresent
 
