@@ -1,13 +1,13 @@
 # Countwhale uses a while-function to run a count-task until the desired number has been reached.
 #
-# Example usage: fission fn test --name countwhale
-# TODO does not work yet (no access to prev)
+# Example usage: fission fn test --name whilewhale
 output: CountUntil
 tasks:
   CountUntil:
     run: while
     inputs:
-      expr: "{ !task().Inputs.prev || task().Inputs.prev < 10 }"
+      expr: "{ !task().Inputs._prev || task().Inputs._prev < 5 }"
+      limit: 10
       do:
-        run: compose
-        inputs: "{ (task().Inputs.prev || 0) + 1 }"
+        run: noop
+        inputs: "{ (task().Inputs._prev || 0) + 1 }"

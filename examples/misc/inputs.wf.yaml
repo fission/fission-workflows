@@ -6,7 +6,6 @@
 # Note: you need to add the json content-type to signal the workflow to parse and output the data
 # as JSON, otherwise it will output the values as plain text.
 # In the future there will be an option to default the output to JSON.
-# TODO werkt niet, zelfs met json content type
 apiVersion: 1
 output: Printer
 tasks:

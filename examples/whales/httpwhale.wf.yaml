@@ -1,6 +1,6 @@
 # Httpwhale shows the use of the built-in, internal HTTP function by looking up your IP.
 #
-# Usage example: fission fn test --name http
+# Usage example: fission fn test --name httpwhale
 apiVersion: 1
 output: Whalify
 tasks:
