@@ -91,6 +91,7 @@ emph "Fission Workflows deployed!"
 #
 # Test
 #
+retry $(dirname $0)/tests/test_inputs.sh
 emph "--- Start Tests ---"
 export ROOT
 export TEST_SUITE_UID
