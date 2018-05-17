@@ -14,7 +14,7 @@ helm list || helm init --wait
 for i in {1..5}; do helm list && break || sleep 5; done
 
 # Install Fission
-fission fn list || helm install --name fission --debug --namespace fission --set "analytics=false,serviceType=NodePort" https://github.com/fission/fission/releases/download/0.6.0/fission-all-0.6.0.tgz 
+fission fn list || helm install --name fission --debug --namespace fission --set "analytics=false,serviceType=NodePort" https://github.com/fission/fission/releases/download/0.7.2/fission-all-0.7.2.tgz
 for i in {1..5}; do fission fn list && break || sleep 5; done
 
 # Install newest version of fission workflows
