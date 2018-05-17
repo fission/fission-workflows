@@ -81,6 +81,7 @@ message WorkflowInvocationSpec {
     //
     // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
     string parentId = 3;
+    //int32 depth = 4; // aka size of the stack
 }
 
 message WorkflowInvocationStatus {
@@ -214,14 +215,13 @@ message ObjectMetadata {
 
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
 message TypedValue {
-    string type = 1; // (string, bool, int...)
+    string type = 1;
     bytes value = 2;
-    // TODO encoding (json, xml, binary)
-    // TODO annotations (content-type: application/xml)
+    map<string, string> labels = 3;
 }
 
 message Error {
-    string code = 1;
+//    string code = 1;
     string message = 2;
 }
 
@@ -232,6 +232,18 @@ message FnRef {
     // Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
     string runtime = 2;
 
-    // RuntimeId is the runtime-specific identifier of the function.
-    string runtimeId = 3;
+    // ID is the runtime-specific identifier of the function.
+    string ID = 3;
 }
+
+// Utility wrapper for a TypedValue map
+message TypedValueMap {
+    map<string,TypedValue> Value = 1;
+}
+
+// Utility wrapper for a TypedValue list
+message TypedValueList {
+    repeated TypedValue Value = 1;
+}
+
+

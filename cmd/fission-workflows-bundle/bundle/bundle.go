@@ -12,6 +12,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/workflow"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
 	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -56,6 +57,7 @@ type Options struct {
 type FissionOptions struct {
 	ExecutorAddress string
 	ControllerAddr  string
+	RouterAddr      string
 }
 
 // Run serves enabled components in a blocking way
@@ -71,7 +73,7 @@ func Run(ctx context.Context, opts *Options) error {
 	// Event Stores
 	if opts.Nats != nil {
 		log.WithFields(log.Fields{
-			"url":     opts.Nats.Url,
+			"url":     "!redacted!",
 			"cluster": opts.Nats.Cluster,
 			"client":  opts.Nats.Client,
 		}).Infof("Using event store: NATS")
@@ -86,21 +88,24 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Resolvers and runtimes
 	invocationApi := invocation.NewApi(es)
-	reflectiveRuntime := workflows.NewRuntime(invocationApi, wfiCache())
 	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
+
+	log.Infof("Using Function Runtime: Workflow")
+	reflectiveRuntime := workflows.NewRuntime(invocationApi, wfiCache())
 	runtimes[workflows.Name] = reflectiveRuntime
 	if opts.InternalRuntime {
-		log.WithField("config", nil).Infof("Using Function Runtime: Internal")
+		log.Infof("Using Function Runtime: Internal")
 		runtimes["internal"] = setupInternalFunctionRuntime()
 		resolvers["internal"] = setupInternalFunctionRuntime()
 	}
 	if opts.Fission != nil {
 		log.WithFields(log.Fields{
 			"controller": opts.Fission.ControllerAddr,
+			"router":     opts.Fission.RouterAddr,
 			"executor":   opts.Fission.ExecutorAddress,
 		}).Infof("Using Function Runtime: Fission")
-		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress)
+		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress, opts.Fission.RouterAddr)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
 
@@ -201,9 +206,9 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 	return native.NewFunctionEnv(builtin.DefaultBuiltinFunctions)
 }
 
-func setupFissionFunctionRuntime(executorAddr string) *fission.FunctionEnv {
+func setupFissionFunctionRuntime(executorAddr string, routerAddr string) *fission.FunctionEnv {
 	client := executor.MakeClient(executorAddr)
-	return fission.NewFunctionEnv(client)
+	return fission.NewFunctionEnv(client, routerAddr)
 }
 
 func setupFissionFunctionResolver(controllerAddr string) *fission.Resolver {
@@ -340,7 +345,8 @@ func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.Cach
 	dynamicApi := dynamic.NewApi(workflowApi, invocationApi)
 	functionApi := function.NewApi(fnRuntimes, es, dynamicApi)
 	s := &scheduler.WorkflowScheduler{}
-	return wfictr.NewController(invocationCache, wfCache, s, functionApi, invocationApi)
+	stateStore := expr.NewStore()
+	return wfictr.NewController(invocationCache, wfCache, s, functionApi, invocationApi, stateStore)
 }
 
 func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,

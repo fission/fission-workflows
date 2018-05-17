@@ -1,4 +1,7 @@
-# This whale shows of a basic workflow that combines both Fission Functions (fortune, whalesay) and internal functions (noop)
+# Fortunewhale shows of a basic workflow that combines both
+# Fission Functions (fortune, whalesay) and Internalfunctions (noop)
+#
+# Usage example: fission fn test --name fortunewhale
 apiVersion: 1
 output: WhaleWithFortune
 tasks:

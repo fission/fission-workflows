@@ -60,7 +60,7 @@ func parseWorkflow(def *workflowSpec) (*types.WorkflowSpec, error) {
 			continue
 		}
 
-		p, err := parseTask(id, task)
+		p, err := parseTask(task)
 		if err != nil {
 			return nil, err
 		}
@@ -74,14 +74,10 @@ func parseWorkflow(def *workflowSpec) (*types.WorkflowSpec, error) {
 	}, nil
 }
 
-func parseTask(id string, t *taskSpec) (*types.TaskSpec, error) {
+func parseTask(t *taskSpec) (*types.TaskSpec, error) {
 	deps := map[string]*types.TaskDependencyParameters{}
 	for _, dep := range t.Requires {
 		deps[dep] = &types.TaskDependencyParameters{}
-	}
-
-	if len(id) == 0 {
-		id = t.Id
 	}
 
 	inputs, err := parseInputs(t.Inputs)
@@ -101,10 +97,10 @@ func parseTask(id string, t *taskSpec) (*types.TaskSpec, error) {
 		Inputs:      inputs,
 	}
 
-	logrus.WithField("id", id).WithField("in", t).WithField("out", result).Debugf("parsed task")
 	return result, nil
 }
 
+// parseInputs parses the inputs of a task. This is typically a map[interface{}]interface{}.
 func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 	if i == nil {
 		return map[string]*types.TypedValue{}, nil
@@ -114,7 +110,7 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 	case map[string]interface{}:
 		result := map[string]*types.TypedValue{}
 		for inputKey, inputVal := range v {
-			typedVal, err := parseSingleInput(inputKey, inputVal)
+			typedVal, err := parseInput(inputVal)
 			if err != nil {
 				return nil, err
 			}
@@ -122,11 +118,10 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 		}
 		return result, nil
 	case map[interface{}]interface{}:
-		//case map[string]interface{}:
 		result := map[string]*types.TypedValue{}
 		for inputKey, inputVal := range v {
 			k := fmt.Sprintf("%v", inputKey)
-			typedVal, err := parseSingleInput(k, inputVal)
+			typedVal, err := parseInput(inputVal)
 			if err != nil {
 				return nil, err
 			}
@@ -134,7 +129,7 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 		}
 		return result, nil
 	}
-	p, err := parseSingleInput(types.INPUT_MAIN, i)
+	p, err := parseInput(i)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +138,17 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 	}, nil
 }
 
-func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
+func parseInput(i interface{}) (*types.TypedValue, error) {
 	// Handle special cases
 	switch t := i.(type) {
+	case []interface{}:
+		// TODO shortcut - future: fix parsing of inputs to be recursive
+		for k, v := range t {
+			mp, ok := v.(map[interface{}]interface{})
+			if ok {
+				t[k] = convertInterfaceMaps(mp)
+			}
+		}
 	case map[interface{}]interface{}:
 		res := convertInterfaceMaps(t)
 		if _, ok := res["run"]; ok {
@@ -157,7 +160,7 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 				panic(err)
 			}
 
-			p, err := parseTask(id, td)
+			p, err := parseTask(td)
 			if err == nil {
 				i = p
 			} else {
@@ -188,7 +191,7 @@ func parseSingleInput(id string, i interface{}) (*types.TypedValue, error) {
 			i = p
 		}
 	case *taskSpec: // Handle taskSpec because it cannot be parsed by standard parser
-		p, err := parseTask(id, t)
+		p, err := parseTask(t)
 		if err != nil {
 			return nil, err
 		}

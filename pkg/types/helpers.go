@@ -212,3 +212,10 @@ type TaskInstance struct {
 	// Invocation is nil if not yet invoked
 	Invocation *TaskInvocation
 }
+
+type NamedTypedValue struct {
+	TypedValue
+	name string
+}
+
+type Inputs map[string]*TypedValue

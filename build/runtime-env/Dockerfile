@@ -2,7 +2,7 @@
 ARG BUNDLE_IMAGE=fission-workflows-bundle
 ARG BUNDLE_TAG=latest
 ARG FISSION_BUILDER_IMAGE=fission/builder
-ARG FISSION_TAG=0.6.0
+ARG FISSION_TAG=latest
 
 FROM $BUNDLE_IMAGE:$BUNDLE_TAG as workflows-bundle
 FROM scratch

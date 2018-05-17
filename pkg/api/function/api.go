@@ -1,6 +1,8 @@
 package function
 
 import (
+	"errors"
+
 	"github.com/fission/fission-workflows/pkg/api/dynamic"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -64,9 +66,15 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	}
 
 	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec)
+	if fnResult == nil && err == nil {
+		err = errors.New("function crashed")
+	}
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
-		logrus.WithField("task", spec.InvocationId).Infof("ParseTask failed: %v", err)
+		logrus.WithField("fn", spec.FnRef).
+			WithField("wi", spec.InvocationId).
+			WithField("task", spec.TaskId).
+			Infof("Failed to invoke task: %v", err)
 		esErr := ap.es.Append(&fes.Event{
 			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,
@@ -82,7 +90,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 
 	// TODO to a middleware component
 	if fnResult.Output != nil {
-		switch fnResult.Output.Type {
+		switch typedvalues.ValueType(fnResult.Output.Type) {
 		case typedvalues.TypeTask:
 			logrus.Info("Adding dynamic task")
 			taskSpec, err := typedvalues.FormatTask(fnResult.Output)

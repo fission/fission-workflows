@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -29,6 +30,7 @@ type Controller struct {
 	wfCache       fes.CacheReader
 	functionApi   *function.Api
 	invocationApi *invocation.Api
+	stateStore    *expr.Store
 	scheduler     *scheduler.WorkflowScheduler
 	sub           *pubsub.Subscription
 	cancelFn      context.CancelFunc
@@ -40,7 +42,7 @@ type Controller struct {
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
-	functionApi *function.Api, invocationApi *invocation.Api) *Controller {
+	functionApi *function.Api, invocationApi *invocation.Api, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
 		invokeCache:   invokeCache,
 		wfCache:       wfCache,
@@ -49,6 +51,7 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 		invocationApi: invocationApi,
 		evalQueue:     make(chan string, evalQueueSize),
 		evalCache:     controller.NewEvalCache(),
+		stateStore:    stateStore,
 
 		// States maintains an active cache of currently running invocations, with execution related data.
 		// This state information is considered preemptable and can be removed or lost at any time.
@@ -115,22 +118,34 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 	wfiLog.WithFields(log.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
-	}).Info("Handling invocation notification!")
+	}).Debug("Handling invocation notification!")
 
 	switch msg.EventType {
-	case events.Invocation_INVOCATION_CREATED.String():
+	case events.Invocation_INVOCATION_COMPLETED.String():
+		fallthrough
+	case events.Invocation_INVOCATION_CANCELED.String():
+		fallthrough
+	case events.Invocation_INVOCATION_FAILED.String():
+		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
+		if !ok {
+			log.Warn("Event did not contain invocation payload", msg)
+		}
+		// TODO mark to clean up later instead
+		cr.stateStore.Delete(wfi.Id())
+		cr.evalCache.Del(wfi.Id())
+		log.Infof("Removed invocation %v from eval state", wfi.Id())
+	case events.Task_TASK_FAILED.String():
 		fallthrough
 	case events.Task_TASK_SUCCEEDED.String():
 		fallthrough
-	case events.Task_TASK_FAILED.String():
-		invoc, ok := msg.Payload.(*aggregates.WorkflowInvocation)
+	case events.Invocation_INVOCATION_CREATED.String():
+		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
 		if !ok {
 			panic(msg)
 		}
-		id := invoc.Id()
-		cr.submitEval(id)
+		cr.submitEval(wfi.Id())
 	default:
-		wfiLog.Infof("Controller ignored event type: %v", msg.EventType)
+		wfiLog.Debugf("Controller ignored event type: %v", msg.EventType)
 	}
 	return nil
 }
@@ -246,6 +261,9 @@ func (cr *Controller) Evaluate(invocationId string) {
 
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action
+	if action == nil {
+		return
+	}
 
 	// Execute action
 	err = action.Apply()
@@ -292,7 +310,6 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 			&controller.RuleExceededErrorCount{
 				OnExceeded: &ActionFail{
 					Api: ctr.invocationApi,
-					Err: errors.New("error count exceeded"),
 				},
 				MaxErrorCount: 0,
 			},
@@ -305,6 +322,7 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 				Scheduler:     ctr.scheduler,
 				InvocationApi: ctr.invocationApi,
 				FunctionApi:   ctr.functionApi,
+				StateStore:    ctr.stateStore,
 			},
 		},
 	}

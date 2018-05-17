@@ -11,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/urfave/cli"
 )
 
@@ -146,14 +147,14 @@ var cmdInvocation = cli.Command{
 					panic(err)
 				}
 
-				wfiUpdated := wfi.Status.UpdatedAt.String()
-				wfiCreated := wfi.Metadata.CreatedAt.String()
+				wfiUpdated := ptypes.TimestampString(wfi.Status.UpdatedAt)
+				wfiCreated := ptypes.TimestampString(wfi.Metadata.CreatedAt)
 				table(os.Stdout, nil, [][]string{
 					{"ID", wfi.Metadata.Id},
 					{"WORKFLOW_ID", wfi.Spec.WorkflowId},
 					{"CREATED", wfiCreated},
 					{"UPDATED", wfiUpdated},
-					{"STATUS", string(wfi.Status.Status)},
+					{"STATUS", wfi.Status.Status.String()},
 				})
 				fmt.Println()
 
@@ -186,13 +187,13 @@ func invocationsList(out io.Writer, wfiApi *httpclient.InvocationApi, since time
 		if err != nil {
 			panic(err)
 		}
-		updated := wi.Status.UpdatedAt.String()
-		created := wi.Metadata.CreatedAt.String()
+		updated := ptypes.TimestampString(wi.Status.UpdatedAt)
+		created := ptypes.TimestampString(wi.Metadata.CreatedAt)
 
 		// TODO add filter params to endpoint instead
 		// TODO filter old invocations and system invocations
 
-		rows = append(rows, []string{wfiId, wi.Spec.WorkflowId, string(wi.Status.Status),
+		rows = append(rows, []string{wfiId, wi.Spec.WorkflowId, wi.Status.Status.String(),
 			created, updated})
 	}
 
@@ -215,9 +216,9 @@ func collectStatus(tasks map[string]*types.TaskSpec, taskStatus map[string]*type
 
 		taskStatus, ok := taskStatus[id]
 		if ok {
-			status = string(taskStatus.Status.Status)
-			started = taskStatus.Metadata.CreatedAt.String()
-			updated = taskStatus.Metadata.CreatedAt.String()
+			status = taskStatus.Status.Status.String()
+			updated = ptypes.TimestampString(taskStatus.Status.UpdatedAt)
+			started = ptypes.TimestampString(taskStatus.Metadata.CreatedAt)
 		}
 
 		rows = append(rows, []string{id, status, started, updated})

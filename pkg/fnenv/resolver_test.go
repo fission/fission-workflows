@@ -30,7 +30,7 @@ func TestResolve(t *testing.T) {
 	}
 	wf, err := ResolveTasks(resolver, tasks)
 	assert.NoError(t, err)
-	assert.Equal(t, wf[task1Name].RuntimeId, strings.ToUpper(task1Name))
+	assert.Equal(t, wf[task1Name].ID, strings.ToUpper(task1Name))
 	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
@@ -56,7 +56,7 @@ func TestResolveForced(t *testing.T) {
 	}
 	wf, err := ResolveTasks(resolver, tasks)
 	assert.NoError(t, err)
-	assert.Equal(t, strings.ToUpper(task1Ref.RuntimeId), wf[task1Name].RuntimeId)
+	assert.Equal(t, strings.ToUpper(task1Ref.ID), wf[task1Name].ID)
 	assert.Equal(t, wf[task1Name].Runtime, fooClient)
 }
 
@@ -93,7 +93,7 @@ func TestResolveInputs(t *testing.T) {
 
 	wf, err := ResolveTasks(resolver, tasks)
 	assert.NoError(t, err)
-	assert.Equal(t, strings.ToUpper(task1Name), wf[task1Name].RuntimeId)
+	assert.Equal(t, strings.ToUpper(task1Name), wf[task1Name].ID)
 	//assert.Equal(t, strings.ToUpper(nestedTaskName), wf[nestedTaskName].RuntimeId)
 	//assert.Equal(t, strings.ToUpper(nestedNestedTaskName), wf[nestedNestedTaskName].RuntimeId)
 	//assert.Equal(t, fooClient, wf[nestedNestedTaskName].Runtime)

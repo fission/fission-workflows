@@ -3,7 +3,6 @@ package builtin
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
@@ -14,36 +13,34 @@ import (
 var DefaultBuiltinFunctions = map[string]native.InternalFunction{
 	If:         &FunctionIf{},
 	Noop:       &FunctionNoop{},
-	"nop":      &FunctionNoop{},
+	"nop":      &FunctionNoop{}, // nop is an alias for 'noop'
 	Compose:    &FunctionCompose{},
 	Sleep:      &FunctionSleep{},
 	Repeat:     &FunctionRepeat{},
 	Javascript: NewFunctionJavascript(),
+	Fail:       &FunctionFail{},
+	Http:       &FunctionHttp{},
+	Foreach:    &FunctionForeach{},
+	Switch:     &FunctionSwitch{},
+	While:      &FunctionWhile{},
 }
 
-// Utils
-func verifyInput(inputs map[string]*types.TypedValue, key string, validTypes ...string) (*types.TypedValue, error) {
+// ensureInput verifies that the input for the given key exists and is of one of the provided types.
+func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...typedvalues.ValueType) (*types.TypedValue, error) {
 
-	i, ok := inputs[key]
+	tv, ok := inputs[key]
 	if !ok {
 		return nil, fmt.Errorf("input '%s' is not set", key)
 	}
 
 	if len(validTypes) > 0 {
-		var valid bool
-		for _, t := range validTypes {
-			if strings.Contains(i.Type, t) {
-				valid = true
-				break
-			}
-		}
+		valid := typedvalues.IsType(tv, validTypes...)
 		if !valid {
-			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %s)", key,
-				strings.Join(validTypes, "|"))
+			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %v)", key, validTypes)
 		}
 	}
 
-	return i, nil
+	return tv, nil
 }
 
 func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types.TaskInvocationSpec, expected interface{}) {
@@ -60,4 +57,19 @@ func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types
 	if !reflect.DeepEqual(outputtedTask, expected) {
 		t.Errorf("Output '%v' does not match expected output '%v'", outputtedTask, expected)
 	}
+}
+
+// getFirstDefinedTypedValue returns the first input and key of the inputs argument that matches a field in fields.
+// For example, given inputs { a : b, c : d }, getFirstDefinedTypedValue(inputs, z, x, c, a) would return (c, d)
+func getFirstDefinedTypedValue(inputs map[string]*types.TypedValue, fields ...string) (string, *types.TypedValue) {
+	var result *types.TypedValue
+	var key string
+	for _, key = range fields {
+		val, ok := inputs[key]
+		if ok {
+			result = val
+			break
+		}
+	}
+	return key, result
 }

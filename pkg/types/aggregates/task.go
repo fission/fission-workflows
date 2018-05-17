@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TypeTaskInvocation = "function"
+	TypeTaskInvocation = "task"
 )
 
 type TaskInvocation struct {
@@ -73,17 +73,19 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.Status = types.TaskInvocationStatus_ABORTED
 		ti.Status.UpdatedAt = event.Timestamp
 	case events.Task_TASK_FAILED:
-		fnErr := &types.Error{}
-		err = proto.Unmarshal(event.Data, fnErr)
-		if err != nil {
-			fnErr.Code = "error"
-			fnErr.Message = err.Error()
-			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+		if event.Data != nil {
+			invoc := &types.TaskInvocation{}
+			err = proto.Unmarshal(event.Data, invoc)
+			if err != nil {
+				log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
+			}
+			if ti.Status == nil {
+				ti.Status = &types.TaskInvocationStatus{}
+			}
+			ti.Status.Error = invoc.GetStatus().GetError()
 		}
-
-		ti.Status.Status = types.TaskInvocationStatus_FAILED
-		ti.Status.Error = fnErr
 		ti.Status.UpdatedAt = event.Timestamp
+		ti.Status.Status = types.TaskInvocationStatus_FAILED
 	case events.Task_TASK_SKIPPED:
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
 		ti.Status.UpdatedAt = event.Timestamp

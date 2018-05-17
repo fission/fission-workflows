@@ -51,6 +51,7 @@ func parseFissionOptions(c *cli.Context) *bundle.FissionOptions {
 	return &bundle.FissionOptions{
 		ExecutorAddress: c.String("fission-executor"),
 		ControllerAddr:  c.String("fission-controller"),
+		RouterAddr:      c.String("fission-router"),
 	}
 }
 
@@ -112,15 +113,21 @@ func createCli() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   "fission-executor",
-			Usage:  "Address of the fission executor",
+			Usage:  "Address of the Fission executor to optimize executions",
 			Value:  "http://executor.fission",
 			EnvVar: "FNENV_FISSION_EXECUTOR",
 		},
 		cli.StringFlag{
 			Name:   "fission-controller",
-			Usage:  "Address of the controller for resolving functions",
+			Usage:  "Address of the Fission controller for resolving functions",
 			Value:  "http://controller.fission",
 			EnvVar: "FNENV_FISSION_CONTROLLER",
+		},
+		cli.StringFlag{
+			Name:   "fission-router",
+			Usage:  "Address of the Fission router for executing functions",
+			Value:  "http://router.fission",
+			EnvVar: "FNENV_FISSION_ROUTER",
 		},
 
 		// Components

@@ -14,6 +14,7 @@ import (
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission/router"
 	"github.com/gogo/protobuf/jsonpb"
@@ -51,10 +52,9 @@ func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	logrus.Infof("Handling incoming request '%s'... ", r.URL)
 
+	// Fetch the workflow based on the received Fission function metadata
 	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)
-
 	fnID := string(meta.UID)
 	if len(meta.UID) == 0 {
 		logrus.WithField("meta", meta).Error("Fission function name is missing")
@@ -76,8 +76,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Map request to workflow inputs
-	inputs := map[string]*types.TypedValue{}
-	err := parseRequest(r, inputs)
+	inputs, err := httpconv.ParseRequest(r)
 	if err != nil {
 		logrus.Errorf("Failed to parse inputs: %v", err)
 		http.Error(w, "Failed to parse inputs", 400)
@@ -109,23 +108,24 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In case of an error, create an error response corresponding to Fission function errors
+	// Format output or error to the response
+	if !wi.Status.Successful() && wi.Status.Error == nil {
+		logrus.Warn("Failed invocation does not contain error")
+		wi.Status.Error = &types.Error{
+			Message: "Unknown error",
+		}
+	}
+	// Logging
 	if !wi.Status.Successful() {
-		logrus.Errorf("Invocation not successful, was '%v'", wi.Status.Status.String())
-		http.Error(w, wi.Status.Status.String(), 500)
-		return
+		logrus.Errorf("Invocation not successful, was '%v': %v", wi.Status.Status.String(), wi.Status.Error.Error())
+	} else if wi.Status.Output == nil {
+		logrus.Infof("Invocation '%v' has no output.", fnID)
+	} else {
+		logrus.Infof("Response Content-Type: %v", httpconv.DetermineContentType(wi.Status.Output))
 	}
 
-	// Otherwise, create a response corresponding to Fission function responses.
-	var resp []byte
-	if wi.Status.Output != nil {
-		resp = wi.Status.Output.Value
-		w.Header().Add("Content-Type", inferContentType(wi.Status.Output, defaultContentType))
-	} else {
-		logrus.Infof("Invocation '%v' has no output.", fnID)
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	// Get output
+	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
 }
 
 func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
@@ -193,6 +193,7 @@ func (fp *Proxy) Specialize(ctx context.Context, flr *fission.FunctionLoadReques
 	var wfIDs []string
 
 	// Create workflows for each detected workflow definition
+	logrus.Infof("Files: %v", wfPaths)
 	for _, wfPath := range wfPaths {
 		wfID, err := fp.createWorkflowFromFile(ctx, flr, wfPath)
 		if err != nil {
@@ -237,8 +238,7 @@ func (fp *Proxy) findWorkflowFiles(ctx context.Context, flr *fission.FunctionLoa
 }
 
 // createWorkflowFromFile creates a workflow given a path to the file containing the workflow definition
-func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.FunctionLoadRequest,
-	path string) (string, error) {
+func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.FunctionLoadRequest, path string) (string, error) {
 
 	rdr, err := os.Open(path)
 	if err != nil {
@@ -248,7 +248,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	if err != nil {
 		return "", fmt.Errorf("failed to read file '%v': %v", path, err)
 	}
-	logrus.Infof("received definition: %s", string(raw))
+	logrus.Infof("received definition: '%s'", string(raw))
 
 	wfSpec := &types.WorkflowSpec{}
 	err = jsonpb.Unmarshal(bytes.NewReader(raw), wfSpec)

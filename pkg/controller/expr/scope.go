@@ -5,7 +5,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 )
 
 // Scope is the broadest view of the workflow invocation, which can be queried by the user.
@@ -36,7 +36,7 @@ type ObjectMetadata struct {
 
 // TaskScope holds information about a specific task execution within the current workflow invocation.
 type TaskScope struct {
-	*types.ObjectMetadata
+	*ObjectMetadata
 	Status    string // TaskInvocation status
 	UpdatedAt int64  // unix timestamp
 	Inputs    map[string]interface{}
@@ -46,30 +46,34 @@ type TaskScope struct {
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
-func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
+func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error) {
 
 	tasks := map[string]*TaskScope{}
-	for taskId, fn := range wfi.Status.Tasks {
-
+	for taskId, task := range types.GetTasks(wf, wfi) {
 		// Dep: pipe output of dynamic tasks
 		t := typedvalues.ResolveTaskOutput(taskId, wfi)
 		output, err := typedvalues.Format(t)
 		if err != nil {
 			panic(err)
 		}
-
-		task, _ := types.GetTask(wf, wfi, taskId)
-
+		inputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, task.Spec.Inputs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)
+		}
 		tasks[taskId] = &TaskScope{
-			ObjectMetadata: fn.Metadata,
-			Status:         fn.Status.Status.String(),
-			UpdatedAt:      formatTimestamp(fn.Status.UpdatedAt),
-			Inputs:         formatTypedValueMap(fn.Spec.Inputs),
+			ObjectMetadata: formatMetadata(task.Metadata),
+			Status:         task.Status.Status.String(),
+			UpdatedAt:      formatTimestamp(task.Status.UpdatedAt),
+			Inputs:         inputs,
 			Requires:       task.Spec.Requires,
 			Output:         output,
 		}
 	}
 
+	invocInputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, wfi.Spec.Inputs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to format invocation inputs")
+	}
 	return &Scope{
 		Workflow: &WorkflowScope{
 			ObjectMetadata: formatMetadata(wf.Metadata),
@@ -78,23 +82,10 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 		},
 		Invocation: &InvocationScope{
 			ObjectMetadata: formatMetadata(wfi.Metadata),
-			Inputs:         formatTypedValueMap(wfi.Spec.Inputs),
+			Inputs:         invocInputs,
 		},
 		Tasks: tasks,
-	}
-}
-
-func formatTypedValueMap(values map[string]*types.TypedValue) map[string]interface{} {
-	result := map[string]interface{}{}
-	for k, v := range values {
-		i, err := typedvalues.Format(v)
-		if err != nil {
-			logrus.Errorf("Failed to format: %s=%v", k, v)
-			panic(err)
-		}
-		result[k] = i
-	}
-	return result
+	}, nil
 }
 
 func formatMetadata(meta *types.ObjectMetadata) *ObjectMetadata {

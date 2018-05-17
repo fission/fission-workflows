@@ -35,7 +35,7 @@ func TestFnRef_Format(t *testing.T) {
 	for expected, input := range parseCases {
 		t.Run(expected, func(t *testing.T) {
 			fnRef := input.FnRef
-			if fnRef.RuntimeId != "" || fnRef.Runtime != "" {
+			if !fnRef.IsEmpty() {
 				assert.Equal(t, expected, fnRef.Format())
 			}
 		})

@@ -13,10 +13,42 @@ const (
 	Repeat           = "repeat"
 	RepeatInputTimes = "times"
 	RepeatInputDo    = "do"
-	RepeatInputPrev  = "prev"
+	RepeatInputPrev  = "_prev"
 )
 
-// TODO chose between unrolled loop and dynamic loop based on number of tasks
+/*
+FunctionRepeat, as the name suggests, repeatedly executes a specific function.
+The repeating is based on a static number, and is done sequentially.
+The subsequent tasks can access the output of the previous task with `prev`.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+times           | yes      | number            | Number of times to repeat the task.
+do              | yes      | task              | The task to execute.
+
+Note: the task `do` gets the output of the previous task injected into `prev`.
+
+**output** (*) The output of the last task.
+
+**Example**
+
+```yaml
+# ...
+RepeatExample:
+  run: repeat
+  inputs:
+    times: 5
+    do:
+      run: noop
+      inputs: { task().prev + 1 }}
+# ...
+```
+
+A complete example of this function can be found in the [repeatwhale](../examples/whales/repeatwhale.wf.yaml) example.
+*/
+// TODO minor: chose between unrolled loop and dynamic loop based on number of tasks for performance
 type FunctionRepeat struct{}
 
 func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
@@ -60,7 +92,7 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVa
 
 	if times > 0 {
 		// TODO add context
-		return typedvalues.UnsafeParse(&types.WorkflowSpec{
+		return typedvalues.MustParse(&types.WorkflowSpec{
 			OutputTask: taskId(times - 1),
 			Tasks:      createRepeatTasks(doTask, times),
 		}), nil
@@ -76,9 +108,12 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 		id := taskId(n)
 		do := proto.Clone(task).(*types.TaskSpec)
 		if n > 0 {
-			prev := taskId(n - 1)
-			do.Require(prev)
-			do.Input(RepeatInputPrev, typedvalues.UnsafeParse(fmt.Sprintf("{output(%s)}", prev)))
+			prevTask := taskId(n - 1)
+			do.Require(prevTask)
+			// TODO move prev to a reserved namespace, to avoid conflicts
+			prev := typedvalues.MustParse(fmt.Sprintf("{output('%s')}", prevTask))
+			prev.SetLabel("priority", "100")
+			do.Input(RepeatInputPrev, prev)
 		}
 		tasks[id] = do
 	}

@@ -16,15 +16,16 @@ func NewResolver(controller *client.Client) *Resolver {
 }
 
 func (re *Resolver) Resolve(fnName string) (string, error) {
+	// Currently we just use the controller API to check if the function exists.
 	log.Infof("Resolving function: %s", fnName)
-	fn, err := re.controller.FunctionGet(&metav1.ObjectMeta{
+	_, err := re.controller.FunctionGet(&metav1.ObjectMeta{
 		Name:      fnName,
 		Namespace: metav1.NamespaceDefault,
 	})
 	if err != nil {
 		return "", err
 	}
-	id := string(fn.Metadata.UID)
+	id := fnName
 
 	log.Infof("Resolved fission function %s to %s", fnName, id)
 

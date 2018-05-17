@@ -3,12 +3,15 @@ package workflows
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,8 +34,24 @@ func NewRuntime(api *invocation.Api, wfiCache fes.CacheReader) *Runtime {
 	}
 }
 
+// TODO support async
 func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	wfiId, err := rt.api.Invoke(spec.ToWorkflowSpec())
+	if err := validate.TaskInvocationSpec(spec); err != nil {
+		return nil, err
+	}
+
+	// Prepare inputs
+	wfSpec := spec.ToWorkflowSpec()
+	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
+		parentId, err := typedvalues.FormatString(parentTv)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parent id %v (%v)", parentTv, err)
+		}
+		wfSpec.ParentId = parentId
+	}
+
+	// Invoke workflow
+	wfiId, err := rt.api.Invoke(wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -45,7 +64,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 		wi := aggregates.NewWorkflowInvocation(wfiId)
 		err := rt.wfiCache.Get(wi)
 		if err != nil {
-			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
+			logrus.Debugf("Could not find workflow invocation in cache: %v", err)
 		}
 		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Finished() {
 			result = wi.WorkflowInvocation
@@ -69,9 +88,9 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 }
 
-func CreateFnRef(wfId string) *types.FnRef {
-	return &types.FnRef{
-		Runtime:   Name,
-		RuntimeId: wfId,
+func CreateFnRef(wfId string) types.FnRef {
+	return types.FnRef{
+		Runtime: Name,
+		ID:      wfId,
 	}
 }

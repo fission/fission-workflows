@@ -6,8 +6,10 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/function"
 	"github.com/fission/fission-workflows/pkg/api/invocation"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
@@ -73,6 +75,7 @@ type RuleSchedule struct {
 	Scheduler     *scheduler.WorkflowScheduler
 	InvocationApi *invocation.Api
 	FunctionApi   *function.Api
+	StateStore    *expr.Store
 }
 
 func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
@@ -92,9 +95,15 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	for _, a := range schedule.Actions {
 		switch a.Type {
 		case scheduler.ActionType_ABORT:
+			invokeAction := &scheduler.AbortAction{}
+			err := ptypes.UnmarshalAny(a.Payload, invokeAction)
+			if err != nil {
+				log.Errorf("Failed to unpack Scheduler action: %v", err)
+			}
 			return &ActionFail{
 				Api:          sf.InvocationApi,
 				InvocationId: wfi.Id(),
+				Err:          errors.New(invokeAction.Reason),
 			}
 		case scheduler.ActionType_INVOKE_TASK:
 			invokeAction := &scheduler.InvokeTaskAction{}
@@ -103,10 +112,11 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
 			return &ActionInvokeTask{
-				Wf:   wf,
-				Wfi:  wfi,
-				Api:  sf.FunctionApi,
-				Task: invokeAction,
+				Wf:         wf,
+				Wfi:        wfi,
+				Api:        sf.FunctionApi,
+				Task:       invokeAction,
+				StateStore: sf.StateStore,
 			}
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)
@@ -127,29 +137,38 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	tasks := types.GetTasks(wf, wfi)
 	var err error
 	finished := true
+	success := true
 	for id := range tasks {
 		t, ok := wfi.Status.Tasks[id]
 		if !ok || !t.Status.Finished() {
 			finished = false
 			break
+		} else {
+			success = success && t.Status.Status == types.TaskInvocationStatus_SUCCEEDED
 		}
 	}
 	if finished {
 		var finalOutput *types.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
-			t, ok := wfi.Status.Tasks[wf.Spec.OutputTask]
-			if !ok {
-				return &controller.ActionError{
-					Err: errors.New("could not find output task status in completed invocation"),
-				}
-			}
-			finalOutput = t.Status.Output
+			//t, ok := wfi.Status.Tasks[wf.Spec.OutputTask]
+			//if !ok {
+			//	return &controller.ActionError{
+			//		Err: errors.New("could not find output task status in completed invocation"),
+			//	}
+			//}
+			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
 		}
 
 		// TODO extract to action
-		err = cc.InvocationApi.MarkCompleted(wfi.Id(), finalOutput)
-		return &controller.ActionError{
-			Err: err,
+		if success {
+			err = cc.InvocationApi.MarkCompleted(wfi.Id(), finalOutput)
+		} else {
+			err = cc.InvocationApi.Fail(wfi.Id(), errors.New("not all tasks succeeded"))
+		}
+		if err != nil {
+			return &controller.ActionError{
+				Err: err,
+			}
 		}
 	}
 	return nil

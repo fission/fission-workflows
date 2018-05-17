@@ -1,0 +1,17 @@
+# Foreachwhale loops over an array of elements.
+#
+# Example usage: fission fn test --name foreachwhale
+output: MakeWhaleSay
+tasks:
+  MultiplyNumbers:
+    run: foreach
+    inputs:
+      foreach: [1,2,3,4,5]
+      do:
+        run: noop
+        inputs: "{ task().Inputs._item * 10 }"
+  MakeWhaleSay:
+    run: whalesay
+    inputs: "{ output('MultiplyNumbers') }"
+    requires:
+    - MultiplyNumbers

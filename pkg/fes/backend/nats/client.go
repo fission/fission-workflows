@@ -111,12 +111,10 @@ func (es *EventStore) Append(event *fes.Event) error {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"event.id":       event.Id,
-		"event.type":     event.Type,
-		"aggregate.id":   event.Aggregate.Id,
-		"aggregate.type": event.Aggregate.Type,
-		"nats.Subject":   subject,
-	}).Info("Backend client appending event.")
+		"aggregate":    event.Aggregate.Format(),
+		"parent":       event.Parent.Format(),
+		"nats.subject": subject,
+	}).Infof("Appending event: %v", event.Type)
 
 	return es.conn.Publish(subject, data)
 }

@@ -3,8 +3,10 @@ package native
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,7 +36,20 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 }
 
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
-	fnId := spec.FnRef.RuntimeId
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithFields(log.Fields{
+				"err": r,
+			}).Error("Internal function crashed.")
+			fmt.Println(string(debug.Stack()))
+		}
+	}()
+
+	if err := validate.TaskInvocationSpec(spec); err != nil {
+		return nil, err
+	}
+
+	fnId := spec.FnRef.ID
 	fn, ok := fe.fns[fnId]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnId)
@@ -49,6 +64,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return &types.TaskInvocationStatus{
 			UpdatedAt: ptypes.TimestampNow(),
 			Status:    types.TaskInvocationStatus_FAILED,
+			Error: &types.Error{
+				Message: err.Error(),
+			},
 		}, nil
 	}
 

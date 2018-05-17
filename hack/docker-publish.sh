@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# Usage: docker-publish.sh <docker-ns> <tag>
+# Usage: docker-publish.sh <docker-ns> <tag> - Pushes all images to the default remote Docker repository
 #
 
 set -e

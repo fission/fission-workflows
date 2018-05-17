@@ -1,4 +1,8 @@
-# A whale that shows off how a if-condition works in a workflow
+# Maybewhale that shows off how a if-condition works in a workflow
+#
+# Usage examples:
+# fission fn test --name maybewhale -b 'a whale can say it!'
+# fission fn test --name maybewhale -b 'This sentence is far to complex for a whale!'
 apiVersion: 1
 output: PassAlong
 tasks:

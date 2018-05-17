@@ -8,24 +8,44 @@ import (
 )
 
 var versionPrinter = commandContext(func(ctx Context) error {
+	c := ctx.Bool("client")
+	s := ctx.Bool("server")
+	if !c && !s {
+		c = true
+		s = true
+	}
+
 	// Print client version
-	fmt.Printf("client: %s\n", version.VERSION)
+	if c {
+		fmt.Printf("client: %s\n", version.VERSION)
+	}
 
 	// Print server version
-	client := getClient(ctx)
-	resp, err := client.Admin.Version(ctx)
-	if err != nil {
-		fmt.Printf("server: failed to get version (%v)\n", err)
-	} else {
-		fmt.Printf("server: %s\n", resp.Version)
+	if s {
+		client := getClient(ctx)
+		resp, err := client.Admin.Version(ctx)
+		if err != nil {
+			fmt.Printf("server: failed to get version (%v)\n", err)
+		} else {
+			fmt.Printf("server: %s\n", resp.Version)
+		}
 	}
 	return nil
 })
 
 var cmdVersion = cli.Command{
 	Name:    "version",
-	Usage:   "Print version of both client and server",
+	Usage:   "Print version of both client and server.",
 	Aliases: []string{"v"},
-	Flags:   []cli.Flag{},
-	Action:  versionPrinter,
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name:  "c, client",
+			Usage: "Only show the version of the client.",
+		},
+		cli.BoolFlag{
+			Name:  "s, server",
+			Usage: "Only show the version of the client.",
+		},
+	},
+	Action: versionPrinter,
 }

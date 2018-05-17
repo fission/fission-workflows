@@ -50,12 +50,15 @@ before_script:
 - glide install -v
 - build/build-linux.sh
 - test/e2e/travis-setup.sh
+# Checks using the built artifacts
 
 script:
 # Unit and Integration tests
 - test/runtests.sh
 # End-to-end tests
 - NOBUILD=y test/e2e/buildtest.sh
+# Use newest wfcli to verify workflows in example dir
+- hack/verify-workflows.sh
 
 after_script:
 - test/e2e/cleanup.sh

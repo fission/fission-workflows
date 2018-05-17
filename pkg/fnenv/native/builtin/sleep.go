@@ -14,6 +14,34 @@ const (
 	SleepInputDefault = time.Duration(1) * time.Second
 )
 
+/*
+FunctionSleep is similarly to `noop` a "no operation" function.
+However, the `sleep` function will wait for a specific amount of time before "completing".
+This can be useful to mock or stub out functions during development, while simulating the realistic execution time.
+
+**Specification**
+
+**input**       | required | types             | description
+----------------|----------|-------------------|--------------------------------------------------------
+default         | no       | string            | A string-based representation of the duration of the sleep. (default: 1 second)
+
+Note: the sleep input is parsed based on the [Golang Duration string notation](https://golang.org/pkg/time/#ParseDuration).
+Examples: 1 hour and 10 minutes: `1h10m`, 2 minutes and 300 milliseconds: `2m300ms`.
+
+**output** None
+
+**Example**
+
+```yaml
+# ...
+NoopExample:
+  run: sleep
+  inputs: 1h
+# ...
+```
+
+A complete example of this function can be found in the [sleepalot](../examples/misc/sleepalot.wf.yaml) example.
+*/
 type FunctionSleep struct{}
 
 func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

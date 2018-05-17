@@ -9,6 +9,9 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,20 +46,29 @@ type ActionFail struct {
 func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
 	a.InvocationId = ec.Invocation().Id()
+	if a.Err == nil {
+		if s, ok := ec.EvalState().Last(); ok {
+			a.Err = s.Error
+		}
+	}
+	if a.Err == nil {
+		a.Err = errors.New("unknown error has occurred")
+	}
 	return a
 }
 
 func (a *ActionFail) Apply() error {
-	wfiLog.Info("Applying action: fail")
+	wfiLog.Infof("Applying action: fail (%v)", a.Err)
 	return a.Api.Fail(a.InvocationId, a.Err)
 }
 
 // ActionInvokeTask invokes a function
 type ActionInvokeTask struct {
-	Wf   *types.Workflow
-	Wfi  *types.WorkflowInvocation
-	Api  *function.Api
-	Task *scheduler.InvokeTaskAction
+	Wf         *types.Workflow
+	Wfi        *types.WorkflowInvocation
+	Api        *function.Api
+	Task       *scheduler.InvokeTaskAction
+	StateStore *expr.Store
 }
 
 func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
@@ -64,7 +76,7 @@ func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
 }
 
 func (a *ActionInvokeTask) Apply() error {
-	wfiLog.Infof("Invoking task: %v", a.Task.Id)
+	wfiLog.Infof("Running task: %v", a.Task.Id)
 	// Find Task (static or dynamic)
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
 	if !ok {
@@ -77,25 +89,41 @@ func (a *ActionInvokeTask) Apply() error {
 		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
 	}
 
-	// ResolveTask the inputs
+	// Resolve the inputs
+	scope, err := expr.NewScope(a.Wf, a.Wfi)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+	}
+	a.StateStore.Set(a.Wfi.Id(), scope)
+
+	// Inherit scope if this invocation is part of a dynamic decision
+	if len(a.Wfi.Spec.ParentId) != 0 {
+		parentScope, ok := a.StateStore.Get(a.Wfi.Spec.ParentId)
+		if ok {
+			err := mergo.Merge(scope, parentScope)
+			if err != nil {
+				logrus.Errorf("Failed to inherit parent scope: %v", err)
+			}
+		}
+	}
 	inputs := map[string]*types.TypedValue{}
-	queryScope := expr.NewScope(a.Wf, a.Wfi)
-	for inputKey, val := range a.Task.Inputs {
-		resolvedInput, err := expr.Resolve(queryScope, a.Task.Id, val)
+	for _, input := range typedvalues.Prioritize(a.Task.Inputs) {
+		resolvedInput, err := expr.Resolve(scope, a.Task.Id, input.Val)
 		if err != nil {
 			wfiLog.WithFields(logrus.Fields{
-				"val":      val,
-				"inputKey": inputKey,
-			}).Errorf("Failed to parse input: %v", err)
+				"val": input.Key,
+				"key": input.Val,
+			}).Errorf("Failed to resolve input: %v", err)
 			return err
 		}
 
-		inputs[inputKey] = resolvedInput
+		inputs[input.Key] = resolvedInput
 		wfiLog.WithFields(logrus.Fields{
-			"val":      val,
-			"key":      inputKey,
-			"resolved": resolvedInput,
-		}).Infof("Resolved expression")
+			"key": input.Key,
+		}).Infof("Resolved input: %v -> %v", typedvalues.MustFormat(input.Val), typedvalues.MustFormat(resolvedInput))
+
+		// Update the scope with the resolved type
+		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustFormat(resolvedInput)
 	}
 
 	// Invoke
@@ -106,7 +134,7 @@ func (a *ActionInvokeTask) Apply() error {
 		Inputs:       inputs,
 	}
 
-	_, err := a.Api.Invoke(fnSpec)
+	_, err = a.Api.Invoke(fnSpec)
 	if err != nil {
 		wfiLog.WithFields(logrus.Fields{
 			"id": a.Wfi.Metadata.Id,

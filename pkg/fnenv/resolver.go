@@ -40,7 +40,7 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	if err != nil {
 		if err == types.ErrNoRuntime {
 			ref = types.FnRef{
-				RuntimeId: targetFn,
+				ID: targetFn,
 			}
 		} else {
 			return types.FnRef{}, err
@@ -48,7 +48,7 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	}
 
 	if ref.Runtime != "" {
-		return ps.resolveForRuntime(ref.RuntimeId, ref.Runtime)
+		return ps.resolveForRuntime(ref.ID, ref.Runtime)
 	}
 
 	waitFor := len(ps.clients)
@@ -59,13 +59,13 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	var lastErr error
 	for cName := range ps.clients {
 		go func(cName string) {
-			def, err := ps.resolveForRuntime(ref.RuntimeId, cName)
+			def, err := ps.resolveForRuntime(ref.ID, cName)
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
 					"err":     err,
 					"runtime": cName,
 					"fn":      targetFn,
-				}).Info("Function not found.")
+				}).Debug("Function not found.")
 				lastErr = err
 			} else {
 				resolved <- def
@@ -95,8 +95,8 @@ func (ps *MetaResolver) resolveForRuntime(targetFn string, runtime string) (type
 		return types.FnRef{}, err
 	}
 	return types.FnRef{
-		Runtime:   runtime,
-		RuntimeId: rsv,
+		Runtime: runtime,
+		ID:      rsv,
 	}, nil
 }
 

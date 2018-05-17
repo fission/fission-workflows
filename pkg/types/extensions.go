@@ -10,12 +10,11 @@ import (
 
 // Types other than specified in protobuf
 const (
-	SUBJECT_INVOCATION = "invocation"
-	SUBJECT_WORKFLOW   = "workflows"
-	INPUT_MAIN         = "default"
-	INPUT_HEADERS      = "headers"
-	INPUT_QUERY        = "query"
-	INPUT_METHOD       = "method"
+	INPUT_MAIN    = "default"
+	INPUT_HEADERS = "headers"
+	INPUT_QUERY   = "query"
+	INPUT_METHOD  = "method"
+	InputParent   = "_parent"
 
 	typedValueShortMaxLen = 32
 	WorkflowApiVersion    = "v1"
@@ -39,7 +38,7 @@ var taskFinalStates = []TaskInvocationStatus_Status{
 // TypedValue
 //
 
-// Prints a short description of the value
+// Prints a short description of the Value
 func (tv TypedValue) Short() string {
 	var val string
 	if len(tv.Value) > typedValueShortMaxLen {
@@ -49,6 +48,30 @@ func (tv TypedValue) Short() string {
 	}
 
 	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
+}
+
+func (tv *TypedValue) SetLabel(k string, v string) *TypedValue {
+	if tv == nil {
+		return tv
+	}
+	if tv.Labels == nil {
+		tv.Labels = map[string]string{}
+	}
+	tv.Labels[k] = v
+
+	return tv
+}
+
+func (tv *TypedValue) GetLabel(k string) (string, bool) {
+	if tv == nil {
+		return "", false
+	}
+
+	if tv.Labels == nil {
+		tv.Labels = map[string]string{}
+	}
+	v, ok := tv.Labels[k]
+	return v, ok
 }
 
 //
@@ -130,7 +153,7 @@ func (m *TaskInvocation) Id() string {
 
 func (m *TaskInvocationSpec) ToWorkflowSpec() *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
-		WorkflowId: m.FnRef.RuntimeId,
+		WorkflowId: m.FnRef.ID,
 		Inputs:     m.Inputs,
 	}
 }

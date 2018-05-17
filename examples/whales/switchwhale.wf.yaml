@@ -1,0 +1,18 @@
+# Switchwhale shows off how a switch-condition works in a workflow
+#
+# Usage examples:
+# fission fn test --name switchwhale -b 'hello'
+# fission fn test --name switchwhale -b 'foo'
+# fission fn test --name switchwhale -b 'acme'
+output: RespondToInput
+tasks:
+  RespondToInput:
+    run: switch
+    inputs:
+      switch: "{ param() }"
+      cases:
+      - case: hello
+        action: world!
+      - case: foo
+        action: bar
+      default: right...

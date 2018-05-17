@@ -1,4 +1,4 @@
-package fission
+package httpconv
 
 import (
 	"fmt"
@@ -38,13 +38,13 @@ func TestFormatRequest(t *testing.T) {
 		types.INPUT_METHOD:  unsafe(typedvalues.Parse(method)),
 	}
 
-	err = formatRequest(target, source)
+	err = FormatRequest(source, target)
 	assert.NoError(t, err)
 
 	// Check body
 	bs, err := ioutil.ReadAll(target.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, "\""+body+"\"", string(bs))
+	assert.Equal(t, body, string(bs))
 
 	// Check headers
 	assert.Equal(t, headers["Header-Key"], target.Header["Header-Key"][0])
@@ -64,9 +64,8 @@ func TestParseRequestComplete(t *testing.T) {
 		"header1": "value1",
 	}, strings.NewReader("\""+body+"\""))
 	req.Header.Set("Content-Type", "application/json")
-	target := map[string]*types.TypedValue{}
 
-	err := parseRequest(req, target)
+	target, err := ParseRequest(req)
 	assert.NoError(t, err)
 
 	// Check body
@@ -102,9 +101,8 @@ func TestParseRequestMinimal(t *testing.T) {
 	req := createRequest(http.MethodPut, "http://foo.example", map[string]string{},
 		strings.NewReader("\""+body+"\""))
 	req.Header.Set("Content-Type", "application/json")
-	target := map[string]*types.TypedValue{}
 
-	err := parseRequest(req, target)
+	target, err := ParseRequest(req)
 	assert.NoError(t, err)
 
 	// Check body

@@ -75,7 +75,6 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		ivErr := &types.Error{}
 		err := proto.Unmarshal(event.Data, ivErr)
 		if err != nil {
-			ivErr.Code = "error"
 			ivErr.Message = err.Error()
 			log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
 		}
@@ -160,7 +159,7 @@ func (wi *WorkflowInvocation) handleTaskAdded(event *fes.Event) error {
 	log.WithFields(log.Fields{
 		"id":          task.Id(),
 		"functionRef": task.Spec.FunctionRef,
-	}).Info("Added dynamic task.")
+	}).Debug("Added dynamic task.")
 	return nil
 }
 

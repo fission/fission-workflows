@@ -15,8 +15,8 @@ func TestFunctionIfConsequentFlow(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: typedvalues.UnsafeParse(true),
-				IfInputThen:      typedvalues.UnsafeParse(expectedTask),
+				IfInputCondition: typedvalues.MustParse(true),
+				IfInputThen:      typedvalues.MustParse(expectedTask),
 			},
 		},
 		expectedTask)
@@ -33,9 +33,9 @@ func TestFunctionIfAlternativeFlow(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: typedvalues.UnsafeParse(false),
-				IfInputThen:      typedvalues.UnsafeParse(task),
-				IfInputElse:      typedvalues.UnsafeParse(alternativeTask),
+				IfInputCondition: typedvalues.MustParse(false),
+				IfInputThen:      typedvalues.MustParse(task),
+				IfInputElse:      typedvalues.MustParse(alternativeTask),
 			},
 		},
 		alternativeTask)
@@ -46,9 +46,9 @@ func TestFunctionIfLiteral(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: typedvalues.UnsafeParse(true),
-				IfInputThen:      typedvalues.UnsafeParse("foo"),
-				IfInputElse:      typedvalues.UnsafeParse("bar"),
+				IfInputCondition: typedvalues.MustParse(true),
+				IfInputThen:      typedvalues.MustParse("foo"),
+				IfInputElse:      typedvalues.MustParse("bar"),
 			},
 		},
 		"foo")
@@ -59,8 +59,8 @@ func TestFunctionIfMissingAlternative(t *testing.T) {
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				IfInputCondition: typedvalues.UnsafeParse(false),
-				IfInputThen:      typedvalues.UnsafeParse("then"),
+				IfInputCondition: typedvalues.MustParse(false),
+				IfInputThen:      typedvalues.MustParse("then"),
 			},
 		},
 		nil)
