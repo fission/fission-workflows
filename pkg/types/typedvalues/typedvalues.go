@@ -1,10 +1,10 @@
 package typedvalues
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -103,12 +103,12 @@ func (pf *ComposedParserFormatter) Parse(ctx Parser, i interface{}) (*types.Type
 }
 
 func (pf *ComposedParserFormatter) Format(ctx Formatter, v *types.TypedValue) (interface{}, error) {
-	if v == nil {
+	if v == nil || (len(v.Type) == 0 && len(v.Value) == 0) {
 		return nil, nil
 	}
 	formatters, ok := pf.formatters[ValueType(v.Type)]
 	if !ok {
-		logrus.Debugf("No known formatter for: %T", v)
+		logrus.Warnf("No known formatter for: %v (%+v) (%v, %v)", v.Type, v, len(v.Type), len(v.Value))
 		return 0, TypedValueErr{
 			src: v,
 			err: ErrUnsupportedType,
@@ -119,7 +119,7 @@ func (pf *ComposedParserFormatter) Format(ctx Formatter, v *types.TypedValue) (i
 		logrus.Debugf("Trying to format with: %T", formatter)
 		tv, err := formatter.Format(ctx, v)
 		if err != nil {
-			logrus.Debugf("Formatter error %t", err)
+			logrus.Warnf("Formatter error %t", err)
 			if isErrUnsupported(err) {
 				continue
 			} else {
@@ -165,7 +165,7 @@ func NewComposedParserFormatter(pfs []ParserFormatter) *ComposedParserFormatter 
 
 func isErrUnsupported(err error) bool {
 	if tverr, ok := err.(TypedValueErr); ok {
-		return tverr.err == ErrUnsupportedType
+		return errors.Cause(tverr.err) == ErrUnsupportedType
 	}
 	return false
 }

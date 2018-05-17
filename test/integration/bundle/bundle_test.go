@@ -155,7 +155,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		}
 	}
 	assert.Equal(t, wiSpec, invocation.Spec)
-	assert.Equal(t, etv, invocation.Status.Output)
+	assert.Equal(t, etv.Value, invocation.Status.Output.Value)
 	assert.True(t, invocation.Status.Successful())
 }
 

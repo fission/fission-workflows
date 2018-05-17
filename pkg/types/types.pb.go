@@ -247,7 +247,7 @@ type WorkflowSpec struct {
 	// Tasks contains the specs of the tasks, with the key being the task id.
 	//
 	// Note: Dependency graph is build into the tasks.
-	Tasks map[string]*TaskSpec `protobuf:"bytes,2,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Tasks map[string]*TaskSpec `protobuf:"bytes,2,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// From which task should the workflow return the output? Future: multiple? Implicit?
 	OutputTask  string `protobuf:"bytes,3,opt,name=outputTask" json:"outputTask,omitempty"`
 	Description string `protobuf:"bytes,4,opt,name=description" json:"description,omitempty"`
@@ -318,7 +318,7 @@ type WorkflowStatus struct {
 	Status    WorkflowStatus_Status      `protobuf:"varint,1,opt,name=status,enum=WorkflowStatus_Status" json:"status,omitempty"`
 	UpdatedAt *google_protobuf.Timestamp `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
 	// Tasks contains the status of the tasks, with the key being the task id.
-	Tasks map[string]*TaskStatus `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Tasks map[string]*TaskStatus `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Error *Error                 `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
 }
 
@@ -393,7 +393,7 @@ func (m *WorkflowInvocation) GetStatus() *WorkflowInvocationStatus {
 // Workflow Invocation Model
 type WorkflowInvocationSpec struct {
 	WorkflowId string                 `protobuf:"bytes,1,opt,name=workflowId" json:"workflowId,omitempty"`
-	Inputs     map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Inputs     map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// ParentId contains the id of the encapsulating workflow invocation.
 	//
 	// This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
@@ -429,11 +429,11 @@ func (m *WorkflowInvocationSpec) GetParentId() string {
 type WorkflowInvocationStatus struct {
 	Status    WorkflowInvocationStatus_Status `protobuf:"varint,1,opt,name=status,enum=WorkflowInvocationStatus_Status" json:"status,omitempty"`
 	UpdatedAt *google_protobuf.Timestamp      `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
-	Tasks     map[string]*TaskInvocation      `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Tasks     map[string]*TaskInvocation      `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Output    *TypedValue                     `protobuf:"bytes,4,opt,name=output" json:"output,omitempty"`
 	// In case the task ID also exists in the workflow spec, the dynamic task will be
 	// used as an overlay over the static task.
-	DynamicTasks map[string]*Task `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	DynamicTasks map[string]*Task `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Error        *Error           `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
 }
 
@@ -486,7 +486,7 @@ func (m *WorkflowInvocationStatus) GetError() *Error {
 
 type DependencyConfig struct {
 	// Dependencies for this task to execute
-	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,1,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,1,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Number of dependencies to wait for
 	Await int32 `protobuf:"varint,2,opt,name=await" json:"await,omitempty"`
 }
@@ -552,9 +552,9 @@ func (m *Task) GetStatus() *TaskStatus {
 type TaskSpec struct {
 	// Name/identifier of the function
 	FunctionRef string                 `protobuf:"bytes,1,opt,name=functionRef" json:"functionRef,omitempty"`
-	Inputs      map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Inputs      map[string]*TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Dependencies for this task to execute
-	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,3,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Requires map[string]*TaskDependencyParameters `protobuf:"bytes,3,rep,name=requires" json:"requires,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Number of dependencies to wait for
 	Await int32 `protobuf:"varint,4,opt,name=await" json:"await,omitempty"`
 	// Transform the output, or override the output with a literal
@@ -706,7 +706,7 @@ type TaskInvocationSpec struct {
 	// TaskId is the id of the task within the workflow
 	TaskId string `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
 	// Inputs contain all inputs to the task invocation
-	Inputs map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Inputs map[string]*TypedValue `protobuf:"bytes,3,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	//
 	InvocationId string `protobuf:"bytes,4,opt,name=invocationId" json:"invocationId,omitempty"`
 }
@@ -814,8 +814,8 @@ func (m *ObjectMetadata) GetCreatedAt() *google_protobuf.Timestamp {
 // Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
 type TypedValue struct {
 	Type   string            `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
-	Value  []byte            `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
-	Labels map[string]string `protobuf:"bytes,3,rep,name=Labels" json:"Labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Value  []byte            `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Labels map[string]string `protobuf:"bytes,3,rep,name=labels" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 func (m *TypedValue) Reset()                    { *m = TypedValue{} }
@@ -892,7 +892,7 @@ func (m *FnRef) GetID() string {
 
 // Utility wrapper for a TypedValue map
 type TypedValueMap struct {
-	Value map[string]*TypedValue `protobuf:"bytes,1,rep,name=Value" json:"Value,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=Value"`
+	Value map[string]*TypedValue `protobuf:"bytes,1,rep,name=Value" json:"Value,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 func (m *TypedValueMap) Reset()                    { *m = TypedValueMap{} }

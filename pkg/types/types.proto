@@ -81,6 +81,7 @@ message WorkflowInvocationSpec {
     //
     // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
     string parentId = 3;
+    //int32 depth = 4; // aka size of the stack
 }
 
 message WorkflowInvocationStatus {

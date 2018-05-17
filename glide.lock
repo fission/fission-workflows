@@ -1,5 +1,5 @@
-hash: 8cad22dc9175c5d5adefde9954de54deadac702836c42afc7b5dbc412cff06a1
-updated: 2018-04-25T23:17:48.679349+02:00
+hash: 1855dd82f3802e04ff027b599d01395c2b4d0f22bbfaa72ea98606e34c5dc565
+updated: 2018-05-15T14:41:29.145132+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -37,7 +37,7 @@ imports:
 - name: github.com/fatih/structs
   version: a720dfa8df582c51dee1b36feabb906bde1588bd
 - name: github.com/fission/fission
-  version: 36238f676c32efa81e36bb46804b1d7c835dab5a
+  version: 6a3e326f36164e589e14c4898e5c097457c9db8d
   subpackages:
   - cache
   - controller/client
@@ -93,7 +93,7 @@ imports:
 - name: github.com/gorilla/handlers
   version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
-  version: 53c1911da2b537f792e7cafcb446b05ffe33b996
+  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
 - name: github.com/grpc-ecosystem/grpc-gateway
   version: 58f78b988bc393694cef62b92c5cde77e4742ff5
   subpackages:
@@ -111,7 +111,7 @@ imports:
 - name: github.com/howeyc/gopass
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/imdario/mergo
-  version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+  version: 9d5f1277e9a8ed20c3684bda8fde67c05628518c
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/mailru/easyjson
@@ -136,6 +136,8 @@ imports:
   - util
 - name: github.com/nats-io/nuid
   version: 289cccf02c178dc782430d534e3c1f5b72af807f
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/PuerkitoBio/purell
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc

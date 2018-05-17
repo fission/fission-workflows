@@ -64,7 +64,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 		wi := aggregates.NewWorkflowInvocation(wfiId)
 		err := rt.wfiCache.Get(wi)
 		if err != nil {
-			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
+			logrus.Debugf("Could not find workflow invocation in cache: %v", err)
 		}
 		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Finished() {
 			result = wi.WorkflowInvocation

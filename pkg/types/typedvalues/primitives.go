@@ -174,7 +174,7 @@ func ParseNil() *types.TypedValue {
 }
 
 func FormatNil(v *types.TypedValue) error {
-	if ValueType(v.Type) != TypeNil {
+	if v != nil && ValueType(v.Type) != TypeNil {
 		return TypedValueErr{
 			src: v,
 			err: ErrValueConversion,
