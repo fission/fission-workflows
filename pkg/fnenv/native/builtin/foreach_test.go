@@ -25,5 +25,5 @@ func TestFunctionForeach_Invoke(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(foreachElements)+1, len(wf.Tasks)) // + 1 for the noop-task in the foreach loop.
 	assert.NotNil(t, wf.Tasks["do_0"])
-	assert.Equal(t, foreachElements[0], int(typedvalues.MustFormat(wf.Tasks["do_0"].Inputs["element"]).(float64)))
+	assert.Equal(t, foreachElements[0], int(typedvalues.MustFormat(wf.Tasks["do_0"].Inputs["_item"]).(float64)))
 }

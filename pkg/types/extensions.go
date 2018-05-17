@@ -50,14 +50,16 @@ func (tv TypedValue) Short() string {
 	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
 }
 
-func (tv *TypedValue) SetLabel(k string, v string) {
+func (tv *TypedValue) SetLabel(k string, v string) *TypedValue {
 	if tv == nil {
-		return
+		return tv
 	}
 	if tv.Labels == nil {
 		tv.Labels = map[string]string{}
 	}
 	tv.Labels[k] = v
+
+	return tv
 }
 
 func (tv *TypedValue) GetLabel(k string) (string, bool) {

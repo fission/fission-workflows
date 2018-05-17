@@ -55,6 +55,25 @@ func NewJavascriptExpressionParser() *JavascriptExpressionParser {
 func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask string,
 	expr *types.TypedValue) (*types.TypedValue, error) {
 
+	switch typedvalues.ValueType(expr.GetType()) {
+	case typedvalues.TypeList:
+		return oe.resolveList(rootScope, currentTask, expr)
+	case typedvalues.TypeMap:
+		return oe.resolveMap(rootScope, currentTask, expr)
+	case typedvalues.TypeExpression:
+		return oe.resolveExpr(rootScope, currentTask, expr)
+	default:
+		return expr, nil
+	}
+}
+
+func (oe *JavascriptExpressionParser) resolveExpr(rootScope interface{}, currentTask string,
+	expr *types.TypedValue) (*types.TypedValue, error) {
+
+	if !typedvalues.IsType(expr, typedvalues.TypeExpression) {
+		return nil, errors.New("expected expression to resolve")
+	}
+
 	defer func() {
 		if caught := recover(); caught != nil {
 			if ErrTimeOut != caught {
@@ -63,75 +82,15 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 		}
 	}()
 
-	// Handle composites
-	if typedvalues.IsType(expr, typedvalues.TypeMap) {
-		logrus.WithField("expr", expr).Info("Resolving map")
-		i, err := typedvalues.Format(expr)
-		if err != nil {
-			return nil, err
-		}
-
-		result := map[string]interface{}{}
-		obj := i.(map[string]interface{})
-		for k, v := range obj { // TODO add priority here
-			field, err := typedvalues.Parse(v)
-			if err != nil {
-				return nil, err
-			}
-
-			resolved, err := oe.Resolve(rootScope, currentTask, field)
-			if err != nil {
-				return nil, err
-			}
-
-			actualVal, err := typedvalues.Format(resolved)
-			if err != nil {
-				return nil, err
-			}
-			result[k] = actualVal
-		}
-		return typedvalues.Parse(result)
-	}
-
-	if typedvalues.IsType(expr, typedvalues.TypeList) {
-		logrus.WithField("expr", expr).Info("Resolving list")
-		i, err := typedvalues.Format(expr)
-		if err != nil {
-			return nil, err
-		}
-
-		result := []interface{}{}
-		obj := i.([]interface{})
-		for _, v := range obj { // TODO add priority here
-			field, err := typedvalues.Parse(v)
-			if err != nil {
-				return nil, err
-			}
-
-			resolved, err := oe.Resolve(rootScope, currentTask, field)
-			if err != nil {
-				return nil, err
-			}
-
-			actualVal, err := typedvalues.Format(resolved)
-			if err != nil {
-				return nil, err
-			}
-			result = append(result, actualVal)
-		}
-		return typedvalues.Parse(result)
-	}
-
-	if !typedvalues.IsType(expr, typedvalues.TypeExpression) {
-		return expr, nil
-	}
-
+	// Setup the JavaScript interpreter
 	scoped := oe.vm.Copy()
 	injectFunctions(scoped, BuiltinFunctions)
 	err := scoped.Set(varScope, rootScope)
+	if err != nil {
+		return nil, err
+	}
 	err = scoped.Set(varCurrentTask, currentTask)
 	if err != nil {
-		// Failed to set some variable
 		return nil, err
 	}
 
@@ -160,10 +119,84 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 		}
 		i = mp
 	}
-	return typedvalues.Parse(i)
+
+	result, err := typedvalues.Parse(i)
+	if err != nil {
+		return nil, err
+	}
+	result.SetLabel("src", e)
+	return result, nil
 }
 
-// TODO add updateScope function here or only reevaluate scope if there is a difference in priorities
+func (oe *JavascriptExpressionParser) resolveMap(rootScope interface{}, currentTask string,
+	expr *types.TypedValue) (*types.TypedValue, error) {
+
+	if !typedvalues.IsType(expr, typedvalues.TypeMap) {
+		return nil, errors.New("expected map to resolve")
+	}
+
+	logrus.WithField("expr", expr).Debug("Resolving map")
+	i, err := typedvalues.Format(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	result := map[string]interface{}{}
+	obj := i.(map[string]interface{})
+	for k, v := range obj { // TODO add priority here
+		field, err := typedvalues.Parse(v)
+		if err != nil {
+			return nil, err
+		}
+
+		resolved, err := oe.Resolve(rootScope, currentTask, field)
+		if err != nil {
+			return nil, err
+		}
+
+		actualVal, err := typedvalues.Format(resolved)
+		if err != nil {
+			return nil, err
+		}
+		result[k] = actualVal
+	}
+	return typedvalues.Parse(result)
+}
+
+func (oe *JavascriptExpressionParser) resolveList(rootScope interface{}, currentTask string,
+	expr *types.TypedValue) (*types.TypedValue, error) {
+
+	if !typedvalues.IsType(expr, typedvalues.TypeList) {
+		return nil, errors.New("expected list to resolve")
+	}
+
+	logrus.WithField("expr", expr).Debug("Resolving list")
+	i, err := typedvalues.Format(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []interface{}{}
+	obj := i.([]interface{})
+	for _, v := range obj { // TODO add priority here
+		field, err := typedvalues.Parse(v)
+		if err != nil {
+			return nil, err
+		}
+
+		resolved, err := oe.Resolve(rootScope, currentTask, field)
+		if err != nil {
+			return nil, err
+		}
+
+		actualVal, err := typedvalues.Format(resolved)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, actualVal)
+	}
+	return typedvalues.Parse(result)
+}
 
 func injectFunctions(vm *otto.Otto, fns map[string]Function) {
 	for varName := range fns {

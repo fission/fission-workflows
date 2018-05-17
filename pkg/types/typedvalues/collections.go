@@ -1,6 +1,8 @@
 package typedvalues
 
 import (
+	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/proto"
 )
@@ -58,7 +60,7 @@ func ParseToTypedValueMap(ctx Parser, mp map[string]interface{}) (map[string]*ty
 	for k, v := range mp {
 		tvv, err := ctx.Parse(ctx, v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse %v: %v", k, err)
 		}
 		tvmp[k] = tvv
 	}
@@ -99,7 +101,7 @@ func FormatTypedValueMap(ctx Formatter, mp map[string]*types.TypedValue) (map[st
 	for k, v := range mp {
 		tvv, err := ctx.Format(ctx, v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to format %v: %v", k, err)
 		}
 		result[k] = tvv
 	}

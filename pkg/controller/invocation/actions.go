@@ -1,7 +1,6 @@
 package invocation
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/api/function"
@@ -12,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/imdario/mergo"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -90,7 +90,10 @@ func (a *ActionInvokeTask) Apply() error {
 	}
 
 	// Resolve the inputs
-	scope := expr.NewScope(a.Wf, a.Wfi)
+	scope, err := expr.NewScope(a.Wf, a.Wfi)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+	}
 	a.StateStore.Set(a.Wfi.Id(), scope)
 
 	// Inherit scope if this invocation is part of a dynamic decision
@@ -104,7 +107,7 @@ func (a *ActionInvokeTask) Apply() error {
 		}
 	}
 	inputs := map[string]*types.TypedValue{}
-	for _, input := range typedvalues.PrioritizeInputs(a.Task.Inputs) {
+	for _, input := range typedvalues.Prioritize(a.Task.Inputs) {
 		resolvedInput, err := expr.Resolve(scope, a.Task.Id, input.Val)
 		if err != nil {
 			wfiLog.WithFields(logrus.Fields{
@@ -131,7 +134,7 @@ func (a *ActionInvokeTask) Apply() error {
 		Inputs:       inputs,
 	}
 
-	_, err := a.Api.Invoke(fnSpec)
+	_, err = a.Api.Invoke(fnSpec)
 	if err != nil {
 		wfiLog.WithFields(logrus.Fields{
 			"id": a.Wfi.Metadata.Id,

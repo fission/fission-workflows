@@ -3,6 +3,7 @@ package typedvalues
 import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -59,8 +60,8 @@ func ParseTask(task *types.TaskSpec) *types.TypedValue {
 	}
 }
 
-func ParseWorkflow(task *types.WorkflowSpec) *types.TypedValue {
-	data, err := proto.Marshal(task)
+func ParseWorkflow(wf *types.WorkflowSpec) *types.TypedValue {
+	data, err := proto.Marshal(wf)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +77,7 @@ func FormatTask(v *types.TypedValue) (*types.TaskSpec, error) {
 	if err != nil {
 		return nil, TypedValueErr{
 			src: v,
-			err: err,
+			err: errors.Wrap(err, "failed to format task"),
 		}
 	}
 	return t, nil
@@ -88,7 +89,7 @@ func FormatWorkflow(v *types.TypedValue) (*types.WorkflowSpec, error) {
 	if err != nil {
 		return nil, TypedValueErr{
 			src: v,
-			err: err,
+			err: errors.Wrap(err, "failed to format workflow"),
 		}
 	}
 	return t, nil
@@ -123,6 +124,8 @@ func ParseControlFlow(i interface{}) (*types.TypedValue, error) {
 		return ParseTask(t), nil
 	case *types.WorkflowSpec:
 		return ParseWorkflow(t), nil
+	case *Flow:
+		return ParseControlFlow(t.Proto())
 	default:
 		return nil, ErrUnsupportedType
 	}

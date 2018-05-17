@@ -15,7 +15,7 @@ func TestPrioritizeInputs(t *testing.T) {
 	prioInput.SetLabel("priority", "2")
 	highPrioInput := MustParse("important")
 	highPrioInput.SetLabel("priority", "3")
-	inputs := PrioritizeInputs(map[string]*TypedValue{
+	inputs := Prioritize(map[string]*TypedValue{
 		"a": invalidPrioInput,
 		"b": regularInput,
 		"c": prioInput,

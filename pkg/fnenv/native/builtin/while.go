@@ -2,10 +2,12 @@ package builtin
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -64,23 +66,31 @@ type FunctionWhile struct{}
 
 func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 	// Expr
-	exprTv, err := ensureInput(spec.Inputs, WhileInputExpr)
+	exprTv, err := ensureInput(spec.Inputs, WhileInputExpr, typedvalues.TypeBool)
 	if err != nil {
 		return nil, err
 	}
 	expr, err := typedvalues.FormatBool(exprTv)
 	if err != nil {
+		return nil, fmt.Errorf("failed to format while condition to a boolean: %v", err)
+	}
+	exprSrc, ok := exprTv.GetLabel("src")
+	if !ok {
+		return nil, fmt.Errorf("could not get source of '%v'", expr)
+	}
+	exprSrcTv, err := typedvalues.ParseExpression(exprSrc)
+	if err != nil {
 		return nil, err
 	}
 
 	// Limit
-	limitTv, err := ensureInput(spec.Inputs, WhileInputLimit)
+	limitTv, err := ensureInput(spec.Inputs, WhileInputLimit, typedvalues.TypeNumber)
 	if err != nil {
 		return nil, err
 	}
 	l, err := typedvalues.FormatNumber(limitTv)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to format limit to a number: %v", err)
 	}
 	limit := int64(l)
 
@@ -89,7 +99,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 	if countTv, ok := spec.Inputs["_count"]; ok {
 		n, err := typedvalues.FormatNumber(countTv)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to format _count to a number: %v", err)
 		}
 		count = int64(n)
 	}
@@ -100,14 +110,15 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 	if ok {
 		s, err := typedvalues.FormatString(delayTv)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse delay (%v) to string: %v", delayTv, err)
 		}
 		d, err := time.ParseDuration(s)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse duration: %v", err)
 		}
 		delay = d
 	}
+	delayTv = typedvalues.MustParse(delay.String())
 
 	// Action
 	action, err := ensureInput(spec.Inputs, WhileInputAction)
@@ -124,45 +135,55 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		return nil, nil
 	}
 
-	if count > limit {
+	if count >= limit {
 		return nil, ErrLimitExceeded
 	}
 
 	// Create the while-specific inputs
 	prevTv := typedvalues.MustParse("{output('action')}")
-	prevTv.SetLabel("priority", "1000")
+	prevTv.SetLabel("priority", "100")
 	countTv := typedvalues.MustParse(count + 1)
-	countTv.SetLabel("priority", "1000")
+	countTv.SetLabel("priority", "100")
+	logrus.Infof("count: %v (<= %v)", count, limit)
 
 	// If the action is a control flow construct add the while-specific inputs
 	if typedvalues.IsControlFlow(action.Type) {
-		flow, _ := typedvalues.FormatControlFlow(action)
-		flow.Input("_prev", *prevTv)
+		flow, err := typedvalues.FormatControlFlow(action)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format workflow action: %v", err)
+		}
+		if count > 0 {
+			flow.Input("_prev", *prevTv)
+		}
 		flow.Input("_count", *countTv)
-		action, _ = typedvalues.ParseControlFlow(flow)
+		action, err = typedvalues.ParseControlFlow(flow)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format task action: %v", err)
+		}
 	}
 
+	fmt.Println("count", countTv)
 	wf := &types.WorkflowSpec{
 		OutputTask: "condition",
 		Tasks: map[string]*types.TaskSpec{
 			"wait": {
 				FunctionRef: Sleep,
-				Inputs: types.Inputs{
-					SleepInput: typedvalues.MustParse(delay.String()),
+				Inputs: map[string]*types.TypedValue{
+					SleepInput: delayTv,
 				},
 			},
 			"action": {
 				FunctionRef: Noop,
-				Inputs: types.Inputs{
+				Inputs: map[string]*types.TypedValue{
 					NoopInput: action,
 				},
 				Requires: types.Require("wait"),
 			},
 			"condition": {
 				FunctionRef: While,
-				Inputs: types.Inputs{
-					WhileInputExpr: exprTv,
-					//WhileInputDelay:  delayTv, // TODO fix; crashes when no delay is provided
+				Inputs: map[string]*types.TypedValue{
+					WhileInputExpr:   exprSrcTv,
+					WhileInputDelay:  delayTv,
 					WhileInputLimit:  limitTv,
 					WhileInputAction: action,
 					"_count":         countTv,
@@ -173,5 +194,9 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		},
 	}
 
-	return typedvalues.Parse(wf)
+	wfTv, err := typedvalues.Parse(wf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create while workflow: %v", err)
+	}
+	return wfTv, nil
 }

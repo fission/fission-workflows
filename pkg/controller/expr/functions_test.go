@@ -11,7 +11,7 @@ import (
 )
 
 func makeTestScope() *Scope {
-	return NewScope(&types.Workflow{
+	scope, _ := NewScope(&types.Workflow{
 		Metadata: &types.ObjectMetadata{
 			Id:        "testWorkflow",
 			CreatedAt: ptypes.TimestampNow(),
@@ -65,6 +65,7 @@ func makeTestScope() *Scope {
 			},
 		},
 	})
+	return scope
 }
 
 func TestOutputFn_Apply_OneArgument(t *testing.T) {

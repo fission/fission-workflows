@@ -1,12 +1,11 @@
 package expr
 
 import (
-	"fmt"
-
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/pkg/errors"
 )
 
 // Scope is the broadest view of the workflow invocation, which can be queried by the user.
@@ -47,7 +46,7 @@ type TaskScope struct {
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
-func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
+func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error) {
 
 	tasks := map[string]*TaskScope{}
 	for taskId, task := range types.GetTasks(wf, wfi) {
@@ -57,16 +56,24 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 		if err != nil {
 			panic(err)
 		}
+		inputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, task.Spec.Inputs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)
+		}
 		tasks[taskId] = &TaskScope{
 			ObjectMetadata: formatMetadata(task.Metadata),
 			Status:         task.Status.Status.String(),
 			UpdatedAt:      formatTimestamp(task.Status.UpdatedAt),
-			Inputs:         mustFormatTypedMap(task.Spec.Inputs),
+			Inputs:         inputs,
 			Requires:       task.Spec.Requires,
 			Output:         output,
 		}
 	}
 
+	invocInputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, wfi.Spec.Inputs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to format invocation inputs")
+	}
 	return &Scope{
 		Workflow: &WorkflowScope{
 			ObjectMetadata: formatMetadata(wf.Metadata),
@@ -75,19 +82,10 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) *Scope {
 		},
 		Invocation: &InvocationScope{
 			ObjectMetadata: formatMetadata(wfi.Metadata),
-			Inputs:         mustFormatTypedMap(wfi.Spec.Inputs),
+			Inputs:         invocInputs,
 		},
 		Tasks: tasks,
-	}
-}
-
-func mustFormatTypedMap(in map[string]*types.TypedValue) map[string]interface{} {
-	out, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, in)
-	if err != nil {
-		fmt.Println(in)
-		panic(err)
-	}
-	return out
+	}, nil
 }
 
 func formatMetadata(meta *types.ObjectMetadata) *ObjectMetadata {

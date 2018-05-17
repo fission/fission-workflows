@@ -99,46 +99,53 @@ func IsType(v *types.TypedValue, ts ...ValueType) bool {
 	return false
 }
 
-type namedInput struct {
+// NamedInput provides the value along with the associated key.
+type NamedInput struct {
 	Key string
 	Val *types.TypedValue
 }
 
-// PrioritizeInputs sorts the inputs based on the priority label (descending order)
-func PrioritizeInputs(inputs map[string]*types.TypedValue) []namedInput {
-	var priorities []int
-	priorityBuckets := map[int][]namedInput{}
+type namedInputSlice []NamedInput
+
+func (n namedInputSlice) Len() int      { return len(n) }
+func (n namedInputSlice) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
+func (n namedInputSlice) Less(i, j int) bool {
+	return priority(n[i].Val) < priority(n[j].Val)
+}
+
+func sortNamedInputSlices(inputs []NamedInput) {
+	sort.Sort(sort.Reverse(namedInputSlice(inputs)))
+}
+
+func priority(t *types.TypedValue) int {
+	var p int
+	if ps, ok := t.GetLabels()["priority"]; ok {
+		i, err := strconv.Atoi(ps)
+		if err != nil {
+			logrus.Warnf("Ignoring invalid priority: %v", ps)
+		} else {
+			p = i
+		}
+	}
+	return p
+}
+
+func toNamedInputs(inputs map[string]*types.TypedValue) []NamedInput {
+	out := make([]NamedInput, len(inputs))
+	var i int
 	for k, v := range inputs {
-		var p int
-		if ps, ok := v.Labels["priority"]; ok {
-			i, err := strconv.Atoi(ps)
-			if err != nil {
-				logrus.Warnf("Ignoring invalid priority: %v", ps)
-			} else {
-				p = i
-			}
-		}
-		b, ok := priorityBuckets[p]
-		if !ok {
-			b = []namedInput{}
-			priorities = append(priorities, p)
-		}
-		b = append(b, namedInput{
+		out[i] = NamedInput{
 			Val: v,
 			Key: k,
-		})
-		priorityBuckets[p] = b
-	}
-
-	// Sort priorities in descending order
-	sort.Ints(priorities)
-	var result []namedInput
-	for i := len(priorities) - 1; i >= 0; i-- {
-		bucket := priorityBuckets[i]
-		for _, input := range bucket {
-			result = append(result, input)
 		}
+		i++
 	}
+	return out
+}
 
-	return result
+// Prioritize sorts the inputs based on the priority label (descending order)
+func Prioritize(inputs map[string]*types.TypedValue) []NamedInput {
+	namedInputs := toNamedInputs(inputs)
+	sortNamedInputSlices(namedInputs)
+	return namedInputs
 }

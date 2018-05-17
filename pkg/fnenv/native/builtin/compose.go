@@ -50,6 +50,7 @@ foo:
 # ...
 ```
 */
+// TODO avoid adding function-injected fields to compose
 type FunctionCompose struct{}
 
 func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {

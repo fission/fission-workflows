@@ -91,7 +91,7 @@ func TestScope(t *testing.T) {
 	expected := "hello world"
 	expectedOutput, _ := typedvalues.Parse(expected)
 
-	actualScope := NewScope(&types.Workflow{
+	actualScope, _ := NewScope(&types.Workflow{
 		Metadata: &types.ObjectMetadata{
 			Id:        "testWorkflow",
 			CreatedAt: ptypes.TimestampNow(),
