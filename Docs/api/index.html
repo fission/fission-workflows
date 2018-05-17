@@ -198,7 +198,7 @@ font-style: italic;
   <ul>
   <li><a href="#halt"><code><span class="http-method">get</span> /halt</code></a></li>
   <li><a href="#resume"><code><span class="http-method">get</span> /resume</code></a></li>
-  <li><a href="#status"><code><span class="http-method">get</span> /status</code></a></li>
+  <li><a href="#status"><code><span class="http-method">get</span> /healthz</code></a></li>
   <li><a href="#version"><code><span class="http-method">get</span> /version</code></a></li>
   </ul>
   <h4><a href="#WorkflowAPI">WorkflowAPI</a></h4>
@@ -310,7 +310,7 @@ font-style: italic;
   <div class="method"><a name="status"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /status</code></pre></div>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /healthz</code></pre></div>
     <div class="method-summary"> (<span class="nickname">status</span>)</div>
     <div class="method-notes"></div>
 
@@ -550,12 +550,18 @@ font-style: italic;
         "functionRef" : "functionRef",
         "output" : {
           "type" : "type",
-          "value" : "value"
+          "value" : "value",
+          "labels" : {
+            "key" : "labels"
+          }
         },
         "inputs" : {
           "key" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           }
         },
         "await" : 0,
@@ -570,17 +576,15 @@ font-style: italic;
   },
   "status" : {
     "error" : {
-      "code" : "code",
       "message" : "message"
     },
     "tasks" : {
       "key" : {
         "fnRef" : {
           "runtime" : "runtime",
-          "runtimeId" : "runtimeId"
+          "ID" : "ID"
         },
         "error" : {
-          "code" : "code",
           "message" : "message"
         },
         "status" : { },
@@ -796,7 +800,10 @@ To lighten the request load, consider using a more specific request.</div>
     "inputs" : {
       "key" : {
         "type" : "type",
-        "value" : "value"
+        "value" : "value",
+        "labels" : {
+          "key" : "labels"
+        }
       }
     },
     "workflowId" : "workflowId",
@@ -805,7 +812,10 @@ To lighten the request load, consider using a more specific request.</div>
   "status" : {
     "output" : {
       "type" : "type",
-      "value" : "value"
+      "value" : "value",
+      "labels" : {
+        "key" : "labels"
+      }
     },
     "dynamicTasks" : {
       "key" : {
@@ -817,12 +827,18 @@ To lighten the request load, consider using a more specific request.</div>
           "functionRef" : "functionRef",
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "await" : 0,
@@ -836,10 +852,9 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -848,7 +863,6 @@ To lighten the request load, consider using a more specific request.</div>
       }
     },
     "error" : {
-      "code" : "code",
       "message" : "message"
     },
     "tasks" : {
@@ -861,12 +875,15 @@ To lighten the request load, consider using a more specific request.</div>
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "invocationId" : "invocationId",
           "taskId" : "taskId"
@@ -874,10 +891,12 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -999,7 +1018,10 @@ To lighten the request load, consider using a more specific request.</div>
     "inputs" : {
       "key" : {
         "type" : "type",
-        "value" : "value"
+        "value" : "value",
+        "labels" : {
+          "key" : "labels"
+        }
       }
     },
     "workflowId" : "workflowId",
@@ -1008,7 +1030,10 @@ To lighten the request load, consider using a more specific request.</div>
   "status" : {
     "output" : {
       "type" : "type",
-      "value" : "value"
+      "value" : "value",
+      "labels" : {
+        "key" : "labels"
+      }
     },
     "dynamicTasks" : {
       "key" : {
@@ -1020,12 +1045,18 @@ To lighten the request load, consider using a more specific request.</div>
           "functionRef" : "functionRef",
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "await" : 0,
@@ -1039,10 +1070,9 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -1051,7 +1081,6 @@ To lighten the request load, consider using a more specific request.</div>
       }
     },
     "error" : {
-      "code" : "code",
       "message" : "message"
     },
     "tasks" : {
@@ -1064,12 +1093,15 @@ To lighten the request load, consider using a more specific request.</div>
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "invocationId" : "invocationId",
           "taskId" : "taskId"
@@ -1077,10 +1109,12 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -1153,7 +1187,10 @@ To lighten the request load, consider using a more specific request.</div>
     "inputs" : {
       "key" : {
         "type" : "type",
-        "value" : "value"
+        "value" : "value",
+        "labels" : {
+          "key" : "labels"
+        }
       }
     },
     "workflowId" : "workflowId",
@@ -1162,7 +1199,10 @@ To lighten the request load, consider using a more specific request.</div>
   "status" : {
     "output" : {
       "type" : "type",
-      "value" : "value"
+      "value" : "value",
+      "labels" : {
+        "key" : "labels"
+      }
     },
     "dynamicTasks" : {
       "key" : {
@@ -1174,12 +1214,18 @@ To lighten the request load, consider using a more specific request.</div>
           "functionRef" : "functionRef",
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "await" : 0,
@@ -1193,10 +1239,9 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -1205,7 +1250,6 @@ To lighten the request load, consider using a more specific request.</div>
       }
     },
     "error" : {
-      "code" : "code",
       "message" : "message"
     },
     "tasks" : {
@@ -1218,12 +1262,15 @@ To lighten the request load, consider using a more specific request.</div>
           "inputs" : {
             "key" : {
               "type" : "type",
-              "value" : "value"
+              "value" : "value",
+              "labels" : {
+                "key" : "labels"
+              }
             }
           },
           "fnRef" : {
             "runtime" : "runtime",
-            "runtimeId" : "runtimeId"
+            "ID" : "ID"
           },
           "invocationId" : "invocationId",
           "taskId" : "taskId"
@@ -1231,10 +1278,12 @@ To lighten the request load, consider using a more specific request.</div>
         "status" : {
           "output" : {
             "type" : "type",
-            "value" : "value"
+            "value" : "value",
+            "labels" : {
+              "key" : "labels"
+            }
           },
           "error" : {
-            "code" : "code",
             "message" : "message"
           },
           "status" : { },
@@ -1401,8 +1450,7 @@ or the response type of an API method. For instance:</a></li>
     <h3><a name="Error"><code>Error</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">code (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">message (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+      <div class="param">message (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1412,7 +1460,7 @@ or the response type of an API method. For instance:</a></li>
 </div>
     <div class="field-items">
       <div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Runtime is the Function Runtime environment (fnenv) that was used to resolve the function. </div>
-<div class="param">runtimeId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> RuntimeId is the runtime-specific identifier of the function. </div>
+<div class="param">ID (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> ID is the runtime-specific identifier of the function. </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1517,6 +1565,7 @@ Id is specified outside of TaskSpec</p>
     <div class="field-items">
       <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
 <div class="param">value (optional)</div><div class="param-desc"><span class="param-type"><a href="#ByteArray">byte[]</a></span>  format: byte</div>
+<div class="param">labels (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">map[String, String]</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">

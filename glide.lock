@@ -1,5 +1,5 @@
-hash: 1855dd82f3802e04ff027b599d01395c2b4d0f22bbfaa72ea98606e34c5dc565
-updated: 2018-05-15T14:41:29.145132+02:00
+hash: 0362a0749f44ec163b038bd647152e07ac72d504d18710cfe59c48269625bad1
+updated: 2018-05-17T12:12:42.008628+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -288,7 +288,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/apiextensions-apiserver
-  version: 12b7cb8ddad258fb5be9de9fa17d5139e02fe61b
+  version: 718d845dac8d60d16967cd230c1ea21265cc7f85
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
@@ -296,7 +296,7 @@ imports:
   - pkg/client/clientset/clientset/scheme
   - pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 - name: k8s.io/apimachinery
-  version: 208a6980b14bbb263f29482482eabdbcfff9f7bb
+  version: 1cb2cdd78d38df243e686d1b572b76e190469842
   subpackages:
   - pkg/api/equality
   - pkg/api/errors

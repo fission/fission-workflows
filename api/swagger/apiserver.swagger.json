@@ -31,9 +31,25 @@
         ]
       }
     },
+    "/healthz": {
+      "get": {
+        "operationId": "Status",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiserverHealth"
+            }
+          }
+        },
+        "tags": [
+          "AdminAPI"
+        ]
+      }
+    },
     "/invocation": {
       "get": {
-        "operationId": "WfiList",
+        "operationId": "List",
         "responses": {
           "200": {
             "description": "",
@@ -130,7 +146,7 @@
     },
     "/invocation/validate": {
       "post": {
-        "operationId": "WfiValidate",
+        "operationId": "Validate",
         "responses": {
           "200": {
             "description": "",
@@ -158,7 +174,7 @@
       "get": {
         "summary": "Get the specification and status of a workflow invocation",
         "description": "Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.\nTo lighten the request load, consider using a more specific request.",
-        "operationId": "WfiGet",
+        "operationId": "Get",
         "responses": {
           "200": {
             "description": "",
@@ -220,22 +236,6 @@
         ]
       }
     },
-    "/status": {
-      "get": {
-        "operationId": "Status",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/apiserverHealth"
-            }
-          }
-        },
-        "tags": [
-          "AdminAPI"
-        ]
-      }
-    },
     "/version": {
       "get": {
         "operationId": "Version",
@@ -254,7 +254,7 @@
     },
     "/workflow": {
       "get": {
-        "operationId": "WfList",
+        "operationId": "List",
         "responses": {
           "200": {
             "description": "",
@@ -294,7 +294,7 @@
     },
     "/workflow/validate": {
       "post": {
-        "operationId": "WfValidate",
+        "operationId": "Validate",
         "responses": {
           "200": {
             "description": "",
@@ -320,7 +320,7 @@
     },
     "/workflow/{id}": {
       "get": {
-        "operationId": "WfGet",
+        "operationId": "Get",
         "responses": {
           "200": {
             "description": "",
@@ -369,11 +369,9 @@
     "Error": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "string"
-        },
         "message": {
-          "type": "string"
+          "type": "string",
+          "title": "string code = 1;"
         }
       }
     },
@@ -384,9 +382,9 @@
           "type": "string",
           "description": "Runtime is the Function Runtime environment (fnenv) that was used to resolve the function."
         },
-        "runtimeId": {
+        "ID": {
           "type": "string",
-          "description": "RuntimeId is the runtime-specific identifier of the function."
+          "description": "ID is the runtime-specific identifier of the function."
         }
       },
       "description": "FnRef is an immutable, unique reference to a function on a specific function runtime environment.\n\nThe string representation (via String or Format): runtime://runtimeId"
@@ -576,6 +574,12 @@
         "value": {
           "type": "string",
           "format": "byte"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "description": "Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type."
