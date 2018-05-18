@@ -79,8 +79,8 @@ func (c *Controller) Init(sctx context.Context) error {
 	selector := labels.In(fes.PubSubLabelAggregateType, "workflow")
 	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
 		c.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
-			Buffer:   NotificationBuffer,
-			Selector: selector,
+			Buffer:       NotificationBuffer,
+			LabelMatcher: selector,
 		})
 
 		// Workflow Notification listener
