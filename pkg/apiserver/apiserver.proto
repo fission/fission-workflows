@@ -1,15 +1,16 @@
 syntax = "proto3";
 
+package fission.workflows.apiserver;
+option go_package = "apiserver";
+
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
 import "github.com/fission/fission-workflows/pkg/version/version.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
-package fission.workflows.apiserver;
-option go_package = "apiserver";
 
 service WorkflowAPI {
-    rpc Create (WorkflowSpec) returns (WorkflowIdentifier) {
+    rpc Create (fission.workflows.types.WorkflowSpec) returns (WorkflowIdentifier) {
         option (google.api.http) = {
            post: "/workflow"
            body: "*"
@@ -22,7 +23,7 @@ service WorkflowAPI {
         };
     }
 
-    rpc Get (WorkflowIdentifier) returns (Workflow) {
+    rpc Get (WorkflowIdentifier) returns (fission.workflows.types.Workflow) {
         option (google.api.http) = {
             get: "/workflow/{id}"
         };
@@ -35,7 +36,7 @@ service WorkflowAPI {
         };
     }
 
-    rpc Validate (WorkflowSpec) returns (google.protobuf.Empty) {
+    rpc Validate (fission.workflows.types.WorkflowSpec) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/workflow/validate"
             body: "*"
@@ -57,14 +58,14 @@ service WorkflowInvocationAPI {
     // Create a new workflow invocation
     //
     // In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
-    rpc Invoke (WorkflowInvocationSpec) returns (WorkflowInvocationIdentifier) {
+    rpc Invoke (fission.workflows.types.WorkflowInvocationSpec) returns (WorkflowInvocationIdentifier) {
         option (google.api.http) = {
             post: "/invocation"
             body: "*"
         };
     }
 
-    rpc InvokeSync (WorkflowInvocationSpec) returns (WorkflowInvocation) {
+    rpc InvokeSync (fission.workflows.types.WorkflowInvocationSpec) returns (fission.workflows.types.WorkflowInvocation) {
         option (google.api.http) = {
             post: "/invocation/sync"
             body: "*"
@@ -95,13 +96,13 @@ service WorkflowInvocationAPI {
     //
     // Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
     // To lighten the request load, consider using a more specific request.
-    rpc Get (WorkflowInvocationIdentifier) returns (WorkflowInvocation) {
+    rpc Get (WorkflowInvocationIdentifier) returns (fission.workflows.types.WorkflowInvocation) {
         option (google.api.http) = {
             get: "/invocation/{id}"
         };
     }
 
-    rpc Validate (WorkflowInvocationSpec) returns (google.protobuf.Empty) {
+    rpc Validate (fission.workflows.types.WorkflowInvocationSpec) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/invocation/validate"
             body: "*"
