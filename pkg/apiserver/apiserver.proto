@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
+import "github.com/fission/fission-workflows/pkg/version/version.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
@@ -43,9 +44,6 @@ service WorkflowAPI {
 
 message WorkflowIdentifier {
     string id = 1;
-}
-
-message SearchWorkflowRequest {
 }
 
 message SearchWorkflowResponse {
@@ -114,16 +112,8 @@ message WorkflowInvocationIdentifier {
     string id = 1;
 }
 
-message WorkflowInvocationQuery {
-    string subject = 1;
-}
-
 message WorkflowInvocationList {
     repeated string invocations = 1;
-}
-
-message WorkflowInvocationGetReponse {
-//    repeated Event events = 1;
 }
 
 service AdminAPI {
@@ -133,7 +123,7 @@ service AdminAPI {
         };
     }
 
-    rpc Version (google.protobuf.Empty) returns (VersionResp) {
+    rpc Version (google.protobuf.Empty) returns (fission.workflows.version.Info) {
         option (google.api.http) = {
             get: "/version"
         };
@@ -156,8 +146,4 @@ service AdminAPI {
 
 message Health {
     string status = 1;
-}
-
-message VersionResp {
-    string version = 1;
 }

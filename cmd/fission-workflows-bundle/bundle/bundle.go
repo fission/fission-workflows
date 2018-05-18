@@ -62,7 +62,7 @@ type FissionOptions struct {
 
 // Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
-	log.WithField("version", version.VERSION).Info("Starting bundle...")
+	log.WithField("version", version.VersionInfo()).Info("Starting bundle...")
 
 	var es fes.Backend
 	var esPub pubsub.Publisher
