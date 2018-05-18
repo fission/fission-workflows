@@ -1,5 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-rm -f ./fission-workflows-bundle ./wfcli
-GOOS=linux GOARCH=386 go build github.com/fission/fission-workflows/cmd/fission-workflows-bundle/
-GOOS=linux GOARCH=386 go build github.com/fission/fission-workflows/cmd/wfcli/
+$(dirname $0)/build.sh --os linux --arch amd64 \
+  --output-bundle "fission-workflows-bundle" \
+  --output-cli "wfcli"

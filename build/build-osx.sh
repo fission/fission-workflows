@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-GOOS=darwin GOARCH=386 CGO_ENABLED=0 go build -o wfcli-osx github.com/fission/fission-workflows/cmd/wfcli/
-GOOS=darwin GOARCH=386 CGO_ENABLED=0 go build -o fission-workflows-bundle-osx github.com/fission/fission-workflows/cmd/fission-workflows-bundle/
+$(dirname $0)/build.sh --os darwin --arch 386 \
+  --output-bundle "fission-workflows-bundle-osx" \
+  --output-cli "wfcli-osx"

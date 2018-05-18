@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/version"
 )
 
 type AdminApi struct {
@@ -26,8 +27,8 @@ func (api *AdminApi) Status(ctx context.Context) (*apiserver.Health, error) {
 	return result, err
 }
 
-func (api *AdminApi) Version(ctx context.Context) (*apiserver.VersionResp, error) {
-	result := &apiserver.VersionResp{}
+func (api *AdminApi) Version(ctx context.Context) (*version.Info, error) {
+	result := &version.Info{}
 	err := call(http.MethodGet, api.formatUrl("/version"), nil, result)
 	return result, err
 }

@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-GOOS=windows GOARCH=386 CGO_ENABLED=0 go build -o fission-workflows-bundle-windows.exe github.com/fission/fission-workflows/cmd/fission-workflows-bundle/
-GOOS=windows GOARCH=386 CGO_ENABLED=0 go build -o wfcli-windows.exe github.com/fission/fission-workflows/cmd/wfcli/
+$(dirname $0)/build.sh --os windows --arch 386 \
+  --output-bundle "fission-workflows-bundle-windows" \
+  --output-cli "wfcli-windows"

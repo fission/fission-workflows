@@ -17,10 +17,9 @@ func (as *GrpcAdminApiServer) Status(ctx context.Context, _ *empty.Empty) (*Heal
 	}, nil
 }
 
-func (as *GrpcAdminApiServer) Version(ctx context.Context, _ *empty.Empty) (*VersionResp, error) {
-	return &VersionResp{
-		Version: version.VERSION,
-	}, nil
+func (as *GrpcAdminApiServer) Version(ctx context.Context, _ *empty.Empty) (*version.Info, error) {
+	version := version.VersionInfo()
+	return &version, nil
 }
 
 func (as *GrpcAdminApiServer) Resume(context.Context, *empty.Empty) (*empty.Empty, error) {

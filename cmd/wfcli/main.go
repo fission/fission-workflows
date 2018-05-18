@@ -20,7 +20,7 @@ func main() {
 	app := cli.NewApp()
 	app.Author = "Erwin van Eyk"
 	app.Email = "erwin@platform9.com"
-	app.Version = version.VERSION
+	app.Version = version.Version
 	app.EnableBashCompletion = true
 	app.Usage = "Fission Workflows CLI"
 	app.Description = "CLI for Fission Workflows"

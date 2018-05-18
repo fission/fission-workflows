@@ -1,27 +1,17 @@
 #!/bin/bash
 
-set -e
+set -o nounset
+set -o errexit
+set -o pipefail
 
 protopaths=`find pkg -type f -name "*.proto"`
 while read -r path; do
-   echo "Generating golang implementations for proto-file: $path"
+   echo "$path"
    protoc -I . \
-        -I /usr/local/include \
-        -I ./pkg/ \
-        -I $GOPATH/src \
-        -I $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+        -I ${GOPATH}/src \
+        -I ${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
          --proto_path=.\
          --go_out=plugins=grpc:.\
+         --grpc-gateway_out=logtostderr=true:. \
          ${path}
 done <<< "$protopaths"
-
-echo "Generating golang HTTP gateway for proto-file: pkg/apiserver/apiserver.proto"
-protoc -I . \
-        -I/usr/local/include \
-        -I ./pkg/ \
-        -I $GOPATH/src \
-        -I $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-        --grpc-gateway_out=logtostderr=true:. \
-        --go_out=plugins=grpc:. \
-        pkg/apiserver/apiserver.proto
-

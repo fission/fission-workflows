@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package fission.workflows.version;
+option go_package = "version";
+
+import "google/protobuf/timestamp.proto";
+
+message Info {
+    string Version = 1;
+    google.protobuf.Timestamp GitDate = 2;
+    google.protobuf.Timestamp BuildDate = 3;
+    string GitCommit = 4;
+}
