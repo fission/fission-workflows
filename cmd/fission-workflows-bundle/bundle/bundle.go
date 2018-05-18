@@ -13,6 +13,7 @@ import (
 	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
 	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
@@ -29,6 +30,7 @@ import (
 	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
 	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -49,6 +51,7 @@ type Options struct {
 	WorkflowAPI          bool
 	HTTPGateway          bool
 	InvocationAPI        bool
+	Metrics              bool
 }
 
 type FissionOptions struct {
@@ -77,6 +80,11 @@ func Run(ctx context.Context, opts *Options) error {
 		natsEs := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
 		es = natsEs
 		esPub = natsEs
+	} else {
+		log.Warn("No event store provided; using the development, in-memory event store")
+		backend := mem.NewBackend()
+		es = backend
+		esPub = backend
 	}
 
 	// Caches
@@ -88,9 +96,13 @@ func Run(ctx context.Context, opts *Options) error {
 	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
 
-	log.Infof("Using Task Runtime: Workflow")
-	reflectiveRuntime := workflows.NewRuntime(invocationAPI, wfiCache())
-	runtimes[workflows.Name] = reflectiveRuntime
+	if opts.InternalRuntime || opts.Fission != nil {
+		log.Infof("Using Task Runtime: Workflow")
+		reflectiveRuntime := workflows.NewRuntime(invocationAPI, wfiCache())
+		runtimes[workflows.Name] = reflectiveRuntime
+	} else {
+		log.Info("No function runtimes specified.")
+	}
 	if opts.InternalRuntime {
 		log.Infof("Using Task Runtime: Internal")
 		runtimes["internal"] = setupInternalFunctionRuntime()
@@ -125,9 +137,18 @@ func Run(ctx context.Context, opts *Options) error {
 
 	// Http servers
 	if opts.Fission != nil {
+		proxyMux := http.NewServeMux()
+		runFissionEnvironmentProxy(proxyMux, es, wfiCache(), wfCache(), resolvers)
 		proxySrv := &http.Server{Addr: fissionProxyAddress}
+		proxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
+
+		if opts.Metrics {
+			setupMetricsEndpoint(proxyMux)
+		}
+
+		go proxySrv.ListenAndServe()
 		defer proxySrv.Shutdown(ctx)
-		runFissionEnvironmentProxy(proxySrv, es, wfiCache(), wfCache(), resolvers)
+		log.Info("Serving HTTP Fission Proxy at: ", proxySrv.Addr)
 	}
 
 	if opts.AdminAPI {
@@ -152,20 +173,41 @@ func Run(ctx context.Context, opts *Options) error {
 		go grpcServer.Serve(lis)
 	}
 
-	if opts.HTTPGateway {
-		HTTPGatewaySrv := &http.Server{Addr: apiGatewayAddress}
-		defer HTTPGatewaySrv.Shutdown(ctx)
-		var admin, wf, wfi string
-		if opts.AdminAPI {
-			admin = gRPCAddress
+	if opts.HTTPGateway || opts.Metrics {
+		grpcMux := grpcruntime.NewServeMux()
+		httpMux := http.NewServeMux()
+
+		if opts.HTTPGateway {
+
+			var admin, wf, wfi string
+			if opts.AdminAPI {
+				admin = gRPCAddress
+			}
+			if opts.WorkflowAPI {
+				wf = gRPCAddress
+			}
+			if opts.InvocationAPI {
+				wfi = gRPCAddress
+			}
+			serveHTTPGateway(ctx, grpcMux, admin, wf, wfi)
 		}
-		if opts.WorkflowAPI {
-			wf = gRPCAddress
+
+		// Metrics
+		if opts.Metrics {
+			setupMetricsEndpoint(httpMux)
+			log.Infof("Set up prometheus collector: %v/metrics", apiGatewayAddress)
 		}
-		if opts.InvocationAPI {
-			wfi = gRPCAddress
-		}
-		serveHTTPGateway(ctx, HTTPGatewaySrv, admin, wf, wfi)
+
+		apiSrv := &http.Server{Addr: apiGatewayAddress}
+		httpMux.Handle("/", grpcMux)
+		apiSrv.Handler = httpMux
+		go func() {
+			err := apiSrv.ListenAndServe()
+			log.WithField("err", err).Info("HTTP Gateway exited")
+		}()
+		defer apiSrv.Shutdown(ctx)
+
+		log.Info("Serving HTTP API gateway at: ", apiSrv.Addr)
 	}
 
 	log.Info("Bundle set up.")
@@ -285,40 +327,35 @@ func serveInvocationAPI(s *grpc.Server, es fes.Backend, wfiCache fes.CacheReader
 	log.Infof("Serving workflow invocation gRPC API at %s.", gRPCAddress)
 }
 
-func serveHTTPGateway(ctx context.Context, gwSrv *http.Server, adminAPIAddr string, workflowAPIAddr string, invocationAPIAddr string) {
-	mux := grpcruntime.NewServeMux()
-	grpcOpts := []grpc.DialOption{grpc.WithInsecure()}
+func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAddr string, workflowAPIAddr string,
+	invocationAPIAddr string) {
+	opts := []grpc.DialOption{grpc.WithInsecure()}
 	if adminAPIAddr != "" {
-		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, adminAPIAddr, grpcOpts)
+		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, adminAPIAddr, opts)
 		if err != nil {
 			panic(err)
 		}
+		log.Info("Registered Workflow API HTTP Endpoint")
 	}
 
 	if workflowAPIAddr != "" {
-		err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, workflowAPIAddr, grpcOpts)
+		err := apiserver.RegisterWorkflowAPIHandlerFromEndpoint(ctx, mux, workflowAPIAddr, opts)
 		if err != nil {
 			panic(err)
 		}
+		log.Info("Registered Admin API HTTP Endpoint")
 	}
 
 	if invocationAPIAddr != "" {
-		err := apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, invocationAPIAddr, grpcOpts)
+		err := apiserver.RegisterWorkflowInvocationAPIHandlerFromEndpoint(ctx, mux, invocationAPIAddr, opts)
 		if err != nil {
 			panic(err)
 		}
+		log.Info("Registered Workflow Invocation API HTTP Endpoint")
 	}
-
-	gwSrv.Handler = mux
-	go func() {
-		err := gwSrv.ListenAndServe()
-		log.WithField("err", err).Info("HTTP Gateway exited")
-	}()
-
-	log.Info("Serving HTTP API gateway at: ", gwSrv.Addr)
 }
 
-func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.Backend, wfiCache fes.CacheReader,
+func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, wfiCache fes.CacheReader,
 	wfCache fes.CacheReader, resolvers map[string]fnenv.RuntimeResolver) {
 
 	workflowParser := fnenv.NewMetaResolver(resolvers)
@@ -326,13 +363,8 @@ func runFissionEnvironmentProxy(proxySrv *http.Server, es fes.Backend, wfiCache 
 	wfServer := apiserver.NewWorkflow(workflowAPI, wfCache)
 	wfiAPI := api.NewInvocationAPI(es)
 	wfiServer := apiserver.NewInvocation(wfiAPI, wfiCache)
-	proxyMux := http.NewServeMux()
 	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
-
-	proxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
-	go proxySrv.ListenAndServe()
-	log.Info("Serving HTTP Fission Proxy at: ", proxySrv.Addr)
 }
 
 func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.Backend,
@@ -355,4 +387,8 @@ func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,
 func runController(ctx context.Context, ctrls ...controller.Controller) {
 	ctrl := controller.NewMetaController(ctrls...)
 	go ctrl.Run(ctx)
+}
+
+func setupMetricsEndpoint(apiMux *http.ServeMux) {
+	apiMux.Handle("/metrics", promhttp.Handler())
 }

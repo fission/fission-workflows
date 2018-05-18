@@ -4,7 +4,11 @@ data/
 
 *.tgz
 /fission-workflows-bundle
+/fission-workflows-bundle-osx
+/fission-workflows-bundle-windows
 /wfcli
+/wfcli-osx
+/wfcli-windows
 __pycache__/
 *.pyc
 

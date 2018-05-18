@@ -9,12 +9,34 @@ import (
 	"github.com/golang/protobuf/proto"
 	nats "github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	defaultClient = "fes"
 )
+
+var (
+	subsActive = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "fes",
+		Subsystem: "nats",
+		Name:      "subs_active",
+		Help:      "Number of active subscriptions to NATS subjects.",
+	})
+
+	eventsAppended = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "fes",
+		Subsystem: "nats",
+		Name:      "events_appended_total",
+		Help:      "Count of appended events (excluding any internal events).",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(subsActive)
+	prometheus.MustRegister(eventsAppended)
+}
 
 type EventStore struct {
 	pubsub.Publisher
@@ -92,11 +114,17 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 
 	logrus.Infof("Backend client watches:' %s'", subject)
 	es.sub[aggregate] = sub
+	subsActive.Inc()
 	return nil
 }
 
 func (es *EventStore) Close() error {
-	return es.conn.Close()
+	err := es.conn.Close()
+	if err != nil {
+		return err
+	}
+	subsActive.Dec()
+	return nil
 }
 
 func (es *EventStore) Append(event *fes.Event) error {
@@ -116,7 +144,12 @@ func (es *EventStore) Append(event *fes.Event) error {
 		"nats.subject": subject,
 	}).Infof("Appending event: %v", event.Type)
 
-	return es.conn.Publish(subject, data)
+	err = es.conn.Publish(subject, data)
+	if err != nil {
+		return err
+	}
+	eventsAppended.Inc()
+	return nil
 }
 
 func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {

@@ -113,7 +113,11 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 	if err != nil {
 		return nil, err
 	}
-	defer sub.Close()
+	subsActive.Inc()
+	defer func() {
+		sub.Close()
+		subsActive.Dec()
+	}()
 
 	for {
 		select {
@@ -138,6 +142,7 @@ func NewWildcardConn(conn stan.Conn) *WildcardConn {
 
 func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, opts ...stan.SubscriptionOption) (stan.Subscription, error) {
 	if !hasWildcard(wildcardSubject) {
+		subsActive.Inc()
 		return wc.Conn.Subscribe(wildcardSubject, cb, opts...)
 	}
 
@@ -183,10 +188,11 @@ func (wc *WildcardConn) Subscribe(wildcardSubject string, cb stan.MsgHandler, op
 		case deleted:
 			// Delete the current listener of the subject of the event
 			if _, ok := ws.sources[subject]; ok {
-				err := ws.sources[subject].Close()
+				err := ws.sources[subject].Unsubscribe()
 				if err != nil {
 					logrus.Errorf("Failed to close (sub)listener: %v", err)
 				}
+				subsActive.Dec()
 			}
 		default:
 			panic(fmt.Sprintf("Unknown eventType: %v", subjectEvent))
@@ -287,6 +293,7 @@ func (ws *WildcardSub) Unsubscribe() error {
 	err := ws.activitySub.Unsubscribe()
 	for id, source := range ws.sources {
 		err = source.Unsubscribe()
+		subsActive.Dec()
 		delete(ws.sources, id)
 	}
 	return err
