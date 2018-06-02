@@ -1,5 +1,5 @@
-hash: 0362a0749f44ec163b038bd647152e07ac72d504d18710cfe59c48269625bad1
-updated: 2018-05-17T12:12:42.008628+02:00
+hash: a8e090c9a44f14974784e926e6cf1e51f05963db807d22cf4278cf21763e6146
+updated: 2018-06-02T13:28:44.604586+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -63,14 +63,12 @@ imports:
 - name: github.com/go-openapi/validate
   version: 2c997e169d705fe1e4235c9c1d62a7e704a84290
 - name: github.com/gogo/protobuf
-  version: 1adfc126b41513cc696b209667c8656ea7aac67c
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
   - gogoproto
-  - jsonpb
   - proto
   - protoc-gen-gogo/descriptor
   - sortkeys
-  - types
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf

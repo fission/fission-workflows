@@ -2,7 +2,7 @@ package typedvalues
 
 import (
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 

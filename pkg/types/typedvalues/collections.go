@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 const (

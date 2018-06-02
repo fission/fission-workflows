@@ -17,7 +17,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission/router"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 )

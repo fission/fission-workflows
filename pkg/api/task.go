@@ -10,7 +10,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
