@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -21,13 +21,13 @@ const (
 	Name                      = "workflows"
 )
 
-// Runtime provides an abstraction of the workflow engine itself to use as a Function runtime environment.
+// Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
-	api      *invocation.Api
+	api      *api.Invocation
 	wfiCache fes.CacheReader
 }
 
-func NewRuntime(api *invocation.Api, wfiCache fes.CacheReader) *Runtime {
+func NewRuntime(api *api.Invocation, wfiCache fes.CacheReader) *Runtime {
 	return &Runtime{
 		api:      api,
 		wfiCache: wfiCache,
@@ -86,11 +86,4 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 	return result.Status.ToTaskStatus(), nil
 
-}
-
-func CreateFnRef(wfId string) types.FnRef {
-	return types.FnRef{
-		Runtime: Name,
-		ID:      wfId,
-	}
 }

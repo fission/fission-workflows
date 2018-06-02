@@ -1,4 +1,4 @@
-package invocation
+package api
 
 import (
 	"errors"
@@ -14,15 +14,15 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
-type Api struct {
+type Invocation struct {
 	es fes.Backend
 }
 
-func NewApi(esClient fes.Backend) *Api {
-	return &Api{esClient}
+func NewInvocation(esClient fes.Backend) *Invocation {
+	return &Invocation{esClient}
 }
 
-func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
+func (ia *Invocation) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
 	err := validate.WorkflowInvocationSpec(invocation)
 	if err != nil {
 		return "", err
@@ -47,7 +47,7 @@ func (ia *Api) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) 
 	return id, nil
 }
 
-func (ia *Api) Cancel(invocationId string) error {
+func (ia *Invocation) Cancel(invocationId string) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -65,7 +65,7 @@ func (ia *Api) Cancel(invocationId string) error {
 	return nil
 }
 
-func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) error {
+func (ia *Invocation) MarkCompleted(invocationId string, output *types.TypedValue) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -88,7 +88,7 @@ func (ia *Api) MarkCompleted(invocationId string, output *types.TypedValue) erro
 	})
 }
 
-func (ia *Api) Fail(invocationId string, errMsg error) error {
+func (ia *Invocation) Fail(invocationId string, errMsg error) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}
@@ -112,7 +112,7 @@ func (ia *Api) Fail(invocationId string, errMsg error) error {
 	})
 }
 
-func (ia *Api) AddTask(invocationId string, task *types.Task) error {
+func (ia *Invocation) AddTask(invocationId string, task *types.Task) error {
 	if len(invocationId) == 0 {
 		return errors.New("invocationId is required")
 	}

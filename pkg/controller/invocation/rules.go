@@ -3,8 +3,7 @@ package invocation
 import (
 	"errors"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -73,8 +72,8 @@ func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Actio
 
 type RuleSchedule struct {
 	Scheduler     *scheduler.WorkflowScheduler
-	InvocationApi *invocation.Api
-	FunctionApi   *function.Api
+	InvocationApi *api.Invocation
+	FunctionApi   *api.Task
 	StateStore    *expr.Store
 }
 
@@ -126,7 +125,7 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 }
 
 type RuleCheckIfCompleted struct {
-	InvocationApi *invocation.Api
+	InvocationApi *api.Invocation
 }
 
 func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {

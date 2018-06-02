@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -25,7 +25,7 @@ var wfLog = logrus.WithField("component", "controller.wf")
 // parsing of workflows.
 type Controller struct {
 	wfCache    fes.CacheReader
-	api        *workflow.Api
+	api        *api.Workflow
 	sub        *pubsub.Subscription
 	cancelFn   context.CancelFunc
 	evalQueue  chan string
@@ -33,7 +33,7 @@ type Controller struct {
 	evalPolicy controller.Rule
 }
 
-func NewController(wfCache fes.CacheReader, wfApi *workflow.Api) *Controller {
+func NewController(wfCache fes.CacheReader, wfApi *api.Workflow) *Controller {
 	ctr := &Controller{
 		wfCache:   wfCache,
 		api:       wfApi,

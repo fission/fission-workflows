@@ -5,8 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -28,8 +27,8 @@ var wfiLog = log.WithField("component", "controller-wi")
 type Controller struct {
 	invokeCache   fes.CacheReader
 	wfCache       fes.CacheReader
-	functionApi   *function.Api
-	invocationApi *invocation.Api
+	functionApi   *api.Task
+	invocationApi *api.Invocation
 	stateStore    *expr.Store
 	scheduler     *scheduler.WorkflowScheduler
 	sub           *pubsub.Subscription
@@ -42,7 +41,7 @@ type Controller struct {
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
-	functionApi *function.Api, invocationApi *invocation.Api, stateStore *expr.Store) *Controller {
+	functionApi *api.Task, invocationApi *api.Invocation, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
 		invokeCache:   invokeCache,
 		wfCache:       wfCache,

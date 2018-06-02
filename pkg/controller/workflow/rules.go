@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/types"
 )
@@ -43,7 +43,7 @@ func (r *RuleSkipIfReady) Eval(cec controller.EvalContext) controller.Action {
 }
 
 type RuleEnsureParsed struct {
-	WfApi *workflow.Api
+	WfApi *api.Workflow
 }
 
 func (r *RuleEnsureParsed) Eval(cec controller.EvalContext) controller.Action {

@@ -3,8 +3,7 @@ package invocation
 import (
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -21,7 +20,7 @@ import (
 
 // ActonAbort aborts an invocation.
 type ActonAbort struct {
-	Api          *invocation.Api
+	Api          *api.Invocation
 	InvocationId string
 }
 
@@ -38,7 +37,7 @@ func (a *ActonAbort) Apply() error {
 
 // ActionFail halts an invocation.
 type ActionFail struct {
-	Api          *invocation.Api
+	Api          *api.Invocation
 	InvocationId string
 	Err          error
 }
@@ -66,7 +65,7 @@ func (a *ActionFail) Apply() error {
 type ActionInvokeTask struct {
 	Wf         *types.Workflow
 	Wfi        *types.WorkflowInvocation
-	Api        *function.Api
+	Api        *api.Task
 	Task       *scheduler.InvokeTaskAction
 	StateStore *expr.Store
 }

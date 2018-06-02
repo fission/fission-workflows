@@ -1,29 +1,25 @@
-package dynamic
+package api
 
 import (
-	"github.com/fission/fission-workflows/pkg/api/invocation"
-	"github.com/fission/fission-workflows/pkg/api/workflow"
-	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
-// Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
-type Api struct {
-	wfApi  *workflow.Api
-	wfiApi *invocation.Api
+type Dynamic struct {
+	wfApi  *Workflow
+	wfiApi *Invocation
 }
 
-func NewApi(wfApi *workflow.Api, wfiApi *invocation.Api) *Api {
-	return &Api{
+func NewDynamic(wfApi *Workflow, wfiApi *Invocation) *Dynamic {
+	return &Dynamic{
 		wfApi:  wfApi,
 		wfiApi: wfiApi,
 	}
 }
 
-func (ap *Api) AddDynamicTask(invocationId string, parentId string, taskSpec *types.TaskSpec) error {
+func (ap *Dynamic) AddDynamicTask(invocationId string, parentId string, taskSpec *types.TaskSpec) error {
 
 	// Transform TaskSpec into WorkflowSpec
 	// TODO dedup workflows
@@ -40,12 +36,12 @@ func (ap *Api) AddDynamicTask(invocationId string, parentId string, taskSpec *ty
 	return ap.addDynamicWorkflow(invocationId, parentId, wfSpec, taskSpec)
 }
 
-func (ap *Api) AddDynamicWorkflow(invocationId string, parentTaskId string, workflowSpec *types.WorkflowSpec) error {
+func (ap *Dynamic) AddDynamicWorkflow(invocationId string, parentTaskId string, workflowSpec *types.WorkflowSpec) error {
 	// TODO add inputs to WorkflowSpec
 	return ap.addDynamicWorkflow(invocationId, parentTaskId, workflowSpec, &types.TaskSpec{})
 }
 
-func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSpec *types.WorkflowSpec,
+func (ap *Dynamic) addDynamicWorkflow(invocationId string, parentTaskId string, wfSpec *types.WorkflowSpec,
 	stubTask *types.TaskSpec) error {
 
 	// Clean-up WorkflowSpec and submit
@@ -60,7 +56,7 @@ func (ap *Api) addDynamicWorkflow(invocationId string, parentTaskId string, wfSp
 	}
 
 	// Create function reference to workflow
-	wfRef := workflows.CreateFnRef(wfId)
+	wfRef := createFnRef(wfId)
 
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
@@ -97,4 +93,11 @@ func sanitizeWorkflow(v *types.WorkflowSpec) {
 
 	// ForceID is not supported for internal workflows
 	v.ForceId = ""
+}
+
+func createFnRef(wfId string) types.FnRef {
+	return types.FnRef{
+		Runtime: "workflows",
+		ID:      wfId,
+	}
 }

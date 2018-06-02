@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -18,7 +18,7 @@ func TestController_Lifecycle(t *testing.T) {
 	mockResolver := fnenv.NewMetaResolver(map[string]fnenv.RuntimeResolver{
 		"mock": mock.NewResolver(),
 	})
-	wfApi := workflow.NewApi(es, mockResolver)
+	wfApi := api.NewWorkflow(es, mockResolver)
 
 	ctr := NewController(cache, wfApi)
 

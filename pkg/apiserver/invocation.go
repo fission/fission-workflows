@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -21,7 +21,7 @@ const (
 )
 
 type grpcInvocationApiServer struct {
-	api      *invocation.Api
+	api      *api.Invocation
 	wfiCache fes.CacheReader
 }
 
@@ -34,7 +34,7 @@ func (gi *grpcInvocationApiServer) Validate(ctx context.Context, spec *types.Wor
 	return &empty.Empty{}, nil
 }
 
-func NewGrpcInvocationApiServer(api *invocation.Api, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
+func NewGrpcInvocationApiServer(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
 	return &grpcInvocationApiServer{api, wfiCache}
 }
 

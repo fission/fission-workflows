@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -16,11 +16,11 @@ import (
 )
 
 type GrpcWorkflowApiServer struct {
-	api   *workflow.Api
+	api   *api.Workflow
 	cache fes.CacheReader
 }
 
-func NewGrpcWorkflowApiServer(api *workflow.Api, cache fes.CacheReader) *GrpcWorkflowApiServer {
+func NewGrpcWorkflowApiServer(api *api.Workflow, cache fes.CacheReader) *GrpcWorkflowApiServer {
 	wf := &GrpcWorkflowApiServer{
 		api:   api,
 		cache: cache,

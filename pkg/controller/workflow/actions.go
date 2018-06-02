@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/types"
 )
 
@@ -10,7 +10,7 @@ import (
 //
 
 type ActionParseWorkflow struct {
-	WfApi *workflow.Api
+	WfApi *api.Workflow
 	Wf    *types.Workflow
 }
 

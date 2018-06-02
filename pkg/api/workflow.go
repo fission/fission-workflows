@@ -1,4 +1,4 @@
-package workflow
+package api
 
 import (
 	"errors"
@@ -15,17 +15,17 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
-type Api struct {
+type Workflow struct {
 	es       fes.Backend
 	resolver fnenv.Resolver
 }
 
-func NewApi(esClient fes.Backend, resolver fnenv.Resolver) *Api {
-	return &Api{esClient, resolver}
+func NewWorkflow(esClient fes.Backend, resolver fnenv.Resolver) *Workflow {
+	return &Workflow{esClient, resolver}
 }
 
 // TODO check if id already exists
-func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
+func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	err := validate.WorkflowSpec(workflow)
 	if err != nil {
 		return "", err
@@ -55,7 +55,7 @@ func (wa *Api) Create(workflow *types.WorkflowSpec) (string, error) {
 	return id, nil
 }
 
-func (wa *Api) Delete(id string) error {
+func (wa *Workflow) Delete(id string) error {
 	if len(id) == 0 {
 		return errors.New("id is required")
 	}
@@ -68,7 +68,7 @@ func (wa *Api) Delete(id string) error {
 	})
 }
 
-func (wa *Api) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
+func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
 	if err := validate.WorkflowSpec(workflow.Spec); err != nil {
 		return nil, err
 	}

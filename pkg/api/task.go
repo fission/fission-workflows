@@ -1,9 +1,8 @@
-package function
+package api
 
 import (
 	"errors"
 
-	"github.com/fission/fission-workflows/pkg/api/dynamic"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -18,22 +17,21 @@ import (
 
 // TODO move events here
 
-// Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
-type Api struct {
+type Task struct {
 	runtime    map[string]fnenv.Runtime // TODO support AsyncRuntime
 	es         fes.Backend
-	dynamicApi *dynamic.Api
+	dynamicApi *Dynamic
 }
 
-func NewApi(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *dynamic.Api) *Api {
-	return &Api{
+func NewTaskApi(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dynamic) *Task {
+	return &Task{
 		runtime:    runtime,
 		es:         esClient,
 		dynamicApi: api,
 	}
 }
 
-func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
 	err := validate.TaskInvocationSpec(spec)
 	if err != nil {
 		return nil, err
@@ -147,7 +145,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	return fn, nil
 }
 
-func (ap *Api) Fail(invocationId string, taskId string) error {
+func (ap *Task) Fail(invocationId string, taskId string) error {
 	return ap.es.Append(&fes.Event{
 		Type:      events.Task_TASK_FAILED.String(),
 		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),

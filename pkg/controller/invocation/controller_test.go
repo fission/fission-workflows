@@ -4,10 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fission/fission-workflows/pkg/api/dynamic"
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
@@ -26,10 +23,10 @@ func TestController_Lifecycle(t *testing.T) {
 		"mock": mock.NewResolver(),
 	})
 
-	wfiApi := invocation.NewApi(es)
-	wfApi := workflow.NewApi(es, mockResolver)
-	dynamicApi := dynamic.NewApi(wfApi, wfiApi)
-	taskApi := function.NewApi(map[string]fnenv.Runtime{
+	wfiApi := api.NewInvocation(es)
+	wfApi := api.NewWorkflow(es, mockResolver)
+	dynamicApi := api.NewDynamic(wfApi, wfiApi)
+	taskApi := api.NewTaskApi(map[string]fnenv.Runtime{
 		"mock": mockRuntime,
 	}, es, dynamicApi)
 
