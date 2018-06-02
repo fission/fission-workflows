@@ -23,19 +23,19 @@ func (l SetLabels) Get(label string) (value string) {
 	return l[label]
 }
 
-type inSelector struct {
+type InSelector struct {
 	Key    string
 	Values []string
 }
 
-func InSelector(key string, values ...string) *inSelector {
-	return &inSelector{
+func In(key string, values ...string) *InSelector {
+	return &InSelector{
 		Key:    key,
 		Values: values,
 	}
 }
 
-func (s *inSelector) Matches(labels Labels) bool {
+func (s *InSelector) Matches(labels Labels) bool {
 	if !labels.Has(s.Key) {
 		return false
 	}
@@ -50,15 +50,15 @@ func (s *inSelector) Matches(labels Labels) bool {
 	return false
 }
 
-type andSelector struct {
-	Selectors []Selector // And
+type AndSelector struct {
+	Selectors []Selector
 }
 
-func AndSelector(reqs ...Selector) *andSelector {
-	return &andSelector{reqs}
+func And(reqs ...Selector) *AndSelector {
+	return &AndSelector{reqs}
 }
 
-func (s *andSelector) Matches(labels Labels) bool {
+func (s *AndSelector) Matches(labels Labels) bool {
 	for _, req := range s.Selectors {
 		valid := req.Matches(labels)
 		if !valid {
@@ -69,15 +69,15 @@ func (s *andSelector) Matches(labels Labels) bool {
 	return true
 }
 
-type orSelector struct {
-	Selectors []Selector // And
+type OrSelector struct {
+	Selectors []Selector
 }
 
-func OrSelector(reqs ...Selector) *orSelector {
-	return &orSelector{reqs}
+func Or(reqs ...Selector) *OrSelector {
+	return &OrSelector{reqs}
 }
 
-func (s *orSelector) Matches(labels Labels) bool {
+func (s *OrSelector) Matches(labels Labels) bool {
 	for _, req := range s.Selectors {
 		valid := req.Matches(labels)
 		if valid {

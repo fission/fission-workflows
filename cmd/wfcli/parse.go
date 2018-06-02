@@ -48,13 +48,13 @@ var cmdParse = cli.Command{
 				panic(err)
 			}
 
-			fmt.Println(toFormattedJson(wfSpec))
+			fmt.Println(toFormattedJSON(wfSpec))
 		}
 		return nil
 	}),
 }
 
-func toFormattedJson(spec *types.WorkflowSpec) string {
+func toFormattedJSON(spec *types.WorkflowSpec) string {
 
 	marshal := jsonpb.Marshaler{
 		Indent: "  ",

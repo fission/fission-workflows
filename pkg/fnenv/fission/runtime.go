@@ -23,20 +23,20 @@ var log = logrus.WithField("component", "fnenv.fission")
 // to invoke Fission functions.
 type FunctionEnv struct {
 	executor         *executor.Client
-	routerUrl        string
+	routerURL        string
 	timedExecService *TimedExecPool
 }
 
 const (
-	defaultHttpMethod = http.MethodPost
+	defaultHTTPMethod = http.MethodPost
 	defaultProtocol   = "http"
 	provisionDuration = time.Duration(500) - time.Millisecond
 )
 
-func NewFunctionEnv(executor *executor.Client, routerUrl string) *FunctionEnv {
+func NewFunctionEnv(executor *executor.Client, routerURL string) *FunctionEnv {
 	return &FunctionEnv{
 		executor:  executor,
-		routerUrl: routerUrl,
+		routerURL: routerURL,
 	}
 }
 
@@ -53,8 +53,8 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	fnRef := *spec.FnRef
 
 	// Construct request and add body
-	url := fe.createRouterUrl(fnRef)
-	req, err := http.NewRequest(defaultHttpMethod, url, nil)
+	url := fe.createRouterURL(fnRef)
+	req, err := http.NewRequest(defaultHTTPMethod, url, nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
 	}
@@ -101,7 +101,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 
 // Notify signals the Fission runtime that a function request is expected at a specific time.
 func (fe *FunctionEnv) Notify(taskID string, fn types.FnRef, expectedAt time.Time) error {
-	reqUrl, err := fe.getFnUrl(fn)
+	reqURL, err := fe.getFnURL(fn)
 	if err != nil {
 		return err
 	}
@@ -111,15 +111,15 @@ func (fe *FunctionEnv) Notify(taskID string, fn types.FnRef, expectedAt time.Tim
 
 	// Tap the Fission function at the right time
 	fe.timedExecService.Submit(func() {
-		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqUrl)
-		fe.executor.TapService(reqUrl)
+		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqURL)
+		fe.executor.TapService(reqURL)
 	}, execAt)
 	return nil
 }
 
-func (fe *FunctionEnv) getFnUrl(fn types.FnRef) (*url.URL, error) {
+func (fe *FunctionEnv) getFnURL(fn types.FnRef) (*url.URL, error) {
 	meta := createFunctionMeta(fn)
-	serviceUrl, err := fe.executor.GetServiceForFunction(meta)
+	serviceURL, err := fe.executor.GetServiceForFunction(meta)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"err":  err,
@@ -127,13 +127,13 @@ func (fe *FunctionEnv) getFnUrl(fn types.FnRef) (*url.URL, error) {
 		}).Error("Fission function could not be found!")
 		return nil, err
 	}
-	rawUrl := fmt.Sprintf("%s://%s", defaultProtocol, serviceUrl)
-	reqUrl, err := url.Parse(rawUrl)
+	rawURL := fmt.Sprintf("%s://%s", defaultProtocol, serviceURL)
+	reqURL, err := url.Parse(rawURL)
 	if err != nil {
-		logrus.Errorf("Failed to parse url: '%v'", rawUrl)
+		logrus.Errorf("Failed to parse url: '%v'", rawURL)
 		panic(err)
 	}
-	return reqUrl, nil
+	return reqURL, nil
 }
 
 func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
@@ -144,6 +144,6 @@ func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
 	}
 }
 
-func (fe *FunctionEnv) createRouterUrl(fn types.FnRef) string {
-	return fe.routerUrl + "/fission-function/" + fn.ID
+func (fe *FunctionEnv) createRouterURL(fn types.FnRef) string {
+	return fe.routerURL + "/fission-function/" + fn.ID
 }

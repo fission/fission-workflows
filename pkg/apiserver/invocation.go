@@ -20,12 +20,12 @@ const (
 	invokeSyncPollingInterval = time.Duration(100) * time.Millisecond
 )
 
-type grpcInvocationApiServer struct {
+type Invocation struct {
 	api      *api.Invocation
 	wfiCache fes.CacheReader
 }
 
-func (gi *grpcInvocationApiServer) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
+func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
 	err := validate.WorkflowInvocationSpec(spec)
 	if err != nil {
 		logrus.Info(strings.Replace(validate.Format(err), "\n", "; ", -1))
@@ -34,21 +34,21 @@ func (gi *grpcInvocationApiServer) Validate(ctx context.Context, spec *types.Wor
 	return &empty.Empty{}, nil
 }
 
-func NewGrpcInvocationApiServer(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
-	return &grpcInvocationApiServer{api, wfiCache}
+func NewInvocation(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
+	return &Invocation{api, wfiCache}
 }
 
-func (gi *grpcInvocationApiServer) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
-	eventId, err := gi.api.Invoke(spec)
+func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
+	eventID, err := gi.api.Invoke(spec)
 	if err != nil {
 		return nil, err
 	}
 
-	return &WorkflowInvocationIdentifier{eventId}, nil
+	return &WorkflowInvocationIdentifier{eventID}, nil
 }
 
-func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	wfiId, err := gi.api.Invoke(spec)
+func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
+	wfiID, err := gi.api.Invoke(spec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -57,7 +57,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 	timeout, _ := context.WithTimeout(ctx, invokeSyncTimeout)
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(wfiId)
+		wi := aggregates.NewWorkflowInvocation(wfiID)
 		err := gi.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
@@ -69,7 +69,7 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 
 		select {
 		case <-timeout.Done():
-			err := gi.api.Cancel(wfiId)
+			err := gi.api.Cancel(wfiID)
 			if err != nil {
 				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
 			}
@@ -83,8 +83,8 @@ func (gi *grpcInvocationApiServer) InvokeSync(ctx context.Context, spec *types.W
 	return result, nil
 }
 
-func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*empty.Empty, error) {
-	err := gi.api.Cancel(invocationId.GetId())
+func (gi *Invocation) Cancel(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*empty.Empty, error) {
+	err := gi.api.Cancel(invocationID.GetId())
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (gi *grpcInvocationApiServer) Cancel(ctx context.Context, invocationId *Wor
 	return &empty.Empty{}, nil
 }
 
-func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
-	wi := aggregates.NewWorkflowInvocation(invocationId.GetId())
+func (gi *Invocation) Get(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
+	wi := aggregates.NewWorkflowInvocation(invocationID.GetId())
 	err := gi.wfiCache.Get(wi)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (gi *grpcInvocationApiServer) Get(ctx context.Context, invocationId *Workfl
 	return wi.WorkflowInvocation, nil
 }
 
-func (gi *grpcInvocationApiServer) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
+func (gi *Invocation) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
 	var invocations []string
 	as := gi.wfiCache.List()
 	for _, a := range as {

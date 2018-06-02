@@ -18,9 +18,9 @@ func TestController_Lifecycle(t *testing.T) {
 	mockResolver := fnenv.NewMetaResolver(map[string]fnenv.RuntimeResolver{
 		"mock": mock.NewResolver(),
 	})
-	wfApi := api.NewWorkflow(es, mockResolver)
+	wfAPI := api.NewWorkflowAPI(es, mockResolver)
 
-	ctr := NewController(cache, wfApi)
+	ctr := NewController(cache, wfAPI)
 
 	err := ctr.Init(context.TODO())
 	assert.NoError(t, err)

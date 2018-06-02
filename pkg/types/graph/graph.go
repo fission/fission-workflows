@@ -18,33 +18,33 @@ type TaskInstanceNode struct {
 }
 
 func (n *TaskInstanceNode) ID() int64 {
-	return createId(n.Task.Id())
+	return createID(n.Task.ID())
 }
 
 func (n *TaskInstanceNode) Links() []int64 {
 	var links []int64
 
 	for k := range n.Task.Spec.Requires {
-		links = append(links, createId(k))
+		links = append(links, createID(k))
 	}
 	return links
 }
 
 type TaskSpecNode struct {
-	Id string
+	id string
 	*types.TaskSpec
 }
 
 func (n *TaskSpecNode) Links() []int64 {
 	var links []int64
 	for k := range n.Requires {
-		links = append(links, createId(k))
+		links = append(links, createID(k))
 	}
 	return links
 }
 
 func (n *TaskSpecNode) ID() int64 {
-	return createId(n.Id)
+	return createID(n.id)
 }
 
 type Iterator interface {
@@ -85,7 +85,7 @@ func (ts *TaskSpecIterator) Get(ptr int) LinkedNode {
 	if len(ts.keys) > ptr {
 		return &TaskSpecNode{
 			TaskSpec: ts.contents[ts.keys[ptr]],
-			Id:       ts.keys[ptr],
+			id:       ts.keys[ptr],
 		}
 	}
 	return nil
@@ -105,12 +105,12 @@ func NewTaskSpecIterator(contents map[string]*types.TaskSpec) *TaskSpecIterator 
 func Parse(it Iterator) graph.Directed {
 	depGraph := simple.NewDirectedGraph()
 	// Add Nodes
-	for ptr := 0; it.Get(ptr) != nil; ptr += 1 {
+	for ptr := 0; it.Get(ptr) != nil; ptr++ {
 		depGraph.AddNode(it.Get(ptr))
 	}
 
 	// Add dependencies
-	for ptr := 0; it.Get(ptr) != nil; ptr += 1 {
+	for ptr := 0; it.Get(ptr) != nil; ptr++ {
 		n := it.Get(ptr)
 		if n.Links() != nil {
 			for _, dep := range n.Links() {
@@ -153,7 +153,7 @@ func Roots(g graph.Directed) []graph.Node {
 	return roots
 }
 
-func createId(s string) int64 {
+func createID(s string) int64 {
 	h := fnv.New64a()
 	h.Write([]byte(s))
 	return int64(h.Sum64())
@@ -163,11 +163,11 @@ func injectDynamicTask(depGraph *simple.DirectedGraph, dynamic graph.Node,
 	nodeRequires map[int64]map[string]*types.TaskDependencyParameters) {
 
 	// find parent id
-	var parentTaskId string
+	var parentTaskID string
 	var found bool
 	for dep, params := range nodeRequires[dynamic.ID()] {
 		if params != nil && params.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
-			parentTaskId = dep
+			parentTaskID = dep
 			found = true
 			break
 		}
@@ -177,16 +177,16 @@ func injectDynamicTask(depGraph *simple.DirectedGraph, dynamic graph.Node,
 	}
 
 	// Add edges from the dynamic task to all nodes depending on the parent.
-	for nodeId, deps := range nodeRequires {
-		if _, ok := deps[parentTaskId]; ok && nodeId != dynamic.ID() {
-			depNode := depGraph.Node(nodeId)
+	for nodeID, deps := range nodeRequires {
+		if _, ok := deps[parentTaskID]; ok && nodeID != dynamic.ID() {
+			depNode := depGraph.Node(nodeID)
 			depGraph.SetEdge(depGraph.NewEdge(dynamic, depNode))
 		}
 	}
 }
 
 func Get(g graph.Graph, id string) graph.Node {
-	idHash := createId(id)
+	idHash := createID(id)
 	for _, v := range g.Nodes() {
 		if v.ID() == idHash {
 			return v

@@ -198,6 +198,10 @@ func (f *Flow) ApplyWorkflow(fn func(t *types.WorkflowSpec)) {
 	}
 }
 
+func (f *Flow) IsEmpty() bool {
+	return f.wf == nil && f.task == nil
+}
+
 func FlowTask(task *types.TaskSpec) *Flow {
 	return &Flow{task: task}
 }

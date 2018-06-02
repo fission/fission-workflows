@@ -61,7 +61,7 @@ func (e *EvalCache) List() map[string]*EvalState {
 // TODO add a time before next evaluation -> backoff
 // TODO add current/in progress record
 type EvalState struct {
-	// Id is the identifier of the evaluation. For example the invocation.
+	// id is the identifier of the evaluation. For example the invocation.
 	id string
 
 	// EvalLog keep track of previous evaluations of this resource

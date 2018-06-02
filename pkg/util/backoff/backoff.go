@@ -115,7 +115,6 @@ func (bc Map) Locked(key string, time time.Time) bool {
 	c, ok := bc[key]
 	if ok {
 		return c.Locked(time)
-	} else {
-		return false
 	}
+	return false
 }

@@ -60,7 +60,7 @@ tasks:
 	}
 
 	assert.Equal(t, wf.OutputTask, wfd.Output)
-	assert.Equal(t, wf.ApiVersion, wfd.ApiVersion)
+	assert.Equal(t, wf.ApiVersion, wfd.APIVersion)
 	for id, task := range wfd.Tasks {
 		if len(task.Run) == 0 {
 			assert.Equal(t, wf.Tasks[id].FunctionRef, "noop")

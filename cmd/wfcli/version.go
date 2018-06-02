@@ -17,7 +17,7 @@ var versionPrinter = commandContext(func(ctx Context) error {
 
 	// Print client version
 	if c {
-		fmt.Printf("client: %s\n", version.VersionInfo().Json())
+		fmt.Printf("client: %s\n", version.VersionInfo().JSON())
 	}
 
 	// Print server version

@@ -32,7 +32,7 @@ func VersionInfo() Info {
 	}
 }
 
-func (m Info) Json() string {
+func (m Info) JSON() string {
 	v, err := (&jsonpb.Marshaler{}).MarshalToString(&m)
 	if err != nil {
 		panic(err)

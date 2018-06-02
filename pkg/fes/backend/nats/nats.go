@@ -47,8 +47,8 @@ func (cn *Conn) SubscribeChan(subject string, msgChan chan *stan.Msg, opts ...st
 }
 
 // Msg has a python style element selector (-1 = len(events)-1)
-func (cn *Conn) Msg(subject string, seqId uint64) (*stan.Msg, error) {
-	msgRange, err := cn.MsgSeqRange(subject, seqId, seqId)
+func (cn *Conn) Msg(subject string, seqID uint64) (*stan.Msg, error) {
+	msgRange, err := cn.MsgSeqRange(subject, seqID, seqID)
 	if err != nil {
 		return nil, err
 	}

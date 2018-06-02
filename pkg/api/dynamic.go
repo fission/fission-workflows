@@ -7,19 +7,33 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+// Dynamic contains the API functionality for creating dynamic tasks and workflows.
 type Dynamic struct {
-	wfApi  *Workflow
-	wfiApi *Invocation
+	wfAPI  *Workflow
+	wfiAPI *Invocation
 }
 
-func NewDynamic(wfApi *Workflow, wfiApi *Invocation) *Dynamic {
+// NewDynamicApi creates the Dynamic API.
+func NewDynamicApi(wfAPI *Workflow, wfiAPI *Invocation) *Dynamic {
 	return &Dynamic{
-		wfApi:  wfApi,
-		wfiApi: wfiApi,
+		wfAPI:  wfAPI,
+		wfiAPI: wfiAPI,
 	}
 }
 
-func (ap *Dynamic) AddDynamicTask(invocationId string, parentId string, taskSpec *types.TaskSpec) error {
+// AddDynamicFlow inserts the flow as a 'dynamic task' into the workflow invocation with id invocationID as the child
+// of the parent task.
+func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow typedvalues.Flow) error {
+	if err := validate.Flow(flow); err != nil {
+		return err
+	}
+	if flow.Workflow() != nil {
+		return ap.addDynamicWorkflow(invocationID, parentTaskID, flow.Workflow(), &types.TaskSpec{})
+	}
+	return ap.addDynamicTask(invocationID, parentTaskID, flow.Task())
+}
+
+func (ap *Dynamic) addDynamicTask(invocationID string, parentTaskID string, taskSpec *types.TaskSpec) error {
 
 	// Transform TaskSpec into WorkflowSpec
 	// TODO dedup workflows
@@ -30,18 +44,13 @@ func (ap *Dynamic) AddDynamicTask(invocationId string, parentId string, taskSpec
 			"main": taskSpec,
 		},
 		Internal:   true, // TODO take into account
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 	}
 
-	return ap.addDynamicWorkflow(invocationId, parentId, wfSpec, taskSpec)
+	return ap.addDynamicWorkflow(invocationID, parentTaskID, wfSpec, taskSpec)
 }
 
-func (ap *Dynamic) AddDynamicWorkflow(invocationId string, parentTaskId string, workflowSpec *types.WorkflowSpec) error {
-	// TODO add inputs to WorkflowSpec
-	return ap.addDynamicWorkflow(invocationId, parentTaskId, workflowSpec, &types.TaskSpec{})
-}
-
-func (ap *Dynamic) addDynamicWorkflow(invocationId string, parentTaskId string, wfSpec *types.WorkflowSpec,
+func (ap *Dynamic) addDynamicWorkflow(invocationID string, parentTaskID string, wfSpec *types.WorkflowSpec,
 	stubTask *types.TaskSpec) error {
 
 	// Clean-up WorkflowSpec and submit
@@ -50,20 +59,19 @@ func (ap *Dynamic) addDynamicWorkflow(invocationId string, parentTaskId string, 
 	if err != nil {
 		return err
 	}
-	wfId, err := ap.wfApi.Create(wfSpec)
+	wfID, err := ap.wfAPI.Create(wfSpec)
 	if err != nil {
 		return err
 	}
 
 	// Create function reference to workflow
-	wfRef := createFnRef(wfId)
-
+	wfRef := createFnRef(wfID)
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfRef.Format()
-	proxyTaskSpec.Input(types.InputParent, typedvalues.ParseString(invocationId))
-	proxyTaskId := parentTaskId + "_child"
-	proxyTask := types.NewTask(proxyTaskId, proxyTaskSpec.FunctionRef)
+	proxyTaskSpec.Input(types.InputParent, typedvalues.ParseString(invocationID))
+	proxyTaskID := parentTaskID + "_child"
+	proxyTask := types.NewTask(proxyTaskID, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec
 	// Shortcut resolving of the function reference
 	proxyTask.Status.Status = types.TaskStatus_READY
@@ -71,7 +79,7 @@ func (ap *Dynamic) addDynamicWorkflow(invocationId string, parentTaskId string, 
 
 	// Ensure that the only link of the dynamic task is with its parent
 	proxyTaskSpec.Requires = map[string]*types.TaskDependencyParameters{
-		parentTaskId: {
+		parentTaskID: {
 			Type: types.TaskDependencyParameters_DYNAMIC_OUTPUT,
 		},
 	}
@@ -83,21 +91,21 @@ func (ap *Dynamic) addDynamicWorkflow(invocationId string, parentTaskId string, 
 
 	// Submit added task to workflow invocation
 	// TODO replace Task with TaskSpec + shortcircuit resolving of function (e.g. special label on fnref)
-	return ap.wfiApi.AddTask(invocationId, proxyTask)
+	return ap.wfiAPI.AddTask(invocationID, proxyTask)
 }
 
 func sanitizeWorkflow(v *types.WorkflowSpec) {
 	if len(v.ApiVersion) == 0 {
-		v.ApiVersion = types.WorkflowApiVersion
+		v.ApiVersion = types.WorkflowAPIVersion
 	}
 
 	// ForceID is not supported for internal workflows
 	v.ForceId = ""
 }
 
-func createFnRef(wfId string) types.FnRef {
+func createFnRef(wfID string) types.FnRef {
 	return types.FnRef{
 		Runtime: "workflows",
-		ID:      wfId,
+		ID:      wfID,
 	}
 }

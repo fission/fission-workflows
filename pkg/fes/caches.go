@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	PubSubLabelEventId       = "event.id"
+	PubSubLabelEventID       = "event.id"
 	PubSubLabelEventType     = "event.type"
 	PubSubLabelAggregateType = "aggregate.type"
-	PubSubLabelAggregateId   = "aggregate.id"
+	PubSubLabelAggregateID   = "aggregate.id"
 )
 
 var (
@@ -159,9 +159,9 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 
 func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
-		PubSubLabelEventId:       event.Id,
+		PubSubLabelEventID:       event.Id,
 		PubSubLabelEventType:     event.Type,
-		PubSubLabelAggregateId:   event.Aggregate.Id,
+		PubSubLabelAggregateID:   event.Aggregate.Id,
 		PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
@@ -276,8 +276,6 @@ func (c *FallbackCache) Get(entity Aggregator) error {
 		if err == ErrNotFound {
 			logrus.WithField("entity", entity.Aggregate()).Info("EvalCache miss! Checking backing event store.")
 			return c.getFromEventStore(entity.Aggregate(), entity)
-		} else {
-			return err
 		}
 	}
 	return nil

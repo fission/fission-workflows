@@ -20,31 +20,31 @@ import (
 
 // ActonAbort aborts an invocation.
 type ActonAbort struct {
-	Api          *api.Invocation
-	InvocationId string
+	API          *api.Invocation
+	InvocationID string
 }
 
 func (a *ActonAbort) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	a.InvocationId = ec.Invocation().Id()
+	a.InvocationID = ec.Invocation().ID()
 	return a
 }
 
 func (a *ActonAbort) Apply() error {
 	wfiLog.Info("Applying action: abort")
-	return a.Api.Cancel(a.InvocationId)
+	return a.API.Cancel(a.InvocationID)
 }
 
 // ActionFail halts an invocation.
 type ActionFail struct {
-	Api          *api.Invocation
-	InvocationId string
+	API          *api.Invocation
+	InvocationID string
 	Err          error
 }
 
 func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	a.InvocationId = ec.Invocation().Id()
+	a.InvocationID = ec.Invocation().ID()
 	if a.Err == nil {
 		if s, ok := ec.EvalState().Last(); ok {
 			a.Err = s.Error
@@ -58,14 +58,14 @@ func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 
 func (a *ActionFail) Apply() error {
 	wfiLog.Infof("Applying action: fail (%v)", a.Err)
-	return a.Api.Fail(a.InvocationId, a.Err)
+	return a.API.Fail(a.InvocationID, a.Err)
 }
 
 // ActionInvokeTask invokes a function
 type ActionInvokeTask struct {
 	Wf         *types.Workflow
 	Wfi        *types.WorkflowInvocation
-	Api        *api.Task
+	API        *api.Task
 	Task       *scheduler.InvokeTaskAction
 	StateStore *expr.Store
 }
@@ -79,7 +79,7 @@ func (a *ActionInvokeTask) Apply() error {
 	// Find Task (static or dynamic)
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
 	if !ok {
-		return fmt.Errorf("task '%v' could not be found", a.Wfi.Id())
+		return fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
 	}
 	wfiLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
 
@@ -93,7 +93,7 @@ func (a *ActionInvokeTask) Apply() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
 	}
-	a.StateStore.Set(a.Wfi.Id(), scope)
+	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Inherit scope if this invocation is part of a dynamic decision
 	if len(a.Wfi.Spec.ParentId) != 0 {
@@ -129,11 +129,11 @@ func (a *ActionInvokeTask) Apply() error {
 	fnSpec := &types.TaskInvocationSpec{
 		FnRef:        task.Status.FnRef,
 		TaskId:       a.Task.Id,
-		InvocationId: a.Wfi.Id(),
+		InvocationId: a.Wfi.ID(),
 		Inputs:       inputs,
 	}
 
-	_, err = a.Api.Invoke(fnSpec)
+	_, err = a.API.Invoke(fnSpec)
 	if err != nil {
 		wfiLog.WithFields(logrus.Fields{
 			"id": a.Wfi.Metadata.Id,

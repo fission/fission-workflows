@@ -22,9 +22,9 @@ import (
 )
 
 type client struct {
-	Admin      *httpclient.AdminApi
-	Workflow   *httpclient.WorkflowApi
-	Invocation *httpclient.InvocationApi
+	Admin      *httpclient.AdminAPI
+	Workflow   *httpclient.WorkflowAPI
+	Invocation *httpclient.InvocationAPI
 }
 
 func getClient(ctx Context) client {
@@ -33,15 +33,15 @@ func getClient(ctx Context) client {
 
 	// fetch the FISSION_URL env variable. If not set, port-forward to controller.
 	if len(url) == 0 {
-		fissionUrl := os.Getenv("FISSION_URL")
-		if len(fissionUrl) == 0 {
+		fissionURL := os.Getenv("FISSION_URL")
+		if len(fissionURL) == 0 {
 			fissionNamespace := getFissionNamespace()
 			kubeConfig := getKubeConfigPath()
 			localPort := setupPortForward(kubeConfig, fissionNamespace, "application=fission-api")
 			url = "http://127.0.0.1:" + localPort
 			logrus.Debugf("Forwarded Fission API to %s.", url)
 		} else {
-			url = fissionUrl
+			url = fissionURL
 		}
 	}
 	path := ctx.GlobalString("path-prefix")
@@ -51,9 +51,9 @@ func getClient(ctx Context) client {
 	url = url + strings.TrimSuffix(path, "/")
 	httpClient := http.Client{}
 	return client{
-		Admin:      httpclient.NewAdminApi(url, httpClient),
-		Workflow:   httpclient.NewWorkflowApi(url, httpClient),
-		Invocation: httpclient.NewInvocationApi(url, httpClient),
+		Admin:      httpclient.NewAdminAPI(url, httpClient),
+		Workflow:   httpclient.NewWorkflowAPI(url, httpClient),
+		Invocation: httpclient.NewInvocationAPI(url, httpClient),
 	}
 }
 

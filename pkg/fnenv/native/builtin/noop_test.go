@@ -33,9 +33,9 @@ func TestFunctionNoopObject(t *testing.T) {
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
 			Inputs: map[string]*types.TypedValue{
-				"foo":            typedvalues.MustParse(true),
-				"bar":            typedvalues.MustParse(false),
-				types.INPUT_MAIN: typedvalues.MustParse("hello"),
+				"foo":           typedvalues.MustParse(true),
+				"bar":           typedvalues.MustParse(false),
+				types.InputMain: typedvalues.MustParse("hello"),
 			},
 		},
 		"hello")

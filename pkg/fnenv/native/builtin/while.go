@@ -27,7 +27,7 @@ var (
 /*
 FunctionWhile consists of a control flow construct that will execute a specific task as long as the condition has
 not been met.
-The results of the executed action can be accessed using the task ID "action".
+The results of the executed action can be accessed using the task id "action".
 
 **Specification**
 

@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
@@ -33,10 +34,10 @@ type Controller struct {
 	evalPolicy controller.Rule
 }
 
-func NewController(wfCache fes.CacheReader, wfApi *api.Workflow) *Controller {
+func NewController(wfCache fes.CacheReader, wfAPI *api.Workflow) *Controller {
 	ctr := &Controller{
 		wfCache:   wfCache,
-		api:       wfApi,
+		api:       wfAPI,
 		evalQueue: make(chan string, evalQueueSize),
 		evalCache: controller.NewEvalCache(),
 	}
@@ -49,7 +50,7 @@ func (c *Controller) Init(sctx context.Context) error {
 	c.cancelFn = cancelFn
 
 	// Subscribe to invocation creations and task events.
-	selector := labels.InSelector(fes.PubSubLabelAggregateType, "workflow")
+	selector := labels.In(fes.PubSubLabelAggregateType, "workflow")
 	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
 		c.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer:   NotificationBuffer,
@@ -85,11 +86,11 @@ func (c *Controller) Init(sctx context.Context) error {
 	return nil
 }
 
-func (cr *Controller) handleMsg(msg pubsub.Msg) error {
+func (c *Controller) handleMsg(msg pubsub.Msg) error {
 	wfLog.WithField("labels", msg.Labels()).Debug("Handling invocation notification.")
 	switch n := msg.(type) {
 	case *fes.Notification:
-		cr.Notify(n)
+		c.Notify(n)
 	default:
 		wfLog.WithField("notification", n).Warn("Ignoring unknown notification type")
 	}
@@ -118,7 +119,7 @@ func (c *Controller) Tick(tick uint64) error {
 	//		panic(fmt.Sprintf("unexpected type '%v' in wfCache", reflect.TypeOf(wfEntity)))
 	//	}
 	//
-	//	c.submitEval(wf.Id())
+	//	c.submitEval(wf.id())
 	//}
 	return nil
 }
@@ -129,29 +130,29 @@ func (c *Controller) Notify(msg *fes.Notification) error {
 		return fmt.Errorf("received notification of invalid type '%s'. Expected '*aggregates.Workflow'", reflect.TypeOf(msg.Payload))
 	}
 
-	c.submitEval(wf.Id())
+	c.submitEval(wf.ID())
 	return nil
 }
 
-func (c *Controller) Evaluate(workflowId string) {
+func (c *Controller) Evaluate(workflowID string) {
 	// Fetch and attempt to claim the evaluation
-	evalState := c.evalCache.GetOrCreate(workflowId)
+	evalState := c.evalCache.GetOrCreate(workflowID)
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfLog.Debugf("Failed to obtain access to workflow %s", workflowId)
+		wfLog.Debugf("Failed to obtain access to workflow %s", workflowID)
 		return
 	}
-	wfLog.Debugf("evaluating workflow %s", workflowId)
+	wfLog.Debugf("evaluating workflow %s", workflowID)
 
 	// Fetch the workflow relevant to the invocation
-	wf := aggregates.NewWorkflow(workflowId)
+	wf := aggregates.NewWorkflow(workflowID)
 	err := c.wfCache.Get(wf)
 	// TODO move to rule
 	if err != nil && wf.Workflow == nil {
-		logrus.Errorf("controller failed to get workflow '%s': %v", workflowId, err)
+		logrus.Errorf("controller failed to get workflow '%s': %v", workflowID, err)
 		return
 	}
 
@@ -209,8 +210,22 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 				evalCache: ctr.evalCache,
 			},
 			&RuleEnsureParsed{
-				WfApi: ctr.api,
+				WfAPI: ctr.api,
 			},
 		},
 	}
+}
+
+//
+// Workflow-specific actions
+//
+
+type ActionParseWorkflow struct {
+	WfAPI *api.Workflow
+	Wf    *types.Workflow
+}
+
+func (ac *ActionParseWorkflow) Apply() error {
+	_, err := ac.WfAPI.Parse(ac.Wf)
+	return err
 }

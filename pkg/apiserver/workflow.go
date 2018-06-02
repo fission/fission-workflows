@@ -15,13 +15,13 @@ import (
 	"golang.org/x/net/context"
 )
 
-type GrpcWorkflowApiServer struct {
+type Workflow struct {
 	api   *api.Workflow
 	cache fes.CacheReader
 }
 
-func NewGrpcWorkflowApiServer(api *api.Workflow, cache fes.CacheReader) *GrpcWorkflowApiServer {
-	wf := &GrpcWorkflowApiServer{
+func NewWorkflow(api *api.Workflow, cache fes.CacheReader) *Workflow {
+	wf := &Workflow{
 		api:   api,
 		cache: cache,
 	}
@@ -29,7 +29,7 @@ func NewGrpcWorkflowApiServer(api *api.Workflow, cache fes.CacheReader) *GrpcWor
 	return wf
 }
 
-func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, spec *types.WorkflowSpec) (*WorkflowIdentifier, error) {
+func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*WorkflowIdentifier, error) {
 
 	id, err := ga.api.Create(spec)
 	if err != nil {
@@ -40,8 +40,8 @@ func (ga *GrpcWorkflowApiServer) Create(ctx context.Context, spec *types.Workflo
 	return &WorkflowIdentifier{id}, nil
 }
 
-func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowIdentifier) (*types.Workflow, error) {
-	id := workflowId.GetId()
+func (ga *Workflow) Get(ctx context.Context, workflowID *WorkflowIdentifier) (*types.Workflow, error) {
+	id := workflowID.GetId()
 	if len(id) == 0 {
 		return nil, errors.New("no id provided")
 	}
@@ -54,8 +54,8 @@ func (ga *GrpcWorkflowApiServer) Get(ctx context.Context, workflowId *WorkflowId
 	return entity.Workflow, nil
 }
 
-func (ga *GrpcWorkflowApiServer) Delete(ctx context.Context, workflowId *WorkflowIdentifier) (*empty.Empty, error) {
-	id := workflowId.GetId()
+func (ga *Workflow) Delete(ctx context.Context, workflowID *WorkflowIdentifier) (*empty.Empty, error) {
+	id := workflowID.GetId()
 	if len(id) == 0 {
 		return nil, errors.New("no id provided")
 	}
@@ -67,7 +67,7 @@ func (ga *GrpcWorkflowApiServer) Delete(ctx context.Context, workflowId *Workflo
 	return &empty.Empty{}, nil
 }
 
-func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
+func (ga *Workflow) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
 	var results []string
 	wfs := ga.cache.List()
 	for _, result := range wfs {
@@ -76,7 +76,7 @@ func (ga *GrpcWorkflowApiServer) List(ctx context.Context, req *empty.Empty) (*S
 	return &SearchWorkflowResponse{results}, nil
 }
 
-func (ga *GrpcWorkflowApiServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
+func (ga *Workflow) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
 	err := validate.WorkflowSpec(spec)
 	if err != nil {
 		logrus.Info(strings.Replace(validate.Format(err), "\n", "; ", -1))

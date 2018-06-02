@@ -21,15 +21,15 @@ func main() {
 		setupLogging(c)
 
 		return bundle.Run(ctx, &bundle.Options{
-			Nats:                  parseNatsOptions(c),
-			Fission:               parseFissionOptions(c),
-			InternalRuntime:       c.Bool("internal"),
-			InvocationController:  c.Bool("controller") || c.Bool("invocation-controller"),
-			WorkflowController:    c.Bool("controller") || c.Bool("workflow-controller"),
-			ApiAdmin:              c.Bool("api") || c.Bool("api-admin"),
-			ApiWorkflow:           c.Bool("api") || c.Bool("api-workflow"),
-			ApiWorkflowInvocation: c.Bool("api") || c.Bool("api-workflow-invocation"),
-			ApiHttp:               c.Bool("api") || c.Bool("api-http"),
+			Nats:                 parseNatsOptions(c),
+			Fission:              parseFissionOptions(c),
+			InternalRuntime:      c.Bool("internal"),
+			InvocationController: c.Bool("controller") || c.Bool("invocation-controller"),
+			WorkflowController:   c.Bool("controller") || c.Bool("workflow-controller"),
+			AdminAPI:             c.Bool("api") || c.Bool("api-admin"),
+			WorkflowAPI:          c.Bool("api") || c.Bool("api-workflow"),
+			InvocationAPI:        c.Bool("api") || c.Bool("api-workflow-invocation"),
+			HTTPGateway:          c.Bool("api") || c.Bool("api-http"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -62,11 +62,11 @@ func parseNatsOptions(c *cli.Context) *nats.Config {
 
 	client := c.String("nats-client")
 	if client == "" {
-		client = fmt.Sprintf("workflow-bundle-%s", util.Uid())
+		client = fmt.Sprintf("workflow-bundle-%s", util.UID())
 	}
 
 	return &nats.Config{
-		Url:     c.String("nats-url"),
+		URL:     c.String("nats-url"),
 		Cluster: c.String("nats-cluster"),
 		Client:  client,
 	}
@@ -86,7 +86,7 @@ func createCli() *cli.App {
 		// NATS
 		cli.StringFlag{
 			Name:   "nats-url",
-			Usage:  "Url to the data store used by the NATS event store.",
+			Usage:  "URL to the data store used by the NATS event store.",
 			Value:  natsio.DefaultURL, // http://nats-streaming.fission
 			EnvVar: "ES_NATS_URL",
 		},

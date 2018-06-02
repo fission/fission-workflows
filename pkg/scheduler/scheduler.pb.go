@@ -171,7 +171,7 @@ func (m *AbortAction) GetReason() string {
 }
 
 type InvokeTaskAction struct {
-	// Id of the task in the workflow
+	// id of the task in the workflow
 	Id     string                       `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
 	Inputs map[string]*types.TypedValue `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }

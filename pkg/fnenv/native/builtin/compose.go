@@ -8,7 +8,7 @@ import (
 
 const (
 	Compose      = "compose"
-	ComposeInput = types.INPUT_MAIN
+	ComposeInput = types.InputMain
 )
 
 /*

@@ -57,21 +57,21 @@ httpExample:
 
 A complete example of this function can be found in the [httpwhale](../examples/whales/httpwhale.wf.yaml) example.
 */
-type FunctionHttp struct{}
+type FunctionHTTP struct{}
 
-func (fn *FunctionHttp) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
 	// Setup request
 	contentType := httpconv.DetermineContentTypeInputs(spec.Inputs)
 	headers := httpconv.FormatHeaders(spec.Inputs)
 	method := httpconv.FormatMethod(spec.Inputs)
 	// Get the actual url
-	uri, err := fn.getUri(spec.Inputs)
+	uri, err := fn.getURI(spec.Inputs)
 	if err != nil {
 		return nil, err
 	}
 	var body io.ReadCloser
 
-	bodyTv, ok := spec.Inputs[types.INPUT_MAIN]
+	bodyTv, ok := spec.Inputs[types.InputMain]
 	if ok && bodyTv != nil {
 		bs, err := httpconv.FormatBody(*bodyTv, contentType)
 		if err != nil {
@@ -100,8 +100,8 @@ func (fn *FunctionHttp) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	return &output, err
 }
 
-func (fn *FunctionHttp) getUri(inputs map[string]*types.TypedValue) (string, error) {
-	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUrl, types.INPUT_MAIN)
+func (fn *FunctionHTTP) getURI(inputs map[string]*types.TypedValue) (string, error) {
+	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUrl, types.InputMain)
 	if tv == nil {
 		return "", errors.New("target URI is required for HTTP function")
 	}

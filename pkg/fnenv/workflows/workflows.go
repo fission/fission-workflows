@@ -43,15 +43,15 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	// Prepare inputs
 	wfSpec := spec.ToWorkflowSpec()
 	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
-		parentId, err := typedvalues.FormatString(parentTv)
+		parentID, err := typedvalues.FormatString(parentTv)
 		if err != nil {
 			return nil, fmt.Errorf("invalid parent id %v (%v)", parentTv, err)
 		}
-		wfSpec.ParentId = parentId
+		wfSpec.ParentId = parentID
 	}
 
 	// Invoke workflow
-	wfiId, err := rt.api.Invoke(wfSpec)
+	wfiID, err := rt.api.Invoke(wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -61,7 +61,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	defer cancelFn()
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(wfiId)
+		wi := aggregates.NewWorkflowInvocation(wfiID)
 		err := rt.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Debugf("Could not find workflow invocation in cache: %v", err)
@@ -73,7 +73,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 		select {
 		case <-timeout.Done():
-			err := rt.api.Cancel(wfiId)
+			err := rt.api.Cancel(wfiID)
 			if err != nil {
 				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
 			}
@@ -85,5 +85,4 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	}
 
 	return result.Status.ToTaskStatus(), nil
-
 }

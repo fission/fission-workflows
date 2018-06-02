@@ -88,7 +88,7 @@ func (mc *MetaController) Start(ctx context.Context) error {
 		case <-ticker.C:
 			if !mc.suspended {
 				mc.Tick(tick)
-				tick += 1
+				tick++
 			}
 		}
 	}

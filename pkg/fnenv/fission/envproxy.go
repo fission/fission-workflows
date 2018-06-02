@@ -257,9 +257,9 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	}
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
-	// Synchronize the workflow ID with the fission ID
-	fissionId := string(flr.FunctionMetadata.GetUID())
-	wfSpec.ForceId = fissionId
+	// Synchronize the workflow id with the fission id
+	fissionID := string(flr.FunctionMetadata.GetUID())
+	wfSpec.ForceId = fissionID
 	wfSpec.Name = flr.FunctionMetadata.Name
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
@@ -268,8 +268,8 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	}
 	wfID := resp.Id
 
-	// EvalCache the ID so we don't have to check whether the workflow engine already has it.
-	fp.fissionIds.Store(fissionId, true)
+	// EvalCache the id so we don't have to check whether the workflow engine already has it.
+	fp.fissionIds.Store(fissionID, true)
 
 	return wfID, nil
 }

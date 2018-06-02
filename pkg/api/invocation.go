@@ -14,21 +14,27 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+// Invocation contains the API functionality for controlling (workflow) invocations.
+// This includes starting, stopping, and completing invocations.
 type Invocation struct {
 	es fes.Backend
 }
 
-func NewInvocation(esClient fes.Backend) *Invocation {
+// NewInvocationAPI creates the Invocation API.
+func NewInvocationAPI(esClient fes.Backend) *Invocation {
 	return &Invocation{esClient}
 }
 
+// Invoke triggers the start of the invocation using the provided specification.
+// The function either returns the invocationID of the invocation or an error.
+// The error can be a validate.Err, proto marshall error, or a fes error.
 func (ia *Invocation) Invoke(invocation *types.WorkflowInvocationSpec) (string, error) {
 	err := validate.WorkflowInvocationSpec(invocation)
 	if err != nil {
 		return "", err
 	}
 
-	id := fmt.Sprintf("wi-%s", util.Uid())
+	id := fmt.Sprintf("wi-%s", util.UID())
 	data, err := proto.Marshal(invocation)
 	if err != nil {
 		return "", err
@@ -43,54 +49,59 @@ func (ia *Invocation) Invoke(invocation *types.WorkflowInvocationSpec) (string, 
 	if err != nil {
 		return "", err
 	}
-
 	return id, nil
 }
 
-func (ia *Invocation) Cancel(invocationId string) error {
-	if len(invocationId) == 0 {
-		return errors.New("invocationId is required")
+// Cancel halts an invocation. This does not guarantee that tasks currently running are halted,
+// but beyond the invocation will not progress any further than those tasks. The state of the invocation will
+// become ABORTED. If the API fails to append the event to the event store, it will return an error.
+func (ia *Invocation) Cancel(invocationID string) error {
+	if len(invocationID) == 0 {
+		return errors.New("invocationID is required")
 	}
 
-	event := &fes.Event{
+	err := ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_CANCELED.String(),
-		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationID),
 		Timestamp: ptypes.TimestampNow(),
 		Hints:     &fes.EventHints{Completed: true},
-	}
-	err := ia.es.Append(event)
+	})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ia *Invocation) MarkCompleted(invocationId string, output *types.TypedValue) error {
-	if len(invocationId) == 0 {
-		return errors.New("invocationId is required")
+// Complete forces the completion of an invocation. This function - used by the controller - is the only way
+// to ensure that a workflow invocation turns into the COMPLETED state.
+// If the API fails to append the event to the event store, it will return an error.
+func (ia *Invocation) Complete(invocationID string, output *types.TypedValue) error {
+	if len(invocationID) == 0 {
+		return errors.New("invocationID is required")
 	}
 
-	status := &types.WorkflowInvocationStatus{
+	data, err := proto.Marshal(&types.WorkflowInvocationStatus{
 		Output: output,
-	}
-
-	data, err := proto.Marshal(status)
+	})
 	if err != nil {
 		return err
 	}
 
 	return ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_COMPLETED.String(),
-		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationID),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
 		Hints:     &fes.EventHints{Completed: true},
 	})
 }
 
-func (ia *Invocation) Fail(invocationId string, errMsg error) error {
-	if len(invocationId) == 0 {
-		return errors.New("invocationId is required")
+// Fail changes the state of the invocation to FAILED.
+// Optionally you can provide a custom error message to indicate the specific reason for the FAILED state.
+// If the API fails to append the event to the event store, it will return an error.
+func (ia *Invocation) Fail(invocationID string, errMsg error) error {
+	if len(invocationID) == 0 {
+		return errors.New("invocationID is required")
 	}
 
 	var msg string
@@ -105,16 +116,19 @@ func (ia *Invocation) Fail(invocationId string, errMsg error) error {
 	}
 	return ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_FAILED.String(),
-		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationID),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
 		Hints:     &fes.EventHints{Completed: true},
 	})
 }
 
-func (ia *Invocation) AddTask(invocationId string, task *types.Task) error {
-	if len(invocationId) == 0 {
-		return errors.New("invocationId is required")
+// AddTask provides functionality to add a task to a specific invocation (instead of a workflow).
+// This allows users to modify specific invocations (see dynamic API).
+// The error can be a validate.Err, proto marshall error, or a fes error.
+func (ia *Invocation) AddTask(invocationID string, task *types.Task) error {
+	if len(invocationID) == 0 {
+		return errors.New("invocationID is required")
 	}
 	err := validate.Task(task)
 	if err != nil {
@@ -126,10 +140,9 @@ func (ia *Invocation) AddTask(invocationId string, task *types.Task) error {
 		return err
 	}
 
-	// Submit dynamic task
 	return ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_TASK_ADDED.String(),
-		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationId),
+		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationID),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      data,
 	})

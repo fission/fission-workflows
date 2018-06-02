@@ -7,3 +7,5 @@ data/
 /wfcli
 __pycache__/
 *.pyc
+
+revive.toml

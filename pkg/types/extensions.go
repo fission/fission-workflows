@@ -10,14 +10,14 @@ import (
 
 // Types other than specified in protobuf
 const (
-	INPUT_MAIN    = "default"
-	INPUT_HEADERS = "headers"
-	INPUT_QUERY   = "query"
-	INPUT_METHOD  = "method"
-	InputParent   = "_parent"
+	InputMain    = "default"
+	InputHeaders = "headers"
+	InputQuery   = "query"
+	InputMethod  = "method"
+	InputParent  = "_parent"
 
 	typedValueShortMaxLen = 32
-	WorkflowApiVersion    = "v1"
+	WorkflowAPIVersion    = "v1"
 )
 
 // InvocationEvent
@@ -86,8 +86,8 @@ func (m *Error) Error() string {
 // WorkflowInvocation
 //
 
-func (m *WorkflowInvocation) Id() string {
-	return m.Metadata.Id
+func (m *WorkflowInvocation) ID() string {
+	return m.GetMetadata().GetId()
 }
 
 func (m *WorkflowInvocation) TaskInvocation(id string) (*TaskInvocation, bool) {
@@ -126,25 +126,25 @@ func (m *WorkflowInvocationStatus) ToTaskStatus() *TaskInvocationStatus {
 	}
 }
 
-func (wi WorkflowInvocationStatus) Finished() bool {
+func (m WorkflowInvocationStatus) Finished() bool {
 	for _, event := range invocationFinalStates {
-		if event == wi.Status {
+		if event == m.GetStatus() {
 			return true
 		}
 	}
 	return false
 }
 
-func (wi WorkflowInvocationStatus) Successful() bool {
-	return wi.Status == WorkflowInvocationStatus_SUCCEEDED
+func (m WorkflowInvocationStatus) Successful() bool {
+	return m.GetStatus() == WorkflowInvocationStatus_SUCCEEDED
 }
 
 //
 // TaskInvocation
 //
 
-func (m *TaskInvocation) Id() string {
-	return m.Metadata.Id
+func (m *TaskInvocation) ID() string {
+	return m.GetMetadata().GetId()
 }
 
 //
@@ -175,8 +175,8 @@ func (ti TaskInvocationStatus) Finished() bool {
 // Task
 //
 
-func (m *Task) Id() string {
-	return m.Metadata.Id
+func (m *Task) ID() string {
+	return m.GetMetadata().GetId()
 }
 
 //
@@ -205,7 +205,7 @@ func (m *TaskSpec) Parent() (string, bool) {
 	return parent, present
 }
 
-func (m *TaskSpec) Require(taskId string, opts ...*TaskDependencyParameters) *TaskSpec {
+func (m *TaskSpec) Require(taskID string, opts ...*TaskDependencyParameters) *TaskSpec {
 	if m.Requires == nil {
 		m.Requires = map[string]*TaskDependencyParameters{}
 	}
@@ -214,7 +214,7 @@ func (m *TaskSpec) Require(taskId string, opts ...*TaskDependencyParameters) *Ta
 		params = opts[0]
 	}
 
-	m.Requires[taskId] = params
+	m.Requires[taskID] = params
 	return m
 }
 
@@ -229,8 +229,8 @@ func (m *TaskSpec) Overlay(overlay *TaskSpec) *TaskSpec {
 // Workflow
 //
 
-func (m *Workflow) Id() string {
-	return m.Metadata.Id
+func (m *Workflow) ID() string {
+	return m.GetMetadata().GetId()
 }
 
 // Note: this only retrieves the statically, top-level defined tasks
@@ -287,8 +287,8 @@ func (m *WorkflowSpec) SetDescription(s string) *WorkflowSpec {
 	return m
 }
 
-func (m *WorkflowSpec) SetOutput(taskId string) *WorkflowSpec {
-	m.OutputTask = taskId
+func (m *WorkflowSpec) SetOutput(taskID string) *WorkflowSpec {
+	m.OutputTask = taskID
 	return m
 }
 

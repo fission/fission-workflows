@@ -38,8 +38,8 @@ var cmdInvocation = cli.Command{
 					invocationsList(os.Stdout, client.Invocation, time.Now().Add(-since))
 				case 1:
 					// Get Workflow Invocation
-					wfiId := ctx.Args().Get(0)
-					wfi, err := client.Invocation.Get(ctx, wfiId)
+					wfiID := ctx.Args().Get(0)
+					wfi, err := client.Invocation.Get(ctx, wfiID)
 					if err != nil {
 						panic(err)
 					}
@@ -51,13 +51,13 @@ var cmdInvocation = cli.Command{
 				case 2:
 					fallthrough
 				default:
-					wfiId := ctx.Args().Get(0)
-					taskId := ctx.Args().Get(1)
-					wfi, err := client.Invocation.Get(ctx, wfiId)
+					wfiID := ctx.Args().Get(0)
+					taskID := ctx.Args().Get(1)
+					wfi, err := client.Invocation.Get(ctx, wfiID)
 					if err != nil {
 						panic(err)
 					}
-					ti, ok := wfi.Status.Tasks[taskId]
+					ti, ok := wfi.Status.Tasks[taskID]
 					if !ok {
 						fmt.Println("Task Invocation not found.")
 						return nil
@@ -77,8 +77,8 @@ var cmdInvocation = cli.Command{
 			Usage: "cancel <Workflow-Invocation-id>",
 			Action: commandContext(func(ctx Context) error {
 				client := getClient(ctx)
-				wfiId := ctx.Args().Get(0)
-				err := client.Invocation.Cancel(ctx, wfiId)
+				wfiID := ctx.Args().Get(0)
+				err := client.Invocation.Cancel(ctx, wfiID)
 				if err != nil {
 					panic(err)
 				}
@@ -101,9 +101,9 @@ var cmdInvocation = cli.Command{
 			},
 			Action: commandContext(func(ctx Context) error {
 				client := getClient(ctx)
-				wfId := ctx.Args().Get(0)
+				wfID := ctx.Args().Get(0)
 				spec := &types.WorkflowInvocationSpec{
-					WorkflowId: wfId,
+					WorkflowId: wfID,
 					Inputs:     map[string]*types.TypedValue{},
 				}
 				if ctx.Bool("sync") {
@@ -135,9 +135,9 @@ var cmdInvocation = cli.Command{
 					return nil
 				}
 				client := getClient(ctx)
-				wfiId := ctx.Args().Get(0)
+				wfiID := ctx.Args().Get(0)
 
-				wfi, err := client.Invocation.Get(ctx, wfiId)
+				wfi, err := client.Invocation.Get(ctx, wfiID)
 				if err != nil {
 					panic(err)
 				}
@@ -150,7 +150,7 @@ var cmdInvocation = cli.Command{
 				wfiUpdated := ptypes.TimestampString(wfi.Status.UpdatedAt)
 				wfiCreated := ptypes.TimestampString(wfi.Metadata.CreatedAt)
 				table(os.Stdout, nil, [][]string{
-					{"ID", wfi.Metadata.Id},
+					{"id", wfi.Metadata.Id},
 					{"WORKFLOW_ID", wfi.Spec.WorkflowId},
 					{"CREATED", wfiCreated},
 					{"UPDATED", wfiUpdated},
@@ -173,17 +173,17 @@ var cmdInvocation = cli.Command{
 	},
 }
 
-func invocationsList(out io.Writer, wfiApi *httpclient.InvocationApi, since time.Time) {
+func invocationsList(out io.Writer, wfiAPI *httpclient.InvocationAPI, since time.Time) {
 	// List workflows invocations
 	ctx := context.TODO()
-	wis, err := wfiApi.List(ctx)
+	wis, err := wfiAPI.List(ctx)
 	if err != nil {
 		panic(err)
 	}
 	sort.Strings(wis.Invocations)
 	var rows [][]string
-	for _, wfiId := range wis.Invocations {
-		wi, err := wfiApi.Get(ctx, wfiId)
+	for _, wfiID := range wis.Invocations {
+		wi, err := wfiAPI.Get(ctx, wfiID)
 		if err != nil {
 			panic(err)
 		}
@@ -193,11 +193,11 @@ func invocationsList(out io.Writer, wfiApi *httpclient.InvocationApi, since time
 		// TODO add filter params to endpoint instead
 		// TODO filter old invocations and system invocations
 
-		rows = append(rows, []string{wfiId, wi.Spec.WorkflowId, wi.Status.Status.String(),
+		rows = append(rows, []string{wfiID, wi.Spec.WorkflowId, wi.Status.Status.String(),
 			created, updated})
 	}
 
-	table(out, []string{"ID", "WORKFLOW", "STATUS", "CREATED", "UPDATED"}, rows)
+	table(out, []string{"id", "WORKFLOW", "STATUS", "CREATED", "UPDATED"}, rows)
 
 }
 

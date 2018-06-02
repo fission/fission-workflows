@@ -23,14 +23,14 @@ func TestController_Lifecycle(t *testing.T) {
 		"mock": mock.NewResolver(),
 	})
 
-	wfiApi := api.NewInvocation(es)
-	wfApi := api.NewWorkflow(es, mockResolver)
-	dynamicApi := api.NewDynamic(wfApi, wfiApi)
-	taskApi := api.NewTaskApi(map[string]fnenv.Runtime{
+	wfiAPI := api.NewInvocationAPI(es)
+	wfAPI := api.NewWorkflowAPI(es, mockResolver)
+	dynamicAPI := api.NewDynamicApi(wfAPI, wfiAPI)
+	taskAPI := api.NewTaskAPI(map[string]fnenv.Runtime{
 		"mock": mockRuntime,
-	}, es, dynamicApi)
+	}, es, dynamicAPI)
 
-	ctr := NewController(cache, cache, s, taskApi, wfiApi, expr.NewStore())
+	ctr := NewController(cache, cache, s, taskAPI, wfiAPI, expr.NewStore())
 
 	err := ctr.Init(context.TODO())
 	assert.NoError(t, err)

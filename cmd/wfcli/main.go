@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -29,7 +28,7 @@ func main() {
 		cli.StringFlag{
 			Name:   "url, u",
 			EnvVar: "FISSION_URL",
-			Usage:  "Url to the Fission apiserver",
+			Usage:  "URL to the Fission apiserver",
 		},
 		cli.StringFlag{
 			Name:   "path-prefix",
@@ -74,14 +73,6 @@ func fail(msg ...interface{}) {
 		fmt.Fprintln(os.Stderr, line)
 	}
 	os.Exit(1)
-}
-
-func parseUrl(rawUrl string) *url.URL {
-	u, err := url.Parse(rawUrl)
-	if err != nil {
-		fail(fmt.Sprintf("Invalid url '%s': %v", rawUrl, err))
-	}
-	return u
 }
 
 type Context struct {

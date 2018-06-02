@@ -23,7 +23,7 @@ type UidFn struct{}
 
 // Apply generates a unique (string) id
 func (qf *UidFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
-	uid, _ := vm.ToValue(util.Uid())
+	uid, _ := vm.ToValue(util.UID())
 	return uid
 }
 
@@ -40,7 +40,7 @@ func (qf *InputFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		task = varCurrentTask
 		fallthrough
 	case 1:
-		inputKey = types.INPUT_MAIN
+		inputKey = types.InputMain
 		fallthrough
 	case 2:
 		fallthrough
@@ -97,7 +97,7 @@ func (qf *ParamFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 	var key string
 	switch len(call.ArgumentList) {
 	case 0:
-		key = types.INPUT_MAIN
+		key = types.InputMain
 		fallthrough
 	default:
 		// Set key if argument provided

@@ -9,14 +9,14 @@ import (
 const (
 	RuntimeDelimiter = "://"
 	groupRuntime     = 1
-	groupRuntimeId   = 2
+	groupRuntimeID   = 2
 )
 
 var (
 	fnRefReg        = regexp.MustCompile(fmt.Sprintf("^(?:(\\w+)%s)?(\\w+)$", RuntimeDelimiter))
 	ErrInvalidFnRef = errors.New("invalid function reference")
 	ErrNoRuntime    = errors.New("function reference does not contain a runtime")
-	ErrNoRuntimeId  = errors.New("function reference does not contain a runtimeId")
+	ErrNoRuntimeID  = errors.New("function reference does not contain a runtimeId")
 )
 
 func (m FnRef) Format() string {
@@ -57,20 +57,20 @@ func ParseFnRef(s string) (FnRef, error) {
 		return FnRef{}, ErrInvalidFnRef
 	}
 
-	if len(matches[groupRuntimeId]) == 0 {
+	if len(matches[groupRuntimeID]) == 0 {
 		return FnRef{
 			Runtime: matches[groupRuntime],
-		}, ErrNoRuntimeId
+		}, ErrNoRuntimeID
 	}
 
 	if len(matches[groupRuntime]) == 0 {
 		return FnRef{
-			ID: matches[groupRuntimeId],
+			ID: matches[groupRuntimeID],
 		}, ErrNoRuntime
 	}
 
 	return FnRef{
 		Runtime: matches[groupRuntime],
-		ID:      matches[groupRuntimeId],
+		ID:      matches[groupRuntimeID],
 	}, nil
 }

@@ -15,15 +15,21 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+// Workflow contains the API functionality for controlling workflow definitions.
+// This includes creating and parsing workflows.
 type Workflow struct {
 	es       fes.Backend
 	resolver fnenv.Resolver
 }
 
-func NewWorkflow(esClient fes.Backend, resolver fnenv.Resolver) *Workflow {
+// NewWorkflowAPI creates the Workflow API.
+func NewWorkflowAPI(esClient fes.Backend, resolver fnenv.Resolver) *Workflow {
 	return &Workflow{esClient, resolver}
 }
 
+// Create creates a new workflow based on the provided workflowSpec.
+// The function either returns the id of the workflow or an error.
+// The error can be a validate.Err, proto marshall error, or a fes error.
 // TODO check if id already exists
 func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	err := validate.WorkflowSpec(workflow)
@@ -34,7 +40,7 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	// If no id is provided generate an id
 	id := workflow.ForceId
 	if len(id) == 0 {
-		id = fmt.Sprintf("wf-%s", util.Uid())
+		id = fmt.Sprintf("wf-%s", util.UID())
 	}
 
 	data, err := proto.Marshal(workflow)
@@ -55,19 +61,26 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	return id, nil
 }
 
-func (wa *Workflow) Delete(id string) error {
-	if len(id) == 0 {
-		return errors.New("id is required")
+// Delete marks a workflow as deleted, making it unavailable to any future interactions.
+// This also means that subsequent invocations for this workflow will fail.
+// If the API fails to append the event to the event store, it will return an error.
+func (wa *Workflow) Delete(workflowID string) error {
+	if len(workflowID) == 0 {
+		return errors.New("workflowID is required")
 	}
 
 	return wa.es.Append(&fes.Event{
 		Type:      events.Workflow_WORKFLOW_DELETED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(id),
+		Aggregate: aggregates.NewWorkflowAggregate(workflowID),
 		Timestamp: ptypes.TimestampNow(),
 		Hints:     &fes.EventHints{Completed: true},
 	})
 }
 
+// Parse processes the workflow to resolve any ambiguity.
+// Currently, this means that all the function references are resolved to function identifiers. For convenience
+// this function returns the new WorkflowStatus. If the API fails to append the event to the event store,
+// it will return an error.
 func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
 	if err := validate.WorkflowSpec(workflow.Spec); err != nil {
 		return nil, err

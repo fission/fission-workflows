@@ -29,14 +29,14 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 		bundleOpts = opts[0]
 	} else {
 		bundleOpts = bundle.Options{
-			InternalRuntime:       true,
-			InvocationController:  true,
-			WorkflowController:    true,
-			ApiHttp:               true,
-			ApiWorkflowInvocation: true,
-			ApiWorkflow:           true,
-			ApiAdmin:              true,
-			Nats:                  &nats,
+			InternalRuntime:      true,
+			InvocationController: true,
+			WorkflowController:   true,
+			HTTPGateway:          true,
+			InvocationAPI:        true,
+			WorkflowAPI:          true,
+			AdminAPI:             true,
+			Nats:                 &nats,
 		}
 	}
 	go bundle.Run(ctx, &bundleOpts)
@@ -45,7 +45,7 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 
 // TODO check if there is a nats instance already is running
 func SetupNatsCluster(ctx context.Context) fesnats.Config {
-	id := util.Uid()
+	id := util.UID()
 	clusterId := fmt.Sprintf("fission-workflows-tests-%s", id)
 	port, err := findFreePort()
 	if err != nil {
@@ -65,7 +65,7 @@ func SetupNatsCluster(ctx context.Context) fesnats.Config {
 	cfg := fesnats.Config{
 		Cluster: clusterId,
 		Client:  fmt.Sprintf("client-%s", id),
-		Url:     fmt.Sprintf("nats://%s:%d", address, port),
+		URL:     fmt.Sprintf("nats://%s:%d", address, port),
 	}
 
 	logrus.WithField("config", cfg).Info("Setting up NATS server")
@@ -73,7 +73,7 @@ func SetupNatsCluster(ctx context.Context) fesnats.Config {
 	// wait for a bit to set it up
 	awaitCtx, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
 	defer cancel()
-	err = waitForNats(awaitCtx, cfg.Url, cfg.Cluster)
+	err = waitForNats(awaitCtx, cfg.URL, cfg.Cluster)
 	if err != nil {
 		logrus.Error(err)
 	}

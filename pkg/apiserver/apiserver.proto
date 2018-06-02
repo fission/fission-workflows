@@ -5,7 +5,8 @@ import "github.com/fission/fission-workflows/pkg/version/version.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
-package apiserver;
+package fission.workflows.apiserver;
+option go_package = "apiserver";
 
 service WorkflowAPI {
     rpc Create (WorkflowSpec) returns (WorkflowIdentifier) {
@@ -129,17 +130,17 @@ service AdminAPI {
         };
     }
 
-    rpc Resume  (google.protobuf.Empty) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            get: "/resume"
-        };
-    }
-
-    rpc Halt (google.protobuf.Empty) returns (google.protobuf.Empty) {
-        option (google.api.http) = {
-            get: "/halt"
-        };
-    }
+//    rpc Resume  (google.protobuf.Empty) returns (google.protobuf.Empty) {
+//        option (google.api.http) = {
+//            get: "/resume"
+//        };
+//    }
+//
+//    rpc Halt (google.protobuf.Empty) returns (google.protobuf.Empty) {
+//        option (google.api.http) = {
+//            get: "/halt"
+//        };
+//    }
 
     // TODO add config view / edit
 }

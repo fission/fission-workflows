@@ -32,10 +32,10 @@ func TestFormatRequest(t *testing.T) {
 		// TODO verify that existing headers, query params, etc stay in tact.
 	}
 	source := map[string]*types.TypedValue{
-		types.INPUT_MAIN:    unsafe(typedvalues.Parse(body)),
-		types.INPUT_QUERY:   unsafe(typedvalues.Parse(query)),
-		types.INPUT_HEADERS: unsafe(typedvalues.Parse(headers)),
-		types.INPUT_METHOD:  unsafe(typedvalues.Parse(method)),
+		types.InputMain:    unsafe(typedvalues.Parse(body)),
+		types.InputQuery:   unsafe(typedvalues.Parse(query)),
+		types.InputHeaders: unsafe(typedvalues.Parse(headers)),
+		types.InputMethod:  unsafe(typedvalues.Parse(method)),
 	}
 
 	err = FormatRequest(source, target)
@@ -69,17 +69,17 @@ func TestParseRequestComplete(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check body
-	ibody, err := typedvalues.Format(target[types.INPUT_MAIN])
+	ibody, err := typedvalues.Format(target[types.InputMain])
 	assert.NoError(t, err)
 	assert.Equal(t, body, ibody)
 
 	// Check method
-	method, err := typedvalues.Format(target[types.INPUT_METHOD])
+	method, err := typedvalues.Format(target[types.InputMethod])
 	assert.NoError(t, err)
 	assert.Equal(t, http.MethodPut, method)
 
 	// Check headers
-	rawHeader, err := typedvalues.Format(target[types.INPUT_HEADERS])
+	rawHeader, err := typedvalues.Format(target[types.InputHeaders])
 	assert.NoError(t, err)
 	headers := rawHeader.(map[string]interface{})
 	assert.IsType(t, map[string]interface{}{}, rawHeader)
@@ -87,7 +87,7 @@ func TestParseRequestComplete(t *testing.T) {
 	assert.Equal(t, nil, headers["nonExistent"])
 
 	// Check query
-	rawQuery, err := typedvalues.Format(target[types.INPUT_QUERY])
+	rawQuery, err := typedvalues.Format(target[types.InputQuery])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawQuery)
 	query := rawQuery.(map[string]interface{})
@@ -106,24 +106,24 @@ func TestParseRequestMinimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check body
-	ibody, err := typedvalues.Format(target[types.INPUT_MAIN])
+	ibody, err := typedvalues.Format(target[types.InputMain])
 	assert.NoError(t, err)
 	assert.Equal(t, body, ibody)
 
 	// Check method
-	method, err := typedvalues.Format(target[types.INPUT_METHOD])
+	method, err := typedvalues.Format(target[types.InputMethod])
 	assert.NoError(t, err)
 	assert.Equal(t, http.MethodPut, method)
 
 	// Check headers
-	rawHeader, err := typedvalues.Format(target[types.INPUT_HEADERS])
+	rawHeader, err := typedvalues.Format(target[types.InputHeaders])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawHeader)
 	headers := rawHeader.(map[string]interface{})
 	assert.Equal(t, nil, headers["nonExistent"])
 
 	// Check query
-	rawQuery, err := typedvalues.Format(target[types.INPUT_QUERY])
+	rawQuery, err := typedvalues.Format(target[types.InputQuery])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawQuery)
 	query := rawQuery.(map[string]interface{})
