@@ -23,21 +23,21 @@ var (
 	ErrDeserialize   = errors.New("failed to deserialize input")
 )
 
-var defaultHttpClient = http.Client{}
-var defaultJsonPbMarshaller = jsonpb.Marshaler{}
+var defaultHTTPClient = http.Client{}
+var defaultJSONPBMarshaller = jsonpb.Marshaler{}
 
-func toJson(dst io.Writer, m proto.Message) error {
-	return defaultJsonPbMarshaller.Marshal(dst, m)
+func toJSON(dst io.Writer, m proto.Message) error {
+	return defaultJSONPBMarshaller.Marshal(dst, m)
 }
 
-func fromJson(src io.Reader, dst proto.Message) error {
+func fromJSON(src io.Reader, dst proto.Message) error {
 	return jsonpb.Unmarshal(src, dst)
 }
 
 func call(method string, url string, in proto.Message, out proto.Message) error {
 	buf := bytes.NewBuffer(nil)
 	if in != nil {
-		err := toJson(buf, in)
+		err := toJSON(buf, in)
 		if err != nil {
 			return fmt.Errorf("%v: %v", ErrSerialize, err)
 		}
@@ -46,7 +46,7 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 		logrus.Debugf("--> %s - %s", method, url)
 		if in != nil {
 			buf := bytes.NewBuffer(nil)
-			err := toJson(buf, in)
+			err := toJSON(buf, in)
 			if err != nil {
 				logrus.Errorf("Failed to jsonify debug data: %v", err)
 			}
@@ -62,7 +62,7 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 		return fmt.Errorf("%v: %v", ErrRequestCreate, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := defaultHttpClient.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("%v: %v", ErrRequestSend, err)
 	}
@@ -84,7 +84,7 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 
 	if out != nil && resp.ContentLength != 0 {
 
-		err = fromJson(resp.Body, out)
+		err = fromJSON(resp.Body, out)
 		if err != nil {
 			return fmt.Errorf("%v: %v", ErrDeserialize, err)
 		}
@@ -96,11 +96,11 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 	return nil
 }
 
-type BaseApi struct {
+type baseAPI struct {
 	endpoint string
 	client   http.Client
 }
 
-func (api *BaseApi) formatUrl(path string) string {
+func (api *baseAPI) formatURL(path string) string {
 	return api.endpoint + path
 }

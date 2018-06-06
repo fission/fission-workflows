@@ -30,23 +30,22 @@ var cmdWorkflow = cli.Command{
 					wfs := resp.Workflows
 					sort.Strings(wfs)
 					var rows [][]string
-					for _, wfId := range wfs {
-						wf, err := client.Workflow.Get(ctx, wfId)
+					for _, wfID := range wfs {
+						wf, err := client.Workflow.Get(ctx, wfID)
 						if err != nil {
 							panic(err)
 						}
 						updated := wf.Status.UpdatedAt.String()
 						created := wf.Metadata.CreatedAt.String()
 
-						rows = append(rows, []string{wfId, wf.Spec.Name, string(wf.Status.Status),
+						rows = append(rows, []string{wfID, wf.Spec.Name, string(wf.Status.Status),
 							created, updated})
 					}
-					table(os.Stdout, []string{"ID", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
+					table(os.Stdout, []string{"id", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
 				case 1:
 					// Get Workflow
-					wfId := ctx.Args().Get(0)
-					println(wfId)
-					wf, err := client.Workflow.Get(ctx, wfId)
+					wfID := ctx.Args().Get(0)
+					wf, err := client.Workflow.Get(ctx, wfID)
 					if err != nil {
 						panic(err)
 					}
@@ -59,13 +58,13 @@ var cmdWorkflow = cli.Command{
 					// Get Workflow task
 					fallthrough
 				default:
-					wfId := ctx.Args().Get(0)
-					taskId := ctx.Args().Get(1)
-					wf, err := client.Workflow.Get(ctx, wfId)
+					wfID := ctx.Args().Get(0)
+					taskID := ctx.Args().Get(1)
+					wf, err := client.Workflow.Get(ctx, wfID)
 					if err != nil {
 						panic(err)
 					}
-					task, ok := wf.Spec.Tasks[taskId]
+					task, ok := wf.Spec.Tasks[taskID]
 					if !ok {
 						fmt.Println("Task not found.")
 						return nil

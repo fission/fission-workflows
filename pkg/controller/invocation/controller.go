@@ -5,8 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -28,8 +27,8 @@ var wfiLog = log.WithField("component", "controller-wi")
 type Controller struct {
 	invokeCache   fes.CacheReader
 	wfCache       fes.CacheReader
-	functionApi   *function.Api
-	invocationApi *invocation.Api
+	taskAPI       *api.Task
+	invocationAPI *api.Invocation
 	stateStore    *expr.Store
 	scheduler     *scheduler.WorkflowScheduler
 	sub           *pubsub.Subscription
@@ -42,13 +41,13 @@ type Controller struct {
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
-	functionApi *function.Api, invocationApi *invocation.Api, stateStore *expr.Store) *Controller {
+	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
 		invokeCache:   invokeCache,
 		wfCache:       wfCache,
 		scheduler:     workflowScheduler,
-		functionApi:   functionApi,
-		invocationApi: invocationApi,
+		taskAPI:       taskAPI,
+		invocationAPI: invocationAPI,
 		evalQueue:     make(chan string, evalQueueSize),
 		evalCache:     controller.NewEvalCache(),
 		stateStore:    stateStore,
@@ -67,7 +66,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 	cr.cancelFn = cancelFn
 
 	// Subscribe to invocation creations and task events.
-	selector := labels.InSelector(fes.PubSubLabelAggregateType, "invocation", "function")
+	selector := labels.In(fes.PubSubLabelAggregateType, "invocation", "function")
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		cr.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer:   NotificationBuffer,
@@ -131,9 +130,9 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 			log.Warn("Event did not contain invocation payload", msg)
 		}
 		// TODO mark to clean up later instead
-		cr.stateStore.Delete(wfi.Id())
-		cr.evalCache.Del(wfi.Id())
-		log.Infof("Removed invocation %v from eval state", wfi.Id())
+		cr.stateStore.Delete(wfi.ID())
+		cr.evalCache.Del(wfi.ID())
+		log.Infof("Removed invocation %v from eval state", wfi.ID())
 	case events.Task_TASK_FAILED.String():
 		fallthrough
 	case events.Task_TASK_SUCCEEDED.String():
@@ -143,7 +142,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		if !ok {
 			panic(msg)
 		}
-		cr.submitEval(wfi.Id())
+		cr.submitEval(wfi.ID())
 	default:
 		wfiLog.Debugf("Controller ignored event type: %v", msg.EventType)
 	}
@@ -197,7 +196,7 @@ func (cr *Controller) checkModelCaches() error {
 		}
 
 		if !wi.Status.Finished() {
-			cr.submitEval(wi.Id())
+			cr.submitEval(wi.ID())
 		}
 	}
 	return nil
@@ -217,30 +216,30 @@ func (cr *Controller) submitEval(ids ...string) bool {
 	return true
 }
 
-func (cr *Controller) Evaluate(invocationId string) {
+func (cr *Controller) Evaluate(invocationID string) {
 	// Fetch and attempt to claim the evaluation
-	evalState := cr.evalCache.GetOrCreate(invocationId)
+	evalState := cr.evalCache.GetOrCreate(invocationID)
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfiLog.Debugf("Failed to obtain access to invocation %s", invocationId)
+		wfiLog.Debugf("Failed to obtain access to invocation %s", invocationID)
 		return
 	}
-	log.Debugf("evaluating invocation %s", invocationId)
+	log.Debugf("evaluating invocation %s", invocationID)
 
 	// Fetch the workflow invocation for the provided invocation id
-	wfi := aggregates.NewWorkflowInvocation(invocationId)
+	wfi := aggregates.NewWorkflowInvocation(invocationID)
 	err := cr.invokeCache.Get(wfi)
 	// TODO move to rule
 	if err != nil && wfi.WorkflowInvocation == nil {
-		log.Errorf("controller failed to get invocation for invocation id '%s': %v", invocationId, err)
+		log.Errorf("controller failed to get invocation for invocation id '%s': %v", invocationID, err)
 		return
 	}
 	// TODO move to rule
 	if wfi.Status.Finished() {
-		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationId)
+		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationID)
 		return
 	}
 
@@ -250,7 +249,7 @@ func (cr *Controller) Evaluate(invocationId string) {
 	// TODO move to rule
 	if err != nil && wf.Workflow == nil {
 		log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
-			invocationId, err)
+			invocationID, err)
 		return
 	}
 
@@ -289,10 +288,10 @@ func (cr *Controller) Close() error {
 	return nil
 }
 
-func (cr *Controller) createFailAction(invocationId string, err error) controller.Action {
+func (cr *Controller) createFailAction(invocationID string, err error) controller.Action {
 	return &ActionFail{
-		Api:          cr.invocationApi,
-		InvocationId: invocationId,
+		API:          cr.invocationAPI,
+		InvocationID: invocationID,
 		Err:          err,
 	}
 }
@@ -302,26 +301,26 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 		Rules: []controller.Rule{
 			&controller.RuleTimedOut{
 				OnTimedOut: &ActionFail{
-					Api: ctr.invocationApi,
+					API: ctr.invocationAPI,
 					Err: errors.New("timed out"),
 				},
 				Timeout: time.Duration(10) * time.Minute,
 			},
 			&controller.RuleExceededErrorCount{
 				OnExceeded: &ActionFail{
-					Api: ctr.invocationApi,
+					API: ctr.invocationAPI,
 				},
 				MaxErrorCount: 0,
 			},
 			&RuleHasCompleted{},
 			&RuleCheckIfCompleted{
-				InvocationApi: ctr.invocationApi,
+				InvocationAPI: ctr.invocationAPI,
 			},
 			&RuleWorkflowIsReady{},
 			&RuleSchedule{
 				Scheduler:     ctr.scheduler,
-				InvocationApi: ctr.invocationApi,
-				FunctionApi:   ctr.functionApi,
+				InvocationAPI: ctr.invocationAPI,
+				FunctionAPI:   ctr.taskAPI,
 				StateStore:    ctr.stateStore,
 			},
 		},

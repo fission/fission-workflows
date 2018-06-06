@@ -37,7 +37,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		}
 		if t.Invocation.Status.Status == types.TaskInvocationStatus_FAILED {
 
-			msg := fmt.Sprintf("Task '%v' failed", t.Invocation.Id())
+			msg := fmt.Sprintf("Task '%v' failed", t.Invocation.ID())
 			if err := t.Invocation.GetStatus().GetError(); err != nil {
 				msg = err.Message
 			}
@@ -67,7 +67,7 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		// TODO might be Status.Inputs instead of Spec.Inputs
 		inputs := taskDef.Task.Spec.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:     taskDef.Task.Id(),
+			Id:     taskDef.Task.ID(),
 			Inputs: inputs,
 		})
 

@@ -35,9 +35,9 @@ func (cm *ContainsMatcher) Match(target string) bool {
 	return strings.Contains(target, cm.Substr)
 }
 
-func NewAggregate(entityType string, entityId string) Aggregate {
+func NewAggregate(entityType string, entityID string) Aggregate {
 	return Aggregate{
-		Id:   entityId,
+		Id:   entityID,
 		Type: entityType,
 	}
 }

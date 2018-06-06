@@ -9,12 +9,12 @@ import (
 func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
 	tasks := map[string]*Task{}
 	for _, task := range wf.Tasks() {
-		tasks[task.Id()] = task
+		tasks[task.ID()] = task
 	}
 	if wfi != nil {
 		for id := range wfi.Status.DynamicTasks {
 			task, _ := GetTask(wf, wfi, id)
-			tasks[task.Id()] = task
+			tasks[task.ID()] = task
 		}
 	}
 	return tasks
@@ -23,12 +23,12 @@ func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
 func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskInstance {
 	tasks := map[string]*TaskInstance{}
 	for _, task := range wf.Tasks() {
-		id := task.Id()
+		id := task.ID()
 		i, ok := wfi.TaskInvocation(id)
 		if !ok {
 			i = NewTaskInvocation(id)
 		}
-		tasks[task.Id()] = &TaskInstance{
+		tasks[task.ID()] = &TaskInstance{
 			Task:       task,
 			Invocation: i,
 		}
@@ -40,7 +40,7 @@ func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskIn
 				i = NewTaskInvocation(id)
 			}
 			task, _ := GetTask(wf, wfi, id)
-			tasks[task.Id()] = &TaskInstance{
+			tasks[task.ID()] = &TaskInstance{
 				Task:       task,
 				Invocation: i,
 			}
@@ -118,17 +118,17 @@ func NewWorkflowStatus() *WorkflowStatus {
 	}
 }
 
-func NewWorkflowInvocation(wfId string, invocId string) *WorkflowInvocation {
+func NewWorkflowInvocation(wfID string, invocationID string) *WorkflowInvocation {
 	return &WorkflowInvocation{
-		Metadata: NewObjectMetadata(invocId),
-		Spec:     NewWorkflowInvocationSpec(wfId),
+		Metadata: NewObjectMetadata(invocationID),
+		Spec:     NewWorkflowInvocationSpec(wfID),
 		Status:   &WorkflowInvocationStatus{},
 	}
 }
 
-func NewWorkflowInvocationSpec(wfId string) *WorkflowInvocationSpec {
+func NewWorkflowInvocationSpec(wfID string) *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
-		WorkflowId: wfId,
+		WorkflowId: wfID,
 	}
 }
 
@@ -174,7 +174,7 @@ func SingleInput(key string, t *TypedValue) map[string]*TypedValue {
 }
 
 func SingleDefaultInput(t *TypedValue) map[string]*TypedValue {
-	return SingleInput(INPUT_MAIN, t)
+	return SingleInput(InputMain, t)
 }
 
 type Requires map[string]*TaskDependencyParameters
@@ -194,7 +194,7 @@ func Require(s ...string) Requires {
 
 func NewWorkflowSpec() *WorkflowSpec {
 	return &WorkflowSpec{
-		ApiVersion: WorkflowApiVersion,
+		ApiVersion: WorkflowAPIVersion,
 	}
 }
 

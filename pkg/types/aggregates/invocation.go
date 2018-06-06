@@ -7,7 +7,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/events"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,19 +20,19 @@ type WorkflowInvocation struct {
 	*types.WorkflowInvocation
 }
 
-func NewWorkflowInvocation(invocationId string, wi ...*types.WorkflowInvocation) *WorkflowInvocation {
+func NewWorkflowInvocation(invocationID string, wi ...*types.WorkflowInvocation) *WorkflowInvocation {
 	wia := &WorkflowInvocation{}
 	if len(wi) > 0 {
 		wia.WorkflowInvocation = wi[0]
 	}
 
-	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowInvocationAggregate(invocationId))
+	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowInvocationAggregate(invocationID))
 	return wia
 }
 
-func NewWorkflowInvocationAggregate(invocationId string) *fes.Aggregate {
+func NewWorkflowInvocationAggregate(invocationID string) *fes.Aggregate {
 	return &fes.Aggregate{
-		Id:   invocationId,
+		Id:   invocationID,
 		Type: TypeWorkflowInvocation,
 	}
 }
@@ -125,12 +125,12 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	if wi.Aggregate() != *event.Parent {
 		return errors.New("function does not belong to invocation")
 	}
-	taskId := event.Aggregate.Id
-	task, ok := wi.Status.Tasks[taskId]
+	taskID := event.Aggregate.Id
+	task, ok := wi.Status.Tasks[taskID]
 	if !ok {
-		task = types.NewTaskInvocation(taskId)
+		task = types.NewTaskInvocation(taskID)
 	}
-	ti := NewTaskInvocation(taskId, task)
+	ti := NewTaskInvocation(taskID, task)
 	err := ti.ApplyEvent(event)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	if wi.Status.Tasks == nil {
 		wi.Status.Tasks = map[string]*types.TaskInvocation{}
 	}
-	wi.Status.Tasks[taskId] = ti.TaskInvocation
+	wi.Status.Tasks[taskID] = ti.TaskInvocation
 
 	return nil
 }
@@ -154,10 +154,10 @@ func (wi *WorkflowInvocation) handleTaskAdded(event *fes.Event) error {
 	if wi.Status.DynamicTasks == nil {
 		wi.Status.DynamicTasks = map[string]*types.Task{}
 	}
-	wi.Status.DynamicTasks[task.Id()] = task
+	wi.Status.DynamicTasks[task.ID()] = task
 
 	log.WithFields(log.Fields{
-		"id":          task.Id(),
+		"id":          task.ID(),
 		"functionRef": task.Spec.FunctionRef,
 	}).Debug("Added dynamic task.")
 	return nil

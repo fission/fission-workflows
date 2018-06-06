@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
@@ -21,13 +21,13 @@ const (
 	Name                      = "workflows"
 )
 
-// Runtime provides an abstraction of the workflow engine itself to use as a Function runtime environment.
+// Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
-	api      *invocation.Api
+	api      *api.Invocation
 	wfiCache fes.CacheReader
 }
 
-func NewRuntime(api *invocation.Api, wfiCache fes.CacheReader) *Runtime {
+func NewRuntime(api *api.Invocation, wfiCache fes.CacheReader) *Runtime {
 	return &Runtime{
 		api:      api,
 		wfiCache: wfiCache,
@@ -43,15 +43,15 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	// Prepare inputs
 	wfSpec := spec.ToWorkflowSpec()
 	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
-		parentId, err := typedvalues.FormatString(parentTv)
+		parentID, err := typedvalues.FormatString(parentTv)
 		if err != nil {
 			return nil, fmt.Errorf("invalid parent id %v (%v)", parentTv, err)
 		}
-		wfSpec.ParentId = parentId
+		wfSpec.ParentId = parentID
 	}
 
 	// Invoke workflow
-	wfiId, err := rt.api.Invoke(wfSpec)
+	wfiID, err := rt.api.Invoke(wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -61,7 +61,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	defer cancelFn()
 	var result *types.WorkflowInvocation
 	for {
-		wi := aggregates.NewWorkflowInvocation(wfiId)
+		wi := aggregates.NewWorkflowInvocation(wfiID)
 		err := rt.wfiCache.Get(wi)
 		if err != nil {
 			logrus.Debugf("Could not find workflow invocation in cache: %v", err)
@@ -73,7 +73,7 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 
 		select {
 		case <-timeout.Done():
-			err := rt.api.Cancel(wfiId)
+			err := rt.api.Cancel(wfiID)
 			if err != nil {
 				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
 			}
@@ -85,12 +85,4 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	}
 
 	return result.Status.ToTaskStatus(), nil
-
-}
-
-func CreateFnRef(wfId string) types.FnRef {
-	return types.FnRef{
-		Runtime: Name,
-		ID:      wfId,
-	}
 }

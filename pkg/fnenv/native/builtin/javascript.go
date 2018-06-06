@@ -76,13 +76,13 @@ func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.Typ
 	if err != nil {
 		return nil, err
 	}
-	logrus.WithField("taskId", spec.TaskId).
+	logrus.WithField("taskID", spec.TaskId).
 		Infof("[internal://%s] args: %v | expr: %v", Javascript, args, expr)
 	result, err := fn.exec(expr, args)
 	if err != nil {
 		return nil, err
 	}
-	logrus.WithField("taskId", spec.TaskId).
+	logrus.WithField("taskID", spec.TaskId).
 		Infof("[internal://%s] %v => %v", Javascript, expr, result)
 
 	return typedvalues.Parse(result)

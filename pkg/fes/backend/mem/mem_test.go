@@ -69,7 +69,7 @@ func TestBackend_Subscribe(t *testing.T) {
 	mem := NewBackend()
 	key := fes.NewAggregate("type", "id")
 	sub := mem.Subscribe(pubsub.SubscriptionOptions{
-		Selector: labels.InSelector(fes.PubSubLabelAggregateType, key.Type),
+		Selector: labels.In(fes.PubSubLabelAggregateType, key.Type),
 	})
 
 	events := []*fes.Event{

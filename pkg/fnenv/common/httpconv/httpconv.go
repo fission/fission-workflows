@@ -13,14 +13,14 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	inputContentType    = "content-type"
 	headerContentType   = "Content-Type"
-	contentTypeJson     = "application/json"
+	contentTypeJSON     = "application/json"
 	contentTypeBytes    = "application/octet-stream"
 	contentTypeText     = "text/plain"
 	contentTypeTask     = "application/vnd.fission.workflows.workflow" // Default format: protobuf, +json for json
@@ -42,19 +42,19 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse request: %v", err)
 	}
-	target[types.INPUT_MAIN] = &bodyInput
+	target[types.InputMain] = &bodyInput
 
 	// Map query to "query.x"
 	query := ParseQuery(r)
-	target[types.INPUT_QUERY] = &query
+	target[types.InputQuery] = &query
 
 	// Map headers to "headers.x"
 	headers := ParseHeaders(r)
-	target[types.INPUT_HEADERS] = &headers
+	target[types.InputHeaders] = &headers
 
 	// Map http method to "method"
 	method := ParseMethod(r)
-	target[types.INPUT_METHOD] = &method
+	target[types.InputMethod] = &method
 
 	return target, nil
 }
@@ -74,7 +74,7 @@ func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 
 	// Attempt to parse body according to provided ContentType
 	switch normalizeContentType(contentType) {
-	case contentTypeJson:
+	case contentTypeJSON:
 		var i interface{}
 		err := json.Unmarshal(bs, &i)
 		if err != nil {
@@ -175,7 +175,7 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 	contentType := DetermineContentTypeInputs(source)
 
 	// Map main input to body
-	mainInput, ok := source[types.INPUT_MAIN]
+	mainInput, ok := source[types.InputMain]
 	if ok && mainInput != nil {
 		bs, err := FormatBody(*mainInput, contentType)
 		if err != nil {
@@ -214,21 +214,20 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 }
 
 func FormatMethod(inputs map[string]*types.TypedValue) string {
-	tv, ok := inputs[types.INPUT_METHOD]
+	tv, ok := inputs[types.InputMethod]
 	if ok && tv != nil {
 		contentType, err := typedvalues.FormatString(tv)
 		if err == nil {
 			return contentType
-		} else {
-			logrus.Error("Invalid method in inputs: %+v", tv)
 		}
+		logrus.Error("Invalid method in inputs: %+v", tv)
 	}
 	return methodDefault
 }
 
 // TODO support multivalued query params at some point
 func FormatQuery(inputs map[string]*types.TypedValue) url.Values {
-	queryInput := inputs[types.INPUT_QUERY]
+	queryInput := inputs[types.InputQuery]
 	if queryInput == nil {
 		return nil
 	}
@@ -264,7 +263,7 @@ func FormatBody(value types.TypedValue, contentType string) ([]byte, error) {
 	// Attempt to parse body according to provided ContentType
 	var bs []byte
 	switch normalizeContentType(contentType) {
-	case contentTypeJson:
+	case contentTypeJSON:
 		bs, err = json.Marshal(i)
 		if err != nil {
 			return nil, err
@@ -320,7 +319,7 @@ func DetermineContentType(value *types.TypedValue) string {
 	case typedvalues.TypeMap:
 		fallthrough
 	case typedvalues.TypeList:
-		return contentTypeJson
+		return contentTypeJSON
 	case typedvalues.TypeNumber:
 		fallthrough
 	case typedvalues.TypeExpression:
@@ -339,19 +338,18 @@ func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 		contentType, err := typedvalues.FormatString(ctTv)
 		if err == nil {
 			return contentType
-		} else {
-			logrus.Error("Invalid content type in inputs: %+v", ctTv)
 		}
+		logrus.Error("Invalid content type in inputs: %+v", ctTv)
 	}
 
 	// Otherwise, check for label on body input
-	return DetermineContentType(inputs[types.INPUT_MAIN])
+	return DetermineContentType(inputs[types.InputMain])
 }
 
 // TODO support multi-headers at some point
 func FormatHeaders(inputs map[string]*types.TypedValue) http.Header {
 	headers := http.Header{}
-	rawHeaders, ok := inputs[types.INPUT_HEADERS]
+	rawHeaders, ok := inputs[types.InputHeaders]
 	if !ok || rawHeaders == nil {
 		return headers
 	}
@@ -389,7 +387,7 @@ func normalizeContentType(contentType string) string {
 	matchContentType := contentType
 	// Heuristics, because everything to do with HTTP is ambiguous...
 	if strings.Contains(contentType, "json") { // TODO exclude JSON representation of protobuf objects
-		matchContentType = contentTypeJson
+		matchContentType = contentTypeJSON
 	}
 	if strings.HasPrefix(contentType, "text") {
 		matchContentType = contentTypeText

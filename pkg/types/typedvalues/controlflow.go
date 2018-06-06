@@ -2,7 +2,7 @@ package typedvalues
 
 import (
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
@@ -196,6 +196,10 @@ func (f *Flow) ApplyWorkflow(fn func(t *types.WorkflowSpec)) {
 	if f != nil && f.wf != nil {
 		fn(f.wf)
 	}
+}
+
+func (f *Flow) IsEmpty() bool {
+	return f.wf == nil && f.task == nil
 }
 
 func FlowTask(task *types.TaskSpec) *Flow {

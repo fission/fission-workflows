@@ -26,12 +26,12 @@ type EventStore struct {
 type Config struct {
 	//Cluster: clusterId,
 	//Client:  "someClient",
-	//Url:     fmt.Sprintf("nats://%s:%d", address, port),
+	//URL:     fmt.Sprintf("nats://%s:%d", address, port),
 	Cluster string
 	Client  string
 
 	// Example: nats://localhost:9300
-	Url string
+	URL string
 }
 
 func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
@@ -47,11 +47,11 @@ func Connect(cfg Config) (*EventStore, error) {
 	if cfg.Client == "" {
 		cfg.Client = defaultClient
 	}
-	if cfg.Url == "" {
-		cfg.Url = nats.DefaultURL
+	if cfg.URL == "" {
+		cfg.URL = nats.DefaultURL
 	}
-	natsUrl := stan.NatsURL(cfg.Url)
-	conn, err := stan.Connect(cfg.Cluster, cfg.Client, natsUrl)
+	url := stan.NatsURL(cfg.URL)
+	conn, err := stan.Connect(cfg.Cluster, cfg.Client, url)
 	if err != nil {
 		return nil, err
 	}

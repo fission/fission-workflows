@@ -34,12 +34,12 @@ func (a *ActionSkip) Eval(rule EvalContext) Action {
 
 type ActionRemoveFromEvalCache struct {
 	EvalCache *EvalCache
-	Id        string
+	ID        string
 }
 
 func (a *ActionRemoveFromEvalCache) Apply() error {
-	log.Infof("Removing '%s' from EvalCache", a.Id)
-	a.EvalCache.Del(a.Id)
+	log.Infof("Removing '%s' from EvalCache", a.ID)
+	a.EvalCache.Del(a.ID)
 	return nil
 }
 

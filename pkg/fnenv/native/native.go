@@ -49,16 +49,16 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return nil, err
 	}
 
-	fnId := spec.FnRef.ID
-	fn, ok := fe.fns[fnId]
+	fnID := spec.FnRef.ID
+	fn, ok := fe.fns[fnID]
 	if !ok {
-		return nil, fmt.Errorf("could not resolve internal function '%s'", fnId)
+		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)
 	}
 
 	out, err := fn.Invoke(spec)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"fnId": fnId,
+			"fnID": fnID,
 			"err":  err,
 		}).Error("Internal function failed.")
 		return &types.TaskInvocationStatus{

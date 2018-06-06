@@ -9,7 +9,7 @@ import (
 
 func validSpec() *types.WorkflowSpec {
 	return &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "last",
 		Tasks: map[string]*types.TaskSpec{
 			"first": {

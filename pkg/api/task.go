@@ -1,9 +1,8 @@
-package function
+package api
 
 import (
 	"errors"
 
-	"github.com/fission/fission-workflows/pkg/api/dynamic"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -11,39 +10,44 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
 // TODO move events here
 
-// Api that servers mainly as a function.Runtime wrapper that deals with the higher-level logic workflow-related logic.
-type Api struct {
+// Task contains the API functionality for controlling the lifecycle of individual tasks.
+// This includes starting, stopping and completing tasks.
+type Task struct {
 	runtime    map[string]fnenv.Runtime // TODO support AsyncRuntime
 	es         fes.Backend
-	dynamicApi *dynamic.Api
+	dynamicAPI *Dynamic
 }
 
-func NewApi(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *dynamic.Api) *Api {
-	return &Api{
+// NewTaskAPI creates the Task API.
+func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dynamic) *Task {
+	return &Task{
 		runtime:    runtime,
 		es:         esClient,
-		dynamicApi: api,
+		dynamicAPI: api,
 	}
 }
 
-func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+// Invoke starts the execution of a task, changing the state of the task into RUNNING.
+// Currently it executes the underlying function synchronously and manage the execution until completion.
+// TODO make asynchronous
+func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
 	err := validate.TaskInvocationSpec(spec)
 	if err != nil {
 		return nil, err
 	}
 
 	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
-	taskId := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
 	fn := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
-			Id:        taskId,
+			Id:        taskID,
 			CreatedAt: ptypes.TimestampNow(),
 		},
 		Spec: spec,
@@ -57,7 +61,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	err = ap.es.Append(&fes.Event{
 		Type:      events.Task_TASK_STARTED.String(),
 		Parent:    aggregate,
-		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+		Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
 		Timestamp: ptypes.TimestampNow(),
 		Data:      fnAny,
 	})
@@ -78,7 +82,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 		esErr := ap.es.Append(&fes.Event{
 			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnAny,
 		})
@@ -89,30 +93,15 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	}
 
 	// TODO to a middleware component
-	if fnResult.Output != nil {
-		switch typedvalues.ValueType(fnResult.Output.Type) {
-		case typedvalues.TypeTask:
-			logrus.Info("Adding dynamic task")
-			taskSpec, err := typedvalues.FormatTask(fnResult.Output)
-			if err != nil {
-				return nil, err
-			}
-
-			// add task
-			err = ap.dynamicApi.AddDynamicTask(spec.InvocationId, taskId, taskSpec)
-			if err != nil {
-				return nil, err
-			}
-		case typedvalues.TypeWorkflow:
-			logrus.Info("Adding dynamic workflow")
-			workflowSpec, err := typedvalues.FormatWorkflow(fnResult.Output)
-			if err != nil {
-				return nil, err
-			}
-			err = ap.dynamicApi.AddDynamicWorkflow(spec.InvocationId, taskId, workflowSpec)
-			if err != nil {
-				return nil, err
-			}
+	if typedvalues.IsControlFlow(typedvalues.ValueType(fnResult.GetOutput().GetType())) {
+		logrus.Info("Adding dynamic flow")
+		flow, err := typedvalues.FormatControlFlow(fnResult.GetOutput())
+		if err != nil {
+			return nil, err
+		}
+		err = ap.dynamicAPI.AddDynamicFlow(spec.InvocationId, taskID, *flow)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -126,7 +115,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 		err = ap.es.Append(&fes.Event{
 			Type:      events.Task_TASK_SUCCEEDED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
 		})
@@ -134,7 +123,7 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 		err = ap.es.Append(&fes.Event{
 			Type:      events.Task_TASK_FAILED.String(),
 			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
 			Timestamp: ptypes.TimestampNow(),
 			Data:      fnStatusAny,
 		})
@@ -147,11 +136,20 @@ func (ap *Api) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, er
 	return fn, nil
 }
 
-func (ap *Api) Fail(invocationId string, taskId string) error {
+// Fail forces the failure of a task. This turns the state of a task into FAILED.
+// If the API fails to append the event to the event store, it will return an error.
+func (ap *Task) Fail(invocationID string, taskID string) error {
+	if len(invocationID) == 0 {
+		return errors.New("invocationID is required")
+	}
+	if len(taskID) == 0 {
+		return errors.New("taskID is required")
+	}
+
 	return ap.es.Append(&fes.Event{
 		Type:      events.Task_TASK_FAILED.String(),
-		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationId),
-		Aggregate: aggregates.NewTaskInvocationAggregate(taskId),
+		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationID),
+		Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
 		Timestamp: ptypes.TimestampNow(),
 	})
 }

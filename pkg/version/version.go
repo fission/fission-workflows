@@ -4,7 +4,7 @@ package version
 import (
 	"time"
 
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -32,7 +32,7 @@ func VersionInfo() Info {
 	}
 }
 
-func (m Info) Json() string {
+func (m Info) JSON() string {
 	v, err := (&jsonpb.Marshaler{}).MarshalToString(&m)
 	if err != nil {
 		panic(err)

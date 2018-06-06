@@ -3,8 +3,7 @@ package invocation
 import (
 	"errors"
 
-	"github.com/fission/fission-workflows/pkg/api/function"
-	"github.com/fission/fission-workflows/pkg/api/invocation"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -24,25 +23,25 @@ type EvalContext interface {
 	Invocation() *types.WorkflowInvocation
 }
 
-type evalContext struct {
+type WfiEvalContext struct {
 	controller.EvalContext
 	wf  *types.Workflow
 	wfi *types.WorkflowInvocation
 }
 
-func NewEvalContext(state *controller.EvalState, wf *types.Workflow, wfi *types.WorkflowInvocation) evalContext {
-	return evalContext{
+func NewEvalContext(state *controller.EvalState, wf *types.Workflow, wfi *types.WorkflowInvocation) WfiEvalContext {
+	return WfiEvalContext{
 		EvalContext: controller.NewEvalContext(state),
 		wf:          wf,
 		wfi:         wfi,
 	}
 }
 
-func (ec evalContext) Workflow() *types.Workflow {
+func (ec WfiEvalContext) Workflow() *types.Workflow {
 	return ec.wf
 }
 
-func (ec evalContext) Invocation() *types.WorkflowInvocation {
+func (ec WfiEvalContext) Invocation() *types.WorkflowInvocation {
 	return ec.wfi
 }
 
@@ -73,8 +72,8 @@ func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Actio
 
 type RuleSchedule struct {
 	Scheduler     *scheduler.WorkflowScheduler
-	InvocationApi *invocation.Api
-	FunctionApi   *function.Api
+	InvocationAPI *api.Invocation
+	FunctionAPI   *api.Task
 	StateStore    *expr.Store
 }
 
@@ -101,8 +100,8 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
 			return &ActionFail{
-				Api:          sf.InvocationApi,
-				InvocationId: wfi.Id(),
+				API:          sf.InvocationAPI,
+				InvocationID: wfi.ID(),
 				Err:          errors.New(invokeAction.Reason),
 			}
 		case scheduler.ActionType_INVOKE_TASK:
@@ -114,7 +113,7 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 			return &ActionInvokeTask{
 				Wf:         wf,
 				Wfi:        wfi,
-				Api:        sf.FunctionApi,
+				API:        sf.FunctionAPI,
 				Task:       invokeAction,
 				StateStore: sf.StateStore,
 			}
@@ -126,7 +125,7 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 }
 
 type RuleCheckIfCompleted struct {
-	InvocationApi *invocation.Api
+	InvocationAPI *api.Invocation
 }
 
 func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {
@@ -161,9 +160,9 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 
 		// TODO extract to action
 		if success {
-			err = cc.InvocationApi.MarkCompleted(wfi.Id(), finalOutput)
+			err = cc.InvocationAPI.Complete(wfi.ID(), finalOutput)
 		} else {
-			err = cc.InvocationApi.Fail(wfi.Id(), errors.New("not all tasks succeeded"))
+			err = cc.InvocationAPI.Fail(wfi.ID(), errors.New("not all tasks succeeded"))
 		}
 		if err != nil {
 			return &controller.ActionError{

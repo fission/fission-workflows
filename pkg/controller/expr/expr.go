@@ -10,8 +10,10 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/robertkrimen/otto"
-	_ "github.com/robertkrimen/otto/underscore"
 	"github.com/sirupsen/logrus"
+
+	// Import the underscore library for the Otto JavaScript engine.
+	_ "github.com/robertkrimen/otto/underscore"
 )
 
 const (

@@ -10,8 +10,8 @@ import (
 )
 
 // TODO move to more appropriate package
-func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.TypedValue {
-	val, ok := invoc.Status.Tasks[taskId]
+func ResolveTaskOutput(taskID string, invoc *types.WorkflowInvocation) *types.TypedValue {
+	val, ok := invoc.Status.Tasks[taskID]
 	if !ok {
 		return nil
 	}
@@ -21,18 +21,19 @@ func ResolveTaskOutput(taskId string, invoc *types.WorkflowInvocation) *types.Ty
 		return nil
 	}
 
+	// TODO to flow
 	switch ValueType(output.Type) {
 	case TypeTask:
-		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
-			if dep, ok := outputTask.Spec.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
-				return ResolveTaskOutput(outputTaskId, invoc)
+		for outputTaskID, outputTask := range invoc.Status.DynamicTasks {
+			if dep, ok := outputTask.Spec.Requires[taskID]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
+				return ResolveTaskOutput(outputTaskID, invoc)
 			}
 		}
 		return nil
 	case TypeWorkflow:
-		for outputTaskId, outputTask := range invoc.Status.DynamicTasks {
-			if dep, ok := outputTask.Spec.Requires[taskId]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
-				return ResolveTaskOutput(outputTaskId, invoc)
+		for outputTaskID, outputTask := range invoc.Status.DynamicTasks {
+			if dep, ok := outputTask.Spec.Requires[taskID]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
+				return ResolveTaskOutput(outputTaskID, invoc)
 			}
 		}
 		return nil
@@ -66,7 +67,7 @@ func FormatArray(t *types.TypedValue) ([]interface{}, error) {
 
 func Input(i interface{}) types.Inputs {
 	in := types.Inputs{}
-	in[types.INPUT_MAIN] = MustParse(i)
+	in[types.InputMain] = MustParse(i)
 	return in
 }
 

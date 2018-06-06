@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 var DefaultParser = &Parser{}

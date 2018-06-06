@@ -431,7 +431,7 @@ type WorkflowInvocationStatus struct {
 	UpdatedAt *google_protobuf.Timestamp      `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
 	Tasks     map[string]*TaskInvocation      `protobuf:"bytes,3,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Output    *TypedValue                     `protobuf:"bytes,4,opt,name=output" json:"output,omitempty"`
-	// In case the task ID also exists in the workflow spec, the dynamic task will be
+	// In case the task id also exists in the workflow spec, the dynamic task will be
 	// used as an overlay over the static task.
 	DynamicTasks map[string]*Task `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Error        *Error           `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
@@ -548,7 +548,7 @@ func (m *Task) GetStatus() *TaskStatus {
 // A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.
 //
 // A task as a number of inputs and exactly two outputs
-// Id is specified outside of TaskSpec
+// id is specified outside of TaskSpec
 type TaskSpec struct {
 	// Name/identifier of the function
 	FunctionRef string                 `protobuf:"bytes,1,opt,name=functionRef" json:"functionRef,omitempty"`
@@ -701,7 +701,7 @@ func (m *TaskInvocation) GetStatus() *TaskInvocationStatus {
 }
 
 type TaskInvocationSpec struct {
-	// Id of the task to be invoked (no ambiguatity at this point
+	// id of the task to be invoked (no ambiguatity at this point
 	FnRef *FnRef `protobuf:"bytes,1,opt,name=fnRef" json:"fnRef,omitempty"`
 	// TaskId is the id of the task within the workflow
 	TaskId string `protobuf:"bytes,2,opt,name=taskId" json:"taskId,omitempty"`
@@ -867,8 +867,8 @@ func (m *Error) GetMessage() string {
 type FnRef struct {
 	// Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
 	Runtime string `protobuf:"bytes,2,opt,name=runtime" json:"runtime,omitempty"`
-	// ID is the runtime-specific identifier of the function.
-	ID string `protobuf:"bytes,3,opt,name=ID" json:"ID,omitempty"`
+	// id is the runtime-specific identifier of the function.
+	ID string `protobuf:"bytes,3,opt,name=id" json:"id,omitempty"`
 }
 
 func (m *FnRef) Reset()                    { *m = FnRef{} }

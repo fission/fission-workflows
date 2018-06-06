@@ -68,7 +68,7 @@ func parseWorkflow(def *workflowSpec) (*types.WorkflowSpec, error) {
 	}
 
 	return &types.WorkflowSpec{
-		ApiVersion: def.ApiVersion,
+		ApiVersion: def.APIVersion,
 		OutputTask: def.Output,
 		Tasks:      tasks,
 	}, nil
@@ -134,7 +134,7 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 		return nil, err
 	}
 	return map[string]*types.TypedValue{
-		types.INPUT_MAIN: p,
+		types.InputMain: p,
 	}, nil
 }
 
@@ -229,14 +229,14 @@ func convertInterfaceMaps(src map[interface{}]interface{}) map[string]interface{
 //
 
 type workflowSpec struct {
-	ApiVersion  string
+	APIVersion  string
 	Description string
 	Output      string
 	Tasks       map[string]*taskSpec
 }
 
 type taskSpec struct {
-	Id       string
+	ID       string
 	Run      string
 	Inputs   interface{}
 	Requires []string

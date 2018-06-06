@@ -5,7 +5,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/fsm"
 )
 
-var WorkflowInvocationFsm *fsm.Fsm = fsm.New(
+var WorkflowInvocationFsm = fsm.New(
 	types.WorkflowInvocationStatus_UNKNOWN,
 	[]fsm.Transition{
 		{

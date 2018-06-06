@@ -33,14 +33,14 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	fn := &FunctionHttp{}
+	fn := &FunctionHTTP{}
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			types.INPUT_METHOD: typedvalues.MustParse(http.MethodPost),
-			HttpInputUrl:       typedvalues.MustParse(ts.URL),
-			types.INPUT_MAIN:   typedvalues.MustParse(body),
-			types.INPUT_HEADERS: typedvalues.MustParse(map[string]interface{}{
+			types.InputMethod: typedvalues.MustParse(http.MethodPost),
+			HttpInputUrl:      typedvalues.MustParse(ts.URL),
+			types.InputMain:   typedvalues.MustParse(body),
+			types.InputHeaders: typedvalues.MustParse(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
@@ -56,14 +56,14 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	fn := &FunctionHttp{}
+	fn := &FunctionHTTP{}
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
-			types.INPUT_METHOD: typedvalues.MustParse(http.MethodDelete),
-			HttpInputUrl:       typedvalues.MustParse(ts.URL),
-			types.INPUT_MAIN:   typedvalues.MustParse(body),
-			types.INPUT_HEADERS: typedvalues.MustParse(map[string]interface{}{
+			types.InputMethod: typedvalues.MustParse(http.MethodDelete),
+			HttpInputUrl:      typedvalues.MustParse(ts.URL),
+			types.InputMain:   typedvalues.MustParse(body),
+			types.InputHeaders: typedvalues.MustParse(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},

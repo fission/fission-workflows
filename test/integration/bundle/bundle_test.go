@@ -52,7 +52,7 @@ func TestWorkflowCreate(t *testing.T) {
 
 	// Test workflow creation
 	spec := &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
@@ -92,13 +92,13 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
+					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -107,7 +107,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 		},
@@ -115,7 +115,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	wfResp, err := cl.Create(ctx, wfSpec)
 	assert.NoError(t, err)
 	if wfResp == nil || len(wfResp.GetId()) == 0 {
-		t.Errorf("Invalid ID returned '%v'", wfResp)
+		t.Errorf("Invalid id returned '%v'", wfResp)
 	}
 
 	// Create invocation
@@ -127,7 +127,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
 		Inputs: map[string]*types.TypedValue{
-			types.INPUT_MAIN: tv,
+			types.InputMain: tv,
 		},
 	}
 	result, err := wi.InvokeSync(ctx, wiSpec)
@@ -170,13 +170,13 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.MustParse("{$.Tasks.someConditionalTask.Output}"),
+					types.InputMain: typedvalues.MustParse("{$.Tasks.someConditionalTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask":           {},
@@ -186,7 +186,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			"FirstTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 			"someConditionalTask": {
@@ -196,13 +196,13 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 					builtin.IfInputThen: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
-							types.INPUT_MAIN: typedvalues.MustParse("{'consequent: ' + $.Tasks.FirstTask.Output}"),
+							types.InputMain: typedvalues.MustParse("{'consequent: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 					builtin.IfInputElse: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
 						Inputs: map[string]*types.TypedValue{
-							types.INPUT_MAIN: typedvalues.MustParse("{'alternative: ' + $.Tasks.FirstTask.Output}"),
+							types.InputMain: typedvalues.MustParse("{'alternative: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 				},
@@ -221,7 +221,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
 		Inputs: map[string]*types.TypedValue{
-			types.INPUT_MAIN: typedvalues.MustParse("foo"),
+			types.InputMain: typedvalues.MustParse("foo"),
 		},
 	}
 	wfi, err := wi.InvokeSync(ctx, wiSpec)
@@ -246,7 +246,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "finalTask",
 		Tasks: map[string]*types.TaskSpec{
 			"nestedTask": {
@@ -258,13 +258,13 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 							"a": {
 								FunctionRef: "noop",
 								Inputs: map[string]*types.TypedValue{
-									types.INPUT_MAIN: typedvalues.MustParse("inner1"),
+									types.InputMain: typedvalues.MustParse("inner1"),
 								},
 							},
 							"b": {
 								FunctionRef: "noop",
 								Inputs: map[string]*types.TypedValue{
-									types.INPUT_MAIN: typedvalues.MustParse("{output('a')}"),
+									types.InputMain: typedvalues.MustParse("{output('a')}"),
 								},
 								Requires: map[string]*types.TaskDependencyParameters{
 									"a": nil,
@@ -277,7 +277,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 			"finalTask": {
 				FunctionRef: "noop",
 				Inputs: map[string]*types.TypedValue{
-					types.INPUT_MAIN: typedvalues.MustParse("output('nestedTask')"),
+					types.InputMain: typedvalues.MustParse("output('nestedTask')"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"nestedTask": {},
@@ -316,7 +316,7 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
-		ApiVersion: types.WorkflowApiVersion,
+		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "final",
 		Tasks: types.Tasks{
 			"longSleep": {

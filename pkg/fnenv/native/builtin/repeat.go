@@ -6,7 +6,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -93,22 +93,21 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVa
 	if times > 0 {
 		// TODO add context
 		return typedvalues.MustParse(&types.WorkflowSpec{
-			OutputTask: taskId(times - 1),
+			OutputTask: taskID(times - 1),
 			Tasks:      createRepeatTasks(doTask, times),
 		}), nil
-	} else {
-		return nil, nil
 	}
+	return nil, nil
 }
 
 func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.TaskSpec {
 	tasks := map[string]*types.TaskSpec{}
 
-	for n := int64(0); n < times; n += 1 {
-		id := taskId(n)
+	for n := int64(0); n < times; n++ {
+		id := taskID(n)
 		do := proto.Clone(task).(*types.TaskSpec)
 		if n > 0 {
-			prevTask := taskId(n - 1)
+			prevTask := taskID(n - 1)
 			do.Require(prevTask)
 			// TODO move prev to a reserved namespace, to avoid conflicts
 			prev := typedvalues.MustParse(fmt.Sprintf("{output('%s')}", prevTask))
@@ -121,6 +120,6 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 	return tasks
 }
 
-func taskId(n int64) string {
+func taskID(n int64) string {
 	return fmt.Sprintf("do_%d", n)
 }

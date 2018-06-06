@@ -40,15 +40,15 @@ type Runtime interface {
 type AsyncRuntime interface {
 	// InvokeAsync invokes a function in the runtime based on the spec and returns an identifier to allow the caller
 	// to reference the invocation.
-	InvokeAsync(spec *types.TaskInvocationSpec) (asyncId string, err error)
+	InvokeAsync(spec *types.TaskInvocationSpec) (asyncID string, err error)
 
-	// Cancel cancels a function invocation using the function invocation ID.
-	Cancel(asyncId string) error
+	// Cancel cancels a function invocation using the function invocation id.
+	Cancel(asyncID string) error
 
 	// Status fetches the status of a invocation.
 	//
 	// The interface user is responsible for determining whether the status indicates that a invocation has completed.
-	Status(asyncId string) (*types.TaskInvocationStatus, error)
+	Status(asyncID string) (*types.TaskInvocationStatus, error)
 }
 
 // Notifier allows signalling of an incoming function invocation.
@@ -65,7 +65,7 @@ type Notifier interface {
 	Notify(taskID string, fn types.FnRef, expectedAt time.Time) error
 }
 
-// Resolver resolves a reference to a function to a deterministic, unique function ID.
+// Resolver resolves a reference to a function to a deterministic, unique function id.
 type Resolver interface {
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function
 	//

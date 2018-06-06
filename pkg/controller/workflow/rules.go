@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"github.com/fission/fission-workflows/pkg/api/workflow"
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/types"
 )
@@ -15,17 +15,17 @@ type EvalContext interface {
 	Workflow() *types.Workflow
 }
 
-type evalContext struct {
+type WfEvalContext struct {
 	controller.EvalContext
 	wf *types.Workflow
 }
 
-func (ec evalContext) Workflow() *types.Workflow {
+func (ec WfEvalContext) Workflow() *types.Workflow {
 	return ec.wf
 }
 
-func NewEvalContext(state *controller.EvalState, wf *types.Workflow) evalContext {
-	return evalContext{
+func NewEvalContext(state *controller.EvalState, wf *types.Workflow) WfEvalContext {
+	return WfEvalContext{
 		EvalContext: controller.NewEvalContext(state),
 		wf:          wf,
 	}
@@ -43,7 +43,7 @@ func (r *RuleSkipIfReady) Eval(cec controller.EvalContext) controller.Action {
 }
 
 type RuleEnsureParsed struct {
-	WfApi *workflow.Api
+	WfAPI *api.Workflow
 }
 
 func (r *RuleEnsureParsed) Eval(cec controller.EvalContext) controller.Action {
@@ -51,7 +51,7 @@ func (r *RuleEnsureParsed) Eval(cec controller.EvalContext) controller.Action {
 	wf := ec.Workflow()
 	if wf.Status == nil || !wf.Status.Ready() {
 		return &ActionParseWorkflow{
-			WfApi: r.WfApi,
+			WfAPI: r.WfAPI,
 			Wf:    wf,
 		}
 	}
@@ -76,7 +76,7 @@ func (r *RuleRemoveIfDeleted) Eval(cec controller.EvalContext) controller.Action
 	if wf.Status.Status == types.WorkflowStatus_DELETED {
 		return &controller.ActionRemoveFromEvalCache{
 			EvalCache: r.evalCache,
-			Id:        wf.Id(),
+			ID:        wf.ID(),
 		}
 	}
 	return nil

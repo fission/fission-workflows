@@ -8,37 +8,27 @@ import (
 	"github.com/fission/fission-workflows/pkg/version"
 )
 
-type AdminApi struct {
-	BaseApi
+type AdminAPI struct {
+	baseAPI
 }
 
-func NewAdminApi(endpoint string, client http.Client) *AdminApi {
-	return &AdminApi{
-		BaseApi: BaseApi{
+func NewAdminAPI(endpoint string, client http.Client) *AdminAPI {
+	return &AdminAPI{
+		baseAPI: baseAPI{
 			endpoint: endpoint,
 			client:   client,
 		},
 	}
 }
 
-func (api *AdminApi) Status(ctx context.Context) (*apiserver.Health, error) {
+func (api *AdminAPI) Status(ctx context.Context) (*apiserver.Health, error) {
 	result := &apiserver.Health{}
-	err := call(http.MethodGet, api.formatUrl("/healthz"), nil, result)
+	err := call(http.MethodGet, api.formatURL("/healthz"), nil, result)
 	return result, err
 }
 
-func (api *AdminApi) Version(ctx context.Context) (*version.Info, error) {
+func (api *AdminAPI) Version(ctx context.Context) (*version.Info, error) {
 	result := &version.Info{}
-	err := call(http.MethodGet, api.formatUrl("/version"), nil, result)
+	err := call(http.MethodGet, api.formatURL("/version"), nil, result)
 	return result, err
-}
-
-func (api *AdminApi) Resume(ctx context.Context) error {
-	err := call(http.MethodGet, api.formatUrl("/resume"), nil, nil)
-	return err
-}
-
-func (api *AdminApi) Halt(ctx context.Context) error {
-	err := call(http.MethodGet, api.formatUrl("/halt"), nil, nil)
-	return err
 }

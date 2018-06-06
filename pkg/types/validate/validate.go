@@ -9,15 +9,16 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/graph"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"gonum.org/v1/gonum/graph/topo"
 )
 
 var (
 	ErrObjectEmpty                  = errors.New("no object provided")
-	ErrInvalidApiVersion            = errors.New("unknown API version")
+	ErrInvalidAPIVersion            = errors.New("unknown API version")
 	ErrWorkflowWithoutTasks         = errors.New("workflow needs at least one task")
 	ErrUndefinedDependency          = errors.New("task contains undefined dependency")
-	ErrTaskIdMissing                = errors.New("task misses an id")
+	ErrTaskIDMissing                = errors.New("task misses an id")
 	ErrTaskNotUnique                = errors.New("task is not unique")
 	ErrWorkflowWithoutStartTasks    = errors.New("workflow does not contain any start tasks (tasks with 0 dependencies)")
 	ErrTaskRequiresFnRef            = errors.New("task requires a function name")
@@ -28,7 +29,7 @@ var (
 	ErrNoWorkflowInvocation         = errors.New("workflow invocation id is required")
 	ErrNoFnRef                      = errors.New("function reference is required")
 	ErrNoWorkflow                   = errors.New("workflow id is required")
-	ErrNoId                         = errors.New("id is required")
+	ErrNoID                         = errors.New("id is required")
 	ErrNoStatus                     = errors.New("status is required")
 )
 
@@ -57,9 +58,8 @@ func (ie *Error) IsEmpty() bool {
 func (ie Error) GetOrNil() error {
 	if ie.IsEmpty() {
 		return nil
-	} else {
-		return ie
 	}
+	return ie
 }
 
 func (ie *Error) append(err error) {
@@ -82,8 +82,8 @@ func WorkflowSpec(spec *types.WorkflowSpec) error {
 		return errs.GetOrNil()
 	}
 
-	if len(spec.ApiVersion) > 0 && !strings.EqualFold(spec.GetApiVersion(), types.WorkflowApiVersion) {
-		errs.append(fmt.Errorf("%v: '%v'", ErrInvalidApiVersion, spec.GetApiVersion()))
+	if len(spec.ApiVersion) > 0 && !strings.EqualFold(spec.GetApiVersion(), types.WorkflowAPIVersion) {
+		errs.append(fmt.Errorf("%v: '%v'", ErrInvalidAPIVersion, spec.GetApiVersion()))
 	}
 
 	if len(spec.Tasks) == 0 {
@@ -96,23 +96,23 @@ func WorkflowSpec(spec *types.WorkflowSpec) error {
 	}
 
 	refTable := map[string]*types.TaskSpec{}
-	for taskId, task := range spec.Tasks {
-		if len(taskId) == 0 {
-			errs.append(ErrTaskIdMissing)
+	for taskID, task := range spec.Tasks {
+		if len(taskID) == 0 {
+			errs.append(ErrTaskIDMissing)
 		}
 
 		errs.append(TaskSpec(task))
 
-		_, ok := refTable[taskId]
+		_, ok := refTable[taskID]
 		if ok {
-			errs.append(fmt.Errorf("%v: '%v'", ErrTaskNotUnique, taskId))
+			errs.append(fmt.Errorf("%v: '%v'", ErrTaskNotUnique, taskID))
 		}
-		refTable[taskId] = task
+		refTable[taskID] = task
 	}
 
 	// Dependency testing
 	var startTasks []*types.TaskSpec
-	for taskId, task := range spec.GetTasks() {
+	for taskID, task := range spec.GetTasks() {
 		if len(task.Requires) == 0 {
 			startTasks = append(startTasks, task)
 		}
@@ -120,7 +120,7 @@ func WorkflowSpec(spec *types.WorkflowSpec) error {
 		// Check for undefined dependencies
 		for depName := range task.Requires {
 			if _, ok := refTable[depName]; !ok {
-				errs.append(fmt.Errorf("%v: '%v->%v'", ErrUndefinedDependency, taskId, depName))
+				errs.append(fmt.Errorf("%v: '%v->%v'", ErrUndefinedDependency, taskID, depName))
 			}
 		}
 	}
@@ -167,7 +167,7 @@ func DynamicTaskSpec(task *types.TaskSpec) error {
 	var parents int
 	for _, params := range task.Requires {
 		if params.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
-			parents += 1
+			parents++
 		}
 	}
 	if parents == 0 {
@@ -203,7 +203,7 @@ func ObjectMetadata(o *types.ObjectMetadata) error {
 		return errs.GetOrNil()
 	}
 	if len(o.Id) == 0 {
-		errs.append(ErrNoId)
+		errs.append(ErrNoID)
 	}
 
 	return errs.GetOrNil()
@@ -265,4 +265,15 @@ func Format(rawErr error) string {
 	default:
 		return fmt.Sprintf("%v", err)
 	}
+}
+
+func Flow(flow typedvalues.Flow) error {
+	if flow.IsEmpty() {
+		return ErrObjectEmpty
+	}
+	wf := flow.Workflow()
+	if wf != nil {
+		return WorkflowSpec(wf)
+	}
+	return TaskSpec(flow.Task())
 }

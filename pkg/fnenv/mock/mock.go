@@ -16,7 +16,7 @@ type Func func(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
 
 // Runtime mocks the implementation of the various runtime.
 //
-// Mock functions can be added to Functions, and should have the mocked function ID as the key.
+// Mock functions can be added to Functions, and should have the mocked function id as the key.
 // For AsyncRuntime the results are stored and retrieved from the AsyncResults. The result is added
 // automatically/instantly using the function, but can be avoided by enabling ManualExecution.
 //
@@ -41,7 +41,7 @@ func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
 		return "", fmt.Errorf("could not invoke unknown function '%s'", fnName)
 	}
 
-	invocationID := util.Uid()
+	invocationID := util.UID()
 	mk.AsyncResults[invocationID] = &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        invocationID,

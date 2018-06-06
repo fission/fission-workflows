@@ -7,27 +7,17 @@ import (
 	"golang.org/x/net/context"
 )
 
-type GrpcAdminApiServer struct {
+type Admin struct {
 	metaCtrl controller.MetaController
 }
 
-func (as *GrpcAdminApiServer) Status(ctx context.Context, _ *empty.Empty) (*Health, error) {
+func (as *Admin) Status(ctx context.Context, _ *empty.Empty) (*Health, error) {
 	return &Health{
 		Status: "OK!",
 	}, nil
 }
 
-func (as *GrpcAdminApiServer) Version(ctx context.Context, _ *empty.Empty) (*version.Info, error) {
-	version := version.VersionInfo()
-	return &version, nil
-}
-
-func (as *GrpcAdminApiServer) Resume(context.Context, *empty.Empty) (*empty.Empty, error) {
-	as.metaCtrl.Resume()
-	return &empty.Empty{}, nil
-}
-
-func (as *GrpcAdminApiServer) Halt(context.Context, *empty.Empty) (*empty.Empty, error) {
-	as.metaCtrl.Halt()
-	return &empty.Empty{}, nil
+func (as *Admin) Version(ctx context.Context, _ *empty.Empty) (*version.Info, error) {
+	v := version.VersionInfo()
+	return &v, nil
 }

@@ -10,7 +10,7 @@ import (
 
 const (
 	Fail         = "fail"
-	FailInputMsg = types.INPUT_MAIN
+	FailInputMsg = types.InputMain
 )
 
 var defaultErrMsg = typedvalues.MustParse("fail function triggered")
