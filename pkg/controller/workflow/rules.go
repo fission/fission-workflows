@@ -67,7 +67,7 @@ func EnsureWorkflowContext(cec controller.EvalContext) EvalContext {
 }
 
 type RuleRemoveIfDeleted struct {
-	evalCache *controller.EvalCache
+	evalCache controller.EvalStore
 }
 
 func (r *RuleRemoveIfDeleted) Eval(cec controller.EvalContext) controller.Action {

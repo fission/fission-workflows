@@ -8,25 +8,27 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/util/gopool"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	NotificationBuffer   = 100
-	defaultEvalQueueSize = 50
-	Name                 = "invocation"
+	NotificationBuffer    = 100
+	maxParallelExecutions = 1000
+	Name                  = "invocation"
 )
 
 var (
-	wfiLog = log.WithField("component", "controller.invocation")
+	log = logrus.WithField("component", "controller.invocation")
 
 	// workflow-related metrics
 	invocationStatus = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -65,10 +67,8 @@ type Controller struct {
 	sub           *pubsub.Subscription
 	cancelFn      context.CancelFunc
 	evalPolicy    controller.Rule
-	evalCache     *controller.EvalCache
-
-	// evalQueue is a queue of invocation ids
-	evalQueue chan string
+	evalStore     controller.EvalStore
+	evalQueue     *controller.ConcurrentEvalStateHeap
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
@@ -79,16 +79,11 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 		scheduler:     workflowScheduler,
 		taskAPI:       taskAPI,
 		invocationAPI: invocationAPI,
-		evalQueue:     make(chan string, defaultEvalQueueSize),
-		evalCache:     controller.NewEvalCache(),
 		stateStore:    stateStore,
-
-		// States maintains an active cache of currently running invocations, with execution related data.
-		// This state information is considered preemptable and can be removed or lost at any time.
-		//states: map[string]*ControlState{},
+		evalQueue:     controller.NewConcurrentEvalStateHeap(true),
 	}
-	ctr.evalPolicy = defaultPolicy(ctr)
 
+	ctr.evalPolicy = defaultPolicy(ctr)
 	return ctr
 }
 
@@ -111,7 +106,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 				case notification := <-cr.sub.Ch:
 					cr.handleMsg(notification)
 				case <-ctx.Done():
-					wfiLog.Debug("Notification listener stopped.")
+					log.Debug("Notification listener stopped.")
 					return
 				}
 			}
@@ -119,14 +114,21 @@ func (cr *Controller) Init(sctx context.Context) error {
 	}
 
 	// process evaluation queue
+	pool := gopool.New(maxParallelExecutions)
 	go func(ctx context.Context) {
+		queue := cr.evalQueue.Chan()
 		for {
 			select {
-			case eval := <-cr.evalQueue:
-				go cr.Evaluate(eval) // TODO limit number of goroutines
-				controller.EvalQueueSize.WithLabelValues("invocation").Dec()
+			case eval := <-queue:
+				err := pool.Submit(ctx, func() {
+					controller.EvalQueueSize.WithLabelValues("invocation").Dec()
+					cr.Evaluate(eval.ID())
+				})
+				if err != nil {
+					log.Errorf("failed to submit invocation %v for execution", eval.ID())
+				}
 			case <-ctx.Done():
-				wfiLog.Debug("Evaluation queue listener stopped.")
+				log.Debug("Evaluation queue listener stopped.")
 				return
 			}
 		}
@@ -136,56 +138,77 @@ func (cr *Controller) Init(sctx context.Context) error {
 }
 
 func (cr *Controller) handleMsg(msg pubsub.Msg) error {
-	wfiLog.WithField("labels", msg.Labels()).Debug("Handling invocation notification.")
 	switch n := msg.(type) {
 	case *fes.Notification:
 		cr.Notify(n)
 	default:
-		wfiLog.WithField("notification", n).Warn("Ignoring unknown notification type")
+		log.WithField("notification", n).Warn("Ignoring unknown notification type")
 	}
 	return nil
 }
 
 func (cr *Controller) Notify(msg *fes.Notification) error {
-	wfiLog.WithFields(log.Fields{
+	log.WithFields(logrus.Fields{
 		"notification": msg.EventType,
 		"labels":       msg.Labels(),
-	}).Debug("Handling invocation notification!")
+	}).Debugf("Controller event: %v", msg.EventType)
 
-	wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
-	if !ok {
-		panic(msg)
+	// TODO avoid struct creations
+	switch msg.EventType {
+	case events.TypeOf(&events.InvocationCompleted{}):
+		fallthrough
+	case events.TypeOf(&events.InvocationCanceled{}):
+		fallthrough
+	case events.TypeOf(&events.InvocationFailed{}):
+		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
+		if !ok {
+			log.Warn("Event did not contain invocation payload", msg)
+		}
+		// TODO mark to clean up later instead
+		cr.stateStore.Delete(wfi.ID())
+		cr.evalStore.Delete(wfi.ID())
+		log.Infof("Removed invocation %v from eval state", wfi.ID())
+	case events.TypeOf(&events.TaskFailed{}):
+		fallthrough
+	case events.TypeOf(&events.TaskSucceeded{}):
+		fallthrough
+	case events.TypeOf(&events.InvocationCreated{}):
+		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
+		if !ok {
+			panic(msg)
+		}
+		es := cr.evalStore.LoadOrStore(wfi.ID())
+		cr.evalQueue.Push(es)
+	default:
+		log.Debugf("Controller ignored event type: %v", msg.EventType)
 	}
-	cr.submitEval(wfi.ID())
 	return nil
 }
 
 func (cr *Controller) Tick(tick uint64) error {
 	// Short loop: invocations the controller is actively tracking
 	var err error
-	if tick%2 != 0 {
-		err = cr.checkEvalCaches()
+	if tick%10 == 0 {
+		log.Debug("Checking eval store for missing invocations")
+		err = cr.checkEvalStore()
 	}
 
 	// Long loop: to check if there are any orphans
-	if tick%4 != 0 {
+	if tick%50 == 0 {
+		log.Debug("Checking model caches for missing invocations")
 		err = cr.checkModelCaches()
 	}
 
 	return err
 }
 
-func (cr *Controller) checkEvalCaches() error {
-	for id, state := range cr.evalCache.List() {
-		last, ok := state.Last()
-		if !ok {
-			continue
-		}
-
-		reevaluateAt := last.Timestamp.Add(time.Duration(100) * time.Millisecond)
-		if time.Now().UnixNano() > reevaluateAt.UnixNano() {
-			controller.EvalRecovered.WithLabelValues(Name, "evalStore").Inc()
-			cr.submitEval(id)
+func (cr *Controller) checkEvalStore() error {
+	for id, state := range cr.evalStore.List() {
+		// TODO check if finished
+		// Add all states that are somehow not in the evalQueue
+		if cr.evalQueue.Get(id) == nil {
+			log.Debugf("Adding missing invocation %v to the queue", id)
+			cr.evalQueue.Push(state)
 		}
 	}
 	return nil
@@ -196,7 +219,8 @@ func (cr *Controller) checkModelCaches() error {
 	// Short control loop
 	entities := cr.invokeCache.List()
 	for _, entity := range entities {
-		if _, ok := cr.evalCache.Get(entity.Id); ok {
+		// Ignore those that are in the evalStore; those will get picked up by checkEvalStore.
+		if _, ok := cr.evalStore.Load(entity.Id); ok {
 			continue
 		}
 
@@ -209,41 +233,27 @@ func (cr *Controller) checkModelCaches() error {
 
 		if !wi.Status.Finished() {
 			controller.EvalRecovered.WithLabelValues(Name, "cache").Inc()
-			cr.submitEval(wi.ID())
+			es := cr.evalStore.LoadOrStore(wi.ID())
+			cr.evalQueue.Push(es)
 		}
 	}
 	return nil
 }
 
-func (cr *Controller) submitEval(ids ...string) bool {
-	for _, id := range ids {
-		select {
-		case cr.evalQueue <- id:
-			controller.EvalQueueSize.WithLabelValues(Name).Inc()
-			return true
-			// ok
-		default:
-			wfiLog.Warnf("Eval queue is full; dropping eval task for '%v'", id)
-			return false
-		}
-	}
-	return true
-}
-
 func (cr *Controller) Evaluate(invocationID string) {
 	start := time.Now()
 	// Fetch and attempt to claim the evaluation
-	evalState := cr.evalCache.GetOrCreate(invocationID)
+	evalState := cr.evalStore.LoadOrStore(invocationID)
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfiLog.Debugf("Failed to obtain access to invocation %s", invocationID)
+		log.Debugf("Failed to obtain access to invocation %s", invocationID)
 		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
-	log.Debugf("evaluating invocation %s", invocationID)
+	log.Debugf("Evaluating invocation %s", invocationID)
 
 	// Fetch the workflow invocation for the provided invocation id
 	wfi := aggregates.NewWorkflowInvocation(invocationID)
@@ -256,7 +266,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 	// TODO move to rule
 	if wfi.Status.Finished() {
-		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationID)
+		log.Debugf("No need to evaluate finished invocation %v", invocationID)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}
@@ -307,9 +317,9 @@ func (cr *Controller) Close() error {
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(cr.sub)
 		if err != nil {
-			wfiLog.Errorf("Failed to unsubscribe from invocation cache: %v", err)
+			log.Errorf("Failed to unsubscribe from invocation cache: %v", err)
 		} else {
-			wfiLog.Info("Unsubscribed from invocation cache")
+			log.Info("Unsubscribed from invocation cache")
 		}
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/util/gopool"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -19,15 +20,16 @@ import (
 )
 
 const (
-	NotificationBuffer   = 100
-	defaultEvalQueueSize = 50
-	Name                 = "workflow"
+	NotificationBuffer    = 100
+	defaultEvalQueueSize  = 50
+	Name                  = "workflow"
+	maxParallelExecutions = 100
 )
 
 // TODO add hard limits (cache size, max concurrent invocation)
 
 var (
-	wfLog = logrus.WithField("component", "controller.workflow")
+	log = logrus.WithField("component", "controller.workflow")
 
 	workflowProcessDuration = prometheus.NewSummary(prometheus.SummaryOpts{
 		Namespace: "workflows",
@@ -56,7 +58,7 @@ type Controller struct {
 	sub        *pubsub.Subscription
 	cancelFn   context.CancelFunc
 	evalQueue  chan string
-	evalCache  *controller.EvalCache
+	evalCache  controller.EvalStore
 	evalPolicy controller.Rule
 }
 
@@ -65,7 +67,7 @@ func NewController(wfCache fes.CacheReader, wfAPI *api.Workflow) *Controller {
 		wfCache:   wfCache,
 		api:       wfAPI,
 		evalQueue: make(chan string, defaultEvalQueueSize),
-		evalCache: controller.NewEvalCache(),
+		evalCache: controller.EvalStore{},
 	}
 	ctr.evalPolicy = defaultPolicy(ctr)
 	return ctr
@@ -90,7 +92,7 @@ func (c *Controller) Init(sctx context.Context) error {
 				case notification := <-c.sub.Ch:
 					c.handleMsg(notification)
 				case <-ctx.Done():
-					wfLog.Debug("Notification listener closed.")
+					log.Debug("Notification listener closed.")
 					return
 				}
 			}
@@ -98,14 +100,17 @@ func (c *Controller) Init(sctx context.Context) error {
 	}
 
 	// process evaluation queue
+	pool := gopool.New(maxParallelExecutions)
 	go func(ctx context.Context) {
 		for {
 			select {
 			case eval := <-c.evalQueue:
-				controller.EvalQueueSize.WithLabelValues(Name).Dec()
-				go c.Evaluate(eval) // TODO limit number of goroutines
+				pool.Submit(ctx, func() {
+					controller.EvalQueueSize.WithLabelValues(Name).Dec()
+					c.Evaluate(eval)
+				})
 			case <-ctx.Done():
-				wfLog.Debug("Evaluation queue listener stopped.")
+				log.Debug("Evaluation queue listener stopped.")
 				return
 			}
 		}
@@ -115,12 +120,12 @@ func (c *Controller) Init(sctx context.Context) error {
 }
 
 func (c *Controller) handleMsg(msg pubsub.Msg) error {
-	wfLog.WithField("labels", msg.Labels()).Debug("Handling invocation notification.")
+	log.WithField("labels", msg.Labels()).Debug("Handling invocation notification.")
 	switch n := msg.(type) {
 	case *fes.Notification:
 		c.Notify(n)
 	default:
-		wfLog.WithField("notification", n).Warn("Ignoring unknown notification type")
+		log.WithField("notification", n).Warn("Ignoring unknown notification type")
 	}
 	return nil
 }
@@ -144,17 +149,17 @@ func (c *Controller) Notify(msg *fes.Notification) error {
 func (c *Controller) Evaluate(workflowID string) {
 	start := time.Now()
 	// Fetch and attempt to claim the evaluation
-	evalState := c.evalCache.GetOrCreate(workflowID)
+	evalState := c.evalCache.LoadOrStore(workflowID)
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
 	default:
 		// TODO provide option to wait for a lock
-		wfLog.Debugf("Failed to obtain access to workflow %s", workflowID)
+		log.Debugf("Failed to obtain access to workflow %s", workflowID)
 		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
-	wfLog.Debugf("evaluating workflow %s", workflowID)
+	log.Debugf("evaluating workflow %s", workflowID)
 
 	// Fetch the workflow relevant to the invocation
 	wf := aggregates.NewWorkflow(workflowID)
@@ -182,7 +187,7 @@ func (c *Controller) Evaluate(workflowID string) {
 	// Execute action
 	err = action.Apply()
 	if err != nil {
-		wfLog.Errorf("Action '%T' failed: %v", action, err)
+		log.Errorf("Action '%T' failed: %v", action, err)
 		record.Error = err
 	}
 	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
@@ -202,9 +207,9 @@ func (c *Controller) Close() error {
 	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(c.sub)
 		if err != nil {
-			wfLog.Errorf("Failed to unsubscribe from workflow cache: %v", err)
+			log.Errorf("Failed to unsubscribe from workflow cache: %v", err)
 		} else {
-			wfLog.Info("Unsubscribed from workflow cache")
+			log.Info("Unsubscribed from workflow cache")
 		}
 	}
 
@@ -220,7 +225,7 @@ func (c *Controller) submitEval(ids ...string) bool {
 			return true
 			// ok
 		default:
-			wfLog.Warnf("Eval queue is full; dropping eval task for '%v'", id)
+			log.Warnf("Eval queue is full; dropping eval task for '%v'", id)
 			return false
 		}
 	}

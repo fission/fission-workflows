@@ -45,7 +45,7 @@ var (
 		Namespace: "workflows",
 		Subsystem: "controller_workflow",
 		Name:      "eval_queue_size",
-		Help:      "A gauge of the evaluation queue size",
+		Help:      "A gauge of the evaluation queue cachedLen",
 	}, []string{"controller"})
 )
 
