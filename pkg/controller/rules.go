@@ -49,7 +49,7 @@ type RuleExceededErrorCount struct {
 func (el *RuleExceededErrorCount) Eval(ec EvalContext) Action {
 	var errorCount int
 	state := ec.EvalState()
-	for i := state.Count() - 1; i >= 0; i-- {
+	for i := state.Len() - 1; i >= 0; i-- {
 		record, ok := state.Get(i)
 		if !ok {
 			panic("Illegal modification")

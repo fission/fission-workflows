@@ -10,7 +10,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
-	log "github.com/sirupsen/logrus"
 )
 
 //

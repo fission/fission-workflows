@@ -35,7 +35,7 @@ func (a *ActonAbort) Eval(cec controller.EvalContext) controller.Action {
 }
 
 func (a *ActonAbort) Apply() error {
-	wfiLog.Info("Applying action: abort")
+	log.Info("Applying action: abort")
 	return a.API.Cancel(a.InvocationID)
 }
 
@@ -61,7 +61,7 @@ func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 }
 
 func (a *ActionFail) Apply() error {
-	wfiLog.Infof("Applying action: fail (%v)", a.Err)
+	log.Infof("Applying action: fail (%v)", a.Err)
 	return a.API.Fail(a.InvocationID, a.Err)
 }
 
