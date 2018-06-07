@@ -1,19 +1,34 @@
 # Change Log
 
+## [0.4.0](https://github.com/fission/fission-workflows/tree/0.4.0) (2018-06-07)
+[Full Changelog](https://github.com/fission/fission-workflows/compare/0.3.0...0.4.0)
+
+**Merged pull requests:**
+
+- Merge API packages [\#147](https://github.com/fission/fission-workflows/pull/147) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Include git info in versioning [\#146](https://github.com/fission/fission-workflows/pull/146) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Prometheus integration [\#122](https://github.com/fission/fission-workflows/pull/122) ([erwinvaneyk](https://github.com/erwinvaneyk))
+
 ## [0.3.0](https://github.com/fission/fission-workflows/tree/0.3.0) (2018-05-17)
 [Full Changelog](https://github.com/fission/fission-workflows/compare/0.2.0...0.3.0)
 
 **Implemented enhancements:**
 
 - Add API change warning to documentation [\#95](https://github.com/fission/fission-workflows/issues/95)
+- Add cancel command to wfcli [\#88](https://github.com/fission/fission-workflows/issues/88)
+- Validation check for circular dependencies [\#42](https://github.com/fission/fission-workflows/issues/42)
+- Support headers \(and other metadata\) as input to workflow [\#96](https://github.com/fission/fission-workflows/issues/96)
 - Support inline workflows [\#44](https://github.com/fission/fission-workflows/issues/44)
+- Support passing query and headers to fission functions [\#37](https://github.com/fission/fission-workflows/issues/37)
 
 **Fixed bugs:**
 
 - Fix builder errors when supplying an archive [\#139](https://github.com/fission/fission-workflows/issues/139)
+- Release latest fission workflow version [\#138](https://github.com/fission/fission-workflows/issues/138)
 - Limit number of parallel subscribers to backing event store [\#85](https://github.com/fission/fission-workflows/issues/85)
 - duplicate task invocations [\#77](https://github.com/fission/fission-workflows/issues/77)
 - Infinite fail loop : limit function rate / retries [\#71](https://github.com/fission/fission-workflows/issues/71)
+- Workflows install fails if fission is not installed in the "fission" namespace [\#69](https://github.com/fission/fission-workflows/issues/69)
 
 **Closed issues:**
 
@@ -23,14 +38,15 @@
 - Errors when installing wfcli [\#133](https://github.com/fission/fission-workflows/issues/133)
 - `fission function logs` should show meaningful logs for workflows [\#125](https://github.com/fission/fission-workflows/issues/125)
 - Install instructions are missing wfcli [\#124](https://github.com/fission/fission-workflows/issues/124)
+- Change Workflows to talk to router [\#84](https://github.com/fission/fission-workflows/issues/84)
+- Document functionality of the query parser [\#43](https://github.com/fission/fission-workflows/issues/43)
 - Add /healthz [\#123](https://github.com/fission/fission-workflows/issues/123)
 - Add Fission e2e test  [\#40](https://github.com/fission/fission-workflows/issues/40)
 
 **Merged pull requests:**
 
+- Fission Workflows 0.3.0 [\#145](https://github.com/fission/fission-workflows/pull/145) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Add demo kubecon 2018 [\#142](https://github.com/fission/fission-workflows/pull/142) ([erwinvaneyk](https://github.com/erwinvaneyk))
-- Fix bash variable errors at workflow builder cmd [\#140](https://github.com/fission/fission-workflows/pull/140) ([thenamly](https://github.com/thenamly))
-- Add control flow / utility functions to the workflow engine  [\#135](https://github.com/fission/fission-workflows/pull/135) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Add chmod line to the installation instructions [\#134](https://github.com/fission/fission-workflows/pull/134) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - fission 0.6.0 -\> 0.6.1 [\#132](https://github.com/fission/fission-workflows/pull/132) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Remove swagger golang client from the wfcli tool [\#131](https://github.com/fission/fission-workflows/pull/131) ([erwinvaneyk](https://github.com/erwinvaneyk))
@@ -58,18 +74,14 @@
 - Integrate e2e with Travis/GKE [\#102](https://github.com/fission/fission-workflows/pull/102) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Improve logging and concurrency in controller [\#93](https://github.com/fission/fission-workflows/pull/93) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Introduce e2e tests [\#92](https://github.com/fission/fission-workflows/pull/92) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Fix bash variable errors at workflow builder cmd [\#140](https://github.com/fission/fission-workflows/pull/140) ([thenamly](https://github.com/thenamly))
+- Add control flow / utility functions to the workflow engine  [\#135](https://github.com/fission/fission-workflows/pull/135) ([erwinvaneyk](https://github.com/erwinvaneyk))
 
 ## [0.2.0](https://github.com/fission/fission-workflows/tree/0.2.0) (2018-01-22)
 [Full Changelog](https://github.com/fission/fission-workflows/compare/0.1.1...0.2.0)
 
-**Implemented enhancements:**
-
-- Support headers \(and other metadata\) as input to workflow [\#96](https://github.com/fission/fission-workflows/issues/96)
-- Support passing query and headers to fission functions [\#37](https://github.com/fission/fission-workflows/issues/37)
-
 **Fixed bugs:**
 
-- Workflows install fails if fission is not installed in the "fission" namespace [\#69](https://github.com/fission/fission-workflows/issues/69)
 - Improve expression type parsing [\#49](https://github.com/fission/fission-workflows/issues/49)
 
 **Closed issues:**
