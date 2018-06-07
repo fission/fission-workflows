@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +19,40 @@ const (
 var (
 	log     = logrus.New().WithFields(logrus.Fields{"component": "controller"})
 	metaLog = log.WithField("controller", "controller-meta")
+
+	// Controller-related metrics
+	EvalJobs = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "eval_job",
+		Help:      "Count of the different statuses of evaluations (e.g. skipped, errored, action).",
+	}, []string{"controller", "status"})
+
+	EvalRecovered = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "eval_recovered",
+		Help:      "Count of the number of jobs that were lost and recovered",
+	}, []string{"controller", "from"})
+
+	EvalDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "eval_duration",
+		Help:      "Duration of an evaluation.",
+	}, []string{"controller", "action"})
+
+	EvalQueueSize = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "eval_queue_size",
+		Help:      "A gauge of the evaluation queue size",
+	}, []string{"controller"})
 )
+
+func init() {
+	prometheus.MustRegister(EvalJobs, EvalDuration, EvalQueueSize, EvalRecovered)
+}
 
 type Controller interface {
 	Init(ctx context.Context) error

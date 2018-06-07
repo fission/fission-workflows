@@ -18,7 +18,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/transport/spdy"
 )
 
 type client struct {
@@ -118,8 +118,7 @@ func runPortForward(kubeConfig string, labelSelector string, localPort string, f
 	}
 
 	// get the pod; if there is more than one, ask the user to disambiguate
-	podList, err := clientset.CoreV1().Pods(fissionNamespace).
-		List(meta_v1.ListOptions{LabelSelector: labelSelector})
+	podList, err := clientset.CoreV1().Pods(fissionNamespace).List(meta_v1.ListOptions{LabelSelector: labelSelector})
 	if err != nil || len(podList.Items) == 0 {
 		panic("Error getting controller pod for port-forwarding")
 	}
@@ -158,7 +157,7 @@ func runPortForward(kubeConfig string, labelSelector string, localPort string, f
 	readyChannel := make(chan struct{})
 
 	// create request URL
-	req := clientset.CoreV1Client.RESTClient().Post().Resource("pods").
+	req := clientset.CoreV1().RESTClient().Post().Resource("pods").
 		Namespace(podNameSpace).Name(podName).SubResource("portforward")
 	url := req.URL()
 
@@ -167,11 +166,12 @@ func runPortForward(kubeConfig string, labelSelector string, localPort string, f
 	ports := []string{portCombo}
 
 	// actually start the port-forwarding process here
-	dialer, err := remotecommand.NewExecutor(config, "POST", url)
+	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
 		msg := fmt.Sprintf("newexecutor errored out :%v", err.Error())
 		panic(msg)
 	}
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", url)
 
 	fw, err := portforward.New(dialer, ports, stopChannel, readyChannel, nil, os.Stderr)
 	if err != nil {

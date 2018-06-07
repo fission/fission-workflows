@@ -29,6 +29,7 @@ import (
 	controllerc "github.com/fission/fission/controller/client"
 	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -67,7 +68,10 @@ func Run(ctx context.Context, opts *Options) error {
 	var es fes.Backend
 	var esPub pubsub.Publisher
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+	)
 	defer grpcServer.GracefulStop()
 
 	// Event Stores
@@ -164,6 +168,9 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.AdminAPI || opts.WorkflowAPI || opts.InvocationAPI {
+		log.Info("Instrumenting gRPC server with Prometheus metrics")
+		grpc_prometheus.Register(grpcServer)
+
 		lis, err := net.Listen("tcp", gRPCAddress)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
@@ -291,7 +298,7 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 		return aggregates.NewWorkflowInvocation("")
 	}
 
-	return fes.NewSubscribedCache(ctx, fes.NewMapCache(), wi, invokeSub)
+	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("invocation"), wi, invokeSub)
 }
 
 func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
@@ -302,7 +309,7 @@ func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) 
 	wb := func() fes.Aggregator {
 		return aggregates.NewWorkflow("")
 	}
-	return fes.NewSubscribedCache(ctx, fes.NewMapCache(), wb, wfSub)
+	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("workflow"), wb, wfSub)
 }
 
 func serveAdminAPI(s *grpc.Server) {

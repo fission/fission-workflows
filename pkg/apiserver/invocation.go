@@ -3,10 +3,10 @@ package apiserver
 import (
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/validate"
@@ -15,14 +15,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	invokeSyncTimeout         = time.Duration(10) * time.Minute
-	invokeSyncPollingInterval = time.Duration(100) * time.Millisecond
-)
-
 type Invocation struct {
 	api      *api.Invocation
 	wfiCache fes.CacheReader
+	fnenv    *workflows.Runtime
 }
 
 func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
@@ -35,7 +31,7 @@ func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocati
 }
 
 func NewInvocation(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
-	return &Invocation{api, wfiCache}
+	return &Invocation{api, wfiCache, workflows.NewRuntime(api, wfiCache)}
 }
 
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
@@ -48,39 +44,7 @@ func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocation
 }
 
 func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	wfiID, err := gi.api.Invoke(spec)
-	if err != nil {
-		logrus.Errorf("Failed to invoke workflow: %v", err)
-		return nil, err
-	}
-
-	timeout, _ := context.WithTimeout(ctx, invokeSyncTimeout)
-	var result *types.WorkflowInvocation
-	for {
-		wi := aggregates.NewWorkflowInvocation(wfiID)
-		err := gi.wfiCache.Get(wi)
-		if err != nil {
-			logrus.Warnf("Failed to get workflow invocation from cache: %v", err)
-		}
-		if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Finished() {
-			result = wi.WorkflowInvocation
-			break
-		}
-
-		select {
-		case <-timeout.Done():
-			err := gi.api.Cancel(wfiID)
-			if err != nil {
-				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
-			}
-			return nil, errors.New("timeout occurred")
-		default:
-			// TODO polling is a temporary shortcut; needs optimizing.
-			time.Sleep(invokeSyncPollingInterval)
-		}
-	}
-
-	return result, nil
+	return gi.fnenv.InvokeWorkflow(spec)
 }
 
 func (gi *Invocation) Cancel(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*empty.Empty, error) {

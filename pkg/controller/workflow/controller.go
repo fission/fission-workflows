@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
@@ -12,15 +13,40 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	NotificationBuffer = 100
-	evalQueueSize      = 50
+	NotificationBuffer   = 100
+	defaultEvalQueueSize = 50
+	Name                 = "workflow"
 )
 
-var wfLog = logrus.WithField("component", "controller.wf")
+// TODO add hard limits (cache size, max concurrent invocation)
+
+var (
+	wfLog = logrus.WithField("component", "controller.wf")
+
+	workflowProcessDuration = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "parsed_duration",
+		Help:      "Duration of a workflow from a start to a parsed state.",
+	})
+
+	workflowStatus = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_workflow",
+		Name:      "status",
+		Help:      "Count of the different statuses of workflows.",
+	}, []string{"status"})
+)
+
+func init() {
+	prometheus.MustRegister(workflowProcessDuration, workflowStatus)
+}
 
 // WorkflowController is the controller concerned with the lifecycle of workflows. It handles responsibilities, such as
 // parsing of workflows.
@@ -38,7 +64,7 @@ func NewController(wfCache fes.CacheReader, wfAPI *api.Workflow) *Controller {
 	ctr := &Controller{
 		wfCache:   wfCache,
 		api:       wfAPI,
-		evalQueue: make(chan string, evalQueueSize),
+		evalQueue: make(chan string, defaultEvalQueueSize),
 		evalCache: controller.NewEvalCache(),
 	}
 	ctr.evalPolicy = defaultPolicy(ctr)
@@ -76,6 +102,7 @@ func (c *Controller) Init(sctx context.Context) error {
 		for {
 			select {
 			case eval := <-c.evalQueue:
+				controller.EvalQueueSize.WithLabelValues(Name).Dec()
 				go c.Evaluate(eval) // TODO limit number of goroutines
 			case <-ctx.Done():
 				return
@@ -98,29 +125,8 @@ func (c *Controller) handleMsg(msg pubsub.Msg) error {
 }
 
 func (c *Controller) Tick(tick uint64) error {
-	// Assume that all workflows are in evalCache
-	//now := time.Now()
 	// TODO short loop: eval cache
 	// TODO longer loop: cache
-	//for _, a := range c.wfCache.List() {
-	//	if locked {
-	//		continue
-	//	}
-	//
-	//	wfEntity, err := c.wfCache.GetAggregate(a)
-	//	if err != nil {
-	//		return fmt.Errorf("failed to retrieve: %v", err)
-	//	}
-	//
-	//	wf, ok := wfEntity.(*aggregates.Workflow)
-	//	if !ok {
-	//		wfLog.WithField("wfEntity", wfEntity).WithField("type", reflect.TypeOf(wfEntity)).
-	//			Error("Unexpected type in wfCache")
-	//		panic(fmt.Sprintf("unexpected type '%v' in wfCache", reflect.TypeOf(wfEntity)))
-	//	}
-	//
-	//	c.submitEval(wf.id())
-	//}
 	return nil
 }
 
@@ -135,6 +141,7 @@ func (c *Controller) Notify(msg *fes.Notification) error {
 }
 
 func (c *Controller) Evaluate(workflowID string) {
+	start := time.Now()
 	// Fetch and attempt to claim the evaluation
 	evalState := c.evalCache.GetOrCreate(workflowID)
 	select {
@@ -143,6 +150,7 @@ func (c *Controller) Evaluate(workflowID string) {
 	default:
 		// TODO provide option to wait for a lock
 		wfLog.Debugf("Failed to obtain access to workflow %s", workflowID)
+		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
 	wfLog.Debugf("evaluating workflow %s", workflowID)
@@ -153,6 +161,7 @@ func (c *Controller) Evaluate(workflowID string) {
 	// TODO move to rule
 	if err != nil && wf.Workflow == nil {
 		logrus.Errorf("controller failed to get workflow '%s': %v", workflowID, err)
+		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}
 
@@ -162,6 +171,11 @@ func (c *Controller) Evaluate(workflowID string) {
 	ec := NewEvalContext(evalState, wf.Workflow)
 
 	action := c.evalPolicy.Eval(ec)
+	if action == nil {
+		controller.EvalJobs.WithLabelValues(Name, "noop").Inc()
+		return
+	}
+
 	record.Action = action
 
 	// Execute action
@@ -170,9 +184,17 @@ func (c *Controller) Evaluate(workflowID string) {
 		wfLog.Errorf("Action '%T' failed: %v", action, err)
 		record.Error = err
 	}
+	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
 
 	// Record this evaluation
 	evalState.Record(record)
+
+	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
+	if wf.GetStatus().Ready() { // TODO only once
+		t, _ := ptypes.Timestamp(wf.GetMetadata().GetCreatedAt())
+		workflowProcessDuration.Observe(float64(time.Now().Sub(t)))
+	}
+	workflowStatus.WithLabelValues(wf.GetStatus().GetStatus().String()).Inc()
 }
 
 func (c *Controller) Close() error {
@@ -192,6 +214,7 @@ func (c *Controller) submitEval(ids ...string) bool {
 	for _, id := range ids {
 		select {
 		case c.evalQueue <- id:
+			controller.EvalQueueSize.WithLabelValues(Name).Inc()
 			return true
 			// ok
 		default:

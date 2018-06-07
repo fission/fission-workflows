@@ -3,11 +3,13 @@ package nats
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
-	nats "github.com/nats-io/go-nats"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -18,26 +20,33 @@ const (
 )
 
 var (
-	subsActive = prometheus.NewGauge(prometheus.GaugeOpts{
+	subsActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "fes",
 		Subsystem: "nats",
 		Name:      "subs_active",
 		Help:      "Number of active subscriptions to NATS subjects.",
-	})
+	}, []string{"subType"})
 
-	eventsAppended = prometheus.NewCounter(prometheus.CounterOpts{
+	eventsAppended = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "fes",
 		Subsystem: "nats",
 		Name:      "events_appended_total",
-		Help:      "Count of appended events (excluding any internal events).",
+		Help:      "Count of appended events (including any internal events).",
+	}, []string{"eventType"})
+
+	eventDelay = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: "fes",
+		Subsystem: "nats",
+		Name:      "event_propagation_delay",
+		Help:      "Delay between event publish and receive by the subscribers.",
 	})
 )
 
 func init() {
-	prometheus.MustRegister(subsActive)
-	prometheus.MustRegister(eventsAppended)
+	prometheus.MustRegister(subsActive, eventsAppended, eventDelay)
 }
 
+// EventStore is a NATS-based implementation of the EventStore interface.
 type EventStore struct {
 	pubsub.Publisher
 	conn   *WildcardConn
@@ -46,14 +55,9 @@ type EventStore struct {
 }
 
 type Config struct {
-	//Cluster: clusterId,
-	//Client:  "someClient",
-	//URL:     fmt.Sprintf("nats://%s:%d", address, port),
 	Cluster string
 	Client  string
-
-	// Example: nats://localhost:9300
-	URL string
+	URL     string // e.g. nats://localhost:9300
 }
 
 func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
@@ -65,6 +69,7 @@ func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 	}
 }
 
+// Connect to a NATS cluster using the config.
 func Connect(cfg Config) (*EventStore, error) {
 	if cfg.Client == "" {
 		cfg.Client = defaultClient
@@ -86,13 +91,14 @@ func Connect(cfg Config) (*EventStore, error) {
 	return NewEventStore(wconn, cfg), nil
 }
 
-// Watch a aggregate type
+// Watch a aggregate type for new events. The events are emitted over the publisher interface.
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 	subject := fmt.Sprintf("%s.>", aggregate.Type)
 	sub, err := es.conn.Subscribe(subject, func(msg *stan.Msg) {
 		event, err := toEvent(msg)
 		if err != nil {
 			logrus.Error(err)
+			return
 		}
 
 		logrus.WithFields(logrus.Fields{
@@ -106,7 +112,13 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 		err = es.Publisher.Publish(event)
 		if err != nil {
 			logrus.Error(err)
+			return
 		}
+
+		// Record the time it took for the event to be propagated from publisher to subscriber.
+		ts, _ := ptypes.Timestamp(event.Timestamp)
+		eventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
+
 	}, stan.DeliverAllAvailable())
 	if err != nil {
 		return err
@@ -114,7 +126,6 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 
 	logrus.Infof("Backend client watches:' %s'", subject)
 	es.sub[aggregate] = sub
-	subsActive.Inc()
 	return nil
 }
 
@@ -123,10 +134,10 @@ func (es *EventStore) Close() error {
 	if err != nil {
 		return err
 	}
-	subsActive.Dec()
 	return nil
 }
 
+// Append publishes (and persists) an event on the NATS message queue
 func (es *EventStore) Append(event *fes.Event) error {
 	// TODO make generic / configurable whether to fold event into parent's Subject
 	subject := toSubject(event.Aggregate)
@@ -142,16 +153,18 @@ func (es *EventStore) Append(event *fes.Event) error {
 		"aggregate":    event.Aggregate.Format(),
 		"parent":       event.Parent.Format(),
 		"nats.subject": subject,
-	}).Infof("Appending event: %v", event.Type)
+	}).Infof("Event added: %v", event.Type)
 
 	err = es.conn.Publish(subject, data)
 	if err != nil {
 		return err
 	}
-	eventsAppended.Inc()
+	eventsAppended.WithLabelValues(event.Type).Inc()
+	eventsAppended.WithLabelValues("control").Inc()
 	return nil
 }
 
+// Get returns all events related to a specific aggregate
 func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
 	subject := toSubject(aggregate)
 
@@ -171,6 +184,7 @@ func (es *EventStore) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
 	return results, nil
 }
 
+// List returns all entities of which the subject matches the StringMatcher
 func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
 	subjects, err := es.conn.List(matcher)
 	if err != nil {

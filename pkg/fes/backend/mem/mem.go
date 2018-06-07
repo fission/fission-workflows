@@ -6,10 +6,18 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	ErrInvalidAggregate = errors.New("invalid aggregate")
+
+	eventsAppended = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "fes",
+		Subsystem: "mem",
+		Name:      "events_appended_total",
+		Help:      "Count of appended events (excluding any internal events).",
+	}, []string{"eventType"})
 )
 
 // An in-memory, fes backend for development and testing purposes
@@ -42,6 +50,7 @@ func (b *Backend) Append(event *fes.Event) error {
 	}
 	b.contents[key] = append(events, event)
 
+	eventsAppended.WithLabelValues(event.Type).Inc()
 	return b.Publish(event)
 }
 

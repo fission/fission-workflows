@@ -25,6 +25,7 @@ import (
 // Proxy between Fission and ParseWorkflow to ensure that workflowInvocations comply with Fission function interface. This
 // ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
+	// TODO change server to client
 	invocationServer apiserver.WorkflowInvocationAPIServer
 	workflowServer   apiserver.WorkflowAPIServer
 	fissionIds       syncmap.Map // map[string]bool

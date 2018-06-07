@@ -8,6 +8,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
@@ -50,8 +51,19 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 		wfSpec.ParentId = parentID
 	}
 
+	wfi, err := rt.InvokeWorkflow(wfSpec)
+	if err != nil {
+		return nil, err
+	}
+	return wfi.Status.ToTaskStatus(), nil
+}
+
+func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
 	// Invoke workflow
-	wfiID, err := rt.api.Invoke(wfSpec)
+	timeStart := time.Now()
+	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
+	fnenv.FnActive.WithLabelValues(Name).Inc()
+	wfiID, err := rt.api.Invoke(spec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
@@ -83,6 +95,8 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 			time.Sleep(invokeSyncPollingInterval)
 		}
 	}
+	fnenv.FnActive.WithLabelValues(Name).Dec()
+	fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	return result.Status.ToTaskStatus(), nil
+	return result, nil
 }

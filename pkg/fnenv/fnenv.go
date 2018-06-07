@@ -19,11 +19,37 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	ErrInvalidRuntime = errors.New("invalid runtime")
+
+	FnActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "workflows",
+		Subsystem: "fnenv",
+		Name:      "functions_active",
+		Help:      "Number of Fission function executions that are currently active",
+	}, []string{"fnenv"})
+
+	FnCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "fnenv",
+		Subsystem: "fission",
+		Name:      "functions_execution_total",
+		Help:      "Total number of Fission function executions",
+	}, []string{"fnenv"})
+
+	FnExecTime = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Namespace: "fnenv",
+		Subsystem: "fission",
+		Name:      "function_execution_time_milliseconds",
+		Help:      "Execution time summary of the Fission functions",
+	}, []string{"fnenv"})
 )
+
+func init() {
+	prometheus.MustRegister(FnActive, FnCount, FnExecTime)
+}
 
 // Runtime is the minimal interface that a function runtime environment needs to conform with to handle tasks.
 type Runtime interface {

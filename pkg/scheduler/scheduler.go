@@ -2,14 +2,35 @@ package scheduler
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/graph"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("component", "scheduler")
+
+var (
+	metricEvalTime = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: "workflows",
+		Subsystem: "scheduler",
+		Name:      "eval_time",
+		Help:      "Statistics of scheduler evaluations",
+	})
+	metricEvalCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "workflows",
+		Subsystem: "scheduler",
+		Name:      "eval_count",
+		Help:      "Number of evaluations",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(metricEvalCount, metricEvalTime)
+}
 
 type WorkflowScheduler struct {
 }
@@ -18,6 +39,11 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	ctxLog := log.WithFields(logrus.Fields{
 		"wfi": request.Invocation.Metadata.Id,
 	})
+	timeStart := time.Now()
+	defer func() {
+		metricEvalTime.Observe(float64(time.Since(timeStart)))
+		metricEvalCount.Inc()
+	}()
 
 	schedule := &Schedule{
 		InvocationId: request.Invocation.Metadata.Id,

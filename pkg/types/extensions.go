@@ -308,6 +308,10 @@ func (m *WorkflowStatus) Ready() bool {
 	return m.Status == WorkflowStatus_READY
 }
 
+func (m *WorkflowStatus) Failed() bool {
+	return m.Status == WorkflowStatus_FAILED
+}
+
 func (m *WorkflowStatus) AddTaskStatus(id string, t *TaskStatus) {
 	if m.Tasks == nil {
 		m.Tasks = map[string]*TaskStatus{}

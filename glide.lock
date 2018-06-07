@@ -1,5 +1,5 @@
-hash: 8dbde2ffd1ec9184f56449c67b2dfcd9ec2c77dac803c05fa9f26fb052be4340
-updated: 2018-06-06T09:01:22.179086+02:00
+hash: ba75f2d0e6fb6979dd369812eac5b97d27a8cd3e03bcd4ff4b21509895366313
+updated: 2018-06-07T13:10:54.09849+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -97,6 +97,8 @@ imports:
   version: 90663712d74cb411cbef281bc1e08c19d1a76145
 - name: github.com/gorilla/mux
   version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
+- name: github.com/grpc-ecosystem/go-grpc-prometheus
+  version: c225b8c3b01faf2899099b768856a9e916e5087b
 - name: github.com/grpc-ecosystem/grpc-gateway
   version: 58f78b988bc393694cef62b92c5cde77e4742ff5
   subpackages:
@@ -127,7 +129,7 @@ imports:
   - encoders/builtin
   - util
 - name: github.com/nats-io/go-nats-streaming
-  version: e15a53f85e4932540600a16b56f6c4f65f58176f
+  version: 6e620057a207bd61e992c1c5b6a2de7b6a4cb010
   subpackages:
   - pb
 - name: github.com/nats-io/nats-streaming-server
@@ -367,7 +369,6 @@ imports:
   - pkg/util/intstr
   - pkg/util/json
   - pkg/util/net
-  - pkg/util/remotecommand
   - pkg/util/runtime
   - pkg/util/sets
   - pkg/util/validation
@@ -434,12 +435,10 @@ imports:
   - tools/pager
   - tools/portforward
   - tools/reference
-  - tools/remotecommand
   - transport
   - transport/spdy
   - util/buffer
   - util/cert
-  - util/exec
   - util/flowcontrol
   - util/homedir
   - util/integer

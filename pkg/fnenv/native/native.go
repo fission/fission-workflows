@@ -6,51 +6,17 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
 
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
 	Name = "native"
 )
-
-var (
-	fnActive = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "fnenv",
-		Subsystem: "native",
-		Name:      "functions_active",
-		Help:      "Number of function executions that are currently active",
-	})
-
-	fnCount = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "fnenv",
-		Subsystem: "native",
-		Name:      "functions_execution_total",
-		Help:      "Total number of function executions",
-	})
-
-	fnResolved = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "fnenv",
-		Subsystem: "native",
-		Name:      "functions_resolved_total",
-		Help:      "Total number of function resolved",
-	})
-
-	fnExecTime = prometheus.NewSummary(prometheus.SummaryOpts{
-		Namespace: "fnenv",
-		Subsystem: "native",
-		Name:      "function_execution_time_milliseconds",
-		Help:      "Execution time summary of the internal functions",
-	})
-)
-
-func init() {
-	prometheus.MustRegister(fnActive, fnResolved, fnExecTime, fnCount)
-}
 
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
@@ -87,16 +53,16 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 
 	timeStart := time.Now()
-	defer fnExecTime.Observe(float64(time.Since(timeStart)))
+	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	fnID := spec.FnRef.ID
 	fn, ok := fe.fns[fnID]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)
 	}
-	fnActive.Inc()
+	fnenv.FnActive.WithLabelValues(Name).Inc()
 	out, err := fn.Invoke(spec)
-	fnActive.Dec()
-	fnCount.Inc()
+	fnenv.FnActive.WithLabelValues(Name).Dec()
+	fnenv.FnCount.WithLabelValues(Name).Inc()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"fnID": fnID,
@@ -119,7 +85,6 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 }
 
 func (fe *FunctionEnv) Resolve(fnName string) (string, error) {
-	fnResolved.Inc()
 	_, ok := fe.fns[fnName]
 	if !ok {
 		return "", fmt.Errorf("could not resolve internal function '%s'", fnName)
