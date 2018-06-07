@@ -131,10 +131,30 @@ func ParseControlFlow(i interface{}) (*types.TypedValue, error) {
 	}
 }
 
+type FlowType string
+
+const (
+	Workflow FlowType = "workflow"
+	Task     FlowType = "task"
+	None     FlowType = ""
+)
+
 // Flow is a generic data type to provide a common API to working with dynamic tasks and workflows
+// If a flow contains both a task and a workflow, behavior is non-standard,
+// but should in principle default to the task.
 type Flow struct {
 	task *types.TaskSpec
 	wf   *types.WorkflowSpec
+}
+
+func (f *Flow) Type() FlowType {
+	if f.task != nil {
+		return Task
+	}
+	if f.wf != nil {
+		return Workflow
+	}
+	return None
 }
 
 func (f *Flow) Input(key string, i types.TypedValue) {

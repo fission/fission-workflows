@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Admin is responsible for all administrative functions related to managing the workflow engine.
 type Admin struct {
 	metaCtrl controller.MetaController
 }
