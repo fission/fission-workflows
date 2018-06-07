@@ -9,7 +9,8 @@ Workflows | Compatible Fission versions
 ----------|---------------------------
 0.1.x     | 0.3.0 up to 0.6.1
 0.2.x     | 0.4.1 up to 0.6.1 
-0.3.0     | all (tested on 0.6.0, 0.6.1, and 0.7.2) 
+0.3.0     | all (tested on 0.6.0, 0.6.1, and 0.7.2)
+0.4.0     | all 
 
 ### Prerequisites
 
@@ -42,7 +43,7 @@ helm repo update
 helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.7.2
 
 # Install Fission Workflows
-helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.3.0
+helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.4.0
 ```
 
 ### Creating your first workflow
