@@ -114,11 +114,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			"event": event,
 		}).Warn("Skipping unimplemented event.")
 	}
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {

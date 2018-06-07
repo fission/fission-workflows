@@ -180,10 +180,8 @@ func SingleDefaultInput(t *TypedValue) map[string]*TypedValue {
 type Requires map[string]*TaskDependencyParameters
 
 func (r Requires) Add(s ...string) Requires {
-	if s != nil {
-		for _, v := range s {
-			r[v] = nil
-		}
+	for _, v := range s {
+		r[v] = nil
 	}
 	return r
 }

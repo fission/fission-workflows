@@ -2,6 +2,7 @@ package invocation
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
@@ -74,24 +75,11 @@ func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
 	panic("not implemented")
 }
 
-func (a *ActionInvokeTask) Apply() error {
-	wfiLog.Infof("Running task: %v", a.Task.Id)
-	// Find Task (static or dynamic)
-	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
-	if !ok {
-		return fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
-	}
-	wfiLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
-
-	// Check if resolved
-	if task.Status.FnRef == nil {
-		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
-	}
-
+func (a *ActionInvokeTask) resolveInputs() (map[string]*types.TypedValue, error) {
 	// Resolve the inputs
 	scope, err := expr.NewScope(a.Wf, a.Wfi)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
@@ -113,7 +101,7 @@ func (a *ActionInvokeTask) Apply() error {
 				"val": input.Key,
 				"key": input.Val,
 			}).Errorf("Failed to resolve input: %v", err)
-			return err
+			return nil, err
 		}
 
 		inputs[input.Key] = resolvedInput
@@ -123,6 +111,30 @@ func (a *ActionInvokeTask) Apply() error {
 
 		// Update the scope with the resolved type
 		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustFormat(resolvedInput)
+	}
+	return inputs, nil
+}
+
+func (a *ActionInvokeTask) Apply() error {
+	wfiLog.Infof("Running task: %v", a.Task.Id)
+	// Find Task (static or dynamic)
+	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
+	if !ok {
+		return fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
+	}
+	wfiLog.Infof("Invoking function '%s' for Task '%s'", task.Spec.FunctionRef, a.Task.Id)
+
+	// Check if function has been resolved
+	if task.Status.FnRef == nil {
+		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
+	}
+
+	// Resolve inputs
+	exprEvalStart := time.Now()
+	inputs, err := a.resolveInputs()
+	exprEvalDuration.Observe(float64(time.Now().Sub(exprEvalStart)))
+	if err != nil {
+		return err
 	}
 
 	// Invoke

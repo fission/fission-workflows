@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// TimedExecPool provides a data structure for scheduling executions based on a timestamp.
 type TimedExecPool struct {
 	fnQueue *timedFnQueue
 	cancel  chan struct{}

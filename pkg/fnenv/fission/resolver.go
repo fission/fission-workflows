@@ -28,6 +28,5 @@ func (re *Resolver) Resolve(fnName string) (string, error) {
 	id := fnName
 
 	log.Infof("Resolved fission function %s to %s", fnName, id)
-
 	return id, nil
 }

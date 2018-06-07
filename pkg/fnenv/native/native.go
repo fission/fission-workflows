@@ -4,10 +4,13 @@ package native
 import (
 	"fmt"
 	"runtime/debug"
+	"time"
 
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,13 +52,17 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return nil, err
 	}
 
+	timeStart := time.Now()
+	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	fnID := spec.FnRef.ID
 	fn, ok := fe.fns[fnID]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)
 	}
-
+	fnenv.FnActive.WithLabelValues(Name).Inc()
 	out, err := fn.Invoke(spec)
+	fnenv.FnActive.WithLabelValues(Name).Dec()
+	fnenv.FnCount.WithLabelValues(Name).Inc()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"fnID": fnID,

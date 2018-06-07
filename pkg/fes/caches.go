@@ -3,11 +3,13 @@ package fes
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,18 +22,41 @@ const (
 
 var (
 	ErrNotFound = errors.New("could not find entity")
+
+	cacheCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "fes",
+		Subsystem: "cache",
+		Name:      "current_cache_counts",
+		Help:      "The current number of entries in the caches",
+	}, []string{"name"})
+	// TODO add additional metrics once cache has been improved
 )
+
+func init() {
+	prometheus.MustRegister(cacheCount)
+}
 
 // MapCache provides a simple non-preempting map-based CacheReaderWriter implementation.
 type MapCache struct {
+	Name     string
 	contents map[string]map[string]Aggregator // Map: AggregateType -> AggregateId -> entity
 	lock     *sync.RWMutex
 }
 
 func NewMapCache() *MapCache {
+	c := &MapCache{
+		contents: map[string]map[string]Aggregator{},
+		lock:     &sync.RWMutex{},
+	}
+	c.Name = fmt.Sprintf("%p", c)
+	return c
+}
+
+func NewNamedMapCache(name string) *MapCache {
 	return &MapCache{
 		contents: map[string]map[string]Aggregator{},
 		lock:     &sync.RWMutex{},
+		Name:     name,
 	}
 }
 
@@ -93,8 +118,8 @@ func (rc *MapCache) Put(entity Aggregator) error {
 	if _, ok := rc.contents[ref.Type]; !ok {
 		rc.contents[ref.Type] = map[string]Aggregator{}
 	}
-
 	rc.contents[ref.Type][ref.Id] = entity
+	cacheCount.WithLabelValues(rc.Name).Inc()
 	return nil
 }
 
@@ -102,6 +127,7 @@ func (rc *MapCache) Invalidate(ref *Aggregate) {
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 	delete(rc.contents[ref.Type], ref.Id)
+	cacheCount.WithLabelValues(rc.Name).Dec()
 }
 
 func (rc *MapCache) List() []Aggregate {

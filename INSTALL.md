@@ -38,8 +38,8 @@ helm repo update
 
 # Install Fission 
 # This assumes that you do not have a Fission deployment yet, and are installing on a standard Minikube deployment.
-# Otherwise see http://fission.io/docs/0.4.0/install/ for more detailed instructions
-helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.4.1
+# Otherwise see http://fission.io/docs/0.7.2/install/ for more detailed instructions
+helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.7.2
 
 # Install Fission Workflows
 helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.3.0

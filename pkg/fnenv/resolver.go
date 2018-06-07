@@ -6,12 +6,26 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 const (
 	defaultTimeout = time.Duration(1) * time.Minute
 )
+
+var (
+	fnResolved = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "fnenv",
+		Subsystem: "fission",
+		Name:      "functions_resolved_total",
+		Help:      "Total number of Fission functions resolved",
+	}, []string{"fnenv"})
+)
+
+func init() {
+	prometheus.MustRegister(fnResolved)
+}
 
 // MetaResolver contacts function execution runtime clients to resolve the function definitions to concrete function ids.
 //
@@ -94,6 +108,8 @@ func (ps *MetaResolver) resolveForRuntime(targetFn string, runtime string) (type
 	if err != nil {
 		return types.FnRef{}, err
 	}
+
+	fnResolved.WithLabelValues(runtime).Inc()
 	return types.FnRef{
 		Runtime: runtime,
 		ID:      rsv,

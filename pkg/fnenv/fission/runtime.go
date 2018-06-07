@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,10 @@ import (
 
 	executor "github.com/fission/fission/executor/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	Name = "fission"
 )
 
 var log = logrus.WithField("component", "fnenv.fission")
@@ -65,11 +70,16 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}
 
 	// Perform request
+	timeStart := time.Now()
+	fnenv.FnActive.WithLabelValues(Name).Inc()
+	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}
+	fnenv.FnActive.WithLabelValues(Name).Dec()
+	fnenv.FnActive.WithLabelValues(Name).Inc()
 
 	// Parse output
 	output, err := httpconv.ParseBody(resp.Body, resp.Header.Get("Content-Type"))

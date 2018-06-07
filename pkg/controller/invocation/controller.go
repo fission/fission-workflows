@@ -3,6 +3,7 @@ package invocation
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
@@ -14,15 +15,46 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	NotificationBuffer = 100
-	evalQueueSize      = 50
+	NotificationBuffer   = 100
+	defaultEvalQueueSize = 50
+	Name                 = "invocation"
 )
 
-var wfiLog = log.WithField("component", "controller-wi")
+var (
+	wfiLog = log.WithField("component", "controller-wi")
+
+	// workflow-related metrics
+	invocationStatus = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_invocation",
+		Name:      "status",
+		Help:      "Count of the different statuses of workflow invocations.",
+	}, []string{"status"})
+
+	invocationDuration = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_invocation",
+		Name:      "finished_duration",
+		Help:      "Duration of an invocation from start to a finished state.",
+	})
+
+	exprEvalDuration = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: "workflows",
+		Subsystem: "controller_invocation",
+		Name:      "expr_eval_duration",
+		Help:      "Duration of the evaluation of the input expressions.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(invocationStatus, invocationDuration, exprEvalDuration)
+}
 
 type Controller struct {
 	invokeCache   fes.CacheReader
@@ -48,7 +80,7 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 		scheduler:     workflowScheduler,
 		taskAPI:       taskAPI,
 		invocationAPI: invocationAPI,
-		evalQueue:     make(chan string, evalQueueSize),
+		evalQueue:     make(chan string, defaultEvalQueueSize),
 		evalCache:     controller.NewEvalCache(),
 		stateStore:    stateStore,
 
@@ -93,6 +125,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 			select {
 			case eval := <-cr.evalQueue:
 				go cr.Evaluate(eval) // TODO limit number of goroutines
+				controller.EvalQueueSize.WithLabelValues("invocation").Dec()
 			case <-ctx.Done():
 				return
 			}
@@ -173,6 +206,7 @@ func (cr *Controller) checkEvalCaches() error {
 
 		reevaluateAt := last.Timestamp.Add(time.Duration(100) * time.Millisecond)
 		if time.Now().UnixNano() > reevaluateAt.UnixNano() {
+			controller.EvalRecovered.WithLabelValues(Name, "evalStore").Inc()
 			cr.submitEval(id)
 		}
 	}
@@ -196,6 +230,7 @@ func (cr *Controller) checkModelCaches() error {
 		}
 
 		if !wi.Status.Finished() {
+			controller.EvalRecovered.WithLabelValues(Name, "cache").Inc()
 			cr.submitEval(wi.ID())
 		}
 	}
@@ -206,6 +241,7 @@ func (cr *Controller) submitEval(ids ...string) bool {
 	for _, id := range ids {
 		select {
 		case cr.evalQueue <- id:
+			controller.EvalQueueSize.WithLabelValues(Name).Inc()
 			return true
 			// ok
 		default:
@@ -217,6 +253,7 @@ func (cr *Controller) submitEval(ids ...string) bool {
 }
 
 func (cr *Controller) Evaluate(invocationID string) {
+	start := time.Now()
 	// Fetch and attempt to claim the evaluation
 	evalState := cr.evalCache.GetOrCreate(invocationID)
 	select {
@@ -225,6 +262,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	default:
 		// TODO provide option to wait for a lock
 		wfiLog.Debugf("Failed to obtain access to invocation %s", invocationID)
+		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
 	log.Debugf("evaluating invocation %s", invocationID)
@@ -235,11 +273,13 @@ func (cr *Controller) Evaluate(invocationID string) {
 	// TODO move to rule
 	if err != nil && wfi.WorkflowInvocation == nil {
 		log.Errorf("controller failed to get invocation for invocation id '%s': %v", invocationID, err)
+		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}
 	// TODO move to rule
 	if wfi.Status.Finished() {
 		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationID)
+		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}
 
@@ -250,6 +290,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	if err != nil && wf.Workflow == nil {
 		log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
 			invocationID, err)
+		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}
 
@@ -261,6 +302,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action
 	if action == nil {
+		controller.EvalJobs.WithLabelValues(Name, "noop").Inc()
 		return
 	}
 
@@ -270,9 +312,17 @@ func (cr *Controller) Evaluate(invocationID string) {
 		log.Errorf("Action '%T' failed: %v", action, err)
 		record.Error = err
 	}
+	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
 
 	// Record this evaluation
 	evalState.Record(record)
+
+	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
+	if wfi.GetStatus().Finished() {
+		t, _ := ptypes.Timestamp(wfi.GetMetadata().GetCreatedAt())
+		invocationDuration.Observe(float64(time.Now().Sub(t)))
+	}
+	invocationStatus.WithLabelValues(wfi.GetStatus().GetStatus().String()).Inc()
 }
 
 func (cr *Controller) Close() error {

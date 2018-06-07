@@ -10,6 +10,7 @@ FROM scratch
 COPY --from=workflows-bundle /fission-workflows-bundle /fission-workflows-bundle
 
 EXPOSE 8888
+EXPOSE 8080
 
 ENV FNENV_FISSION_CONTROLLER http://controller.fission
 ENV FNENV_FISSION_EXECUTOR http://executor.fission
@@ -25,4 +26,5 @@ ENTRYPOINT ["/fission-workflows-bundle", \
             "--api-http", \
             "--api-workflow-invocation", \
             "--api-workflow", \
-            "--api-admin"]
+            "--api-admin", \
+            "--metrics"]

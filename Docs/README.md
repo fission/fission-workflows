@@ -8,3 +8,4 @@
 - [Data](data.md)
 - [Roadmap](./roadmap.md)
 - [Deployment Administration](./admin.md)
+- [Instrumentation and Logging](./instrumentation.md)

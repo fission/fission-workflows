@@ -25,6 +25,7 @@ spec:
           "--api-workflow-invocation",
           "--api-workflow",
           "--api-admin",
+          "--metrics",
         ]
         env:
         - name: ES_NATS_URL
