@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/fission/fission-workflows/cmd/fission-workflows-bundle/bundle"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
@@ -14,7 +17,21 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancelFn := context.WithCancel(context.Background())
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			fmt.Println("Received signal: ", sig)
+			go func() {
+				time.Sleep(30 * time.Second)
+				fmt.Println("Deadline exceeded; forcing shutdown.")
+				os.Exit(0)
+			}()
+			cancelFn()
+			break
+		}
+	}()
 
 	cliApp := createCli()
 	cliApp.Action = func(c *cli.Context) error {
