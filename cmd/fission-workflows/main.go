@@ -1,14 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/version"
+	"github.com/fission/fission/fission/plugins"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -40,6 +43,10 @@ func main() {
 			Name:   "debug, d",
 			EnvVar: "WFCLI_DEBUG",
 		},
+		cli.BoolFlag{
+			Hidden: true,
+			Name:   "plugin",
+		},
 	}
 	app.Commands = []cli.Command{
 		cmdConfig,
@@ -50,6 +57,27 @@ func main() {
 		cmdValidate,
 		cmdAdmin,
 		cmdVersion,
+	}
+	app.Action = func(ctx *cli.Context) error {
+		if ctx.Bool("plugin") {
+			bs, err := json.Marshal(plugins.Metadata{
+				Name:    "workflows",
+				Version: version.Version,
+				Url:     "http://github.com/fission/fission-workflows/releases/" + version.Version + "-" + runtime.GOOS,
+				Requires: map[string]string{
+					"fission": "*",
+				},
+				Aliases: []string{"wf"},
+				Usage:   "Inspect and manage workflow executions",
+			})
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(bs))
+			return nil
+		}
+		cli.ShowAppHelp(ctx)
+		return nil
 	}
 	app.Run(os.Args)
 }
