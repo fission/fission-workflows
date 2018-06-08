@@ -140,10 +140,10 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 // If the API fails to append the event to the event store, it will return an error.
 func (ap *Task) Fail(invocationID string, taskID string) error {
 	if len(invocationID) == 0 {
-		return errors.New("invocationID is required")
+		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 	if len(taskID) == 0 {
-		return errors.New("taskID is required")
+		return validate.NewError("taskID", errors.New("id should not be empty"))
 	}
 
 	return ap.es.Append(&fes.Event{

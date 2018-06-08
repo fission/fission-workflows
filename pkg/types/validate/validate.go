@@ -1,5 +1,7 @@
 // Validate package contains validation functions for the common structures used in the
 // workflow engine, such as Workflows, Tasks, WorkflowInvocations, etc.
+//
+// All validate functions return either nil (value is valid) or a validate.Error (value is invalid).
 package validate
 
 import (
@@ -34,29 +36,54 @@ var (
 )
 
 type Error struct {
-	val  string
-	errs []error
+	subject string
+	errs    []error
 }
 
-// Note that this does not take nested Error's into account
 func (ie Error) Reasons() []error {
+	var reasons []error
+	for _, e := range ie.errs {
+		switch nestedErr := e.(type) {
+		case Error:
+			reasons = append(reasons, nestedErr.Reasons()...)
+		default:
+			reasons = append(reasons, nestedErr)
+		}
+	}
 	return ie.errs
 }
 
+func (ie Error) Contains(err error) bool {
+	for _, e := range ie.errs {
+		switch nestedErr := e.(type) {
+		case Error:
+			if nestedErr.Contains(err) {
+				return true
+			}
+		default:
+			if e == err {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (ie Error) Error() string {
-	vt := ie.val
+	vt := ie.subject
 	if len(vt) == 0 {
 		vt = "Value"
 	}
-	return fmt.Sprintf("%s is invalid", vt)
+	prefix := fmt.Sprintf("%s is invalid", vt)
+	rs := ie.Reasons()
+	if len(rs) == 1 {
+		return prefix + ": " + rs[0].Error()
+	}
+	return prefix + " (multiple errors)"
 }
 
-func (ie *Error) IsEmpty() bool {
-	return ie.errs == nil || len(ie.errs) == 0
-}
-
-func (ie Error) GetOrNil() error {
-	if ie.IsEmpty() {
+func (ie Error) getOrNil() error {
+	if ie.errs == nil {
 		return nil
 	}
 	return ie
@@ -66,20 +93,16 @@ func (ie *Error) append(err error) {
 	if err == nil {
 		return
 	}
-	if ie.errs == nil {
-		ie.errs = []error{err}
-	} else {
-		ie.errs = append(ie.errs, err)
-	}
+	ie.errs = append(ie.errs, err)
 }
 
 // WorkflowSpec validates the Workflow Specification.
 func WorkflowSpec(spec *types.WorkflowSpec) error {
-	errs := Error{val: "WorkflowSpec"}
+	errs := Error{subject: "WorkflowSpec"}
 
 	if spec == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 
 	if len(spec.ApiVersion) > 0 && !strings.EqualFold(spec.GetApiVersion(), types.WorkflowAPIVersion) {
@@ -136,22 +159,22 @@ func WorkflowSpec(spec *types.WorkflowSpec) error {
 		errs.append(ErrWorkflowWithoutStartTasks)
 	}
 
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func TaskSpec(spec *types.TaskSpec) error {
-	errs := Error{val: "TaskSpec"}
+	errs := Error{subject: "TaskSpec"}
 
 	if spec == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 
 	if len(spec.FunctionRef) == 0 {
 		errs.append(ErrTaskRequiresFnRef)
 	}
 
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func DynamicTaskSpec(task *types.TaskSpec) error {
@@ -160,7 +183,7 @@ func DynamicTaskSpec(task *types.TaskSpec) error {
 		return err
 	}
 	errs := Error{
-		val: "TaskSpec.dynamic",
+		subject: "TaskSpec.dynamic",
 	}
 
 	// Check if there is a parent link
@@ -175,14 +198,14 @@ func DynamicTaskSpec(task *types.TaskSpec) error {
 	} else if parents > 1 {
 		errs.append(ErrMultipleParentTaskDependency)
 	}
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func Task(task *types.Task) error {
-	errs := Error{val: "Task"}
+	errs := Error{subject: "Task"}
 	if task == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 
 	errs.append(TaskSpec(task.Spec))
@@ -192,44 +215,44 @@ func Task(task *types.Task) error {
 		errs.append(ErrNoStatus)
 	}
 
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func ObjectMetadata(o *types.ObjectMetadata) error {
-	errs := Error{val: "WorkflowInvocationSpec"}
+	errs := Error{subject: "WorkflowInvocationSpec"}
 
 	if o == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 	if len(o.Id) == 0 {
 		errs.append(ErrNoID)
 	}
 
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func WorkflowInvocationSpec(spec *types.WorkflowInvocationSpec) error {
-	errs := Error{val: "WorkflowInvocationSpec"}
+	errs := Error{subject: "WorkflowInvocationSpec"}
 
 	if spec == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 
 	if len(spec.WorkflowId) == 0 {
 		errs.append(ErrNoWorkflow)
 	}
 
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 func TaskInvocationSpec(spec *types.TaskInvocationSpec) error {
-	errs := Error{val: "TaskInvocationSpec"}
+	errs := Error{subject: "TaskInvocationSpec"}
 
 	if spec == nil {
 		errs.append(ErrObjectEmpty)
-		return errs.GetOrNil()
+		return errs.getOrNil()
 	}
 
 	if len(spec.InvocationId) == 0 {
@@ -239,31 +262,33 @@ func TaskInvocationSpec(spec *types.TaskInvocationSpec) error {
 	if spec.FnRef == nil {
 		errs.append(ErrNoFnRef)
 	}
-	return errs.GetOrNil()
+	return errs.getOrNil()
 }
 
 // Format is an utility for printing the error hierarchies of Error
 func Format(rawErr error) string {
+	return strings.TrimSpace(format(rawErr, 0))
+}
+
+// FormatConcise returns a single line description of the errors.
+func FormatConcise(rawErr error) string {
+	return strings.Replace(Format(rawErr), "\n", ";", -1)
+}
+
+func format(rawErr error, depth int) string {
+	indent := strings.Repeat("  ", depth)
 	switch err := rawErr.(type) {
 	case Error:
-		result := err.Error() + "\n"
-		for _, reason := range err.Reasons() {
-			var formatted string
-			switch t := reason.(type) {
-			case Error:
-				reasons := Format(t)
-				reasons = strings.Replace(reasons, "\n", "\n  ", -1)
-				reasons = reasons[:len(reasons)-2]
-				formatted = fmt.Sprintf("- %v\n", reasons)
-			default:
-				formatted = fmt.Sprintf("- %v\n", reason)
-			}
-			result += formatted
+		result := indent + err.Error() + "\n"
+		for _, nested := range err.errs {
+			result += format(nested, depth+1)
 		}
-
-		return strings.TrimSpace(result)
+		if len(err.errs) == 0 {
+			result += format(errors.New("unknown error"), depth+1)
+		}
+		return result
 	default:
-		return fmt.Sprintf("%v", err)
+		return indent + fmt.Sprintf("%v", err) + "\n"
 	}
 }
 
@@ -276,4 +301,11 @@ func Flow(flow typedvalues.Flow) error {
 		return WorkflowSpec(wf)
 	}
 	return TaskSpec(flow.Task())
+}
+
+func NewError(subject string, errs ...error) error {
+	return Error{
+		subject: subject,
+		errs:    errs,
+	}
 }

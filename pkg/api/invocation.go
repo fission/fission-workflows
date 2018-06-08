@@ -57,7 +57,7 @@ func (ia *Invocation) Invoke(invocation *types.WorkflowInvocationSpec) (string, 
 // become ABORTED. If the API fails to append the event to the event store, it will return an error.
 func (ia *Invocation) Cancel(invocationID string) error {
 	if len(invocationID) == 0 {
-		return errors.New("invocationID is required")
+		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
 	err := ia.es.Append(&fes.Event{
@@ -77,7 +77,7 @@ func (ia *Invocation) Cancel(invocationID string) error {
 // If the API fails to append the event to the event store, it will return an error.
 func (ia *Invocation) Complete(invocationID string, output *types.TypedValue) error {
 	if len(invocationID) == 0 {
-		return errors.New("invocationID is required")
+		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
 	data, err := proto.Marshal(&types.WorkflowInvocationStatus{
@@ -101,7 +101,7 @@ func (ia *Invocation) Complete(invocationID string, output *types.TypedValue) er
 // If the API fails to append the event to the event store, it will return an error.
 func (ia *Invocation) Fail(invocationID string, errMsg error) error {
 	if len(invocationID) == 0 {
-		return errors.New("invocationID is required")
+		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
 	var msg string
@@ -128,7 +128,7 @@ func (ia *Invocation) Fail(invocationID string, errMsg error) error {
 // The error can be a validate.Err, proto marshall error, or a fes error.
 func (ia *Invocation) AddTask(invocationID string, task *types.Task) error {
 	if len(invocationID) == 0 {
-		return errors.New("invocationID is required")
+		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 	err := validate.Task(task)
 	if err != nil {

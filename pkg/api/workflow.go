@@ -66,7 +66,7 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 // If the API fails to append the event to the event store, it will return an error.
 func (wa *Workflow) Delete(workflowID string) error {
 	if len(workflowID) == 0 {
-		return errors.New("workflowID is required")
+		return validate.NewError("workflowID", errors.New("id should not be empty"))
 	}
 
 	return wa.es.Append(&fes.Event{

@@ -27,14 +27,17 @@ func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow
 	if err := validate.Flow(flow); err != nil {
 		return err
 	}
-	if flow.Workflow() != nil {
+	switch flow.Type() {
+	case typedvalues.Workflow:
 		return ap.addDynamicWorkflow(invocationID, parentTaskID, flow.Workflow(), &types.TaskSpec{})
+	case typedvalues.Task:
+		return ap.addDynamicTask(invocationID, parentTaskID, flow.Task())
+	default:
+		panic("validated flow was still empty")
 	}
-	return ap.addDynamicTask(invocationID, parentTaskID, flow.Task())
 }
 
 func (ap *Dynamic) addDynamicTask(invocationID string, parentTaskID string, taskSpec *types.TaskSpec) error {
-
 	// Transform TaskSpec into WorkflowSpec
 	// TODO dedup workflows
 	// TODO indicate relation with workflow somehow?
