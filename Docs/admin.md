@@ -6,7 +6,7 @@ This section provides you with some approaches to debugging, and maintaining a
 Fission Workflows deployment, as well as how to diagnose and fix (common) issues.
 
 ## Inspect workflow invocations
-Use the `wfcli` tool, which allows you to query and inspect workflow invocations.
+Use the `fission-workflows` tool, which allows you to query and inspect workflow invocations.
 
 ## View workflow engine logs
 To view the logging of the workflow engine:

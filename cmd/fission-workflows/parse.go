@@ -26,7 +26,7 @@ var cmdParse = cli.Command{
 	Action: commandContext(func(ctx Context) error {
 
 		if ctx.NArg() == 0 {
-			panic("Need a path to a yaml Workflow definition")
+			panic("Need a path to a yaml workflow definition")
 		}
 
 		parserType := ctx.String("type")

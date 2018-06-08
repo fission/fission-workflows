@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/version"
-	"github.com/fission/fission/fission/plugins"
+	"github.com/fission/fission/fission/plugin"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -24,8 +23,8 @@ func main() {
 	app.Email = "erwin@platform9.com"
 	app.Version = version.Version
 	app.EnableBashCompletion = true
-	app.Usage = "Fission Workflows CLI"
-	app.Description = "CLI for Fission Workflows"
+	app.Usage = "Inspect, manage, and debug workflow executions"
+	app.Description = app.Usage
 	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -39,13 +38,15 @@ func main() {
 			Value:  "/proxy/workflows-apiserver",
 			Usage:  "The path to prepend each of the commands",
 		},
-		cli.BoolFlag{
-			Name:   "debug, d",
-			EnvVar: "WFCLI_DEBUG",
+		cli.IntFlag{
+			Name:  "verbosity",
+			Value: 1,
+			Usage: "CLI verbosity (0 is quiet, 1 is the default, 2 is verbose.)",
 		},
 		cli.BoolFlag{
 			Hidden: true,
 			Name:   "plugin",
+			Usage:  "Show Fission plugin info",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -59,16 +60,12 @@ func main() {
 		cmdVersion,
 	}
 	app.Action = func(ctx *cli.Context) error {
-		if ctx.Bool("plugin") {
-			bs, err := json.Marshal(plugins.Metadata{
+		if ctx.GlobalBool("plugin") {
+			bs, err := json.Marshal(plugin.Metadata{
 				Name:    "workflows",
 				Version: version.Version,
-				Url:     "http://github.com/fission/fission-workflows/releases/" + version.Version + "-" + runtime.GOOS,
-				Requires: map[string]string{
-					"fission": "*",
-				},
 				Aliases: []string{"wf"},
-				Usage:   "Inspect and manage workflow executions",
+				Usage:   ctx.App.Usage,
 			})
 			if err != nil {
 				panic(err)
@@ -128,10 +125,15 @@ func (c Context) Value(key interface{}) interface{} {
 
 func commandContext(fn func(c Context) error) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
-		if c.GlobalBool("debug") {
-			logrus.SetLevel(logrus.DebugLevel)
-		} else {
+		switch c.GlobalInt("verbosity") {
+		case 0:
+			logrus.SetLevel(logrus.ErrorLevel)
+		default:
+			fallthrough
+		case 1:
 			logrus.SetLevel(logrus.InfoLevel)
+		case 2:
+			logrus.SetLevel(logrus.DebugLevel)
 		}
 		return fn(Context{c})
 	}

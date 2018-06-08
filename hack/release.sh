@@ -6,11 +6,11 @@ set -e
 # release.sh - Generate all artifacts for a release
 #
 
-# wfcli
+# fission-workflows
 echo "Building linux binaries..."
 build/build-linux.sh
 mv fission-workflows-bundle fission-workflows-bundle-linux
-mv wfcli wfcli-linux
+mv fission-workflows fission-workflows-linux
 echo "Building windows binaries..."
 build/build-windows.sh
 echo "Building osx binaries..."

@@ -17,12 +17,12 @@ import (
 
 var cmdInvocation = cli.Command{
 	Name:    "invocation",
-	Aliases: []string{"wi", "invocations", "Workflow-Invocation", "wfi"},
+	Aliases: []string{"wfi", "invocations"},
 	Usage:   "Workflow invocation-related commands",
 	Subcommands: []cli.Command{
 		{
 			Name:  "get",
-			Usage: "get <Workflow-Invocation-id> <task-Invocation-id>",
+			Usage: "get <invocation-id> <task-id>",
 			Flags: []cli.Flag{
 				cli.DurationFlag{
 					Name:  "history",
@@ -74,7 +74,7 @@ var cmdInvocation = cli.Command{
 		},
 		{
 			Name:  "cancel",
-			Usage: "cancel <Workflow-Invocation-id>",
+			Usage: "cancel <invocation-id>",
 			Action: commandContext(func(ctx Context) error {
 				client := getClient(ctx)
 				wfiID := ctx.Args().Get(0)
@@ -88,7 +88,7 @@ var cmdInvocation = cli.Command{
 		{
 			// TODO support input
 			Name:  "invoke",
-			Usage: "invoke <Workflow-id>",
+			Usage: "invoke <workflow-id>",
 			Flags: []cli.Flag{
 				cli.StringSliceFlag{
 					Name:  "input, i",
@@ -131,7 +131,7 @@ var cmdInvocation = cli.Command{
 			Usage: "status <Workflow-Invocation-id> ",
 			Action: commandContext(func(ctx Context) error {
 				if ctx.NArg() < 1 {
-					fmt.Println("Need Workflow Invocation id")
+					fmt.Println("Need workflow invocation id")
 					return nil
 				}
 				client := getClient(ctx)

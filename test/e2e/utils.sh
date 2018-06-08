@@ -222,8 +222,8 @@ dump_system_info() {
     echo "--- fission ---"
     fission -v
     echo
-    echo "--- wfcli ---"
-    wfcli version
+    echo "--- fission-workflows ---"
+    fission-workflows version
     echo
     echo "--- End System Info ---"
 }

@@ -77,10 +77,10 @@ fission route create --method GET --url /fortunewhale --function fortunewhale
 curl ${FISSION_ROUTER}/fortunewhale
 ```
 
-### wfcli client (optional)
+### Workflows client (optional)
 To use Fission Workflows there is no need to learn any other client other than the one you already use for function invocation - after all, a workflow is just another function.
 However, in many cases it is useful to have more insight in and control over the behaviour of the workflows (for example when developing/debugging workflows).
-To get these more capabilities and insight, you can use the `wfcli` client.
+To get these more capabilities and insight, you can use the `fission-workflows` client.
 
 It has the following features:
 - Get insight into workflow and invocations statuses.
@@ -89,39 +89,39 @@ It has the following features:
 - validating workflow definitions locally.
 
 #### Installation
-To install `wfcli` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
+To install `fission-workflows` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
 For example, to download and install version 0.5.0,  assuming that you use OS X:
 ```bash
-curl -Lo wfcli https://github.com/fission/fission-workflows/releases/download/0.5.0/wfcli-osx
-chmod +x ./wfcli
-sudo mv ./wfcli /usr/local/bin
+curl -o fission-workflows https://github.com/fission/fission-workflows/releases/download/0.3.0/fission-workflows-osx
+chmod +x ./fission-workflows
+sudo mv ./fission-workflows /usr/local/bin
 ```
 
 Or install the latest, edge version with Go:
 ```bash
-go get -u github.com/fission/fission-workflows/cmd/wfcli
+go get -u github.com/fission/fission-workflows/cmd/fission-workflows
 ```
 
-The `wfcli` client uses the `FISSION_URL` environment variable to find the Fission controller server to use as a proxy to the workflow apiserver.
-By default `wfcli` uses ttp://localhost:31313 to locate the Fission controller.
+The `fission-workflows` client uses the `FISSION_URL` environment variable to find the Fission controller server to use as a proxy to the workflow apiserver.
+By default `fission-workflows` uses ttp://localhost:31313 to locate the Fission controller.
 
 #### Examples
 Get all defined workflows loaded in the workflow engine:
 ```bash
-wfcli workflows get
+fission-workflows workflows get
 ```
 
 Get all workflow invocations:
 ```bash
-wfcli invocations get
+fission-workflows invocations get
 ```
 
 Get a specific task execution in a specific 
 ```bash
-wfcli invocations <invocation-id> <task-id>
+fission-workflows invocations <invocation-id> <task-id>
 ```
 
 Cancel a workflow invocation
 ```bash 
-wfcli invocations cancel <invocation-id>
+fission-workflows invocations cancel <invocation-id>
 ```

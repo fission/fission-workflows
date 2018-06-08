@@ -57,7 +57,7 @@ script:
 - test/runtests.sh
 # End-to-end tests
 - NOBUILD=y test/e2e/buildtest.sh
-# Use newest wfcli to verify workflows in example dir
+# Use newest cli to verify workflows in example dir
 - hack/verify-workflows.sh
 
 after_script:
