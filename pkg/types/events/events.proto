@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-package events;
+package fission.workflows.events;
+option go_package = "events";
 
 enum Workflow {
     WORKFLOW_CREATED = 0;

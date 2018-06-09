@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+package fission.workflows.types;
 option go_package = "types";
 
 import "google/protobuf/timestamp.proto";
