@@ -24,7 +24,7 @@ func TestPublish(t *testing.T) {
 		Buffer: 1,
 	})
 
-	msg := NewGenericMsg(labels.SetLabels{"foo": "bar"}, time.Now(), "TestMsg")
+	msg := NewGenericMsg(labels.Set{"foo": "bar"}, time.Now(), "TestMsg")
 
 	err := pub.Publish(msg)
 	assert.NoError(t, err)
@@ -43,8 +43,8 @@ func TestPublishBufferOverflow(t *testing.T) {
 		Buffer: 10,
 	})
 
-	firstMsg := NewGenericMsg(labels.SetLabels(map[string]string{"foo": "bar"}), time.Now(), "TestMsg1")
-	secondMsg := NewGenericMsg(labels.SetLabels(map[string]string{"foo": "bar"}), time.Now(), "TestMsg2")
+	firstMsg := NewGenericMsg(labels.Set(map[string]string{"foo": "bar"}), time.Now(), "TestMsg1")
+	secondMsg := NewGenericMsg(labels.Set(map[string]string{"foo": "bar"}), time.Now(), "TestMsg2")
 
 	err := pub.Publish(firstMsg)
 	assert.NoError(t, err)

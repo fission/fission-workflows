@@ -101,8 +101,8 @@ func (cr *Controller) Init(sctx context.Context) error {
 	selector := labels.In(fes.PubSubLabelAggregateType, "invocation", "function")
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		cr.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
-			Buffer:   NotificationBuffer,
-			Selector: selector,
+			Buffer:       NotificationBuffer,
+			LabelMatcher: selector,
 		})
 
 		// Invocation Notification listener

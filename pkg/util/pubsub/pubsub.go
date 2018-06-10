@@ -25,14 +25,15 @@ type Publisher interface {
 	Publish(msg Msg) error
 }
 
+// SubscriptionOptions allow subscribers to customize the type and behaviour of the subscription.
 type SubscriptionOptions struct {
 	// Buffer is the size of the buffer kept for incoming messages. In case the buffer is full, subsequent messages will
 	// be dropped. The default size of the buffer is 10.
 	Buffer int
 
-	// Selector allows subscribers to narrow the selection of messages that they are notified of. By default there is no
-	// selector; the subscriber will receive all messages published by the publisher.
-	Selector labels.Selector
+	// LabelMatcher allows subscribers to narrow the selection of messages that they are notified of.
+	// By default there is no matcher; the subscriber will receive all messages published by the publisher.
+	LabelMatcher labels.Matcher
 }
 
 type Subscription struct {
@@ -125,7 +126,7 @@ func (pu *DefaultPublisher) Publish(msg Msg) error {
 	pu.lock.Lock()
 	defer pu.lock.Unlock()
 	for _, sub := range pu.subs {
-		if sub.Selector != nil && !sub.Selector.Matches(msg.Labels()) {
+		if sub.LabelMatcher != nil && !sub.LabelMatcher.Matches(msg.Labels()) {
 			continue
 		}
 		select {

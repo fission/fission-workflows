@@ -290,7 +290,7 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub.Publisher) *fes.SubscribedCache {
 	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
-		Selector: labels.Or(
+		LabelMatcher: labels.Or(
 			labels.In(fes.PubSubLabelAggregateType, "invocation"),
 			labels.In("parent.type", "invocation")),
 	})
@@ -303,8 +303,8 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 
 func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
 	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buffer:   10,
-		Selector: labels.In(fes.PubSubLabelAggregateType, "workflow"),
+		Buffer:       10,
+		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, "workflow"),
 	})
 	wb := func() fes.Aggregator {
 		return aggregates.NewWorkflow("")
