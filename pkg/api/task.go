@@ -10,7 +10,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
@@ -44,7 +43,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 	}
 
 	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
-	fn := &types.TaskInvocation{
+	task := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        taskID,
 			CreatedAt: ptypes.TimestampNow(),
@@ -52,19 +51,14 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 		Spec: spec,
 	}
 
-	fnAny, err := proto.Marshal(fn)
+	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
+	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskStarted{
+		Task: task,
+	})
+	event.Parent = aggregate
 	if err != nil {
 		return nil, err
 	}
-
-	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
-	err = ap.es.Append(&fes.Event{
-		Type:      events.Task_TASK_STARTED.String(),
-		Parent:    aggregate,
-		Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
-		Timestamp: ptypes.TimestampNow(),
-		Data:      fnAny,
-	})
 	if err != nil {
 		return nil, err
 	}
@@ -75,17 +69,11 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 	}
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
-		logrus.WithField("fn", spec.FnRef).
+		logrus.WithField("task", spec.FnRef).
 			WithField("wi", spec.InvocationId).
 			WithField("task", spec.TaskId).
 			Infof("Failed to invoke task: %v", err)
-		esErr := ap.es.Append(&fes.Event{
-			Type:      events.Task_TASK_FAILED.String(),
-			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
-			Timestamp: ptypes.TimestampNow(),
-			Data:      fnAny,
-		})
+		esErr := ap.Fail(spec.InvocationId, taskID, err.Error())
 		if esErr != nil {
 			return nil, esErr
 		}
@@ -105,40 +93,29 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 		}
 	}
 
-	fn.Status = fnResult
-	fnStatusAny, err := proto.Marshal(fn)
-	if err != nil {
-		return nil, err
-	}
-
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
-		err = ap.es.Append(&fes.Event{
-			Type:      events.Task_TASK_SUCCEEDED.String(),
-			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
-			Timestamp: ptypes.TimestampNow(),
-			Data:      fnStatusAny,
+		event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskSucceeded{
+			Result: fnResult,
 		})
+		if err != nil {
+			return nil, err
+		}
+		event.Parent = aggregate
+		err = ap.es.Append(event)
 	} else {
-		err = ap.es.Append(&fes.Event{
-			Type:      events.Task_TASK_FAILED.String(),
-			Parent:    aggregate,
-			Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
-			Timestamp: ptypes.TimestampNow(),
-			Data:      fnStatusAny,
-		})
+		err = ap.Fail(spec.InvocationId, taskID, fnResult.Error.GetMessage())
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	fn.Status = fnResult
-	return fn, nil
+	task.Status = fnResult
+	return task, nil
 }
 
 // Fail forces the failure of a task. This turns the state of a task into FAILED.
 // If the API fails to append the event to the event store, it will return an error.
-func (ap *Task) Fail(invocationID string, taskID string) error {
+func (ap *Task) Fail(invocationID string, taskID string, errMsg string) error {
 	if len(invocationID) == 0 {
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
@@ -146,10 +123,12 @@ func (ap *Task) Fail(invocationID string, taskID string) error {
 		return validate.NewError("taskID", errors.New("id should not be empty"))
 	}
 
-	return ap.es.Append(&fes.Event{
-		Type:      events.Task_TASK_FAILED.String(),
-		Parent:    aggregates.NewWorkflowInvocationAggregate(invocationID),
-		Aggregate: aggregates.NewTaskInvocationAggregate(taskID),
-		Timestamp: ptypes.TimestampNow(),
+	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.TaskFailed{
+		Error: &types.Error{Message: errMsg},
 	})
+	if err != nil {
+		return err
+	}
+	event.Parent = aggregates.NewWorkflowInvocationAggregate(invocationID)
+	return ap.es.Append(event)
 }

@@ -3,26 +3,70 @@ syntax = "proto3";
 package fission.workflows.events;
 option go_package = "events";
 
-enum Workflow {
-    WORKFLOW_CREATED = 0;
-    WORKFLOW_UPDATED = 1;
-    WORKFLOW_PARSED = 2;
-    WORKFLOW_DELETED = 3;
-    WORKFLOW_PARSING_FAILED = 4;
+import "github.com/fission/fission-workflows/pkg/types/types.proto";
+
+message EventWrapper {
+    string any = 1;
 }
 
-enum Invocation {
-    INVOCATION_CREATED = 0; // origin: User
-    INVOCATION_COMPLETED = 1; // origin: Engine
-    INVOCATION_CANCELED = 2; // origin: User
-    INVOCATION_TASK_ADDED = 3;
-    INVOCATION_FAILED = 4;
+//
+// Workflow
+//
+
+message WorkflowCreated {
+    fission.workflows.types.WorkflowSpec spec = 1;
 }
 
-enum Task {
-    TASK_STARTED = 0; // origin: Engine
-    TASK_SKIPPED = 1; // origin: Engine
-    TASK_SUCCEEDED = 4; // origin: Task
-    TASK_FAILED = 5; // origin: Task
-    TASK_ABORTED = 6; // origin: Engine
+message WorkflowDeleted {
+}
+
+message WorkflowParsed {
+    map<string, fission.workflows.types.TaskStatus> tasks = 1;
+}
+
+message WorkflowParsingFailed {
+    fission.workflows.types.Error error = 1;
+}
+
+//
+// Invocation
+//
+
+message InvocationCreated {
+    fission.workflows.types.WorkflowInvocationSpec spec = 1;
+}
+
+message InvocationCompleted {
+    fission.workflows.types.TypedValue output = 1;
+}
+
+message InvocationCanceled {
+    fission.workflows.types.Error error = 1;
+}
+
+message InvocationTaskAdded {
+    fission.workflows.types.Task task = 1;
+}
+
+message InvocationFailed {
+    fission.workflows.types.Error error = 1;
+}
+
+//
+// Task
+//
+// TODO why do we need task, and not just task spec.
+message TaskStarted {
+    fission.workflows.types.TaskInvocation task = 1;
+}
+
+message TaskSucceeded {
+    fission.workflows.types.TaskInvocationStatus result = 1;
+}
+
+message TaskSkipped {
+}
+
+message TaskFailed {
+    fission.workflows.types.Error error = 1;
 }

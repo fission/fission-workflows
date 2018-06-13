@@ -11,7 +11,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -43,17 +42,13 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 		id = fmt.Sprintf("wf-%s", util.UID())
 	}
 
-	data, err := proto.Marshal(workflow)
+	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(id), &events.WorkflowCreated{
+		Spec: workflow,
+	})
 	if err != nil {
 		return "", err
 	}
-
-	err = wa.es.Append(&fes.Event{
-		Type:      events.Workflow_WORKFLOW_CREATED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(id),
-		Timestamp: ptypes.TimestampNow(),
-		Data:      data,
-	})
+	err = wa.es.Append(event)
 	if err != nil {
 		return "", err
 	}
@@ -69,12 +64,12 @@ func (wa *Workflow) Delete(workflowID string) error {
 		return validate.NewError("workflowID", errors.New("id should not be empty"))
 	}
 
-	return wa.es.Append(&fes.Event{
-		Type:      events.Workflow_WORKFLOW_DELETED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(workflowID),
-		Timestamp: ptypes.TimestampNow(),
-		Hints:     &fes.EventHints{Completed: true},
-	})
+	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflowID), &events.WorkflowDeleted{})
+	if err != nil {
+		return err
+	}
+	event.Hints = &fes.EventHints{Completed: true}
+	return wa.es.Append(event)
 }
 
 // Parse processes the workflow to resolve any ambiguity.
@@ -100,17 +95,13 @@ func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, erro
 		})
 	}
 
-	parsedData, err := proto.Marshal(wfStatus)
+	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflow.ID()), &events.WorkflowParsed{
+		Tasks: wfStatus.GetTasks(),
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	err = wa.es.Append(&fes.Event{
-		Type:      events.Workflow_WORKFLOW_PARSED.String(),
-		Aggregate: aggregates.NewWorkflowAggregate(workflow.Metadata.Id),
-		Timestamp: ptypes.TimestampNow(),
-		Data:      parsedData,
-	})
+	err = wa.es.Append(event)
 	if err != nil {
 		return nil, err
 	}

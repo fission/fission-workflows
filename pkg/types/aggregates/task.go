@@ -1,8 +1,6 @@
 package aggregates
 
 import (
-	"fmt"
-
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/events"
@@ -38,55 +36,35 @@ func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 
 func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 
-	eventType, err := events.ParseTask(event.Type)
+	eventData, err := unmarshalEventData(event)
 	if err != nil {
 		return err
 	}
 
-	switch eventType {
-	case events.Task_TASK_STARTED:
-		fn := &types.TaskInvocation{}
-		err = proto.Unmarshal(event.Data, fn)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
-		}
-
+	switch m := eventData.(type) {
+	case *events.TaskStarted:
+		task := m.GetTask()
 		ti.TaskInvocation = &types.TaskInvocation{
-			Metadata: fn.Metadata,
-			Spec:     fn.Spec,
+			Metadata: task.GetMetadata(),
+			Spec:     task.GetSpec(),
 			Status: &types.TaskInvocationStatus{
 				Status:    types.TaskInvocationStatus_IN_PROGRESS,
 				UpdatedAt: event.Timestamp,
 			},
 		}
-	case events.Task_TASK_SUCCEEDED:
-		invoc := &types.TaskInvocation{}
-		err = proto.Unmarshal(event.Data, invoc)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
-		}
-
-		ti.Status.Output = invoc.Status.Output
+	case *events.TaskSucceeded:
+		ti.Status.Output = m.GetResult().Output
 		ti.Status.Status = types.TaskInvocationStatus_SUCCEEDED
 		ti.Status.UpdatedAt = event.Timestamp
-	case events.Task_TASK_ABORTED:
-		ti.Status.Status = types.TaskInvocationStatus_ABORTED
-		ti.Status.UpdatedAt = event.Timestamp
-	case events.Task_TASK_FAILED:
-		if event.Data != nil {
-			invoc := &types.TaskInvocation{}
-			err = proto.Unmarshal(event.Data, invoc)
-			if err != nil {
-				log.Errorf("failed to unmarshal event: '%v' (%v)", event, err)
-			}
-			if ti.Status == nil {
-				ti.Status = &types.TaskInvocationStatus{}
-			}
-			ti.Status.Error = invoc.GetStatus().GetError()
+	case *events.TaskFailed:
+		// TODO validate event data
+		if ti.Status == nil {
+			ti.Status = &types.TaskInvocationStatus{}
 		}
+		ti.Status.Error = m.GetError()
 		ti.Status.UpdatedAt = event.Timestamp
 		ti.Status.Status = types.TaskInvocationStatus_FAILED
-	case events.Task_TASK_SKIPPED:
+	case *events.TaskSkipped:
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
 		ti.Status.UpdatedAt = event.Timestamp
 	default:

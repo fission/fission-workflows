@@ -8,12 +8,27 @@ It is generated from these files:
 	pkg/types/events/events.proto
 
 It has these top-level messages:
+	EventWrapper
+	WorkflowCreated
+	WorkflowDeleted
+	WorkflowParsed
+	WorkflowParsingFailed
+	InvocationCreated
+	InvocationCompleted
+	InvocationCanceled
+	InvocationTaskAdded
+	InvocationFailed
+	TaskStarted
+	TaskSucceeded
+	TaskSkipped
+	TaskFailed
 */
 package events
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import fission_workflows_types "github.com/fission/fission-workflows/pkg/types"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -26,122 +41,267 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type Workflow int32
-
-const (
-	Workflow_WORKFLOW_CREATED        Workflow = 0
-	Workflow_WORKFLOW_UPDATED        Workflow = 1
-	Workflow_WORKFLOW_PARSED         Workflow = 2
-	Workflow_WORKFLOW_DELETED        Workflow = 3
-	Workflow_WORKFLOW_PARSING_FAILED Workflow = 4
-)
-
-var Workflow_name = map[int32]string{
-	0: "WORKFLOW_CREATED",
-	1: "WORKFLOW_UPDATED",
-	2: "WORKFLOW_PARSED",
-	3: "WORKFLOW_DELETED",
-	4: "WORKFLOW_PARSING_FAILED",
-}
-var Workflow_value = map[string]int32{
-	"WORKFLOW_CREATED":        0,
-	"WORKFLOW_UPDATED":        1,
-	"WORKFLOW_PARSED":         2,
-	"WORKFLOW_DELETED":        3,
-	"WORKFLOW_PARSING_FAILED": 4,
+type EventWrapper struct {
+	Any string `protobuf:"bytes,1,opt,name=any" json:"any,omitempty"`
 }
 
-func (x Workflow) String() string {
-	return proto.EnumName(Workflow_name, int32(x))
-}
-func (Workflow) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *EventWrapper) Reset()                    { *m = EventWrapper{} }
+func (m *EventWrapper) String() string            { return proto.CompactTextString(m) }
+func (*EventWrapper) ProtoMessage()               {}
+func (*EventWrapper) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-type Invocation int32
-
-const (
-	Invocation_INVOCATION_CREATED    Invocation = 0
-	Invocation_INVOCATION_COMPLETED  Invocation = 1
-	Invocation_INVOCATION_CANCELED   Invocation = 2
-	Invocation_INVOCATION_TASK_ADDED Invocation = 3
-	Invocation_INVOCATION_FAILED     Invocation = 4
-)
-
-var Invocation_name = map[int32]string{
-	0: "INVOCATION_CREATED",
-	1: "INVOCATION_COMPLETED",
-	2: "INVOCATION_CANCELED",
-	3: "INVOCATION_TASK_ADDED",
-	4: "INVOCATION_FAILED",
-}
-var Invocation_value = map[string]int32{
-	"INVOCATION_CREATED":    0,
-	"INVOCATION_COMPLETED":  1,
-	"INVOCATION_CANCELED":   2,
-	"INVOCATION_TASK_ADDED": 3,
-	"INVOCATION_FAILED":     4,
+func (m *EventWrapper) GetAny() string {
+	if m != nil {
+		return m.Any
+	}
+	return ""
 }
 
-func (x Invocation) String() string {
-	return proto.EnumName(Invocation_name, int32(x))
-}
-func (Invocation) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-type Task int32
-
-const (
-	Task_TASK_STARTED   Task = 0
-	Task_TASK_SKIPPED   Task = 1
-	Task_TASK_SUCCEEDED Task = 4
-	Task_TASK_FAILED    Task = 5
-	Task_TASK_ABORTED   Task = 6
-)
-
-var Task_name = map[int32]string{
-	0: "TASK_STARTED",
-	1: "TASK_SKIPPED",
-	4: "TASK_SUCCEEDED",
-	5: "TASK_FAILED",
-	6: "TASK_ABORTED",
-}
-var Task_value = map[string]int32{
-	"TASK_STARTED":   0,
-	"TASK_SKIPPED":   1,
-	"TASK_SUCCEEDED": 4,
-	"TASK_FAILED":    5,
-	"TASK_ABORTED":   6,
+type WorkflowCreated struct {
+	Spec *fission_workflows_types.WorkflowSpec `protobuf:"bytes,1,opt,name=spec" json:"spec,omitempty"`
 }
 
-func (x Task) String() string {
-	return proto.EnumName(Task_name, int32(x))
+func (m *WorkflowCreated) Reset()                    { *m = WorkflowCreated{} }
+func (m *WorkflowCreated) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowCreated) ProtoMessage()               {}
+func (*WorkflowCreated) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *WorkflowCreated) GetSpec() *fission_workflows_types.WorkflowSpec {
+	if m != nil {
+		return m.Spec
+	}
+	return nil
 }
-func (Task) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type WorkflowDeleted struct {
+}
+
+func (m *WorkflowDeleted) Reset()                    { *m = WorkflowDeleted{} }
+func (m *WorkflowDeleted) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowDeleted) ProtoMessage()               {}
+func (*WorkflowDeleted) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type WorkflowParsed struct {
+	Tasks map[string]*fission_workflows_types.TaskStatus `protobuf:"bytes,1,rep,name=tasks" json:"tasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+func (m *WorkflowParsed) Reset()                    { *m = WorkflowParsed{} }
+func (m *WorkflowParsed) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowParsed) ProtoMessage()               {}
+func (*WorkflowParsed) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *WorkflowParsed) GetTasks() map[string]*fission_workflows_types.TaskStatus {
+	if m != nil {
+		return m.Tasks
+	}
+	return nil
+}
+
+type WorkflowParsingFailed struct {
+	Error *fission_workflows_types.Error `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *WorkflowParsingFailed) Reset()                    { *m = WorkflowParsingFailed{} }
+func (m *WorkflowParsingFailed) String() string            { return proto.CompactTextString(m) }
+func (*WorkflowParsingFailed) ProtoMessage()               {}
+func (*WorkflowParsingFailed) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *WorkflowParsingFailed) GetError() *fission_workflows_types.Error {
+	if m != nil {
+		return m.Error
+	}
+	return nil
+}
+
+type InvocationCreated struct {
+	Spec *fission_workflows_types.WorkflowInvocationSpec `protobuf:"bytes,1,opt,name=spec" json:"spec,omitempty"`
+}
+
+func (m *InvocationCreated) Reset()                    { *m = InvocationCreated{} }
+func (m *InvocationCreated) String() string            { return proto.CompactTextString(m) }
+func (*InvocationCreated) ProtoMessage()               {}
+func (*InvocationCreated) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *InvocationCreated) GetSpec() *fission_workflows_types.WorkflowInvocationSpec {
+	if m != nil {
+		return m.Spec
+	}
+	return nil
+}
+
+type InvocationCompleted struct {
+	Output *fission_workflows_types.TypedValue `protobuf:"bytes,1,opt,name=output" json:"output,omitempty"`
+}
+
+func (m *InvocationCompleted) Reset()                    { *m = InvocationCompleted{} }
+func (m *InvocationCompleted) String() string            { return proto.CompactTextString(m) }
+func (*InvocationCompleted) ProtoMessage()               {}
+func (*InvocationCompleted) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *InvocationCompleted) GetOutput() *fission_workflows_types.TypedValue {
+	if m != nil {
+		return m.Output
+	}
+	return nil
+}
+
+type InvocationCanceled struct {
+	Error *fission_workflows_types.Error `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *InvocationCanceled) Reset()                    { *m = InvocationCanceled{} }
+func (m *InvocationCanceled) String() string            { return proto.CompactTextString(m) }
+func (*InvocationCanceled) ProtoMessage()               {}
+func (*InvocationCanceled) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *InvocationCanceled) GetError() *fission_workflows_types.Error {
+	if m != nil {
+		return m.Error
+	}
+	return nil
+}
+
+type InvocationTaskAdded struct {
+	Task *fission_workflows_types.Task `protobuf:"bytes,1,opt,name=task" json:"task,omitempty"`
+}
+
+func (m *InvocationTaskAdded) Reset()                    { *m = InvocationTaskAdded{} }
+func (m *InvocationTaskAdded) String() string            { return proto.CompactTextString(m) }
+func (*InvocationTaskAdded) ProtoMessage()               {}
+func (*InvocationTaskAdded) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+
+func (m *InvocationTaskAdded) GetTask() *fission_workflows_types.Task {
+	if m != nil {
+		return m.Task
+	}
+	return nil
+}
+
+type InvocationFailed struct {
+	Error *fission_workflows_types.Error `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *InvocationFailed) Reset()                    { *m = InvocationFailed{} }
+func (m *InvocationFailed) String() string            { return proto.CompactTextString(m) }
+func (*InvocationFailed) ProtoMessage()               {}
+func (*InvocationFailed) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *InvocationFailed) GetError() *fission_workflows_types.Error {
+	if m != nil {
+		return m.Error
+	}
+	return nil
+}
+
+//
+// Task
+//
+// TODO why do we need task, and not just task spec.
+type TaskStarted struct {
+	Task *fission_workflows_types.TaskInvocation `protobuf:"bytes,1,opt,name=task" json:"task,omitempty"`
+}
+
+func (m *TaskStarted) Reset()                    { *m = TaskStarted{} }
+func (m *TaskStarted) String() string            { return proto.CompactTextString(m) }
+func (*TaskStarted) ProtoMessage()               {}
+func (*TaskStarted) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *TaskStarted) GetTask() *fission_workflows_types.TaskInvocation {
+	if m != nil {
+		return m.Task
+	}
+	return nil
+}
+
+type TaskSucceeded struct {
+	Result *fission_workflows_types.TaskInvocationStatus `protobuf:"bytes,1,opt,name=result" json:"result,omitempty"`
+}
+
+func (m *TaskSucceeded) Reset()                    { *m = TaskSucceeded{} }
+func (m *TaskSucceeded) String() string            { return proto.CompactTextString(m) }
+func (*TaskSucceeded) ProtoMessage()               {}
+func (*TaskSucceeded) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *TaskSucceeded) GetResult() *fission_workflows_types.TaskInvocationStatus {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
+type TaskSkipped struct {
+}
+
+func (m *TaskSkipped) Reset()                    { *m = TaskSkipped{} }
+func (m *TaskSkipped) String() string            { return proto.CompactTextString(m) }
+func (*TaskSkipped) ProtoMessage()               {}
+func (*TaskSkipped) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+type TaskFailed struct {
+	Error *fission_workflows_types.Error `protobuf:"bytes,1,opt,name=error" json:"error,omitempty"`
+}
+
+func (m *TaskFailed) Reset()                    { *m = TaskFailed{} }
+func (m *TaskFailed) String() string            { return proto.CompactTextString(m) }
+func (*TaskFailed) ProtoMessage()               {}
+func (*TaskFailed) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *TaskFailed) GetError() *fission_workflows_types.Error {
+	if m != nil {
+		return m.Error
+	}
+	return nil
+}
 
 func init() {
-	proto.RegisterEnum("fission.workflows.events.Workflow", Workflow_name, Workflow_value)
-	proto.RegisterEnum("fission.workflows.events.Invocation", Invocation_name, Invocation_value)
-	proto.RegisterEnum("fission.workflows.events.Task", Task_name, Task_value)
+	proto.RegisterType((*EventWrapper)(nil), "fission.workflows.events.EventWrapper")
+	proto.RegisterType((*WorkflowCreated)(nil), "fission.workflows.events.WorkflowCreated")
+	proto.RegisterType((*WorkflowDeleted)(nil), "fission.workflows.events.WorkflowDeleted")
+	proto.RegisterType((*WorkflowParsed)(nil), "fission.workflows.events.WorkflowParsed")
+	proto.RegisterType((*WorkflowParsingFailed)(nil), "fission.workflows.events.WorkflowParsingFailed")
+	proto.RegisterType((*InvocationCreated)(nil), "fission.workflows.events.InvocationCreated")
+	proto.RegisterType((*InvocationCompleted)(nil), "fission.workflows.events.InvocationCompleted")
+	proto.RegisterType((*InvocationCanceled)(nil), "fission.workflows.events.InvocationCanceled")
+	proto.RegisterType((*InvocationTaskAdded)(nil), "fission.workflows.events.InvocationTaskAdded")
+	proto.RegisterType((*InvocationFailed)(nil), "fission.workflows.events.InvocationFailed")
+	proto.RegisterType((*TaskStarted)(nil), "fission.workflows.events.TaskStarted")
+	proto.RegisterType((*TaskSucceeded)(nil), "fission.workflows.events.TaskSucceeded")
+	proto.RegisterType((*TaskSkipped)(nil), "fission.workflows.events.TaskSkipped")
+	proto.RegisterType((*TaskFailed)(nil), "fission.workflows.events.TaskFailed")
 }
 
 func init() { proto.RegisterFile("pkg/types/events/events.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 287 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x54, 0x91, 0x41, 0x4f, 0x83, 0x30,
-	0x1c, 0xc5, 0x9d, 0x22, 0x59, 0xfe, 0x1a, 0x87, 0xff, 0x6d, 0x6e, 0xc6, 0xf8, 0x05, 0x76, 0x60,
-	0x07, 0x3f, 0x41, 0x47, 0x3b, 0xd3, 0x80, 0x94, 0x00, 0x93, 0xc4, 0x0b, 0x41, 0xc3, 0x0c, 0xc1,
-	0x50, 0x32, 0xc8, 0x16, 0x2f, 0xde, 0xfd, 0xd6, 0x66, 0x65, 0x12, 0x38, 0x35, 0xf9, 0xbd, 0xd7,
-	0xf7, 0x5e, 0x5a, 0x78, 0x2c, 0xf3, 0xcf, 0x65, 0xfd, 0x5d, 0xa6, 0xd5, 0x32, 0xdd, 0xa7, 0x45,
-	0xfd, 0x7f, 0x98, 0xe5, 0x4e, 0xd6, 0x12, 0xe7, 0xdb, 0xac, 0xaa, 0x32, 0x59, 0x98, 0x07, 0xb9,
-	0xcb, 0xb7, 0x5f, 0xf2, 0x50, 0x99, 0x8d, 0xbe, 0xf8, 0x81, 0x61, 0x74, 0x62, 0x38, 0x01, 0x23,
-	0x12, 0xbe, 0xbd, 0x76, 0x44, 0x14, 0x5b, 0x3e, 0x23, 0x21, 0xa3, 0xc6, 0x59, 0x8f, 0x6e, 0x3c,
-	0xaa, 0xe8, 0x00, 0xc7, 0x30, 0x6a, 0xa9, 0x47, 0xfc, 0x80, 0x51, 0xe3, 0xbc, 0x67, 0xa5, 0xcc,
-	0x61, 0x47, 0xeb, 0x05, 0x3e, 0xc0, 0xac, 0x67, 0xe5, 0xee, 0x73, 0xbc, 0x26, 0xdc, 0x61, 0xd4,
-	0xd0, 0x16, 0xbf, 0x03, 0x00, 0x5e, 0xec, 0xe5, 0x47, 0x52, 0x67, 0xb2, 0xc0, 0x3b, 0x40, 0xee,
-	0xbe, 0x0a, 0x8b, 0x84, 0x5c, 0xb8, 0x9d, 0x11, 0x73, 0x98, 0x74, 0xb9, 0x78, 0xf1, 0x9a, 0xf4,
-	0x01, 0xce, 0x60, 0xdc, 0x55, 0x88, 0x6b, 0x31, 0x47, 0x8d, 0xb9, 0x87, 0x69, 0x47, 0x08, 0x49,
-	0x60, 0xc7, 0x84, 0x52, 0xb5, 0x68, 0x0a, 0xb7, 0x1d, 0xa9, 0xdd, 0x92, 0x80, 0x16, 0x26, 0x55,
-	0x8e, 0x06, 0x5c, 0x2b, 0x7b, 0x10, 0x12, 0xbf, 0xa9, 0x6f, 0x89, 0xcd, 0x3d, 0x4f, 0xd5, 0x22,
-	0xdc, 0x34, 0x64, 0x63, 0x59, 0x8c, 0x1d, 0x63, 0x35, 0x1c, 0xc1, 0x95, 0x62, 0xa7, 0xc0, 0xcb,
-	0xf6, 0x1a, 0x59, 0x09, 0x15, 0xa4, 0xaf, 0x86, 0x6f, 0x7a, 0xf3, 0xf0, 0xef, 0xba, 0xfa, 0x99,
-	0xa7, 0xbf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x20, 0x96, 0xde, 0x7a, 0xba, 0x01, 0x00, 0x00,
+	// 471 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x94, 0x51, 0x6b, 0xd4, 0x40,
+	0x14, 0x85, 0x49, 0xdb, 0x5d, 0xf4, 0xae, 0xd5, 0x76, 0x44, 0x58, 0x0a, 0x95, 0x65, 0x44, 0xec,
+	0x4b, 0x13, 0x6c, 0x7d, 0xb0, 0xf5, 0xc9, 0xd6, 0x48, 0x5b, 0x14, 0x24, 0x95, 0x56, 0x04, 0x1f,
+	0xa6, 0x99, 0xdb, 0x35, 0x24, 0xcd, 0x0c, 0x33, 0x93, 0x2d, 0xf9, 0x6b, 0xfe, 0x3a, 0x99, 0xcc,
+	0xa4, 0x49, 0x91, 0x5d, 0xc5, 0x7d, 0xc9, 0x84, 0xc9, 0xbd, 0x5f, 0xce, 0x39, 0x77, 0x12, 0xd8,
+	0x96, 0xf9, 0x34, 0x32, 0xb5, 0x44, 0x1d, 0xe1, 0x0c, 0x4b, 0xd3, 0x2e, 0xa1, 0x54, 0xc2, 0x08,
+	0x32, 0xbe, 0xce, 0xb4, 0xce, 0x44, 0x19, 0xde, 0x0a, 0x95, 0x5f, 0x17, 0xe2, 0x56, 0x87, 0xee,
+	0xf9, 0xd6, 0xe1, 0x34, 0x33, 0x3f, 0xab, 0xab, 0x30, 0x15, 0x37, 0x91, 0x2f, 0x6a, 0xd7, 0xdd,
+	0xbb, 0xe2, 0xa8, 0xa3, 0x37, 0x57, 0x47, 0xa5, 0x13, 0x78, 0x14, 0x5b, 0xca, 0xa5, 0x62, 0x52,
+	0xa2, 0x22, 0x1b, 0xb0, 0xca, 0xca, 0x7a, 0x1c, 0x4c, 0x82, 0x9d, 0x87, 0x89, 0xbd, 0xa5, 0x9f,
+	0xe0, 0xc9, 0xa5, 0x87, 0x1c, 0x2b, 0x64, 0x06, 0x39, 0x39, 0x80, 0x35, 0x2d, 0x31, 0x6d, 0xaa,
+	0x46, 0x7b, 0x2f, 0xc3, 0x3f, 0x95, 0xb9, 0x57, 0xb4, 0x7d, 0xe7, 0x12, 0xd3, 0xa4, 0x69, 0xa1,
+	0x9b, 0x1d, 0xed, 0x03, 0x16, 0x68, 0x90, 0xd3, 0x5f, 0x01, 0x3c, 0x6e, 0xf7, 0xbe, 0x30, 0xa5,
+	0x91, 0x93, 0x53, 0x18, 0x18, 0xa6, 0x73, 0x3d, 0x0e, 0x26, 0xab, 0x3b, 0xa3, 0xbd, 0xfd, 0x70,
+	0x9e, 0xf7, 0xf0, 0x7e, 0x63, 0xf8, 0xd5, 0x76, 0xc5, 0xa5, 0x51, 0x75, 0xe2, 0x08, 0x5b, 0x3f,
+	0x00, 0xba, 0x4d, 0x6b, 0x2f, 0xc7, 0x3b, 0x7b, 0x39, 0xd6, 0xe4, 0x00, 0x06, 0x33, 0x56, 0x54,
+	0x38, 0x5e, 0x69, 0xcc, 0xbc, 0x98, 0x6b, 0xc6, 0x52, 0xce, 0x0d, 0x33, 0x95, 0x4e, 0x5c, 0xc7,
+	0xe1, 0xca, 0xdb, 0x80, 0x7e, 0x86, 0x67, 0x7d, 0x09, 0x59, 0x39, 0xfd, 0xc8, 0xb2, 0x02, 0x39,
+	0x79, 0x03, 0x03, 0x54, 0x4a, 0x28, 0x1f, 0xd2, 0xf3, 0xb9, 0xdc, 0xd8, 0x56, 0x25, 0xae, 0x98,
+	0x7e, 0x83, 0xcd, 0xd3, 0x72, 0x26, 0x52, 0x66, 0x32, 0x51, 0xb6, 0x71, 0x1f, 0xdf, 0x8b, 0x3b,
+	0xfa, 0x6b, 0xdc, 0x1d, 0xa1, 0x17, 0x7c, 0x02, 0x4f, 0x7b, 0x64, 0x71, 0x23, 0x9b, 0xf0, 0xc9,
+	0x3b, 0x18, 0x8a, 0xca, 0xc8, 0xca, 0x78, 0xfa, 0x02, 0xff, 0xb5, 0x44, 0x7e, 0x61, 0x8d, 0x27,
+	0xbe, 0x85, 0x9e, 0x01, 0xe9, 0x31, 0x59, 0x99, 0xe2, 0xff, 0x3b, 0x3f, 0xe9, 0xeb, 0xb3, 0x59,
+	0xbf, 0xe7, 0x1c, 0x39, 0x79, 0x0d, 0x6b, 0x76, 0x8e, 0x9e, 0xb5, 0xbd, 0x70, 0x3a, 0x49, 0x53,
+	0x4a, 0x4f, 0x60, 0xa3, 0x23, 0x2d, 0x35, 0x8d, 0x33, 0x18, 0xf9, 0xa9, 0x2b, 0x97, 0x55, 0x5f,
+	0xcb, 0xab, 0x85, 0x5a, 0x3a, 0x05, 0x5e, 0xd5, 0x05, 0xac, 0x37, 0xac, 0x2a, 0x4d, 0x11, 0xad,
+	0xb3, 0x18, 0x86, 0x0a, 0x75, 0x55, 0xb4, 0xc9, 0xef, 0xfe, 0x23, 0xcf, 0x9f, 0x41, 0xdf, 0x4c,
+	0xd7, 0xbd, 0xc6, 0x3c, 0x93, 0x12, 0x39, 0x3d, 0x72, 0xc7, 0x7d, 0x19, 0xdb, 0x47, 0x0f, 0xbe,
+	0x0f, 0xdd, 0xd7, 0x75, 0x35, 0x6c, 0x7e, 0x12, 0xfb, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x37,
+	0x39, 0x48, 0x43, 0x9b, 0x04, 0x00, 0x00,
 }

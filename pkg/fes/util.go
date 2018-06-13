@@ -2,9 +2,13 @@ package fes
 
 import (
 	"errors"
+	"reflect"
 	"strings"
+	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 )
 
 func validateAggregate(aggregate Aggregate) error {
@@ -42,13 +46,25 @@ func NewAggregate(entityType string, entityID string) Aggregate {
 	}
 }
 
-func NewEvent(aggregate Aggregate, data []byte) *Event {
+type EventOpts struct {
+	Event
+	Data      proto.Message
+	Timestamp time.Time
+}
+
+func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
+	var data *any.Any
+	if msg != nil {
+		d, err := ptypes.MarshalAny(msg)
+		if err != nil {
+			return nil, err
+		}
+		data = d
+	}
 	return &Event{
-		Type:      aggregate.Type,
 		Aggregate: &aggregate,
 		Data:      data,
 		Timestamp: ptypes.TimestampNow(),
-		Parent:    nil,
-		Hints:     nil,
-	}
+		Type:      reflect.Indirect(reflect.ValueOf(msg)).Type().Name(),
+	}, nil
 }

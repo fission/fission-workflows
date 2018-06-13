@@ -12,7 +12,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
-	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
@@ -153,33 +152,11 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		"labels":       msg.Labels(),
 	}).Debug("Handling invocation notification!")
 
-	switch msg.EventType {
-	case events.Invocation_INVOCATION_COMPLETED.String():
-		fallthrough
-	case events.Invocation_INVOCATION_CANCELED.String():
-		fallthrough
-	case events.Invocation_INVOCATION_FAILED.String():
-		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
-		if !ok {
-			log.Warn("Event did not contain invocation payload", msg)
-		}
-		// TODO mark to clean up later instead
-		cr.stateStore.Delete(wfi.ID())
-		cr.evalCache.Del(wfi.ID())
-		log.Infof("Removed invocation %v from eval state", wfi.ID())
-	case events.Task_TASK_FAILED.String():
-		fallthrough
-	case events.Task_TASK_SUCCEEDED.String():
-		fallthrough
-	case events.Invocation_INVOCATION_CREATED.String():
-		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
-		if !ok {
-			panic(msg)
-		}
-		cr.submitEval(wfi.ID())
-	default:
-		wfiLog.Debugf("Controller ignored event type: %v", msg.EventType)
+	wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
+	if !ok {
+		panic(msg)
 	}
+	cr.submitEval(wfi.ID())
 	return nil
 }
 
