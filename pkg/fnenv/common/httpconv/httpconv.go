@@ -27,7 +27,7 @@ const (
 	contentTypeWorkflow = "application/vnd.fission.workflows.task"     // Default format: protobuf, +json for json
 	contentTypeProtobuf = "application/protobuf"                       // Default format: protobuf, +json for json
 	contentTypeDefault  = contentTypeText
-	methodDefault       = http.MethodGet
+	methodDefault       = http.MethodPost
 )
 
 // ParseRequest maps a HTTP request to a target map.
@@ -182,6 +182,7 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 			return err
 		}
 		target.Body = ioutil.NopCloser(bytes.NewReader(bs))
+		target.ContentLength = int64(len(bs))
 	}
 
 	// Map method input to HTTP method
