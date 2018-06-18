@@ -76,11 +76,11 @@ func (ie Error) Error() string {
 		vt = "Value"
 	}
 	prefix := fmt.Sprintf("%s is invalid", vt)
-	rs := ie.Reasons()
-	if len(rs) == 1 {
-		return prefix + ": " + rs[0].Error()
+	var rs []string
+	for k, reason := range ie.Reasons() {
+		rs = append(rs, fmt.Sprintf("(%d) %v", k, reason))
 	}
-	return prefix + " (multiple errors)"
+	return prefix + ": " + strings.Join(rs, "; ")
 }
 
 func (ie Error) getOrNil() error {
