@@ -1,5 +1,5 @@
-hash: 0aa3850135ea276827ed1beef1133960ffef5183930220ad59461636af062fc5
-updated: 2018-06-09T01:00:51.241533+02:00
+hash: 17bbcf54feef7c5516e253cd617a4f360562db75cb922cd91a7452cecda5adbb
+updated: 2018-06-18T16:36:56.952921+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -329,7 +329,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: 8e7f43002fec5394a8d96ebca781aa9d4b37aaef
+  version: b13a681559816a9c14f93086bbeeed1c7baf2bcb
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
@@ -337,7 +337,7 @@ imports:
   - pkg/client/clientset/clientset/scheme
   - pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 - name: k8s.io/apimachinery
-  version: 17529ec7eadb8de8e7dc835201455f53571f655a
+  version: f6313580a4d36c7c74a3d845dda6e116642c4f90
   subpackages:
   - pkg/api/errors
   - pkg/api/meta
@@ -457,46 +457,12 @@ testImports:
   version: d3c23511c1bf5851696cba83143d9cbcd666869b
   subpackages:
   - pathdriver
-- name: github.com/docker/docker
-  version: 5e11f66cb6de472d11647e8b1a744afc941859ad
-  subpackages:
-  - api/types
-  - api/types/blkiodev
-  - api/types/container
-  - api/types/filters
-  - api/types/mount
-  - api/types/network
-  - api/types/registry
-  - api/types/strslice
-  - api/types/swarm
-  - api/types/swarm/runtime
-  - api/types/versions
-  - opts
-  - pkg/archive
-  - pkg/fileutils
-  - pkg/homedir
-  - pkg/idtools
-  - pkg/ioutils
-  - pkg/jsonmessage
-  - pkg/longpath
-  - pkg/mount
-  - pkg/pools
-  - pkg/stdcopy
-  - pkg/system
-  - pkg/term
-  - pkg/term/windows
 - name: github.com/docker/go-connections
   version: 7395e3f8aa162843a74ed6d48e79627d9792ac55
   subpackages:
   - nat
 - name: github.com/docker/go-units
   version: 47565b4f722fb6ceae66b95f853feed578a4a51c
-- name: github.com/docker/libnetwork
-  version: 19279f0492417475b6bfbd0aa529f73e8f178fb5
-  subpackages:
-  - ipamutils
-- name: github.com/fsouza/go-dockerclient
-  version: 51bd33c0c7792b2566054672a4915b406d988cc6
 - name: github.com/Microsoft/go-winio
   version: ab35fc04b6365e8fcb18e6e9e41ea4a02b10b175
 - name: github.com/Nvveen/Gotty
@@ -513,6 +479,33 @@ testImports:
   subpackages:
   - libcontainer/system
   - libcontainer/user
+- name: github.com/ory/dockertest
+  version: 9bca068bf5e4af2484b9c2e8cfeb3d098d5327d7
+  subpackages:
+  - docker
+  - docker/opts
+  - docker/pkg/archive
+  - docker/pkg/fileutils
+  - docker/pkg/homedir
+  - docker/pkg/idtools
+  - docker/pkg/ioutils
+  - docker/pkg/jsonmessage
+  - docker/pkg/longpath
+  - docker/pkg/mount
+  - docker/pkg/pools
+  - docker/pkg/stdcopy
+  - docker/pkg/system
+  - docker/pkg/term
+  - docker/pkg/term/windows
+  - docker/types
+  - docker/types/blkiodev
+  - docker/types/container
+  - docker/types/filters
+  - docker/types/mount
+  - docker/types/network
+  - docker/types/registry
+  - docker/types/strslice
+  - docker/types/versions
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
@@ -522,4 +515,4 @@ testImports:
   subpackages:
   - assert
 - name: gopkg.in/ory-am/dockertest.v3
-  version: 15c8e8835bba04e0d7c2b57958ffe294d5e643dc
+  version: 9bca068bf5e4af2484b9c2e8cfeb3d098d5327d7
