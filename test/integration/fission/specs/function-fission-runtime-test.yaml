@@ -1,0 +1,50 @@
+include:
+- fn.js
+kind: ArchiveUploadSpec
+name: fn-js
+
+---
+apiVersion: fission.io/v1
+kind: Package
+metadata:
+  creationTimestamp: null
+  name: fn-js-faqo
+  namespace: default
+spec:
+  deployment:
+    checksum: {}
+    type: url
+    url: archive://fn-js
+  environment:
+    name: fission-runtime-test
+    namespace: default
+  source:
+    checksum: {}
+status:
+  buildstatus: none
+
+---
+apiVersion: fission.io/v1
+kind: Function
+metadata:
+  creationTimestamp: null
+  name: fission-runtime-test
+  namespace: default
+spec:
+  InvokeStrategy:
+    ExecutionStrategy:
+      ExecutorType: poolmgr
+      MaxScale: 1
+      MinScale: 0
+      TargetCPUPercent: 80
+    StrategyType: execution
+  configmaps: null
+  environment:
+    name: fission-runtime-test
+    namespace: default
+  package:
+    packageref:
+      name: fn-js-faqo
+      namespace: default
+  resources: {}
+  secrets: null

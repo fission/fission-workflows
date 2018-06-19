@@ -30,7 +30,9 @@ type EventAppender interface {
 // Backend is a persistent store for events
 type Backend interface {
 	EventAppender
-	Get(aggregate *Aggregate) ([]*Event, error)
+
+	// Get fetches all events that belong to a specific aggregate
+	Get(aggregate Aggregate) ([]*Event, error)
 	List(matcher StringMatcher) ([]Aggregate, error)
 }
 

@@ -217,3 +217,11 @@ type NamedTypedValue struct {
 }
 
 type Inputs map[string]*TypedValue
+
+func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *TaskInvocationSpec {
+	return &TaskInvocationSpec{
+		FnRef:        &fnRef,
+		TaskId:       taskId,
+		InvocationId: invocationId,
+	}
+}

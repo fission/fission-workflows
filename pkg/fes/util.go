@@ -44,7 +44,6 @@ func NewAggregate(entityType string, entityID string) Aggregate {
 
 func NewEvent(aggregate Aggregate, data []byte) *Event {
 	return &Event{
-		Id:        aggregate.Id,
 		Type:      aggregate.Type,
 		Aggregate: &aggregate,
 		Data:      data,

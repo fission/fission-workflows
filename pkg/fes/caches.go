@@ -259,7 +259,7 @@ func (c *FallbackCache) List() []Aggregate {
 	for _, aggregate := range esAggregates {
 		entity, err := c.cache.GetAggregate(aggregate)
 		if err != nil || entity == nil {
-			events, err := c.client.Get(&aggregate)
+			events, err := c.client.Get(aggregate)
 			if err != nil {
 				logrus.WithField("err", err).Error("failed to get missed entity from event store")
 				continue
@@ -309,7 +309,7 @@ func (c *FallbackCache) Get(entity Aggregator) error {
 
 func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Aggregator) error {
 	// Look up relevant events in event store
-	events, err := c.client.Get(&aggregate)
+	events, err := c.client.Get(aggregate)
 	if err != nil {
 		return err
 	}

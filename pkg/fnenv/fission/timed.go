@@ -6,25 +6,25 @@ import (
 	"time"
 )
 
-// TimedExecPool provides a data structure for scheduling executions based on a timestamp.
-type TimedExecPool struct {
+// timedExecPool provides a data structure for scheduling executions based on a timestamp.
+type timedExecPool struct {
 	fnQueue *timedFnQueue
 	cancel  chan struct{}
 	fnsLock *sync.Mutex
 }
 
-func NewTimedExecPool() *TimedExecPool {
-	return &TimedExecPool{
+func newTimedExecPool() *timedExecPool {
+	return &timedExecPool{
 		fnQueue: &timedFnQueue{},
 		cancel:  make(chan struct{}),
 		fnsLock: &sync.Mutex{},
 	}
 }
 
-func (ds *TimedExecPool) Submit(fn func(), execAt time.Time) {
+func (ds *timedExecPool) Submit(fn func(), execAt time.Time) {
 	ds.fnsLock.Lock()
 	defer ds.fnsLock.Unlock()
-	ds.fnQueue.Push(timedFn{
+	ds.fnQueue.Push(&timedFn{
 		execAt: execAt,
 		fn:     fn,
 	})
@@ -32,13 +32,13 @@ func (ds *TimedExecPool) Submit(fn func(), execAt time.Time) {
 	ds.eval()
 }
 
-func (ds *TimedExecPool) Eval() {
+func (ds *timedExecPool) Eval() {
 	ds.fnsLock.Lock()
 	defer ds.fnsLock.Unlock()
 	ds.eval()
 }
 
-func (ds *TimedExecPool) eval() {
+func (ds *timedExecPool) eval() {
 	// Get head
 	t := ds.fnQueue.Peek()
 	if t == nil {

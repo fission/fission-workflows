@@ -54,12 +54,10 @@ func (b *Backend) Append(event *fes.Event) error {
 	return b.Publish(event)
 }
 
-func (b *Backend) Get(aggregate *fes.Aggregate) ([]*fes.Event, error) {
-	if !fes.ValidateAggregate(aggregate) {
+func (b *Backend) Get(key fes.Aggregate) ([]*fes.Event, error) {
+	if !fes.ValidateAggregate(&key) {
 		return nil, ErrInvalidAggregate
 	}
-
-	key := *aggregate
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	events, ok := b.contents[key]

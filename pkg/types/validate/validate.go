@@ -29,6 +29,7 @@ var (
 	ErrNoParentTaskDependency       = errors.New("dynamic task does not contain parent dependency")
 	ErrMultipleParentTaskDependency = errors.New("dynamic task contains multiple parent tasks")
 	ErrNoWorkflowInvocation         = errors.New("workflow invocation id is required")
+	ErrNoTaskInvocation             = errors.New("task invocation id is required")
 	ErrNoFnRef                      = errors.New("function reference is required")
 	ErrNoWorkflow                   = errors.New("workflow id is required")
 	ErrNoID                         = errors.New("id is required")
@@ -75,11 +76,11 @@ func (ie Error) Error() string {
 		vt = "Value"
 	}
 	prefix := fmt.Sprintf("%s is invalid", vt)
-	rs := ie.Reasons()
-	if len(rs) == 1 {
-		return prefix + ": " + rs[0].Error()
+	var rs []string
+	for k, reason := range ie.Reasons() {
+		rs = append(rs, fmt.Sprintf("(%d) %v", k, reason))
 	}
-	return prefix + " (multiple errors)"
+	return prefix + ": " + strings.Join(rs, "; ")
 }
 
 func (ie Error) getOrNil() error {
@@ -257,6 +258,10 @@ func TaskInvocationSpec(spec *types.TaskInvocationSpec) error {
 
 	if len(spec.InvocationId) == 0 {
 		errs.append(ErrNoWorkflowInvocation)
+	}
+
+	if len(spec.TaskId) == 0 {
+		errs.append(ErrNoTaskInvocation)
 	}
 
 	if spec.FnRef == nil {

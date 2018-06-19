@@ -74,7 +74,7 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		defer leftSub.Close()
 		select {
 		case seqEnd = <-rightBound:
-		case <-time.After(time.Duration(10) * time.Second):
+		case <-time.After(time.Duration(5) * time.Second):
 			return nil, fmt.Errorf("timed out while finding boundary for Subject '%s'", subject)
 		}
 	}
@@ -124,7 +124,9 @@ func (cn *Conn) MsgSeqRange(subject string, seqStart uint64, seqEnd uint64) ([]*
 		case err := <-errC:
 			return result, err
 		case msg := <-elementC:
-			result = append(result, msg)
+			if msg != nil {
+				result = append(result, msg)
+			}
 		}
 	}
 }
