@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	wfiLog = log.WithField("component", "controller-wi")
+	wfiLog = log.WithField("component", "controller.invocation")
 
 	// workflow-related metrics
 	invocationStatus = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -112,7 +112,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 				case notification := <-cr.sub.Ch:
 					cr.handleMsg(notification)
 				case <-ctx.Done():
-					wfiLog.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+					wfiLog.Debug("Notification listener stopped.")
 					return
 				}
 			}
@@ -127,6 +127,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 				go cr.Evaluate(eval) // TODO limit number of goroutines
 				controller.EvalQueueSize.WithLabelValues("invocation").Dec()
 			case <-ctx.Done():
+				wfiLog.Debug("Evaluation queue listener stopped.")
 				return
 			}
 		}
@@ -326,11 +327,12 @@ func (cr *Controller) Evaluate(invocationID string) {
 }
 
 func (cr *Controller) Close() error {
-	wfiLog.Info("Closing invocation controller...")
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(cr.sub)
 		if err != nil {
-			return err
+			wfiLog.Errorf("Failed to unsubscribe from invocation cache: %v", err)
+		} else {
+			wfiLog.Info("Unsubscribed from invocation cache")
 		}
 	}
 

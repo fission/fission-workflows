@@ -2,9 +2,11 @@ package bundle
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/apiserver"
@@ -63,7 +65,10 @@ type FissionOptions struct {
 
 // Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
-	log.WithField("version", version.VersionInfo()).Info("Starting bundle...")
+	log.WithFields(log.Fields{
+		"version": fmt.Sprintf("%+v", version.VersionInfo()),
+		"config":  fmt.Sprintf("%+v", opts),
+	}).Info("Starting bundle...")
 
 	var es fes.Backend
 	var esPub pubsub.Publisher
@@ -72,9 +77,10 @@ func Run(ctx context.Context, opts *Options) error {
 		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
 		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
 	)
-	defer grpcServer.GracefulStop()
 
-	// Event Stores
+	//
+	// Event Store
+	//
 	if opts.Nats != nil {
 		log.WithFields(log.Fields{
 			"url":     "!redacted!",
@@ -95,7 +101,9 @@ func Run(ctx context.Context, opts *Options) error {
 	wfiCache := getWorkflowInvocationCache(ctx, esPub)
 	wfCache := getWorkflowCache(ctx, esPub)
 
-	// Resolvers and runtimes
+	//
+	// Function Runtimes
+	//
 	invocationAPI := api.NewInvocationAPI(es)
 	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
@@ -122,7 +130,9 @@ func Run(ctx context.Context, opts *Options) error {
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
 	}
 
-	// Controller
+	//
+	// Controllers
+	//
 	if opts.InvocationController || opts.WorkflowController {
 		var ctrls []controller.Controller
 		if opts.WorkflowController {
@@ -135,26 +145,51 @@ func Run(ctx context.Context, opts *Options) error {
 			ctrls = append(ctrls, setupInvocationController(wfiCache(), wfCache(), es, runtimes, resolvers))
 		}
 
-		log.Info("Running controllers.")
-		runController(ctx, ctrls...)
+		ctrl := controller.NewMetaController(ctrls...)
+		go ctrl.Run(ctx)
+		defer func() {
+			err := ctrl.Close()
+			if err != nil {
+				log.Errorf("Failed to stop controllers: %v", err)
+			} else {
+				log.Info("Stopped controllers")
+			}
+		}()
+	} else {
+		log.Info("No controllers specified to run.")
 	}
 
-	// Http servers
+	//
+	// Fission integration
+	//
 	if opts.Fission != nil {
 		proxyMux := http.NewServeMux()
 		runFissionEnvironmentProxy(proxyMux, es, wfiCache(), wfCache(), resolvers)
-		proxySrv := &http.Server{Addr: fissionProxyAddress}
-		proxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
+		fissionProxySrv := &http.Server{Addr: fissionProxyAddress}
+		fissionProxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
 
 		if opts.Metrics {
 			setupMetricsEndpoint(proxyMux)
 		}
 
-		go proxySrv.ListenAndServe()
-		defer proxySrv.Shutdown(ctx)
-		log.Info("Serving HTTP Fission Proxy at: ", proxySrv.Addr)
+		go func() {
+			err := fissionProxySrv.ListenAndServe()
+			log.WithField("err", err).Info("Fission Proxy server stopped")
+		}()
+		defer func() {
+			err := fissionProxySrv.Shutdown(ctx)
+			if err != nil {
+				log.Errorf("Failed to stop Fission Proxy server: %v", err)
+			} else {
+				log.Info("Stopped Fission Proxy server")
+			}
+		}()
+		log.Info("Serving HTTP Fission Proxy at: ", fissionProxySrv.Addr)
 	}
 
+	//
+	// gRPC API
+	//
 	if opts.AdminAPI {
 		serveAdminAPI(grpcServer)
 	}
@@ -168,18 +203,27 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.AdminAPI || opts.WorkflowAPI || opts.InvocationAPI {
-		log.Info("Instrumenting gRPC server with Prometheus metrics")
-		grpc_prometheus.Register(grpcServer)
+		if opts.Metrics {
+			log.Debug("Instrumenting gRPC server with Prometheus metrics")
+			grpc_prometheus.Register(grpcServer)
+		}
 
 		lis, err := net.Listen("tcp", gRPCAddress)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
-		defer lis.Close()
-		log.Info("Serving gRPC services at: ", lis.Addr())
 		go grpcServer.Serve(lis)
+		defer func() {
+			grpcServer.GracefulStop()
+			lis.Close()
+			log.Info("Stopped gRPC server")
+		}()
+		log.Info("Serving gRPC services at: ", lis.Addr())
 	}
 
+	//
+	// HTTP API
+	//
 	if opts.HTTPGateway || opts.Metrics {
 		grpcMux := grpcruntime.NewServeMux()
 		httpMux := http.NewServeMux()
@@ -199,28 +243,34 @@ func Run(ctx context.Context, opts *Options) error {
 			serveHTTPGateway(ctx, grpcMux, admin, wf, wfi)
 		}
 
-		// Metrics
 		if opts.Metrics {
 			setupMetricsEndpoint(httpMux)
 			log.Infof("Set up prometheus collector: %v/metrics", apiGatewayAddress)
 		}
 
-		apiSrv := &http.Server{Addr: apiGatewayAddress}
+		httpApiSrv := &http.Server{Addr: apiGatewayAddress}
 		httpMux.Handle("/", grpcMux)
-		apiSrv.Handler = httpMux
+		httpApiSrv.Handler = httpMux
 		go func() {
-			err := apiSrv.ListenAndServe()
-			log.WithField("err", err).Info("HTTP Gateway exited")
+			err := httpApiSrv.ListenAndServe()
+			log.WithField("err", err).Info("HTTP Gateway stopped")
 		}()
-		defer apiSrv.Shutdown(ctx)
+		defer func() {
+			err := httpApiSrv.Shutdown(ctx)
+			if err != nil {
+				log.Errorf("Failed to stop HTTP API server: %v", err)
+			} else {
+				log.Info("Stopped HTTP API server")
+			}
+		}()
 
-		log.Info("Serving HTTP API gateway at: ", apiSrv.Addr)
+		log.Info("Serving HTTP API gateway at: ", httpApiSrv.Addr)
 	}
 
-	log.Info("Bundle set up.")
+	log.Info("Setup completed.")
 	<-ctx.Done()
-	log.Info("Shutting down...")
-	// TODO properly shutdown components
+	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	time.Sleep(5 * time.Second)
 	return nil
 }
 
@@ -389,11 +439,6 @@ func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,
 	fnResolvers map[string]fnenv.RuntimeResolver) *wfctr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	return wfctr.NewController(wfCache, workflowAPI)
-}
-
-func runController(ctx context.Context, ctrls ...controller.Controller) {
-	ctrl := controller.NewMetaController(ctrls...)
-	go ctrl.Run(ctx)
 }
 
 func setupMetricsEndpoint(apiMux *http.ServeMux) {

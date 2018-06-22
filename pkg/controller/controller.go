@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	log     = logrus.New().WithFields(logrus.Fields{"component": "controller"})
-	metaLog = log.WithField("controller", "controller-meta")
+	metaLog = logrus.New().WithFields(logrus.Fields{"component": "controller"})
 
 	// Controller-related metrics
 	EvalJobs = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -88,16 +87,14 @@ func NewMetaController(ctrls ...Controller) *MetaController {
 }
 
 func (mc *MetaController) Init(ctx context.Context) error {
-	metaLog.Info("Running MetaController init.")
 	for _, ctrl := range mc.ctrls {
 		err := ctrl.Init(ctx)
 		if err != nil {
 			return err
 		}
-		metaLog.Infof("'%s' controller init done.", reflect.TypeOf(ctrl))
+		metaLog.Debugf("Controller '%s' initialized.", reflect.TypeOf(ctrl))
 	}
 
-	metaLog.Info("Finished MetaController init.")
 	return nil
 }
 
@@ -151,21 +148,17 @@ func (mc *MetaController) Notify(msg *fes.Notification) error {
 }
 
 func (mc *MetaController) Close() error {
-	metaLog.Info("Closing metacontroller and its controllers...")
-	var err error
+	var merr error
 	for _, ctrl := range mc.ctrls {
 		if closer, ok := ctrl.(io.Closer); ok {
-			err = closer.Close()
+			err := closer.Close()
+			if err != nil {
+				merr = err
+				metaLog.Errorf("Failed to stop controller %s: %v", reflect.TypeOf(ctrl), err)
+			} else {
+				metaLog.Debugf("Controller '%s' stopped.", reflect.TypeOf(ctrl))
+			}
 		}
 	}
-	metaLog.Info("Closed MetaController")
-	return err
-}
-
-func (mc *MetaController) Halt() {
-	mc.suspended = false
-}
-
-func (mc *MetaController) Resume() {
-	mc.suspended = true
+	return merr
 }

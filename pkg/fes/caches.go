@@ -162,7 +162,7 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 		for {
 			select {
 			case <-ctx.Done():
-				logrus.Info("SubscribedCache worker was canceled.")
+				logrus.Debug("SubscribedCache: listener stopped.")
 				return
 			case msg := <-sub.Ch:
 				// Discard invalid messages
