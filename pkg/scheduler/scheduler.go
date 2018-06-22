@@ -37,7 +37,8 @@ type WorkflowScheduler struct {
 
 func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
-		"wfi": request.Invocation.Metadata.Id,
+		"invocation": request.Invocation.ID(),
+		"workflow":   request.Workflow.ID(),
 	})
 	timeStart := time.Now()
 	defer func() {

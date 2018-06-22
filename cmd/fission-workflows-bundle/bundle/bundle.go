@@ -117,8 +117,10 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 	if opts.InternalRuntime {
 		log.Infof("Using Task Runtime: Internal")
-		runtimes["internal"] = setupInternalFunctionRuntime()
-		resolvers["internal"] = setupInternalFunctionRuntime()
+		internalRuntime := setupInternalFunctionRuntime()
+		runtimes["internal"] = internalRuntime
+		resolvers["internal"] = internalRuntime
+		log.Infof("Internal runtime functions: %v", internalRuntime.Installed())
 	}
 	if opts.Fission != nil {
 		log.WithFields(log.Fields{
@@ -250,7 +252,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 		httpApiSrv := &http.Server{Addr: apiGatewayAddress}
 		httpMux.Handle("/", grpcMux)
-		httpApiSrv.Handler = httpMux
+		httpApiSrv.Handler = handlers.LoggingHandler(os.Stdout, httpMux)
 		go func() {
 			err := httpApiSrv.ListenAndServe()
 			log.WithField("err", err).Info("HTTP Gateway stopped")

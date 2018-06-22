@@ -34,7 +34,6 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 	env := &FunctionEnv{
 		fns: fns,
 	}
-	log.WithField("fns", env.fns).Debugf("Internal function runtime installed.")
 	return env
 }
 
@@ -95,4 +94,13 @@ func (fe *FunctionEnv) Resolve(fnName string) (string, error) {
 
 func (fe *FunctionEnv) RegisterFn(name string, fn InternalFunction) {
 	fe.fns[name] = fn
+}
+
+// Installed lists all installed functions in the internal function runtime.
+func (fe *FunctionEnv) Installed() []string {
+	fns := make([]string, len(fe.fns))
+	for fn := range fe.fns {
+		fns = append(fns, fn)
+	}
+	return fns
 }

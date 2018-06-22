@@ -43,7 +43,6 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 		return nil, err
 	}
 
-	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
 	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
 	fn := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
@@ -58,6 +57,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 		return nil, err
 	}
 
+	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
 	err = ap.es.Append(&fes.Event{
 		Type:      events.Task_TASK_STARTED.String(),
 		Parent:    aggregate,
