@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -49,4 +50,13 @@ func MustConvertStructsToMap(i interface{}) map[string]interface{} {
 	} else {
 		return result
 	}
+}
+
+func Truncate(val interface{}, maxLen int) string {
+	s := fmt.Sprintf("%v", val)
+	if len(s) <= maxLen {
+		return s
+	}
+	affix := fmt.Sprintf("<truncated orig_len: %d>", len(s))
+	return s[:len(s)-len(affix)] + affix
 }

@@ -35,8 +35,6 @@ func (tf *RuleTimedOut) Eval(ec EvalContext) Action {
 	}
 	duration := time.Now().UnixNano() - initialStatus.Timestamp.UnixNano()
 	if duration > tf.Timeout.Nanoseconds() {
-		log.Infof("cancelling due to timeout; %v exceeds max timeout %v",
-			duration, int64(tf.Timeout.Seconds()))
 		return evalIfNotNil(tf.OnTimedOut, ec)
 	}
 	return evalIfNotNil(tf.OnWithinTime, ec)

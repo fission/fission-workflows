@@ -38,7 +38,6 @@ type ActionRemoveFromEvalCache struct {
 }
 
 func (a *ActionRemoveFromEvalCache) Apply() error {
-	log.Infof("Removing '%s' from EvalCache", a.ID)
 	a.EvalCache.Del(a.ID)
 	return nil
 }

@@ -27,7 +27,7 @@ const (
 // TODO add hard limits (cache size, max concurrent invocation)
 
 var (
-	wfLog = logrus.WithField("component", "controller.wf")
+	wfLog = logrus.WithField("component", "controller.workflow")
 
 	workflowProcessDuration = prometheus.NewSummary(prometheus.SummaryOpts{
 		Namespace: "workflows",
@@ -90,7 +90,7 @@ func (c *Controller) Init(sctx context.Context) error {
 				case notification := <-c.sub.Ch:
 					c.handleMsg(notification)
 				case <-ctx.Done():
-					wfLog.WithField("ctx.err", ctx.Err()).Debug("Notification listener closed.")
+					wfLog.Debug("Notification listener closed.")
 					return
 				}
 			}
@@ -105,6 +105,7 @@ func (c *Controller) Init(sctx context.Context) error {
 				controller.EvalQueueSize.WithLabelValues(Name).Dec()
 				go c.Evaluate(eval) // TODO limit number of goroutines
 			case <-ctx.Done():
+				wfLog.Debug("Evaluation queue listener stopped.")
 				return
 			}
 		}
@@ -198,11 +199,12 @@ func (c *Controller) Evaluate(workflowID string) {
 }
 
 func (c *Controller) Close() error {
-	wfLog.Info("Closing workflow controller...")
 	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(c.sub)
 		if err != nil {
-			return err
+			wfLog.Errorf("Failed to unsubscribe from workflow cache: %v", err)
+		} else {
+			wfLog.Info("Unsubscribed from workflow cache")
 		}
 	}
 
