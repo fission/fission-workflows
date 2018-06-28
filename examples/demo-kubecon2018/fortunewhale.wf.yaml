@@ -10,6 +10,7 @@ tasks:
 
   WhaleSay:
     run: whalesay
-    inputs: "{ output('InputOrFortune') }"
+    inputs:
+      body: "{ output('InputOrFortune') }"
     requires:
     - InputOrFortune

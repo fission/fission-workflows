@@ -42,6 +42,10 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse request: %v", err)
 	}
+
+	target[types.InputBody] = &bodyInput
+
+	// Deprecated: body is mapped to 'default'
 	target[types.InputMain] = &bodyInput
 
 	// Map query to "query.x"
@@ -174,8 +178,11 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 	// Map content-type to the request's content-type
 	contentType := DetermineContentTypeInputs(source)
 
-	// Map main input to body
-	mainInput, ok := source[types.InputMain]
+	// Map 'body' input to the body of the request
+	mainInput, ok := source[types.InputBody]
+	if !ok {
+		mainInput, ok = source[types.InputMain]
+	}
 	if ok && mainInput != nil {
 		bs, err := FormatBody(*mainInput, contentType)
 		if err != nil {
