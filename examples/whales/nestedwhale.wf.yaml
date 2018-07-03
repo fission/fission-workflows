@@ -10,6 +10,6 @@ tasks:
 
   WhaleIt:
     run: echowhale
-    inputs: "{output('GenerateFortune')}"
+    inputs: "{ output('GenerateFortune') }"
     requires:
     - GenerateFortune

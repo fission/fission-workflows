@@ -14,6 +14,7 @@ tasks:
             run: fortune
           WhaleIt:
             run: whalesay
-            inputs: "{output('GenerateFortune')}"
+            inputs:
+              body: "{ output('GenerateFortune') }"
             requires:
             - GenerateFortune

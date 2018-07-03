@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # deploy.sh - deploys all functions and workflows in this directory
+set -x
 
 # Deploy functions
 fission env create --name binary --image fission/binary-env

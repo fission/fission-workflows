@@ -6,10 +6,12 @@ output: Whalify
 tasks:
   FetchMyIp:
     run: http
-    inputs: "http://ifconfig.co"
+    inputs:
+      url: "http://ifconfig.co"
 
   Whalify:
     run: whalesay
-    inputs: "{output('FetchMyIp')}"
+    inputs:
+      body: "{ output('FetchMyIp') }"
     requires:
     - FetchMyIp
