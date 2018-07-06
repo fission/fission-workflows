@@ -7,3 +7,4 @@ tasks:
       body: "{ param('body') }"
       headers: "{ param('headers') }"
       method: "{ param('method') }"
+      query: "{ param('query') }"

@@ -351,7 +351,11 @@ func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 	}
 
 	// Otherwise, check for label on body input
-	return DetermineContentType(inputs[types.InputMain])
+	if inputs[types.InputBody] != nil {
+		return DetermineContentType(inputs[types.InputBody])
+	} else {
+		return DetermineContentType(inputs[types.InputMain])
+	}
 }
 
 // TODO support multi-headers at some point

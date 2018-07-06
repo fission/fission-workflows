@@ -9,6 +9,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
+fission env create --name binary --image fission/binary-env:latest || true
 fission fn create --name inputs --env workflow --src ${EXAMPLE_DIR}/inputs.wf.yaml
 sleep 5 # TODO remove this once we can initiate synchronous commands
 fission fn test --name inputs -b 'foobar' -H 'HEADER_KEY: HEADER_VAL' --method PUT \
