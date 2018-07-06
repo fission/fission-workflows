@@ -7,7 +7,7 @@ WORKDIR /go/src/github.com/fission/fission-workflows
 
 COPY . .
 
-RUN if [ "_$NOBUILD" = "_" ] ; then \
+RUN if ! $NOBUILD ; then \
         go get github.com/Masterminds/glide; \
         glide install -v; \
         build/build-linux.sh; \
