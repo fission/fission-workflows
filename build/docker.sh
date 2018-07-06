@@ -8,11 +8,12 @@ set -eo pipefail
 BUILD_ROOT=$(dirname $0)
 IMAGE_REPO=${1:-fission}
 IMAGE_TAG=${2:-latest}
+NOBUILD=${3:-false}
 
 # Build bundle images
 bundleImage=${IMAGE_REPO}/fission-workflows-bundle
 pushd ${BUILD_ROOT}/..
-if [ ! -z "$NOBUILD" ]; then
+if $NOBUILD ; then
     if [ ! -f ./fission-workflows-bundle ]; then
         echo "Executable './fission-workflows-bundle' not found!"
         exit 1;
