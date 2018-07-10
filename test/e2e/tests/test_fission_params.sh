@@ -30,14 +30,28 @@ cleanup() {
     fission fn delete --name fission-inputs
 }
 trap cleanup EXIT
-fission fn create --name dump --env binary --src ${EXAMPLE_DIR}/dump.sh
+fission env create --name binary --image fission/binary-env || true
+fission fn create --name dump --env binary --deploy ${EXAMPLE_DIR}/dump.sh
 retry fission fn test --name dump
 
 fission fn create --name fission-inputs --env workflow --src ${EXAMPLE_DIR}/fission-inputs.wf.yaml
 sleep 5 # TODO remove this once we can initiate synchronous commands
-fission fn test --name fission-inputs -b 'foobar' -H 'HEADER_KEY: HEADER_VAL' --method PUT \
-    | tee /dev/tty \
-    | grep -i Header_Val \
-    | grep HEADER_VAL \
-    | grep -i PUT \
-    | grep -q foobar
+
+
+printf "[Test 1]: fission-inputs workflow"
+OUTPUT=$(fission fn test --name fission-inputs -b "foobar\n" -H 'HEADER_KEY: HEADER_VAL' --method PUT)
+
+
+printf "[Test 2]: body\n"
+echo ${OUTPUT} | grep -q foobar
+
+printf "[Test 3]: headers\n"
+echo ${OUTPUT} | grep HTTP_HEADER_KEY
+echo ${OUTPUT} | grep HEADER_VAL
+
+printf "[Test 4]: method\n"
+echo ${OUTPUT} | grep PUT
+
+printf "[Test 5]: query\n"
+# TODO add query parameters once supported in `fission test`
+echo "not implemented"
