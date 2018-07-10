@@ -3,8 +3,8 @@ Hooray! You can now use workflows in Fission.
 Usage:
 ```bash
 # Setup a couple of Fission functions
-https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortune.sh > fortune.sh
-https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/whalesay.sh > whalesay.sh
+curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortune.sh > fortune.sh
+curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/whalesay.sh > whalesay.sh
 
 fission env create --name binary --image fission/binary-env
 fission fn create --name whalesay --env binary --deploy ./whalesay.sh
