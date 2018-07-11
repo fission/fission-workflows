@@ -11,6 +11,7 @@ Workflows | Compatible Fission versions
 0.2.x     | 0.4.1 up to 0.6.1 
 0.3.0     | all (tested on 0.6.0, 0.6.1, and 0.7.2)
 0.4.0     | all 
+0.5.0     | all 
 
 ### Prerequisites
 
@@ -43,7 +44,7 @@ helm repo update
 helm install --wait -n fission-all --namespace fission --set serviceType=NodePort --set analytics=false fission-charts/fission-all --version 0.7.2
 
 # Install Fission Workflows
-helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.4.0
+helm install --wait -n fission-workflows fission-charts/fission-workflows --version 0.5.0
 ```
 
 ### Creating your first workflow
@@ -89,9 +90,9 @@ It has the following features:
 
 #### Installation
 To install `wfcli` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
-For example, to download and install version 0.4.0,  assuming that you use OS X:
+For example, to download and install version 0.5.0,  assuming that you use OS X:
 ```bash
-curl -Lo wfcli https://github.com/fission/fission-workflows/releases/download/0.4.0/wfcli-osx
+curl -Lo wfcli https://github.com/fission/fission-workflows/releases/download/0.5.0/wfcli-osx
 chmod +x ./wfcli
 sudo mv ./wfcli /usr/local/bin
 ```

@@ -4,8 +4,8 @@
 kubectl apply -f redis/redis.yaml
 
 # Setup environments
-fission env create --name python3 --version 2 --image fission/python-env:0.4.0rc --builder fission/python-build-env:0.4.0rc
-fission env create --name binary --image fission/binary-env:0.4.0rc
+fission env create --name python3 --version 2 --image fission/python-env --builder fission/python-build-env
+fission env create --name binary --image fission/binary-env
 
 # Prepare functions
 zip -jr notify-pushbullet.zip notify-pushbullet/

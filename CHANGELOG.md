@@ -1,10 +1,32 @@
 # Change Log
 
+## [0.5.0](https://github.com/fission/fission-workflows/tree/0.5.0) (2018-07-11)
+[Full Changelog](https://github.com/fission/fission-workflows/compare/0.4.0...0.5.0)
+
+**Implemented enhancements:**
+
+- Attach invocation context to logs [\#86](https://github.com/fission/fission-workflows/issues/86)
+
+**Merged pull requests:**
+
+- Update commands to setup fission functions [\#163](https://github.com/fission/fission-workflows/pull/163) ([beevelop](https://github.com/beevelop))
+- Update wfcli docs [\#162](https://github.com/fission/fission-workflows/pull/162) ([beevelop](https://github.com/beevelop))
+- add NOBUILD ARG to script [\#161](https://github.com/fission/fission-workflows/pull/161) ([xiekeyang](https://github.com/xiekeyang))
+- YAML API improvements [\#159](https://github.com/fission/fission-workflows/pull/159) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Log correlation [\#157](https://github.com/fission/fission-workflows/pull/157) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Set content-length when setting body [\#156](https://github.com/fission/fission-workflows/pull/156) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Cleanup labels package [\#154](https://github.com/fission/fission-workflows/pull/154) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Namespace proto files [\#153](https://github.com/fission/fission-workflows/pull/153) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Listen to system termination signals [\#152](https://github.com/fission/fission-workflows/pull/152) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Match validation errors to IllegalArgument HTTP statuses [\#151](https://github.com/fission/fission-workflows/pull/151) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Fission integration tests [\#121](https://github.com/fission/fission-workflows/pull/121) ([erwinvaneyk](https://github.com/erwinvaneyk))
+
 ## [0.4.0](https://github.com/fission/fission-workflows/tree/0.4.0) (2018-06-07)
 [Full Changelog](https://github.com/fission/fission-workflows/compare/0.3.0...0.4.0)
 
 **Merged pull requests:**
 
+- 0.3.0 -\> 0.4.0 [\#149](https://github.com/fission/fission-workflows/pull/149) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Merge API packages [\#147](https://github.com/fission/fission-workflows/pull/147) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Include git info in versioning [\#146](https://github.com/fission/fission-workflows/pull/146) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Prometheus integration [\#122](https://github.com/fission/fission-workflows/pull/122) ([erwinvaneyk](https://github.com/erwinvaneyk))
