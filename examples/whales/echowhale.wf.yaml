@@ -6,4 +6,5 @@ output: echowhale
 tasks:
   echowhale:
     run: whalesay
-    inputs: "{$.Invocation.Inputs.default}"
+    inputs:
+      body: "{ $.Invocation.Inputs.default }"

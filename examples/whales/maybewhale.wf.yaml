@@ -16,7 +16,8 @@ tasks:
       if: "{$.Invocation.Inputs.default.length < 20}"
       then:
         run: whalesay
-        inputs: "{$.Tasks.InternalFuncShowoff.Output}"
+        inputs:
+          body: "{$.Tasks.InternalFuncShowoff.Output}"
       else: "{$.Tasks.InternalFuncShowoff.Output}"
     requires:
     - InternalFuncShowoff

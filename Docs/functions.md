@@ -66,15 +66,15 @@ it is a workflow or an actual Fission function.
 Calling a Fission function is no different from calling other (internal) functions.
 Like other functions, it has a number of optional input parameters to augment the Fission function execution.
 
-**input**        | required | types                | description
+**Input**        | required | types                | description
 -----------------|----------|----------------------|---------------------------------
-body/default     | no       | *                    | The body of the Fission function call.
+body             | no       | *                    | The body of the Fission function call.
 headers          | no       | map[string]string    | The headers that need to be added to the request.
 query            | no       | map[string]string    | The key-value values that need to be added to the URL.
 method           | no       | string               | HTTP Method to use (Default: GET)
 content-type     | no       | string               | Force a specific content-type for the request (default: application/octet-stream).
 
-**output** (*) the body of the Fission function response.
+**Output** (*) the body of the Fission function response.
 
 The body is interpreted based on the content-type.
 In case it is interpretable (e.g. `application/json`), the workflow engine will parse it, and make it available to 
@@ -89,6 +89,33 @@ invocation.
 
 The workflow engine invokes Fission functions with the same API as other types of event sources.
 So conceptually there is no difference between Fission functions used or not used in workflows.
+
+**Example**
+
+To invoke the Fission function `example-funciton`, we can define the following task in the workflow:
+
+Note: although you can override the content-type, if nothing is specified the content-type will be inferred from the 
+body value. So in this case the content-type will be `text/plain` because the body value is a string.
+
+```yaml
+# ...
+RunExampleFissionFunction:
+  run: example-function
+  inputs: 
+    body: "Some body input"
+    headers:
+      foo: bar
+    query:
+      abc: def
+    method: DELETE
+# ...
+```
+
+This task is basically equivalent to calling the fission function directly:
+
+```bash
+curl ${FISSION_ROUTER}/fission-function/example-function?abd=def -XDELETE -H "foo: bar" -H "Content-Type: text/plain" -d "Some body input"
+```
 
 #### Notes
 - The content-type is important if you want to utilize the full functionality of Workflows; ensure that the functions 
@@ -139,14 +166,14 @@ scenario).
 
 **Specification**
 
-**input**   | required | types  | description
+**Input**   | required | types  | description
 ------------|----------|--------|---------------------------------
 default     | no       | *      | the inputs to be merged into a single map or outputted if none other.
 *           | no       | *      | the inputs to be merged into a single map. 
 
 **Note: custom message does not yet propagate back to the user**
 
-**output** (*) The composed map, single default input, or nothing.
+**Output** (*) The composed map, single default input, or nothing.
 
 **Example**
 
@@ -187,13 +214,13 @@ specific branches. Optionally you can provide a custom message to the failure.
 
 **Specification**
 
-**input**   | required | types  | description
+**Input**   | required | types  | description
 ------------|----------|--------|---------------------------------
 default     | no       | string | custom message to show on error 
 
 **Note: custom message does not yet propagate back to the user**
 
-**output** None 
+**Output** None 
 
 **Example**
 
@@ -225,7 +252,7 @@ Currently, foreach does not gather or store the outputs of the tasks in any way.
 
 **Specification**
 
-**input**       | required | types         | description
+**Input**       | required | types         | description
 ----------------|----------|---------------|--------------------------------------------------------
 foreach/default | yes      | list          | The list of elements that foreach should be looped over.
 do              | yes      | task/workflow | The action to perform for every element.
@@ -233,7 +260,7 @@ sequential      | no       | bool          | Execute the actions sequentially (d
 
 The element is made available to the action using the field `element`.
 
-**output** None 
+**Output** None 
 
 **Example**
 
@@ -272,7 +299,7 @@ To this end it offers basic functionality, such as setting headers, query, metho
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 url/default     | yes      | string            | URL of the request.
 headers         | no       | map[string|string | The action to perform for every element.
@@ -282,7 +309,7 @@ body            | no       | *                 | The body of the request. (defau
 
 Unless the content type is specified explicitly, the workflow engine will infer the content-type based on the body.
 
-**output** (*) the body of the response.
+**Output** (*) the body of the response.
 
 Note: currently you cannot access the metadata of the response.
 
@@ -319,13 +346,13 @@ result of an execution.
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 if              | yes      | bool              | The condition to evaluate.
 then            | no       | *                 | Value or action to return if the condition is true.
 else            | no       | *                 | Value or action to return if the condition is false.
 
-**output** (*) Either the input of `then` or `else` (or none if not set).
+**Output** (*) Either the input of `then` or `else` (or none if not set).
 
 **Example**
 
@@ -367,7 +394,7 @@ stubbing particular functions.
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 expr            | yes      | string            | The JavaScript expression
 args            | no       | *                 | The arguments that need to be present in the expression.
@@ -375,7 +402,7 @@ args            | no       | *                 | The arguments that need to be p
 Note: the `expr` is of type `string` - not a `expression` - to prevent the workflow engine from evaluating the 
 expression prematurely. 
 
-**output** (*) The output of the expression.
+**Output** (*) The output of the expression.
 
 **Example**
 
@@ -410,11 +437,11 @@ The input it receives in its default key, will be outputted in the output
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 default         | no       | *                 | The input to pass to the output.
 
-**output** (*) The output of the default input if provided.
+**Output** (*) The output of the default input if provided.
 
 **Example**
 
@@ -446,14 +473,14 @@ The subsequent tasks can access the output of the previous task with `prev`.
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 times           | yes      | number            | Number of times to repeat the task.
 do              | yes      | task              | The task to execute.
 
 Note: the task `do` gets the output of the previous task injected into `prev`.
 
-**output** (*) The output of the last task.
+**Output** (*) The output of the last task.
 
 **Example**
 
@@ -489,14 +516,14 @@ This can be useful to mock or stub out functions during development, while simul
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 default         | no       | string            | A string-based representation of the duration of the sleep. (default: 1 second)
 
 Note: the sleep input is parsed based on the [Golang Duration string notation](https://golang.org/pkg/time/#ParseDuration).
 Examples: 1 hour and 10 minutes: `1h10m`, 2 minutes and 300 milliseconds: `2m300ms`.
 
-**output** None
+**Output** None
 
 **Example**
 
@@ -528,13 +555,13 @@ The string-switch is matched to one of the cases, or - if none of those match - 
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 switch          | yes      | string            | The string to match to one of the cases.
 cases           | no       | list              | List of cases to match to.
 default         | no       | *                 | The default value if there is no matching case.
 
-**output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
+**Output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
 
 **Example**
 
@@ -573,7 +600,7 @@ The results of the executed action can be accessed using the task ID "action".
 
 **Specification**
 
-**input**       | required | types             | description
+**Input**       | required | types             | description
 ----------------|----------|-------------------|--------------------------------------------------------
 expr            | yes      | bool              | The condition which determines whether to continue or halt the loop.
 do              | yes      | task/workflow     | The action to execute on each iteration.
@@ -586,7 +613,7 @@ Maybe we can add the original expression to the labels.
 - we might want to have a `prev` value here to reference the output of the previous iteration.
  
 
-**output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
+**Output** (*) Either the value of the matching case, the default, or nothing (in case the default is not specified).
 
 **Example**
 

@@ -34,6 +34,7 @@ print_report() {
 
 on_exit() {
     emph "[Buildtest exited]"
+
     # Dump all the logs
     dump_logs ${NS} ${NS_FUNCTION} ${NS_BUILDER} || true
 

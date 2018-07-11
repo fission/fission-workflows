@@ -12,6 +12,7 @@ tasks:
         inputs: "{ task().Inputs._item * 10 }"
   MakeWhaleSay:
     run: whalesay
-    inputs: "{ output('MultiplyNumbers') }"
+    inputs:
+      body: "{ output('MultiplyNumbers') }"
     requires:
     - MultiplyNumbers

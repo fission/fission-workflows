@@ -11,6 +11,7 @@ import (
 // Types other than specified in protobuf
 const (
 	InputMain    = "default"
+	InputBody    = "body"
 	InputHeaders = "headers"
 	InputQuery   = "query"
 	InputMethod  = "method"
