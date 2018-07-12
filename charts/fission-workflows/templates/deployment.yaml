@@ -26,6 +26,9 @@ spec:
           "--api-workflow",
           "--api-admin",
           "--metrics",
+          {{- if .Values.debug }}
+          "--debug",
+          {{- end }}
         ]
         env:
         - name: ES_NATS_URL
@@ -76,9 +79,26 @@ metadata:
   namespace: default
 spec:
   version: 2
+  TerminationGracePeriod: {{ .Values.gracePeriod }}
   runtime:
     image: "{{ .Values.envImage }}:{{.Values.tag}}"
     container:
+      command: ["/fission-workflows-bundle"]
+      args: [
+      # Override workflow env CMD to optionally enable --debug
+        "--nats",
+        "--fission",
+        "--internal",
+        "--controller",
+        "--api-http",
+        "--api-workflow-invocation",
+        "--api-workflow",
+        "--api-admin",
+        "--metrics",
+        {{- if .Values.debug }}
+        "--debug",
+        {{- end }}
+      ]
       env:
       - name: ES_NATS_URL
         value: "nats://{{ .Values.nats.authToken }}@{{ .Values.nats.location }}.{{ .Values.fnenv.fission.ns }}:{{ .Values.nats.port }}"
