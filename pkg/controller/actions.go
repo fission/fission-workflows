@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -70,4 +72,29 @@ func (a *ActionError) Apply() error {
 
 func (a *ActionError) Eval(rule EvalContext) Action {
 	return a
+}
+
+type MultiAction struct {
+	Actions []Action
+}
+
+func (a *MultiAction) Apply() error {
+	var wg sync.WaitGroup
+	var multiErr atomic.Value
+	wg.Add(len(a.Actions))
+	for _, action := range a.Actions {
+		go func(action Action) {
+			err := action.Apply()
+			if err != nil {
+				multiErr.Store(err)
+			}
+			wg.Done()
+		}(action)
+	}
+	wg.Wait()
+	err := multiErr.Load()
+	if err == nil {
+		return nil
+	}
+	return err.(error)
 }
