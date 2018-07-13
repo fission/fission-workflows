@@ -14,6 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/test/integration"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -289,6 +290,65 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 
 	_, err = typedvalues.Format(wfi.Status.Output)
 	assert.NoError(t, err)
+}
+
+func TestParallelInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	wfSpec := types.NewWorkflowSpec()
+
+	taskSpec := &types.TaskSpec{
+		FunctionRef: builtin.Sleep,
+		Inputs:      typedvalues.Input("2s"),
+	}
+
+	wfSpec.AddTask("p1", taskSpec)
+	wfSpec.AddTask("p2", taskSpec)
+	wfSpec.AddTask("p3", taskSpec)
+	wfSpec.AddTask("p4", taskSpec)
+	wfSpec.AddTask("p5", taskSpec)
+	wfSpec.AddTask("await", &types.TaskSpec{
+		FunctionRef: builtin.Sleep,
+		Inputs:      typedvalues.Input("1s"),
+		Requires:    types.Require("p1", "p2", "p3", "p4", "p5"),
+	})
+	wfSpec.SetOutput("await")
+
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+	assert.NoError(t, err, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
+
+	// Check if pN tasks were run in parallel
+	var minStartTime, maxStartTime time.Time
+	for _, task := range wfi.Status.Tasks {
+		if strings.HasPrefix(task.Spec.TaskId, "p") {
+			tt, err := ptypes.Timestamp(task.Metadata.CreatedAt)
+			assert.NoError(t, err)
+			if minStartTime == (time.Time{}) || tt.Before(minStartTime) {
+				minStartTime = tt
+			}
+			if maxStartTime == (time.Time{}) || tt.After(maxStartTime) {
+				maxStartTime = tt
+			}
+		}
+	}
+	assert.InDelta(t, 0, maxStartTime.Sub(minStartTime).Nanoseconds(), float64(time.Second.Nanoseconds()))
 }
 
 func TestLongRunningWorkflowInvocation(t *testing.T) {
