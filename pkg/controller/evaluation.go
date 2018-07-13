@@ -4,39 +4,21 @@ import (
 	"container/heap"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 // EvalStore allows storing and retrieving EvalStates in a thread-safe way.
 type EvalStore struct {
-	states    sync.Map
-	cachedLen *int32
-}
-
-func (e *EvalStore) Len() int {
-	if e.cachedLen == nil {
-		var count int32
-		e.states.Range(func(k, v interface{}) bool {
-			count++
-			return true
-		})
-		atomic.StoreInt32(e.cachedLen, count)
-		return int(count)
-	}
-	return int(atomic.LoadInt32(e.cachedLen))
+	mp sync.Map
 }
 
 func (e *EvalStore) LoadOrStore(id string) *EvalState {
-	s, loaded := e.states.LoadOrStore(id, NewEvalState(id))
-	if !loaded && e.cachedLen != nil {
-		atomic.AddInt32(e.cachedLen, 1)
-	}
+	s, _ := e.mp.LoadOrStore(id, NewEvalState(id))
 	return s.(*EvalState)
 }
 
 func (e *EvalStore) Load(id string) (*EvalState, bool) {
-	s, ok := e.states.Load(id)
+	s, ok := e.mp.Load(id)
 	if !ok {
 		return nil, false
 	}
@@ -44,18 +26,16 @@ func (e *EvalStore) Load(id string) (*EvalState, bool) {
 }
 
 func (e *EvalStore) Store(state *EvalState) {
-	e.states.Store(state.id, state)
-	e.cachedLen = nil // We are not sure if an entry was replaced or added
+	e.mp.Store(state.id, state)
 }
 
 func (e *EvalStore) Delete(id string) {
-	e.states.Delete(id)
-	e.cachedLen = nil // We are not sure if an entry was removed
+	e.mp.Delete(id)
 }
 
 func (e *EvalStore) List() map[string]*EvalState {
 	results := map[string]*EvalState{}
-	e.states.Range(func(k, v interface{}) bool {
+	e.mp.Range(func(k, v interface{}) bool {
 		results[k.(string)] = v.(*EvalState)
 		return true
 	})
@@ -251,8 +231,7 @@ func (h *ConcurrentEvalStateHeap) Init() {
 	h.init.Do(func() {
 		front := make(chan *EvalState, 1)
 		updateFront := func() {
-			es := h.heap.Front().GetEvalState()
-			front <- es
+			front <- h.heap.Front().GetEvalState()
 		}
 
 		// Channel supplier
@@ -265,8 +244,6 @@ func (h *ConcurrentEvalStateHeap) Init() {
 					case h.queueChan <- next:
 						// Queue item has been fetched; get next one.
 						next = nil
-						// heap.Pop(h.heap) // RACE with command handler
-						// updateFront()
 						h.Pop()
 					case u := <-front:
 						// There has been an update to the queue item; replace it.

@@ -67,7 +67,7 @@ type Controller struct {
 	sub           *pubsub.Subscription
 	cancelFn      context.CancelFunc
 	evalPolicy    controller.Rule
-	evalStore     controller.EvalStore
+	evalStore     *controller.EvalStore
 	evalQueue     *controller.ConcurrentEvalStateHeap
 }
 
@@ -80,6 +80,7 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 		taskAPI:       taskAPI,
 		invocationAPI: invocationAPI,
 		stateStore:    stateStore,
+		evalStore:     &controller.EvalStore{},
 		evalQueue:     controller.NewConcurrentEvalStateHeap(true),
 	}
 
@@ -307,6 +308,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 
 	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
 	if wfi.GetStatus().Finished() {
+		cr.evalStore.Delete(wfi.ID())
 		t, _ := ptypes.Timestamp(wfi.GetMetadata().GetCreatedAt())
 		invocationDuration.Observe(float64(time.Now().Sub(t)))
 	}

@@ -35,7 +35,7 @@ func (a *ActionSkip) Eval(rule EvalContext) Action {
 }
 
 type ActionRemoveFromEvalCache struct {
-	EvalCache EvalStore
+	EvalCache *EvalStore
 	ID        string
 }
 
