@@ -58,7 +58,7 @@ type Controller struct {
 	sub        *pubsub.Subscription
 	cancelFn   context.CancelFunc
 	evalQueue  chan string
-	evalCache  controller.EvalStore
+	evalCache  *controller.EvalStore
 	evalPolicy controller.Rule
 }
 
@@ -67,7 +67,7 @@ func NewController(wfCache fes.CacheReader, wfAPI *api.Workflow) *Controller {
 		wfCache:   wfCache,
 		api:       wfAPI,
 		evalQueue: make(chan string, defaultEvalQueueSize),
-		evalCache: controller.EvalStore{},
+		evalCache: &controller.EvalStore{},
 	}
 	ctr.evalPolicy = defaultPolicy(ctr)
 	return ctr

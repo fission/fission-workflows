@@ -1,3 +1,4 @@
+// package gopool provides functionality for bounded parallelism
 package gopool
 
 import (
