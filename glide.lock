@@ -1,5 +1,5 @@
-hash: 17bbcf54feef7c5516e253cd617a4f360562db75cb922cd91a7452cecda5adbb
-updated: 2018-06-18T16:36:56.952921+02:00
+hash: 87b17ae086fd78cf015e658b5438eda33382592c2f193a03b9a41eaeca7dbd59
+updated: 2018-07-13T15:34:55.360455+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -30,7 +30,7 @@ imports:
 - name: github.com/fatih/structs
   version: a720dfa8df582c51dee1b36feabb906bde1588bd
 - name: github.com/fission/fission
-  version: b782df4d5a69b0db21992bafc365456c880516f8
+  version: 92c9661e8d0e48ff41b2bdf3436c0328fbaeec04
   subpackages:
   - cache
   - controller/client
@@ -133,7 +133,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/nats-io/nats-streaming-server
-  version: 6026da1b7c444bf9f1d1b1d3ed14e435aabf02bc
+  version: 63e2c334b66dba3edade0047625a25c0d8f18f80
   subpackages:
   - spb
   - util
@@ -260,7 +260,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: f8c8703595236ae70fdf8789ecb656ea0bcdcf46
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis/api/annotations
   - googleapis/rpc/status
@@ -448,7 +448,7 @@ imports:
   - util/retry
 testImports:
 - name: github.com/Azure/go-ansiterm
-  version: d6e3b3328b783f23731bc4d058875b0371ff8109
+  version: 19f72df4d05d31cbe1c56bfc8045c96babff6c7e
   subpackages:
   - winterm
 - name: github.com/cenkalti/backoff
@@ -458,19 +458,19 @@ testImports:
   subpackages:
   - pathdriver
 - name: github.com/docker/go-connections
-  version: 7395e3f8aa162843a74ed6d48e79627d9792ac55
+  version: 3ede32e2033de7505e6500d6c868c2b9ed9f169d
   subpackages:
   - nat
 - name: github.com/docker/go-units
-  version: 47565b4f722fb6ceae66b95f853feed578a4a51c
+  version: 9e638d38cf6977a37a8ea0078f3ee75a7cdb2dd1
 - name: github.com/Microsoft/go-winio
   version: ab35fc04b6365e8fcb18e6e9e41ea4a02b10b175
 - name: github.com/Nvveen/Gotty
   version: cd527374f1e5bff4938207604a14f2e38a9cf512
 - name: github.com/opencontainers/go-digest
-  version: c9281466c8b2f606084ac71339773efd177436e7
+  version: a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb
 - name: github.com/opencontainers/image-spec
-  version: e562b04403929d582d449ae5386ff79dd7961a11
+  version: 372ad780f63454fbbbbcc7cf80e5b90245c13e13
   subpackages:
   - specs-go
   - specs-go/v1
