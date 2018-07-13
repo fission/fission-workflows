@@ -31,3 +31,9 @@ nats:
   cluster: fissionMQTrigger
   location: nats-streaming
   port: 4222
+
+# Enable Debug Message?
+debug: false
+
+# Pod deleting grace period in seconds
+gracePeriod: 5
