@@ -53,7 +53,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 
 	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
 	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskStarted{
-		Task: task,
+		Spec: spec,
 	})
 	event.Parent = aggregate
 	if err != nil {

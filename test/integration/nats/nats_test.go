@@ -91,8 +91,10 @@ func TestNatsBackend_GetNonExistent(t *testing.T) {
 
 func TestNatsBackend_Append(t *testing.T) {
 	key := fes.NewAggregate("someType", "someId")
-	event := fes.NewEvent(key, nil)
-	err := backend.Append(event)
+	dummyEvent := &fes.DummyEvent{Msg: "dummy"}
+	event, err := fes.NewEvent(key, dummyEvent)
+	assert.NoError(t, err)
+	err = backend.Append(event)
 	assert.NoError(t, err)
 
 	// check
@@ -101,10 +103,13 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.Len(t, events, 1)
 	event.Id = "1"
 	assert.Equal(t, event, events[0])
+	data, err := fes.UnmarshalEventData(events[0])
+	assert.NoError(t, err)
+	assert.Equal(t, dummyEvent, data)
 }
 
 func TestNatsBackend_List(t *testing.T) {
-	subjects, err := backend.List(&fes.ContainsMatcher{})
+	subjects, err := backend.List(fes.ContainsMatcher(""))
 	assert.NoError(t, err)
 	assert.NotEmpty(t, subjects)
 }

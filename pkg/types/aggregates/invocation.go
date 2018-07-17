@@ -42,7 +42,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		return wi.applyTaskEvent(event)
 	}
 
-	eventData, err := unmarshalEventData(event)
+	eventData, err := fes.UnmarshalEventData(event)
 	if err != nil {
 		return err
 	}

@@ -57,7 +57,7 @@ message InvocationFailed {
 //
 // TODO why do we need task, and not just task spec.
 message TaskStarted {
-    fission.workflows.types.TaskInvocation task = 1;
+    fission.workflows.types.TaskInvocationSpec spec = 1;
 }
 
 message TaskSucceeded {

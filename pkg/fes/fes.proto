@@ -25,3 +25,7 @@ message Event {
 message EventHints {
     bool completed = 1;
 }
+
+message DummyEvent {
+    string msg = 1;
+}

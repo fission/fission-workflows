@@ -35,7 +35,7 @@ func NewWorkflowAggregate(workflowID string) *fes.Aggregate {
 }
 
 func (wf *Workflow) ApplyEvent(event *fes.Event) error {
-	eventData, err := unmarshalEventData(event)
+	eventData, err := fes.UnmarshalEventData(event)
 	if err != nil {
 		return err
 	}

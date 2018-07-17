@@ -39,12 +39,10 @@ func (df *DeepFoldMatcher) Match(target string) bool {
 	return strings.EqualFold(df.Expected, target)
 }
 
-type ContainsMatcher struct {
-	Substr string
-}
-
-func (cm *ContainsMatcher) Match(target string) bool {
-	return strings.Contains(target, cm.Substr)
+func ContainsMatcher(Substr string) StringMatcher {
+	return func(target string) bool {
+		return strings.Contains(target, Substr)
+	}
 }
 
 func NewAggregate(entityType string, entityID string) Aggregate {
@@ -62,13 +60,15 @@ type EventOpts struct {
 
 func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
 	var data *any.Any
-	if msg != nil {
-		d, err := ptypes.MarshalAny(msg)
-		if err != nil {
-			return nil, err
-		}
-		data = d
+	if msg == nil {
+		return nil, errors.New("event cannot have no message")
 	}
+
+	d, err := ptypes.MarshalAny(msg)
+	if err != nil {
+		return nil, err
+	}
+	data = d
 	return &Event{
 		Aggregate: &aggregate,
 		Data:      data,
@@ -87,4 +87,13 @@ func validateAggregate(aggregate Aggregate) error {
 	}
 
 	return nil
+}
+
+func UnmarshalEventData(event *Event) (interface{}, error) {
+	d := &ptypes.DynamicAny{}
+	err := ptypes.UnmarshalAny(event.Data, d)
+	if err != nil {
+		return nil, err
+	}
+	return d.Message, nil
 }

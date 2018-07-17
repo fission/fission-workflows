@@ -36,17 +36,16 @@ func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 
 func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 
-	eventData, err := unmarshalEventData(event)
+	eventData, err := fes.UnmarshalEventData(event)
 	if err != nil {
 		return err
 	}
 
 	switch m := eventData.(type) {
 	case *events.TaskStarted:
-		task := m.GetTask()
 		ti.TaskInvocation = &types.TaskInvocation{
-			Metadata: task.GetMetadata(),
-			Spec:     task.GetSpec(),
+			Metadata: types.NewObjectMetadata(m.GetSpec().TaskId),
+			Spec:     m.GetSpec(),
 			Status: &types.TaskInvocationStatus{
 				Status:    types.TaskInvocationStatus_IN_PROGRESS,
 				UpdatedAt: event.Timestamp,
