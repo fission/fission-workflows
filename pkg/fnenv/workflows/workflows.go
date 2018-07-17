@@ -16,11 +16,11 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
-	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util/labels"
@@ -33,6 +33,13 @@ const (
 	PollInterval = time.Duration(100) * time.Millisecond
 	Name         = "workflows"
 )
+
+// TODO to fsm
+var terminationEvent = []string{
+	events.TypeOf(&events.InvocationCompleted{}),
+	events.TypeOf(&events.InvocationCanceled{}),
+	events.TypeOf(&events.InvocationFailed{}),
+}
 
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
@@ -95,8 +102,7 @@ func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvoc
 			LabelMatcher: labels.And(
 				labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
 				labels.In(fes.PubSubLabelAggregateID, wfiID),
-				labels.In(fes.PubSubLabelEventType, events.Invocation_INVOCATION_COMPLETED.String(),
-					events.Invocation_INVOCATION_CANCELED.String(), events.Invocation_INVOCATION_FAILED.String())),
+				labels.In(fes.PubSubLabelEventType, terminationEvent...)),
 		})
 		defer pub.Unsubscribe(sub)
 

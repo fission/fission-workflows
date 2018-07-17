@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"

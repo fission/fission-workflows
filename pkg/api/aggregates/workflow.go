@@ -1,9 +1,9 @@
 package aggregates
 
 import (
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 )

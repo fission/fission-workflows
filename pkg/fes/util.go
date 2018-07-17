@@ -2,10 +2,10 @@ package fes
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -73,7 +73,7 @@ func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
 		Aggregate: &aggregate,
 		Data:      data,
 		Timestamp: ptypes.TimestampNow(),
-		Type:      reflect.Indirect(reflect.ValueOf(msg)).Type().Name(),
+		Type:      events.TypeOf(msg),
 	}, nil
 }
 

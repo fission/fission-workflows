@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -23,7 +24,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/scheduler"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"

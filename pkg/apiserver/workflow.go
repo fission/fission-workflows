@@ -2,9 +2,9 @@ package apiserver
 
 import (
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
 	"golang.org/x/net/context"

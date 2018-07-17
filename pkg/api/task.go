@@ -3,11 +3,11 @@ package api
 import (
 	"errors"
 
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
-	"github.com/fission/fission-workflows/pkg/types/events"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
