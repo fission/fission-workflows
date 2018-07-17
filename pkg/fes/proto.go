@@ -24,8 +24,6 @@ func (m *Event) Labels() labels.Labels {
 		parent = &Aggregate{}
 	}
 
-	// TODO could be created using reflection
-	// TODO cache somewhere to avoid rebuilding on every request
 	return labels.Set{
 		"aggregate.id":   m.Aggregate.Id,
 		"aggregate.type": m.Aggregate.Type,

@@ -5,8 +5,8 @@ import "github.com/fission/fission-workflows/pkg/util/pubsub"
 // Aggregator is a entity that can be updated
 // TODO we need to keep more event-related information (such as current index)
 type Aggregator interface {
+
 	// Entity-specific
-	// TODO can we avoid mutability here?
 	ApplyEvent(event *Event) error
 
 	// Aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
@@ -57,9 +57,7 @@ type CacheReaderWriter interface {
 	CacheWriter
 }
 
-type StringMatcher interface {
-	Match(target string) bool
-}
+type StringMatcher func(target string) bool
 
 type Notification struct {
 	*pubsub.EmptyMsg

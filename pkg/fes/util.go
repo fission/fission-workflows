@@ -9,17 +9,25 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	log "github.com/sirupsen/logrus"
 )
 
-func validateAggregate(aggregate Aggregate) error {
-	if len(aggregate.Id) == 0 {
-		return errors.New("aggregate does not contain id")
+// Project is convenience function to apply events to an entity.
+func Project(entity Aggregator, events ...*Event) error {
+	if entity == nil {
+		log.WithField("entity", entity).Warn("Empty entity")
+		return nil
 	}
-
-	if len(aggregate.Type) == 0 {
-		return errors.New("aggregate does not contain type")
+	for _, event := range events {
+		if event == nil {
+			log.WithField("entity", entity).Warn("Empty event received")
+			return nil
+		}
+		err := entity.ApplyEvent(event)
+		if err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
@@ -67,4 +75,16 @@ func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
 		Timestamp: ptypes.TimestampNow(),
 		Type:      reflect.Indirect(reflect.ValueOf(msg)).Type().Name(),
 	}, nil
+}
+
+func validateAggregate(aggregate Aggregate) error {
+	if len(aggregate.Id) == 0 {
+		return errors.New("aggregate does not contain id")
+	}
+
+	if len(aggregate.Type) == 0 {
+		return errors.New("aggregate does not contain type")
+	}
+
+	return nil
 }

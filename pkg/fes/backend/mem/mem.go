@@ -74,7 +74,7 @@ func (b *Backend) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
 	var results []fes.Aggregate
 	for k := range b.contents {
 		// TODO change matcher to fes.AggregateMatcher instead
-		if matcher.Match(k.Type + k.Id) {
+		if matcher(k.Type + k.Id) {
 			results = append(results, k)
 		}
 	}

@@ -266,7 +266,7 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 		}
 
 		subject := subjectEvent.Subject
-		if matcher.Match(subject) {
+		if matcher(subject) {
 			count := 1
 			if c, ok := subjectCount[subject]; ok {
 				count += c
