@@ -91,6 +91,7 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	}
 
 	// Execute the actions as specified in the execution plan
+	var actions []controller.Action
 	for _, a := range schedule.Actions {
 		switch a.Type {
 		case scheduler.ActionType_ABORT:
@@ -110,18 +111,18 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 			if err != nil {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
-			return &ActionInvokeTask{
+			actions = append(actions, &ActionInvokeTask{
 				Wf:         wf,
 				Wfi:        wfi,
 				API:        sf.FunctionAPI,
 				Task:       invokeAction,
 				StateStore: sf.StateStore,
-			}
+			})
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)
 		}
 	}
-	return nil
+	return &controller.MultiAction{Actions: actions}
 }
 
 type RuleCheckIfCompleted struct {
@@ -149,12 +150,6 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	if finished {
 		var finalOutput *types.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
-			//t, ok := wfi.Status.Tasks[wf.Spec.OutputTask]
-			//if !ok {
-			//	return &controller.ActionError{
-			//		Err: errors.New("could not find output task status in completed invocation"),
-			//	}
-			//}
 			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
 		}
 
