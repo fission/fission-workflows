@@ -67,14 +67,13 @@ func (b *Backend) Get(key fes.Aggregate) ([]*fes.Event, error) {
 	return events, nil
 }
 
-func (b *Backend) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+func (b *Backend) List(matchFn fes.StringMatcher) ([]fes.Aggregate, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	var results []fes.Aggregate
 	for k := range b.contents {
-		// TODO change matcher to fes.AggregateMatcher instead
-		if matcher(k.Type + k.Id) {
+		if matchFn(k.Type + k.Id) {
 			results = append(results, k)
 		}
 	}

@@ -15,7 +15,7 @@ const (
 )
 
 type WorkflowInvocation struct {
-	*fes.AggregatorMixin
+	*fes.BaseEntity
 	*types.WorkflowInvocation
 }
 
@@ -25,7 +25,7 @@ func NewWorkflowInvocation(invocationID string, wi ...*types.WorkflowInvocation)
 		wia.WorkflowInvocation = wi[0]
 	}
 
-	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowInvocationAggregate(invocationID))
+	wia.BaseEntity = fes.NewBaseEntity(wia, *NewWorkflowInvocationAggregate(invocationID))
 	return wia
 }
 
@@ -49,7 +49,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 
 	switch m := eventData.(type) {
 	case *events.InvocationCreated:
-		wi.AggregatorMixin = fes.NewAggregatorMixin(wi, *event.Aggregate)
+		wi.BaseEntity = fes.NewBaseEntity(wi, *event.Aggregate)
 		wi.WorkflowInvocation = &types.WorkflowInvocation{
 			Metadata: &types.ObjectMetadata{
 				Id:        event.Aggregate.Id,
@@ -120,11 +120,11 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	return nil
 }
 
-func (wi *WorkflowInvocation) GenericCopy() fes.Aggregator {
+func (wi *WorkflowInvocation) GenericCopy() fes.Entity {
 	n := &WorkflowInvocation{
 		WorkflowInvocation: wi.Copy(),
 	}
-	n.AggregatorMixin = wi.CopyAggregatorMixin(n)
+	n.BaseEntity = wi.CopyBaseEntity(n)
 	return n
 }
 

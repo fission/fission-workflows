@@ -13,7 +13,7 @@ const (
 )
 
 type Workflow struct {
-	*fes.AggregatorMixin
+	*fes.BaseEntity
 	*types.Workflow
 }
 
@@ -23,7 +23,7 @@ func NewWorkflow(workflowID string, wi ...*types.Workflow) *Workflow {
 		wia.Workflow = wi[0]
 	}
 
-	wia.AggregatorMixin = fes.NewAggregatorMixin(wia, *NewWorkflowAggregate(workflowID))
+	wia.BaseEntity = fes.NewBaseEntity(wia, *NewWorkflowAggregate(workflowID))
 	return wia
 }
 
@@ -47,7 +47,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.Status = types.WorkflowStatus_FAILED
 	case *events.WorkflowCreated:
 		// Setup object
-		wf.AggregatorMixin = fes.NewAggregatorMixin(wf, *event.Aggregate)
+		wf.BaseEntity = fes.NewBaseEntity(wf, *event.Aggregate)
 		wf.Workflow = &types.Workflow{
 			Metadata: &types.ObjectMetadata{
 				Id:        wf.Aggregate().Id,
@@ -74,11 +74,11 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 	return nil
 }
 
-func (wf *Workflow) GenericCopy() fes.Aggregator {
+func (wf *Workflow) GenericCopy() fes.Entity {
 	n := &Workflow{
 		Workflow: wf.Copy(),
 	}
-	n.AggregatorMixin = wf.CopyAggregatorMixin(n)
+	n.BaseEntity = wf.CopyBaseEntity(n)
 	return n
 }
 

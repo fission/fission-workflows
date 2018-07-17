@@ -7,7 +7,7 @@ import (
 )
 
 type MockAggregate struct {
-	*AggregatorMixin
+	*BaseEntity
 	Val int
 }
 
@@ -15,11 +15,11 @@ func newMockAggregate(id string, atype string, val int) *MockAggregate {
 	m := &MockAggregate{
 		Val: val,
 	}
-	m.AggregatorMixin = NewAggregatorMixin(m, Aggregate{id, atype})
+	m.BaseEntity = NewBaseEntity(m, Aggregate{id, atype})
 	return m
 }
 
-func (ma *MockAggregate) GenericCopy() Aggregator {
+func (ma *MockAggregate) GenericCopy() Entity {
 	panic("implement me")
 }
 
@@ -27,7 +27,7 @@ func (ma *MockAggregate) ApplyEvent(event *Event) error {
 	panic("Should not be relevant")
 }
 
-func TestNewAggregatorMixin(t *testing.T) {
+func TestNewBaseEntity(t *testing.T) {
 	src := newMockAggregate("1", "foo", 1)
 	updated := newMockAggregate("1", "foo", 2)
 

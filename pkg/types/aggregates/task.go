@@ -13,7 +13,7 @@ const (
 )
 
 type TaskInvocation struct {
-	*fes.AggregatorMixin
+	*fes.BaseEntity
 	*types.TaskInvocation
 }
 
@@ -22,7 +22,7 @@ func NewTaskInvocation(id string, fi *types.TaskInvocation) *TaskInvocation {
 		TaskInvocation: fi,
 	}
 
-	tia.AggregatorMixin = fes.NewAggregatorMixin(tia, *NewTaskInvocationAggregate(id))
+	tia.BaseEntity = fes.NewBaseEntity(tia, *NewTaskInvocationAggregate(id))
 
 	return tia
 }
@@ -75,11 +75,11 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 	return nil
 }
 
-func (ti *TaskInvocation) GenericCopy() fes.Aggregator {
+func (ti *TaskInvocation) GenericCopy() fes.Entity {
 	n := &TaskInvocation{
 		TaskInvocation: ti.Copy(),
 	}
-	n.AggregatorMixin = ti.CopyAggregatorMixin(n)
+	n.BaseEntity = ti.CopyBaseEntity(n)
 	return n
 }
 

@@ -13,7 +13,7 @@ import (
 )
 
 // Project is convenience function to apply events to an entity.
-func Project(entity Aggregator, events ...*Event) error {
+func Project(entity Entity, events ...*Event) error {
 	if entity == nil {
 		log.WithField("entity", entity).Warn("Empty entity")
 		return nil

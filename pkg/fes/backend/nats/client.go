@@ -193,8 +193,8 @@ func (es *EventStore) Get(aggregate fes.Aggregate) ([]*fes.Event, error) {
 }
 
 // List returns all entities of which the subject matches the StringMatcher
-func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
-	subjects, err := es.conn.List(matcher)
+func (es *EventStore) List(matchFn fes.StringMatcher) ([]fes.Aggregate, error) {
+	subjects, err := es.conn.List(matchFn)
 	if err != nil {
 		return nil, err
 	}

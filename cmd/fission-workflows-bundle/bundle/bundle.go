@@ -346,7 +346,7 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 			labels.In(fes.PubSubLabelAggregateType, "invocation"),
 			labels.In("parent.type", "invocation")),
 	})
-	wi := func() fes.Aggregator {
+	wi := func() fes.Entity {
 		return aggregates.NewWorkflowInvocation("")
 	}
 
@@ -358,7 +358,7 @@ func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) 
 		Buffer:       10,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, "workflow"),
 	})
-	wb := func() fes.Aggregator {
+	wb := func() fes.Entity {
 		return aggregates.NewWorkflow("")
 	}
 	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("workflow"), wb, wfSub)
