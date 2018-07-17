@@ -37,3 +37,7 @@ debug: false
 
 # Pod deleting grace period in seconds
 gracePeriod: 5
+
+# Environment specific configuration
+env:
+  name: workflow
