@@ -8,6 +8,12 @@ __pycache__/
 
 revive.toml
 
+wfcli
+wfcli-linux
+wfcli-osx
+wfcli-windows
 
-wfcli*
-fission-workflows-bundle*
+fission-workflows-bundle
+fission-workflows-bundle-linux
+fission-workflows-bundle-osx
+fission-workflows-bundle-windows

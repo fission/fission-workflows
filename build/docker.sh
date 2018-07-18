@@ -42,7 +42,7 @@ docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
 echo "Building wfcli..."
-docker build --tag="${IMAGE_REPO}/wfcli:${IMAGE_TAG}" ${BUILD_ROOT}/wfcli/ \
+docker build --tag="${IMAGE_REPO}/wfcli:${IMAGE_TAG}" ${BUILD_ROOT}/wfcli-docker/ \
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
