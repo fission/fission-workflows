@@ -3,7 +3,6 @@ package fission
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -108,43 +107,6 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		Status: types.TaskInvocationStatus_SUCCEEDED,
 		Output: &output,
 	}, nil
-}
-
-// Notify signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
-	reqURL, err := fe.getFnURL(fn)
-	if err != nil {
-		return err
-	}
-
-	// For this now assume a standard cold start delay; use profiling to provide a better estimate.
-	execAt := expectedAt.Add(-provisionDuration)
-
-	// Tap the Fission function at the right time
-	fe.timedExecService.Submit(func() {
-		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqURL)
-		fe.executor.TapService(reqURL)
-	}, execAt)
-	return nil
-}
-
-func (fe *FunctionEnv) getFnURL(fn types.FnRef) (*url.URL, error) {
-	meta := createFunctionMeta(fn)
-	serviceURL, err := fe.executor.GetServiceForFunction(meta)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"err":  err,
-			"meta": meta,
-		}).Error("Fission function could not be found!")
-		return nil, err
-	}
-	rawURL := fmt.Sprintf("%s://%s", defaultProtocol, serviceURL)
-	reqURL, err := url.Parse(rawURL)
-	if err != nil {
-		logrus.Errorf("Failed to parse url: '%v'", rawURL)
-		panic(err)
-	}
-	return reqURL, nil
 }
 
 func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
