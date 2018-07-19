@@ -266,7 +266,6 @@ func (cr *Controller) Evaluate(invocationID string) {
 		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
-	log.Debugf("evaluating invocation %s", invocationID)
 
 	// Fetch the workflow invocation for the provided invocation id
 	wfi := aggregates.NewWorkflowInvocation(invocationID)
@@ -279,7 +278,6 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 	// TODO move to rule
 	if wfi.Status.Finished() {
-		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationID)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
 	}

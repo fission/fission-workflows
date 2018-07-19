@@ -64,7 +64,6 @@ func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Actio
 	wf := ec.Workflow()
 	// Check if workflow is in the right state to use.
 	if !wf.Status.Ready() {
-		log.WithField("wf.status", wf.Status.Status).Error("Workflow is not ready yet.")
 		return &controller.ActionSkip{} // TODO backoff action
 	}
 	return nil
