@@ -2,7 +2,6 @@ package workflows
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -51,15 +50,15 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 		wfSpec.ParentId = parentID
 	}
 
-	wfi, err := rt.InvokeWorkflow(wfSpec)
+	// Note: currently context is not supported in the runtime interface, so we use a background context.
+	wfi, err := rt.InvokeWorkflow(context.Background(), wfSpec)
 	if err != nil {
 		return nil, err
 	}
 	return wfi.Status.ToTaskStatus(), nil
 }
 
-func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	// Invoke workflow
+func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
 	timeStart := time.Now()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	fnenv.FnActive.WithLabelValues(Name).Inc()
@@ -69,7 +68,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec) (*types.Wo
 		return nil, err
 	}
 
-	timeout, cancelFn := context.WithTimeout(context.TODO(), invokeSyncTimeout)
+	timedCtx, cancelFn := context.WithTimeout(ctx, invokeSyncTimeout)
 	defer cancelFn()
 	var result *types.WorkflowInvocation
 	for {
@@ -84,12 +83,12 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec) (*types.Wo
 		}
 
 		select {
-		case <-timeout.Done():
+		case <-timedCtx.Done():
 			err := rt.api.Cancel(wfiID)
 			if err != nil {
 				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
 			}
-			return nil, errors.New("timeout occurred")
+			return nil, timedCtx.Err()
 		default:
 			// TODO polling is a temporary shortcut; needs optimizing.
 			time.Sleep(invokeSyncPollingInterval)

@@ -75,7 +75,7 @@ spec:
 apiVersion: fission.io/v1
 kind: Environment
 metadata:
-  name: workflow
+  name: {{ .Values.env.name }}
   namespace: default
 spec:
   version: 2

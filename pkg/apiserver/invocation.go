@@ -42,7 +42,7 @@ func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocation
 }
 
 func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	wfi, err := gi.fnenv.InvokeWorkflow(spec)
+	wfi, err := gi.fnenv.InvokeWorkflow(ctx, spec)
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
