@@ -14,6 +14,8 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+const ErrInvocationCanceled = "workflow invocation was canceled"
+
 // Invocation contains the API functionality for controlling (workflow) invocations.
 // This includes starting, stopping, and completing invocations.
 type Invocation struct {
@@ -60,16 +62,19 @@ func (ia *Invocation) Cancel(invocationID string) error {
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
-	err := ia.es.Append(&fes.Event{
+	data, err := proto.Marshal(&types.Error{
+		Message: ErrInvocationCanceled,
+	})
+	if err != nil {
+		data = []byte{}
+	}
+	return ia.es.Append(&fes.Event{
 		Type:      events.Invocation_INVOCATION_CANCELED.String(),
 		Aggregate: aggregates.NewWorkflowInvocationAggregate(invocationID),
 		Timestamp: ptypes.TimestampNow(),
+		Data:      data,
 		Hints:     &fes.EventHints{Completed: true},
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Complete forces the completion of an invocation. This function - used by the controller - is the only way
