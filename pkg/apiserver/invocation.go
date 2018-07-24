@@ -10,6 +10,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -67,15 +68,37 @@ func (gi *Invocation) Get(ctx context.Context, invocationID *WorkflowInvocationI
 	return wi.WorkflowInvocation, nil
 }
 
-func (gi *Invocation) List(context.Context, *empty.Empty) (*WorkflowInvocationList, error) {
+func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*WorkflowInvocationList, error) {
 	var invocations []string
 	as := gi.wfiCache.List()
-	for _, a := range as {
-		if a.Type != aggregates.TypeWorkflowInvocation {
+	for _, aggregate := range as {
+		if aggregate.Type != aggregates.TypeWorkflowInvocation {
 			return nil, toErrorStatus(errors.New("invalid type in invocation cache"))
 		}
 
-		invocations = append(invocations, a.Id)
+		if len(query.Workflows) > 0 {
+			// TODO make more efficient (by moving list queries to cache)
+			entity, err := gi.wfiCache.GetAggregate(aggregate)
+			if err != nil {
+				logrus.Error("List: failed to fetch %v from cache: %v", aggregate, err)
+				continue
+			}
+			wfi := entity.(*aggregates.WorkflowInvocation)
+			if !contains(query.Workflows, wfi.GetSpec().GetWorkflowId()) {
+				continue
+			}
+		}
+
+		invocations = append(invocations, aggregate.Id)
 	}
 	return &WorkflowInvocationList{invocations}, nil
+}
+
+func contains(haystack []string, needle string) bool {
+	for i := 0; i < len(haystack); i++ {
+		if haystack[i] == needle {
+			return true
+		}
+	}
+	return false
 }

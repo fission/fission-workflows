@@ -98,6 +98,7 @@ func (pu *DefaultPublisher) Unsubscribe(sub *Subscription) error {
 			updatedSubs = append(updatedSubs, s)
 		}
 	}
+	pu.subs = updatedSubs
 	return nil
 }
 

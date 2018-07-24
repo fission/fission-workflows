@@ -11,6 +11,7 @@ package workflows
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -107,8 +108,21 @@ func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvoc
 
 		// Block until either we received an completion event or the context completed
 		select {
-		case <-sub.Ch:
 		case <-timedCtx.Done():
+			// Check once before cancelling, whether cancelling is needed.
+			if result := rt.checkForResult(wfiID); result != nil {
+				return result, nil
+			}
+
+			// Cancel the invocation
+			err := rt.api.Cancel(wfiID)
+			if err == nil {
+				err = errors.New(api.ErrInvocationCanceled)
+			} else {
+				logrus.Errorf("Failed to cancel invocation: %v", err)
+			}
+			return nil, err
+		case <-sub.Ch:
 		}
 		return rt.checkForResult(wfiID), timedCtx.Err()
 	}
