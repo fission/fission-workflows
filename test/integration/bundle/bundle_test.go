@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -20,7 +21,9 @@ import (
 )
 
 const (
-	gRPCAddress = ":5555"
+	TestSuiteTimeout = 10 * time.Minute
+	TestTimeout      = time.Minute
+	gRPCAddress      = ":5555"
 )
 
 func TestMain(m *testing.M) {
@@ -29,7 +32,7 @@ func TestMain(m *testing.M) {
 		return
 	}
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), time.Duration(1)*time.Minute)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestSuiteTimeout)
 	integration.SetupBundle(ctx)
 
 	time.Sleep(time.Duration(4) * time.Second)
@@ -38,17 +41,14 @@ func TestMain(m *testing.M) {
 	defer os.Exit(exitCode)
 	// Teardown
 	cancelFn()
-	<-time.After(time.Duration(2) * time.Second) // Needed in order to let context cancel propagate
+	<-time.After(time.Duration(5) * time.Second) // Needed in order to let context cancel propagate
 }
 
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, _ := setup()
 
 	// Test workflow creation
 	spec := &types.WorkflowSpec{
@@ -82,13 +82,9 @@ func TestWorkflowCreate(t *testing.T) {
 }
 
 func TestWorkflowInvocation(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
-	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
@@ -135,7 +131,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	wiId := result.Metadata.Id
 
 	// Test invocation list
-	l, err := wi.List(ctx, &empty.Empty{})
+	l, err := wi.List(ctx, &apiserver.InvocationListQuery{})
 	assert.NoError(t, err)
 	if len(l.Invocations) != 1 || l.Invocations[0] != wiId {
 		t.Errorf("Listed invocations '%v' did not match expected invocation '%s'", l.Invocations, wiId)
@@ -160,13 +156,9 @@ func TestWorkflowInvocation(t *testing.T) {
 }
 
 func TestDynamicWorkflowInvocation(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
-	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
@@ -236,13 +228,9 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 }
 
 func TestInlineWorkflowInvocation(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
-	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
@@ -306,13 +294,9 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 }
 
 func TestLongRunningWorkflowInvocation(t *testing.T) {
-	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
-	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
 
 	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
@@ -371,4 +355,65 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 
 	output := typedvalues.MustFormat(wfi.Status.Output)
 	assert.Equal(t, "1234", output)
+}
+
+func TestWorkflowCancellation(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "longSleep2",
+		Tasks: types.Tasks{
+			"longSleep": {
+				FunctionRef: builtin.Sleep,
+				Inputs:      typedvalues.Input("250ms"),
+			},
+			"longSleep2": {
+				FunctionRef: builtin.Sleep,
+				Inputs:      typedvalues.Input("5s"),
+				Requires:    types.Require("longSleep"),
+			},
+		},
+	}
+
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+
+	// Invoke and cancel the invocation
+	cancelCtx, cancelFn := context.WithCancel(ctx)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		cancelFn()
+	}()
+	resp, err := wi.InvokeSync(cancelCtx, wiSpec)
+	assert.Error(t, err)
+	assert.Empty(t, resp)
+	time.Sleep(500 * time.Millisecond)
+
+	wfis, err := wi.List(ctx, &apiserver.InvocationListQuery{
+		Workflows: []string{wfResp.GetId()},
+	})
+	assert.NoError(t, err)
+	wfiID := wfis.Invocations[0]
+	wfi, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wfiID})
+	assert.NoError(t, err)
+	assert.False(t, wfi.GetStatus().Successful())
+	assert.True(t, wfi.GetStatus().Finished())
+	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
+}
+
+func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	return cl, wi
 }

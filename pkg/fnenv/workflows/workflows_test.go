@@ -22,7 +22,7 @@ func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 	runtime.timeout = 10 * time.Millisecond
 
 	_, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
-	assert.EqualError(t, err, context.DeadlineExceeded.Error())
+	assert.Equal(t, api.ErrInvocationCanceled, err.Error())
 }
 
 func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
