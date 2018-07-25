@@ -47,7 +47,7 @@ func TestResolveForced(t *testing.T) {
 	resolver := NewMetaResolver(clients)
 
 	task1 := "task1"
-	task1Ref := types.NewFnRef(fooClient, "lowercase")
+	task1Ref := types.NewFnRef(fooClient, "", "lowercase")
 	task1Name := task1Ref.Format()
 	tasks := map[string]*types.TaskSpec{
 		task1: {
@@ -133,6 +133,6 @@ type MockedFunctionResolver struct {
 	Fn func(string) (string, error)
 }
 
-func (mk *MockedFunctionResolver) Resolve(fnName string) (string, error) {
-	return mk.Fn(fnName)
+func (mk *MockedFunctionResolver) Resolve(ref types.FnRef) (string, error) {
+	return mk.Fn(ref.ID)
 }

@@ -131,7 +131,7 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 func TestRuntime_Invoke(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
 
-	spec := types.NewTaskInvocationSpec("wi-123", "ti-123", types.NewFnRef("internal", "fooFn"))
+	spec := types.NewTaskInvocationSpec("wi-123", "ti-123", types.NewFnRef("internal", "", "fooFn"))
 	spec.Inputs = types.Inputs{}
 	spec.Inputs[types.InputParent] = typedvalues.MustParse("parentID")
 	output := typedvalues.MustParse("foo")
