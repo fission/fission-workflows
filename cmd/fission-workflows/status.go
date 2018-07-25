@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli"
 )
@@ -14,7 +15,8 @@ var cmdStatus = cli.Command{
 		client := getClient(ctx)
 		resp, err := client.Admin.Status(ctx)
 		if err != nil {
-			panic(err)
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
 		fmt.Printf(resp.Status)
 
