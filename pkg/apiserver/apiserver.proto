@@ -86,7 +86,7 @@ service WorkflowInvocationAPI {
         };
     }
 
-    rpc List (google.protobuf.Empty) returns (WorkflowInvocationList) {
+    rpc List (InvocationListQuery) returns (WorkflowInvocationList) {
         option (google.api.http) = {
             get: "/invocation"
         };
@@ -108,6 +108,10 @@ service WorkflowInvocationAPI {
             body: "*"
         };
     }
+}
+
+message InvocationListQuery {
+    repeated string workflows = 1;
 }
 
 message WorkflowInvocationIdentifier {
