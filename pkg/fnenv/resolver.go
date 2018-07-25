@@ -52,17 +52,11 @@ func NewMetaResolver(client map[string]RuntimeResolver) *MetaResolver {
 func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	ref, err := types.ParseFnRef(targetFn)
 	if err != nil {
-		if err == types.ErrNoRuntime {
-			ref = types.FnRef{
-				ID: targetFn,
-			}
-		} else {
-			return types.FnRef{}, err
-		}
+		return types.FnRef{}, err
 	}
 
 	if ref.Runtime != "" {
-		return ps.resolveForRuntime(ref.ID, ref.Runtime)
+		return ps.resolveForRuntime(ref)
 	}
 
 	waitFor := len(ps.clients)
@@ -73,7 +67,7 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	var lastErr error
 	for cName := range ps.clients {
 		go func(cName string) {
-			def, err := ps.resolveForRuntime(ref.ID, cName)
+			def, err := ps.resolveForRuntime(types.FnRef{Runtime: cName, Namespace: ref.Namespace, ID: ref.ID})
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
 					"err":     err,
@@ -99,20 +93,21 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	}
 }
 
-func (ps *MetaResolver) resolveForRuntime(targetFn string, runtime string) (types.FnRef, error) {
-	dst, ok := ps.clients[runtime]
+func (ps *MetaResolver) resolveForRuntime(ref types.FnRef) (types.FnRef, error) {
+	dst, ok := ps.clients[ref.Runtime]
 	if !ok {
 		return types.FnRef{}, ErrInvalidRuntime
 	}
-	rsv, err := dst.Resolve(targetFn)
+	rsv, err := dst.Resolve(ref)
 	if err != nil {
 		return types.FnRef{}, err
 	}
 
-	fnResolved.WithLabelValues(runtime).Inc()
+	fnResolved.WithLabelValues(ref.Runtime).Inc()
 	return types.FnRef{
-		Runtime: runtime,
-		ID:      rsv,
+		Runtime:   ref.Runtime,
+		Namespace: ref.Namespace,
+		ID:        rsv,
 	}, nil
 }
 
@@ -182,10 +177,12 @@ func resolveTask(ps Resolver, id string, task *types.TaskSpec, resolvedC chan so
 	if task == nil || resolvedC == nil {
 		return nil
 	}
+
 	t, err := ps.Resolve(task.FunctionRef)
 	if err != nil {
 		return err
 	}
+
 	resolvedC <- sourceFnRef{
 		src:   id,
 		FnRef: &t,

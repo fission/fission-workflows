@@ -156,5 +156,9 @@ func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
 }
 
 func (fe *FunctionEnv) createRouterURL(fn types.FnRef) string {
-	return fe.routerURL + "/fission-function/" + fn.ID
+	if fn.Namespace == metav1.NamespaceDefault {
+		return fe.routerURL + "/fission-function/" + fn.ID
+	}
+
+	return fe.routerURL + "/fission-function/" + fn.Namespace + "/" + fn.ID
 }

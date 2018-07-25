@@ -1,6 +1,7 @@
 package fission
 
 import (
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission/controller/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -15,18 +16,18 @@ func NewResolver(controller *client.Client) *Resolver {
 	return &Resolver{controller}
 }
 
-func (re *Resolver) Resolve(fnName string) (string, error) {
+func (re *Resolver) Resolve(ref types.FnRef) (string, error) {
 	// Currently we just use the controller API to check if the function exists.
-	log.Infof("Resolving function: %s", fnName)
+	log.Infof("Resolving function: %s", ref.ID)
 	_, err := re.controller.FunctionGet(&metav1.ObjectMeta{
-		Name:      fnName,
-		Namespace: metav1.NamespaceDefault,
+		Name:      ref.ID,
+		Namespace: ref.Namespace,
 	})
 	if err != nil {
 		return "", err
 	}
-	id := fnName
+	id := ref.ID
 
-	log.Infof("Resolved fission function %s to %s", fnName, id)
+	log.Infof("Resolved fission function %s to %s", ref.ID, id)
 	return id, nil
 }

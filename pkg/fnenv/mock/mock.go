@@ -145,10 +145,10 @@ type Resolver struct {
 	FnNameIDs map[string]string
 }
 
-func (mf *Resolver) Resolve(fnName string) (string, error) {
-	fnID, ok := mf.FnNameIDs[fnName]
+func (mf *Resolver) Resolve(ref types.FnRef) (string, error) {
+	fnID, ok := mf.FnNameIDs[ref.ID]
 	if !ok {
-		return "", fmt.Errorf("could not resolve function '%s' using resolve-map '%v'", fnName, mf.FnNameIDs)
+		return "", fmt.Errorf("could not resolve function '%s' using resolve-map '%v'", ref.ID, mf.FnNameIDs)
 	}
 
 	return fnID, nil

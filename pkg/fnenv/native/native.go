@@ -83,13 +83,13 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	}, nil
 }
 
-func (fe *FunctionEnv) Resolve(fnName string) (string, error) {
-	_, ok := fe.fns[fnName]
+func (fe *FunctionEnv) Resolve(ref types.FnRef) (string, error) {
+	_, ok := fe.fns[ref.ID]
 	if !ok {
-		return "", fmt.Errorf("could not resolve internal function '%s'", fnName)
+		return "", fmt.Errorf("could not resolve internal function '%s'", ref.ID)
 	}
-	log.WithField("name", fnName).WithField("uid", fnName).Debug("Resolved internal function")
-	return fnName, nil
+	log.WithField("name", ref.ID).WithField("uid", ref.ID).Debug("Resolved internal function")
+	return ref.ID, nil
 }
 
 func (fe *FunctionEnv) RegisterFn(name string, fn InternalFunction) {

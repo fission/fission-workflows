@@ -105,5 +105,5 @@ type RuntimeResolver interface {
 
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function within the scope
 	// of a runtime.
-	Resolve(targetFn string) (string, error)
+	Resolve(ref types.FnRef) (string, error)
 }
