@@ -68,8 +68,8 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.Status = types.WorkflowStatus_DELETED
 	default:
 		log.WithFields(log.Fields{
-			"event": event,
-		}).Warn("Skipping unimplemented event.")
+			"aggregate": wf.Aggregate(),
+		}).Warnf("Skipping unimplemented event: %T", eventData)
 	}
 	return nil
 }

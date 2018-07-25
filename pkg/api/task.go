@@ -123,7 +123,7 @@ func (ap *Task) Fail(invocationID string, taskID string, errMsg string) error {
 		return validate.NewError("taskID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.TaskFailed{
+	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskFailed{
 		Error: &types.Error{Message: errMsg},
 	})
 	if err != nil {

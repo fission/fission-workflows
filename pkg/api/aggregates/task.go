@@ -68,8 +68,8 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.UpdatedAt = event.Timestamp
 	default:
 		log.WithFields(log.Fields{
-			"event": event,
-		}).Warn("Skipping unimplemented event.")
+			"aggregate": ti.Aggregate(),
+		}).Warnf("Skipping unimplemented event: %T", eventData)
 	}
 	return nil
 }

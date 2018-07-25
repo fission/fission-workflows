@@ -91,8 +91,8 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		wi.Status.Status = types.WorkflowInvocationStatus_FAILED
 	default:
 		log.WithFields(log.Fields{
-			"event": event,
-		}).Warn("Skipping unimplemented event.")
+			"aggregate": wi.Aggregate(),
+		}).Warnf("Skipping unimplemented event: %T", eventData)
 	}
 	return err
 }

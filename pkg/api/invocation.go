@@ -101,7 +101,7 @@ func (ia *Invocation) Fail(invocationID string, errMsg error) error {
 	}
 
 	var msg string
-	if errMsg == nil {
+	if errMsg != nil {
 		msg = errMsg.Error()
 	}
 	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationFailed{

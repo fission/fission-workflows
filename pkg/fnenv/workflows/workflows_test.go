@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/stretchr/testify/assert"
@@ -154,7 +154,7 @@ func TestRuntime_Invoke(t *testing.T) {
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
-	cache := fes.NewSubscribedCache(context.Background(), fes.NewMapCache(), func() fes.Aggregator {
+	cache := fes.NewSubscribedCache(context.Background(), fes.NewMapCache(), func() fes.Entity {
 		return aggregates.NewWorkflowInvocation("")
 	}, backend.Subscribe())
 	runtime := NewRuntime(invocationAPI, cache)
