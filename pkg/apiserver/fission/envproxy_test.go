@@ -66,22 +66,22 @@ func (m *mockWorkflowServer) Create(ctx context.Context, spec *types.WorkflowSpe
 	return &types.ObjectMetadata{Id: args.String(0)}, args.Error(1)
 }
 
-func (m mockWorkflowServer) List(ctx context.Context, _ *empty.Empty) (*apiserver.WorkflowList, error) {
+func (m *mockWorkflowServer) List(ctx context.Context, _ *empty.Empty) (*apiserver.WorkflowList, error) {
 	args := m.Called()
 	return args.Get(0).(*apiserver.WorkflowList), args.Error(1)
 }
 
-func (m mockWorkflowServer) Get(ctx context.Context, id *types.ObjectMetadata) (*types.Workflow, error) {
+func (m *mockWorkflowServer) Get(ctx context.Context, id *types.ObjectMetadata) (*types.Workflow, error) {
 	args := m.Called(id)
 	return args.Get(0).(*types.Workflow), args.Error(1)
 }
 
-func (m mockWorkflowServer) Delete(ctx context.Context, id *types.ObjectMetadata) (*empty.Empty, error) {
+func (m *mockWorkflowServer) Delete(ctx context.Context, id *types.ObjectMetadata) (*empty.Empty, error) {
 	args := m.Called(id)
 	return &empty.Empty{}, args.Error(1)
 }
 
-func (m mockWorkflowServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
+func (m *mockWorkflowServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
 	args := m.Called(spec)
 	return &empty.Empty{}, args.Error(1)
 }
