@@ -160,7 +160,6 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	defer cancelFn()
 	cl, wi := setup()
 
-	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",
@@ -232,7 +231,6 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 	defer cancelFn()
 	cl, wi := setup()
 
-	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "finalTask",
@@ -298,7 +296,6 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 	defer cancelFn()
 	cl, wi := setup()
 
-	// Test workflow creation
 	wfSpec := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "final",
@@ -406,6 +403,57 @@ func TestWorkflowCancellation(t *testing.T) {
 	assert.False(t, wfi.GetStatus().Successful())
 	assert.True(t, wfi.GetStatus().Finished())
 	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
+}
+
+func TestInvocationInvalid(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, _ := setup()
+
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "nonexistentTask",
+		Tasks: types.Tasks{
+			"task1": {
+				FunctionRef: builtin.Noop,
+			},
+		},
+	}
+	_, err := cl.Create(ctx, wfSpec)
+	assert.Error(t, err)
+}
+
+func TestInvocationFailed(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
+
+	msg := "expected error"
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "task1",
+		Tasks: types.Tasks{
+			"task1": {
+				FunctionRef: builtin.Fail,
+				Inputs:      typedvalues.Input(msg),
+			},
+		},
+	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+	assert.NoError(t, err, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.False(t, wfi.Status.Successful())
+	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
+	// assert.Equal(t, msg, wfi.GetStatus().GetError().GetMessage())
+	// TODO generate consistent error report!
 }
 
 func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {

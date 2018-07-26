@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package fission.workflows.events;
+option go_package = "events";
+
+import "github.com/fission/fission-workflows/pkg/types/types.proto";
+
+message EventWrapper {
+    string any = 1;
+}
+
+//
+// Workflow
+//
+
+message WorkflowCreated {
+    fission.workflows.types.WorkflowSpec spec = 1;
+}
+
+message WorkflowDeleted {
+}
+
+message WorkflowParsed {
+    map<string, fission.workflows.types.TaskStatus> tasks = 1;
+}
+
+message WorkflowParsingFailed {
+    fission.workflows.types.Error error = 1;
+}
+
+//
+// Invocation
+//
+
+message InvocationCreated {
+    fission.workflows.types.WorkflowInvocationSpec spec = 1;
+}
+
+message InvocationCompleted {
+    fission.workflows.types.TypedValue output = 1;
+}
+
+message InvocationCanceled {
+    fission.workflows.types.Error error = 1;
+}
+
+message InvocationTaskAdded {
+    fission.workflows.types.Task task = 1;
+}
+
+message InvocationFailed {
+    fission.workflows.types.Error error = 1;
+}
+
+//
+// Task
+//
+// TODO why do we need task, and not just task spec.
+message TaskStarted {
+    fission.workflows.types.TaskInvocationSpec spec = 1;
+}
+
+message TaskSucceeded {
+    fission.workflows.types.TaskInvocationStatus result = 1;
+}
+
+message TaskSkipped {
+}
+
+message TaskFailed {
+    fission.workflows.types.Error error = 1;
+}

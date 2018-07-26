@@ -2,25 +2,25 @@ package fes
 
 import "github.com/fission/fission-workflows/pkg/util/pubsub"
 
-// Aggregator is a entity that can be updated
+// Entity is a entity that can be updated
 // TODO we need to keep more event-related information (such as current index)
-type Aggregator interface {
+type Entity interface {
+
 	// Entity-specific
-	// TODO can we avoid mutability here?
 	ApplyEvent(event *Event) error
 
 	// Aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
 	//
-	// This is implemented by AggregatorMixin
+	// This is implemented by BaseEntity
 	Aggregate() Aggregate
 
 	// UpdateState mutates the current entity to the provided target state
 	//
-	// This is implemented by AggregatorMixin, can be overridden for performance approach
-	UpdateState(targetState Aggregator) error
+	// This is implemented by BaseEntity, can be overridden for performance approach
+	UpdateState(targetState Entity) error
 
 	// Copy copies the actual wrapped object. This is useful to get a snapshot of the state.
-	GenericCopy() Aggregator
+	GenericCopy() Entity
 }
 
 type EventAppender interface {
@@ -38,17 +38,17 @@ type Backend interface {
 
 // Projector projects events into an entity
 type Projector interface {
-	Project(target Aggregator, events ...*Event) error
+	Project(target Entity, events ...*Event) error
 }
 
 type CacheReader interface {
-	Get(entity Aggregator) error
+	Get(entity Entity) error
 	List() []Aggregate
-	GetAggregate(a Aggregate) (Aggregator, error)
+	GetAggregate(a Aggregate) (Entity, error)
 }
 
 type CacheWriter interface {
-	Put(entity Aggregator) error
+	Put(entity Entity) error
 	Invalidate(entity *Aggregate)
 }
 
@@ -57,17 +57,15 @@ type CacheReaderWriter interface {
 	CacheWriter
 }
 
-type StringMatcher interface {
-	Match(target string) bool
-}
+type StringMatcher func(target string) bool
 
 type Notification struct {
 	*pubsub.EmptyMsg
-	Payload   Aggregator
+	Payload   Entity
 	EventType string
 }
 
-func newNotification(entity Aggregator, event *Event) *Notification {
+func newNotification(entity Entity, event *Event) *Notification {
 	return &Notification{
 		EmptyMsg:  pubsub.NewEmptyMsg(event.Labels(), event.CreatedAt()),
 		Payload:   entity,

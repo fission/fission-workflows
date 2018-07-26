@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
-	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/sirupsen/logrus"
 

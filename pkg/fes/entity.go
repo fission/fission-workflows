@@ -5,27 +5,27 @@ import (
 	"reflect"
 )
 
-// AggregatorMixin is a helper to implement most of the Aggregator interface.
+// BaseEntity is a helper to implement most of the Entity interface.
 //
 // Structs using this struct will only need to implement the following methods:
 // - ApplyEvent(event)
-type AggregatorMixin struct {
+type BaseEntity struct {
 	aggregate Aggregate
 	// parent is a pointer to the wrapper of this mixin, to allow for reflection-based aggregation.
-	parent Aggregator
+	parent Entity
 
 	version uint
 }
 
-func (am *AggregatorMixin) Aggregate() Aggregate {
+func (am *BaseEntity) Aggregate() Aggregate {
 	return am.aggregate
 }
 
-// UpdateState mutates the current Aggregator to the new provided Aggregator.
+// UpdateState mutates the current Entity to the new provided Entity.
 //
 // By default it uses reflection to update the fields. For improved performance override this method with a
 // aggregate-specific one.
-func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
+func (am *BaseEntity) UpdateState(newState Entity) error {
 	if newState.Aggregate() != am.Aggregate() {
 		return errors.New("invalid newState")
 	}
@@ -46,15 +46,15 @@ func (am *AggregatorMixin) UpdateState(newState Aggregator) error {
 	return nil
 }
 
-func (am AggregatorMixin) CopyAggregatorMixin(self Aggregator) *AggregatorMixin {
-	return &AggregatorMixin{
+func (am BaseEntity) CopyBaseEntity(self Entity) *BaseEntity {
+	return &BaseEntity{
 		aggregate: am.aggregate,
 		parent:    self,
 	}
 }
 
-func NewAggregatorMixin(thiz Aggregator, aggregate Aggregate) *AggregatorMixin {
-	return &AggregatorMixin{
+func NewBaseEntity(thiz Entity, aggregate Aggregate) *BaseEntity {
+	return &BaseEntity{
 		aggregate: aggregate,
 		parent:    thiz,
 	}

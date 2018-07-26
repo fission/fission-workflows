@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/sirupsen/logrus"
 )
 

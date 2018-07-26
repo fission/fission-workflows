@@ -14,8 +14,8 @@ import (
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
-	"github.com/fission/fission-workflows/pkg/fnenv/common/httpconv"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission/router"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/sirupsen/logrus"

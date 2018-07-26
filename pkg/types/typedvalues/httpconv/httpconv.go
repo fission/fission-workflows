@@ -1,3 +1,4 @@
+// package httpconv provides methods for mapping typedvalues to HTTP requests and HTTP responses to typedvalues.
 package httpconv
 
 import (
@@ -30,7 +31,7 @@ const (
 	methodDefault       = http.MethodPost
 )
 
-// ParseRequest maps a HTTP request to a target map.
+// ParseRequest maps a HTTP request to a target map of typedvalues.
 func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	target := map[string]*types.TypedValue{}
 	// Content-Type is a common problem, so log this for every request
@@ -63,6 +64,7 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	return target, nil
 }
 
+// ParseRequest maps the body of the HTTP request to a corresponding typedvalue.
 func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 	if len(contentType) == 0 {
 		contentType = contentTypeDefault
@@ -139,7 +141,11 @@ func ParseQuery(r *http.Request) types.TypedValue {
 	return *tv
 }
 
+//
 // formatting logic
+//
+
+// FormatResponse maps an TypedValue to an HTTP response
 func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *types.Error) {
 	if w == nil {
 		panic("cannot format response to nil")
@@ -170,6 +176,7 @@ func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *
 	return
 }
 
+// FormatRequest maps a map of typed values to an HTTP request
 func FormatRequest(source map[string]*types.TypedValue, target *http.Request) error {
 	if target == nil {
 		panic("cannot format request to nil")
@@ -233,7 +240,7 @@ func FormatMethod(inputs map[string]*types.TypedValue) string {
 	return methodDefault
 }
 
-// TODO support multivalued query params at some point
+// FUTURE: support multivalued query params
 func FormatQuery(inputs map[string]*types.TypedValue) url.Values {
 	queryInput := inputs[types.InputQuery]
 	if queryInput == nil {
@@ -358,7 +365,7 @@ func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 	}
 }
 
-// TODO support multi-headers at some point
+// FUTURE: support multi-headers at some point
 func FormatHeaders(inputs map[string]*types.TypedValue) http.Header {
 	headers := http.Header{}
 	rawHeaders, ok := inputs[types.InputHeaders]
@@ -384,7 +391,9 @@ func FormatHeaders(inputs map[string]*types.TypedValue) http.Header {
 	return headers
 }
 
+//
 // Util
+//
 
 func flattenMultimap(mm map[string][]string) map[string]interface{} {
 	target := map[string]interface{}{}

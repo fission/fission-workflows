@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -23,7 +24,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/scheduler"
-	"github.com/fission/fission-workflows/pkg/types/aggregates"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
@@ -346,7 +346,7 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 			labels.In(fes.PubSubLabelAggregateType, "invocation"),
 			labels.In("parent.type", "invocation")),
 	})
-	wi := func() fes.Aggregator {
+	wi := func() fes.Entity {
 		return aggregates.NewWorkflowInvocation("")
 	}
 
@@ -358,7 +358,7 @@ func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) 
 		Buffer:       10,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, "workflow"),
 	})
-	wb := func() fes.Aggregator {
+	wb := func() fes.Entity {
 		return aggregates.NewWorkflow("")
 	}
 	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("workflow"), wb, wfSub)

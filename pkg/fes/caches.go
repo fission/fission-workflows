@@ -39,13 +39,13 @@ func init() {
 // MapCache provides a simple non-preempting map-based CacheReaderWriter implementation.
 type MapCache struct {
 	Name     string
-	contents map[string]map[string]Aggregator // Map: AggregateType -> AggregateId -> entity
+	contents map[string]map[string]Entity // Map: AggregateType -> AggregateId -> entity
 	lock     *sync.RWMutex
 }
 
 func NewMapCache() *MapCache {
 	c := &MapCache{
-		contents: map[string]map[string]Aggregator{},
+		contents: map[string]map[string]Entity{},
 		lock:     &sync.RWMutex{},
 	}
 	c.Name = fmt.Sprintf("%p", c)
@@ -54,13 +54,13 @@ func NewMapCache() *MapCache {
 
 func NewNamedMapCache(name string) *MapCache {
 	return &MapCache{
-		contents: map[string]map[string]Aggregator{},
+		contents: map[string]map[string]Entity{},
 		lock:     &sync.RWMutex{},
 		Name:     name,
 	}
 }
 
-func (rc *MapCache) Get(entity Aggregator) error {
+func (rc *MapCache) Get(entity Entity) error {
 	if entity == nil {
 		return errors.New("entity is nil")
 	}
@@ -85,7 +85,7 @@ func (rc *MapCache) Get(entity Aggregator) error {
 	return e
 }
 
-func (rc *MapCache) GetAggregate(aggregate Aggregate) (Aggregator, error) {
+func (rc *MapCache) GetAggregate(aggregate Aggregate) (Entity, error) {
 	err := validateAggregate(aggregate)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (rc *MapCache) GetAggregate(aggregate Aggregate) (Aggregator, error) {
 	return cached, nil
 }
 
-func (rc *MapCache) Put(entity Aggregator) error {
+func (rc *MapCache) Put(entity Entity) error {
 	ref := entity.Aggregate()
 	err := validateAggregate(ref)
 	if err != nil {
@@ -116,7 +116,7 @@ func (rc *MapCache) Put(entity Aggregator) error {
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 	if _, ok := rc.contents[ref.Type]; !ok {
-		rc.contents[ref.Type] = map[string]Aggregator{}
+		rc.contents[ref.Type] = map[string]Entity{}
 	}
 	rc.contents[ref.Type][ref.Id] = entity
 	cacheCount.WithLabelValues(rc.Name).Inc()
@@ -147,10 +147,10 @@ type SubscribedCache struct {
 	pubsub.Publisher
 	CacheReaderWriter
 	ts     time.Time
-	target func() Aggregator // TODO extract to a TypedSubscription
+	target func() Entity // TODO extract to a TypedSubscription
 }
 
-func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target func() Aggregator, sub *pubsub.Subscription) *SubscribedCache {
+func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target func() Entity, sub *pubsub.Subscription) *SubscribedCache {
 	c := &SubscribedCache{
 		Publisher:         pubsub.NewPublisher(),
 		CacheReaderWriter: cache,
@@ -246,7 +246,7 @@ type FallbackCache struct {
 	cache  CacheReaderWriter
 	client Backend
 	domain StringMatcher
-	target func() Aggregator // TODO extract to a TypedSubscription
+	target func() Entity // TODO extract to a TypedSubscription
 }
 
 func (c *FallbackCache) List() []Aggregate {
@@ -280,7 +280,7 @@ func (c *FallbackCache) List() []Aggregate {
 	return esAggregates
 }
 
-func (c *FallbackCache) GetAggregate(a Aggregate) (Aggregator, error) {
+func (c *FallbackCache) GetAggregate(a Aggregate) (Entity, error) {
 	cached, err := c.cache.GetAggregate(a)
 	if err != nil {
 		if err == ErrNotFound {
@@ -296,7 +296,7 @@ func (c *FallbackCache) GetAggregate(a Aggregate) (Aggregator, error) {
 	return cached, nil
 }
 
-func (c *FallbackCache) Get(entity Aggregator) error {
+func (c *FallbackCache) Get(entity Entity) error {
 	err := c.cache.Get(entity)
 	if err != nil {
 		if err == ErrNotFound {
@@ -307,7 +307,7 @@ func (c *FallbackCache) Get(entity Aggregator) error {
 	return nil
 }
 
-func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Aggregator) error {
+func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Entity) error {
 	// Look up relevant events in event store
 	events, err := c.client.Get(aggregate)
 	if err != nil {
