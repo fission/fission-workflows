@@ -1,0 +1,10 @@
+# multinamespace shows you how to access and refere a fission function in task under specific namespace.
+#
+# Usage example: fission fn test --name multinamespace --fns fission-function -b 'Hello World'
+apiVersion: 1
+output: multinamespace
+
+tasks:
+  multinamespace:
+    run: fission://fission-function/multinsdump
+    inputs: "{ $.Invocation.Inputs }"

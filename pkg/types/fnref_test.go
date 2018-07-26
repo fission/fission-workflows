@@ -8,15 +8,18 @@ import (
 
 var parseCases = map[string]struct {
 	FnRef
-	err error
+	err  error
+	full string
 }{
-	"":              {FnRef{}, ErrInvalidFnRef},
-	"noRuntime":     {NewFnRef("", "noRuntime"), ErrNoRuntime},
-	"://":           {FnRef{}, ErrInvalidFnRef},
-	"://runtimeId":  {FnRef{}, ErrInvalidFnRef},
-	"runtime://":    {FnRef{}, ErrInvalidFnRef},
-	"a://b":         {NewFnRef("a", "b"), nil},
-	"http://foobar": {NewFnRef("http", "foobar"), nil},
+	"noRuntime":                         {NewFnRef("", "default", "noRuntime"), nil, "default/noRuntime"},
+	"a://b":                             {NewFnRef("a", "default", "b"), nil, "a://default/b"},
+	"http://foobar":                     {NewFnRef("http", "default", "foobar"), nil, "http://default/foobar"},
+	"fission://fission-function/foobar": {NewFnRef("fission", "fission-function", "foobar"), nil, "fission://fission-function/foobar"},
+
+	"":             {FnRef{}, ErrInvalidFnRef, ""},
+	"://":          {FnRef{}, ErrInvalidFnRef, ""},
+	"://runtimeId": {FnRef{}, ErrInvalidFnRef, ""},
+	"runtime://":   {FnRef{}, ErrInvalidFnRef, ""},
 }
 
 func TestParse(t *testing.T) {
@@ -36,7 +39,7 @@ func TestFnRef_Format(t *testing.T) {
 		t.Run(expected, func(t *testing.T) {
 			fnRef := input.FnRef
 			if !fnRef.IsEmpty() {
-				assert.Equal(t, expected, fnRef.Format())
+				assert.Equal(t, input.full, fnRef.Format())
 			}
 		})
 	}

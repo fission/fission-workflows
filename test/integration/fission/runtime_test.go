@@ -29,6 +29,7 @@ const (
 var executor = executorclient.MakeClient(localhost(executorLocalPort))
 var controller = controllerclient.MakeClient(localhost(controllerLocalPort))
 var testFnName = "fission-runtime-test"
+var testFnNs = "fission-function"
 
 // Currently we assume that fission is present (along with the CLI) and kubectl.
 func TestMain(m *testing.M) {
@@ -80,20 +81,22 @@ func TestMain(m *testing.M) {
 
 func TestFnenvResolve(t *testing.T) {
 	resolver := fission.NewResolver(controller)
-	resolved, err := resolver.Resolve(testFnName)
+	ref, err := types.ParseFnRef(testFnName)
+	assert.NoError(t, err)
+	resolved, err := resolver.Resolve(ref)
 	assert.NoError(t, err)
 	assert.Equal(t, testFnName, resolved)
 }
 
 func TestFnenvNotify(t *testing.T) {
-	fnref := types.NewFnRef(fission.Name, testFnName)
+	fnref := types.NewFnRef(fission.Name, testFnNs, testFnName)
 	fnenv := fission.NewFunctionEnv(executor, localhost(routerLocalPort))
 	err := fnenv.Notify(fnref, time.Now().Add(100*time.Millisecond))
 	assert.NoError(t, err)
 }
 
 func TestFnenvInvoke(t *testing.T) {
-	fnref := types.NewFnRef(fission.Name, testFnName)
+	fnref := types.NewFnRef(fission.Name, testFnNs, testFnName)
 	fnenv := fission.NewFunctionEnv(executor, localhost(routerLocalPort))
 	body := "stubBodyVal"
 	headerVal := "stub-header-val"

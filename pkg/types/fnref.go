@@ -4,16 +4,24 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
 	RuntimeDelimiter = "://"
-	groupRuntime     = 1
-	groupRuntimeID   = 2
+)
+
+const (
+	// These are the index of capture groups for the FnRef regex
+	groupFnRef = iota
+	groupRuntime
+	groupNamespace
+	groupRuntimeID
 )
 
 var (
-	fnRefReg        = regexp.MustCompile(fmt.Sprintf("^(?:(\\w+)%s)?(\\w+)$", RuntimeDelimiter))
+	fnRefReg        = regexp.MustCompile(fmt.Sprintf("^(?:(\\w+)%s)?(?:([a-zA-Z0-9][a-zA-Z0-9_-]{1,128})/)?(\\w+)$", RuntimeDelimiter))
 	ErrInvalidFnRef = errors.New("invalid function reference")
 	ErrNoRuntime    = errors.New("function reference does not contain a runtime")
 	ErrNoRuntimeID  = errors.New("function reference does not contain a runtimeId")
@@ -23,6 +31,11 @@ func (m FnRef) Format() string {
 	var runtime string
 	if len(m.Runtime) > 0 {
 		runtime = m.Runtime + RuntimeDelimiter
+	}
+
+	if len(m.Namespace) > 0 {
+		return runtime + m.Namespace + `/` + m.ID
+
 	}
 
 	return runtime + m.ID
@@ -41,13 +54,14 @@ func IsFnRef(s string) bool {
 	return err == nil
 }
 
-func NewFnRef(runtime string, id string) FnRef {
+func NewFnRef(runtime, ns, id string) FnRef {
 	if len(id) == 0 {
 		panic("function reference needs a runtime id")
 	}
 	return FnRef{
-		Runtime: runtime,
-		ID:      id,
+		Runtime:   runtime,
+		Namespace: ns,
+		ID:        id,
 	}
 }
 
@@ -57,20 +71,14 @@ func ParseFnRef(s string) (FnRef, error) {
 		return FnRef{}, ErrInvalidFnRef
 	}
 
-	if len(matches[groupRuntimeID]) == 0 {
-		return FnRef{
-			Runtime: matches[groupRuntime],
-		}, ErrNoRuntimeID
-	}
-
-	if len(matches[groupRuntime]) == 0 {
-		return FnRef{
-			ID: matches[groupRuntimeID],
-		}, ErrNoRuntime
+	ns := matches[groupNamespace]
+	if len(ns) == 0 {
+		ns = metav1.NamespaceDefault
 	}
 
 	return FnRef{
-		Runtime: matches[groupRuntime],
-		ID:      matches[groupRuntimeID],
+		Runtime:   matches[groupRuntime],
+		Namespace: ns,
+		ID:        matches[groupRuntimeID],
 	}, nil
 }
