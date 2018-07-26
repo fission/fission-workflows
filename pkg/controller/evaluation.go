@@ -13,6 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	DefaultPriority = 0
+)
+
 // EvalStore allows storing and retrieving EvalStates in a thread-safe way.
 type EvalStore struct {
 	mp sync.Map
@@ -244,230 +248,157 @@ func (e *EvalLog) Record(record EvalRecord) {
 	*e = append(*e, record)
 }
 
-type heapCmdType string
-
-const (
-	heapCmdPush     heapCmdType = "push"
-	heapCmdFront    heapCmdType = "front"
-	heapCmdPop      heapCmdType = "pop"
-	heapCmdUpdate   heapCmdType = "update"
-	heapCmdGet      heapCmdType = "get"
-	heapCmdLength   heapCmdType = "len"
-	DefaultPriority             = 0
-)
-
-type heapCmd struct {
-	cmd    heapCmdType
-	input  interface{}
-	result chan<- interface{}
-}
-
+// ConcurrentEvalStateHeap is a thread-safe adaption of the EvalStateHeap
 type ConcurrentEvalStateHeap struct {
-	heap             *EvalStateHeap
-	cmdChan          chan heapCmd
-	closeChan        chan bool
-	queueChan        chan *EvalState
-	init             sync.Once
-	activeGoRoutines sync.WaitGroup
+	heap       *EvalStateHeap
+	qLock      sync.RWMutex // Note: pop is altering state, so it needs a write _lock.
+	fLock      sync.Mutex
+	init       sync.Once
+	popChan    chan *EvalState
+	frontChan  chan *EvalState
+	updateCond sync.Cond
+	closeChan  chan struct{}
 }
 
 func NewConcurrentEvalStateHeap(unique bool) *ConcurrentEvalStateHeap {
 	h := &ConcurrentEvalStateHeap{
 		heap:      NewEvalStateHeap(unique),
-		cmdChan:   make(chan heapCmd, 50),
-		closeChan: make(chan bool),
-		queueChan: make(chan *EvalState),
+		popChan:   make(chan *EvalState),
+		frontChan: make(chan *EvalState),
+		closeChan: make(chan struct{}),
 	}
 	h.Init()
-	heap.Init(h.heap)
 	return h
 }
 
 func (h *ConcurrentEvalStateHeap) Init() {
 	h.init.Do(func() {
-		front := make(chan *EvalState, 1)
-		updateFront := func() {
-			front <- h.heap.Front().GetEvalState()
-		}
-
-		// Channel supplier
 		go func() {
-			h.activeGoRoutines.Add(1)
-			var next *EvalState
+			var element *EvalState
 			for {
-				if next != nil {
+				if element == nil {
 					select {
-					case h.queueChan <- next:
-						// Queue item has been fetched; get next one.
-						next = nil
-						h.Pop()
-					case u := <-front:
-						// There has been an update to the queue item; replace it.
-						next = u
+					case element = <-h.frontChan:
 					case <-h.closeChan:
-						h.activeGoRoutines.Done()
 						return
 					}
+
 				} else {
-					// There is no current queue item, so we only listen to updates
 					select {
-					case u := <-front:
-						next = u
+					case h.popChan <- element:
+						h.fLock.Lock()
+						h.qLock.Lock()
+						element = nil
+						heap.Pop(h.heap)
+						front := h.heap.Front()
+						if front != nil {
+							element = front.GetEvalState()
+						}
+						h.qLock.Unlock()
+						h.fLock.Unlock()
+					case element = <-h.frontChan:
 					case <-h.closeChan:
-						h.activeGoRoutines.Done()
 						return
 					}
-				}
-			}
-		}()
-
-		// Command handler
-		go func() {
-			h.activeGoRoutines.Add(1)
-			updateFront()
-			for {
-				select {
-				case cmd := <-h.cmdChan:
-					switch cmd.cmd {
-					case heapCmdFront:
-						cmd.result <- h.heap.Front()
-					case heapCmdLength:
-						cmd.result <- h.heap.Len()
-					case heapCmdPush:
-						heap.Push(h.heap, cmd.input)
-						updateFront()
-					case heapCmdPop:
-						cmd.result <- heap.Pop(h.heap)
-						updateFront()
-					case heapCmdGet:
-						s, _ := h.heap.Get(cmd.input.(string))
-						cmd.result <- s
-					case heapCmdUpdate:
-						i := cmd.input.(*HeapItem)
-						if i.index < 0 {
-							cmd.result <- h.heap.Update(i.EvalState)
-						} else {
-							cmd.result <- h.heap.UpdatePriority(i.EvalState, i.Priority)
-						}
-						updateFront()
-					}
-				case <-h.closeChan:
-					h.activeGoRoutines.Done()
-					return
 				}
 			}
 		}()
 	})
 }
 
-func (h *ConcurrentEvalStateHeap) Get(key string) *HeapItem {
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdGet,
-		input:  key,
-		result: result,
+func (h *ConcurrentEvalStateHeap) Pop() *EvalState {
+	h.lock()
+	if h.heap.Len() == 0 {
+		return nil
 	}
-	return (<-result).(*HeapItem)
+	popped := heap.Pop(h.heap)
+	h.unlock()
+	return (popped).(*EvalState)
+}
+
+// lock write-locks the queue, flushing the channel
+func (h *ConcurrentEvalStateHeap) lock() {
+	h.fLock.Lock()
+	h.frontChan <- nil // clear the pop channel
+	h.qLock.Lock()
+}
+
+// unlock write-unlocks the queue, filling the popChan
+func (h *ConcurrentEvalStateHeap) unlock() {
+	fmt.Println("len: ", h.heap.Len())
+	front := h.heap.Front()
+	if front != nil {
+		h.frontChan <- front.GetEvalState()
+	}
+	h.qLock.Unlock()
+	h.fLock.Unlock()
 }
 
 func (h *ConcurrentEvalStateHeap) Chan() <-chan *EvalState {
-	h.Len()
-	return h.queueChan
+	return h.popChan
 }
 
 func (h *ConcurrentEvalStateHeap) Len() int {
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdLength,
-		result: result,
-	}
-	return (<-result).(int)
+	h.qLock.RLock()
+	count := h.heap.Len()
+	h.qLock.RUnlock()
+	return count
+}
+
+func (h *ConcurrentEvalStateHeap) Get(key string) *HeapItem {
+	h.qLock.RLock()
+	item := h.heap.Get(key)
+	h.qLock.RUnlock()
+	return item
 }
 
 func (h *ConcurrentEvalStateHeap) Front() *HeapItem {
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdFront,
-		result: result,
-	}
-	return (<-result).(*HeapItem)
+	h.qLock.RLock()
+	front := h.heap.Front()
+	h.qLock.RUnlock()
+	return front
 }
 
 func (h *ConcurrentEvalStateHeap) Update(s *EvalState) *HeapItem {
 	if s == nil {
 		return nil
 	}
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdUpdate,
-		result: result,
-		input: &HeapItem{
-			EvalState: s,
-			index:     -1, // abuse index as a signal to not update priority
-		},
-	}
-	return (<-result).(*HeapItem)
+	h.lock()
+	updated := h.heap.Update(s)
+	h.unlock()
+	return updated
 }
 
 func (h *ConcurrentEvalStateHeap) UpdatePriority(s *EvalState, priority int) *HeapItem {
 	if s == nil {
 		return nil
 	}
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdUpdate,
-		result: result,
-		input: &HeapItem{
-			EvalState: s,
-			Priority:  priority,
-		},
-	}
-	return (<-result).(*HeapItem)
+	h.lock()
+	updated := h.heap.UpdatePriority(s, priority)
+	h.unlock()
+	return updated
 }
 
 func (h *ConcurrentEvalStateHeap) Push(s *EvalState) {
 	if s == nil {
 		return
 	}
-	h.cmdChan <- heapCmd{
-		cmd:   heapCmdPush,
-		input: s,
-	}
+	h.lock()
+	heap.Push(h.heap, s)
+	h.unlock()
 }
 
 func (h *ConcurrentEvalStateHeap) PushPriority(s *EvalState, priority int) {
 	if s == nil {
 		return
 	}
-	h.cmdChan <- heapCmd{
-		cmd: heapCmdPush,
-		input: &HeapItem{
-			EvalState: s,
-			Priority:  priority,
-		},
+	item := &HeapItem{
+		EvalState: s,
+		Priority:  priority,
 	}
-}
-
-func (h *ConcurrentEvalStateHeap) Pop() *EvalState {
-	result := make(chan interface{})
-	h.cmdChan <- heapCmd{
-		cmd:    heapCmdPop,
-		result: result,
-	}
-	res := <-result
-	if res == nil {
-		return nil
-	}
-	return (res).(*EvalState)
-}
-
-func (h *ConcurrentEvalStateHeap) Close() error {
-	h.closeChan <- true
-	close(h.closeChan)
-	h.activeGoRoutines.Wait()
-	close(h.cmdChan)
-	close(h.queueChan)
-	return nil
+	h.lock()
+	heap.Push(h.heap, item)
+	h.unlock()
 }
 
 type HeapItem struct {
@@ -490,11 +421,14 @@ type EvalStateHeap struct {
 }
 
 func NewEvalStateHeap(unique bool) *EvalStateHeap {
-	return &EvalStateHeap{
+	h := &EvalStateHeap{
 		items:  map[string]*HeapItem{},
 		unique: unique,
 	}
+	heap.Init(h)
+	return h
 }
+
 func (h EvalStateHeap) Len() int {
 	return len(h.heap)
 }
@@ -527,7 +461,7 @@ func (h EvalStateHeap) Swap(i, j int) {
 	h.heap[j].index = j
 }
 
-// Use heap.Push
+// Do not use directly, use heap.Push!
 // The signature of push requests an interface{} to adhere to the sort.Interface interface, but will panic if a
 // a type other than *EvalState is provided.
 func (h *EvalStateHeap) Push(x interface{}) {
@@ -557,11 +491,8 @@ func (h *EvalStateHeap) pushPriority(state *EvalState, priority int) {
 	h.items[state.id] = el
 }
 
-// Use heap.Pop
+// Do not use directly, use heap.Pop!
 func (h *EvalStateHeap) Pop() interface{} {
-	if h.Len() == 0 {
-		return nil
-	}
 	popped := h.heap[h.Len()-1]
 	delete(h.items, popped.id)
 	h.heap = h.heap[:h.Len()-1]
@@ -587,9 +518,9 @@ func (h *EvalStateHeap) UpdatePriority(es *EvalState, priority int) *HeapItem {
 	return nil
 }
 
-func (h *EvalStateHeap) Get(key string) (*HeapItem, bool) {
-	item, ok := h.items[key]
-	return item, ok
+func (h *EvalStateHeap) Get(key string) *HeapItem {
+	item, _ := h.items[key]
+	return item
 }
 
 func ignoreOk(r EvalRecord, _ bool) EvalRecord {
