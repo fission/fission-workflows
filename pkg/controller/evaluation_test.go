@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -154,7 +155,6 @@ func TestEvalCache_Invalidate(t *testing.T) {
 
 func TestConcurrentEvalStateHeap(t *testing.T) {
 	h := NewConcurrentEvalStateHeap(true)
-	defer h.Close()
 	es1 := NewEvalState("id1")
 	es2 := NewEvalState("id2")
 	es3 := NewEvalState("id3")
@@ -170,7 +170,6 @@ func TestConcurrentEvalStateHeap(t *testing.T) {
 	h.Push(es1)
 	h.Push(es2)
 	h.Push(es3)
-
 	assert.Equal(t, 3, h.Len())
 	assert.Equal(t, es3, h.Pop())
 	assert.Equal(t, es1, h.Pop())
@@ -179,7 +178,6 @@ func TestConcurrentEvalStateHeap(t *testing.T) {
 
 func TestConcurrentEvalStateHeap_priorities(t *testing.T) {
 	h := NewConcurrentEvalStateHeap(true)
-	defer h.Close()
 	es1 := NewEvalState("id1")
 	es2 := NewEvalState("id2")
 	es3 := NewEvalState("id3")
@@ -203,7 +201,6 @@ func TestConcurrentEvalStateHeap_priorities(t *testing.T) {
 
 func TestConcurrentEvalStateHeap_updateTimestamp(t *testing.T) {
 	h := NewConcurrentEvalStateHeap(true)
-	defer h.Close()
 	es1 := NewEvalState("id1")
 	es1.Record(EvalRecord{
 		Timestamp: time.Now().Add(2 * time.Minute),
@@ -226,7 +223,6 @@ func TestConcurrentEvalStateHeap_updateTimestamp(t *testing.T) {
 
 func TestConcurrentEvalStateHeap_updatePriority(t *testing.T) {
 	h := NewConcurrentEvalStateHeap(true)
-	defer h.Close()
 	es1 := NewEvalState("id1")
 	es1.Record(EvalRecord{
 		Timestamp: time.Now().Add(2 * time.Minute),
@@ -247,7 +243,6 @@ func TestConcurrentEvalStateHeap_updatePriority(t *testing.T) {
 
 func TestConcurrentEvalStateHeap_chan(t *testing.T) {
 	h := NewConcurrentEvalStateHeap(true)
-	defer h.Close()
 	es1 := NewEvalState("id1")
 	es2 := NewEvalState("id2")
 	es3 := NewEvalState("id3")
@@ -267,9 +262,13 @@ func TestConcurrentEvalStateHeap_chan(t *testing.T) {
 	c := h.Chan()
 	item := h.Front()
 	assert.Equal(t, es3.id, item.id)
+	fmt.Println("chan 1")
 	assert.Equal(t, es3, <-c)
+	fmt.Println("chan 2")
 	assert.Equal(t, es1, <-c)
+	fmt.Println("chan 3")
 	assert.Equal(t, es2, <-c)
+	fmt.Println("chan 4")
 	select {
 	case <-c:
 		assert.Fail(t, "unexpected item")

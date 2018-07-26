@@ -465,6 +465,16 @@ func TestWorkflowCancellation(t *testing.T) {
 	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
 }
 
+func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	return cl, wi
+}
+
 func TestInvocationInvalid(t *testing.T) {
 	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancelFn()
@@ -516,12 +526,51 @@ func TestInvocationFailed(t *testing.T) {
 	// TODO generate consistent error report!
 }
 
-func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {
+func TestDeeplyNestedInvocation(t *testing.T) {
+	ctx := context.Background()
 	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 	cl := apiserver.NewWorkflowAPIClient(conn)
 	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
-	return cl, wi
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "CountUntil",
+		Tasks: map[string]*types.TaskSpec{
+			"CountUntil": {
+				FunctionRef: builtin.While,
+				Inputs: types.Inputs{
+					builtin.WhileInputExpr:  typedvalues.MustParse("{ !task().Inputs._prev || task().Inputs._prev < 5 }"),
+					builtin.WhileInputLimit: typedvalues.MustParse(10),
+					builtin.WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
+						FunctionRef: builtin.Noop,
+						Inputs: types.Inputs{
+							builtin.NoopInput: typedvalues.MustParse("{ (task().Inputs._prev || 0) + 1 }"),
+						},
+					}),
+				},
+			},
+		},
+	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+	}
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+
+	output := typedvalues.MustFormat(wfi.Status.Output)
+	assert.Equal(t, 5, output)
 }

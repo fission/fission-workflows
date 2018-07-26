@@ -107,7 +107,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 				case notification := <-cr.sub.Ch:
 					cr.handleMsg(notification)
 				case <-ctx.Done():
-					log.Debug("Notification listener stopped.")
+					log.Info("Notification listener stopped.")
 					return
 				}
 			}
@@ -129,7 +129,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 					log.Errorf("failed to submit invocation %v for execution", eval.ID())
 				}
 			case <-ctx.Done():
-				log.Debug("Evaluation queue listener stopped.")
+				log.Info("Evaluation queue listener stopped.")
 				return
 			}
 		}
@@ -190,7 +190,6 @@ func (cr *Controller) Tick(tick uint64) error {
 	// Short loop: invocations the controller is actively tracking
 	var err error
 	if tick%10 == 0 {
-		log.Debug("Checking eval store for missing invocations")
 		err = cr.checkEvalStore()
 	}
 
@@ -208,7 +207,7 @@ func (cr *Controller) checkEvalStore() error {
 		// TODO check if finished
 		// Add all states that are somehow not in the evalQueue
 		if cr.evalQueue.Get(id) == nil {
-			log.Debugf("Adding missing invocation %v to the queue", id)
+			log.Infof("Adding missing invocation %v to the queue", id)
 			cr.evalQueue.Push(state)
 		}
 	}
