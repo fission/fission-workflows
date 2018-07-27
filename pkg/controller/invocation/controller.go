@@ -122,13 +122,16 @@ func (cr *Controller) Init(sctx context.Context) error {
 		for {
 			select {
 			case eval := <-queue:
-				err := pool.Submit(ctx, func() {
-					controller.EvalQueueSize.WithLabelValues("invocation").Dec()
-					cr.Evaluate(eval.ID())
-				})
-				if err != nil {
-					log.Errorf("failed to submit invocation %v for execution", eval.ID())
-				}
+				func() {
+					ee := eval
+					err := pool.Submit(ctx, func() {
+						controller.EvalQueueSize.WithLabelValues("invocation").Dec()
+						cr.Evaluate(ee.ID())
+					})
+					if err != nil {
+						log.Errorf("failed to submit invocation %v for execution", eval.ID())
+					}
+				}()
 			case <-ctx.Done():
 				log.Info("Evaluation queue listener stopped.")
 				return
@@ -196,7 +199,7 @@ func (cr *Controller) Tick(tick uint64) error {
 
 	// Long loop: to check if there are any orphans
 	if tick%50 == 0 {
-		log.Debug("Checking model caches for missing invocations")
+		log.Info("Checking model caches for missing invocations")
 		err = cr.checkModelCaches()
 	}
 

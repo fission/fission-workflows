@@ -1,4 +1,4 @@
-// package gopool provides functionality for bounded parallelism
+// package gopool provides functionality for bounded parallelism with goroutines
 package gopool
 
 import (
@@ -20,8 +20,12 @@ func New(maxRoutines int64) *GoPool {
 	}
 }
 
+func (g *GoPool) Max() int64 {
+	return g.maxRoutines
+}
+
 func (g *GoPool) Active() int64 {
-	return g.activeRoutines
+	return atomic.LoadInt64(&g.activeRoutines)
 }
 
 func (g *GoPool) Submit(ctx context.Context, fn func()) error {

@@ -613,7 +613,7 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Successful())
 
 	output := typedvalues.MustFormat(wfi.Status.Output)
-	assert.Equal(t, 5, output)
+	assert.Equal(t, float64(5), output)
 }
 
 func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {

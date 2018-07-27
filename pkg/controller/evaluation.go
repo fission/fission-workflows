@@ -286,7 +286,7 @@ func (h *ConcurrentEvalStateHeap) Init() {
 				} else {
 					select {
 					case h.popChan <- element:
-						h.fLock.Lock()
+						h.fLock.Lock() // TODO change into a less strict lock, commands will have to wait until it is done
 						h.qLock.Lock()
 						element = nil
 						heap.Pop(h.heap)
@@ -318,6 +318,7 @@ func (h *ConcurrentEvalStateHeap) Pop() *EvalState {
 
 // lock write-locks the queue, flushing the channel
 func (h *ConcurrentEvalStateHeap) lock() {
+	h.frontChan <- nil // clear the pop channel
 	h.fLock.Lock()
 	h.frontChan <- nil // clear the pop channel
 	h.qLock.Lock()
@@ -325,7 +326,6 @@ func (h *ConcurrentEvalStateHeap) lock() {
 
 // unlock write-unlocks the queue, filling the popChan
 func (h *ConcurrentEvalStateHeap) unlock() {
-	fmt.Println("len: ", h.heap.Len())
 	front := h.heap.Front()
 	if front != nil {
 		h.frontChan <- front.GetEvalState()
