@@ -162,7 +162,6 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		}
 	}
 
-	fmt.Println("count", countTv)
 	wf := &types.WorkflowSpec{
 		OutputTask: "condition",
 		Tasks: map[string]*types.TaskSpec{

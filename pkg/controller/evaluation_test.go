@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -262,13 +261,9 @@ func TestConcurrentEvalStateHeap_chan(t *testing.T) {
 	c := h.Chan()
 	item := h.Front()
 	assert.Equal(t, es3.id, item.id)
-	fmt.Println("chan 1")
 	assert.Equal(t, es3, <-c)
-	fmt.Println("chan 2")
 	assert.Equal(t, es1, <-c)
-	fmt.Println("chan 3")
 	assert.Equal(t, es2, <-c)
-	fmt.Println("chan 4")
 	select {
 	case <-c:
 		assert.Fail(t, "unexpected item")
