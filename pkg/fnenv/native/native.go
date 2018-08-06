@@ -10,6 +10,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/opentracing/opentracing-go"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +38,8 @@ func NewFunctionEnv(fns map[string]InternalFunction) *FunctionEnv {
 	return env
 }
 
-func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (*types.TaskInvocationStatus, error) {
+	cfg := fnenv.ParseInvokeOptions(opts)
 	defer func() {
 		if r := recover(); r != nil {
 			log.WithFields(log.Fields{
@@ -46,7 +48,6 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 			fmt.Println(string(debug.Stack()))
 		}
 	}()
-
 	if err := validate.TaskInvocationSpec(spec); err != nil {
 		return nil, err
 	}
@@ -58,6 +59,8 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)
 	}
+	span, _ := opentracing.StartSpanFromContext(cfg.Ctx, fmt.Sprintf("fnenv/internal/fn/%s", fnID))
+	defer span.Finish()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	out, err := fn.Invoke(spec)
 	fnenv.FnActive.WithLabelValues(Name).Dec()

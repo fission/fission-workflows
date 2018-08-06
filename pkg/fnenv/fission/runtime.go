@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 
 	"github.com/fission/fission-workflows/pkg/types"
@@ -51,7 +52,8 @@ func NewFunctionEnv(executor *executor.Client, routerURL string) *FunctionEnv {
 // spec contains the complete configuration needed for the execution.
 // It returns the TaskInvocationStatus with a completed (FINISHED, FAILED, ABORTED) status.
 // An error is returned only when error occurs outside of the runtime's control.
-func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (*types.TaskInvocationStatus, error) {
+	cfg := fnenv.ParseInvokeOptions(opts)
 	ctxLog := log.WithField("fn", spec.FnRef)
 	if err := validate.TaskInvocationSpec(spec); err != nil {
 		return nil, err
@@ -70,13 +72,21 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 		return nil, err
 	}
 
+	// Add tracing
+	if span := opentracing.SpanFromContext(cfg.Ctx); span != nil {
+		err := opentracing.GlobalTracer().Inject(span.Context(), opentracing.HTTPHeaders,
+			opentracing.HTTPHeadersCarrier(req.Header))
+		if err != nil {
+			ctxLog.Warnf("Failed to inject opentracing tracer context: %v", err)
+		}
+	}
+
 	// Perform request
 	timeStart := time.Now()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req.WithContext(cfg.Ctx))
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}

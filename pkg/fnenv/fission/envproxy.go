@@ -18,6 +18,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission/router"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/syncmap"
 )
@@ -53,6 +54,18 @@ func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// Optional: Parse opentracing
+	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(r.Header))
+	if err != nil && err != opentracing.ErrSpanContextNotFound {
+		logrus.Warnf("Failed to extract tracer from proxy requrest: %v", err)
+	}
+	var opts []opentracing.StartSpanOption
+	if spanCtx != nil {
+		opts = append(opts, opentracing.ChildOf(spanCtx))
+	}
+	span := opentracing.StartSpan("fnenv/fission/envproxy.handleRequest", opts...)
+	defer span.Finish()
 
 	// Fetch the workflow based on the received Fission function metadata
 	meta := router.HeadersToMetadata(router.HEADERS_FISSION_FUNCTION_PREFIX, r.Header)

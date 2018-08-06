@@ -86,7 +86,7 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 
 		// States maintains an active cache of currently running invocations, with execution related data.
 		// This state information is considered preemptable and can be removed or lost at any time.
-		//states: map[string]*ControlState{},
+		// states: map[string]*ControlState{},
 	}
 	ctr.evalPolicy = defaultPolicy(ctr)
 

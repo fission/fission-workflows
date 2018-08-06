@@ -58,7 +58,7 @@ func NewRuntime(api *api.Invocation, wfiCache fes.CacheReader) *Runtime {
 	}
 }
 
-func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (*types.TaskInvocationStatus, error) {
 	if err := validate.TaskInvocationSpec(spec); err != nil {
 		return nil, err
 	}
@@ -69,14 +69,15 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation
 	}
 
 	// Note: currently context is not supported in the runtime interface, so we use a background context.
-	wfi, err := rt.InvokeWorkflow(context.Background(), wfSpec)
+	wfi, err := rt.InvokeWorkflow(wfSpec, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return wfi.Status.ToTaskStatus(), nil
 }
 
-func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
+func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fnenv.InvokeOption) (*types.WorkflowInvocation, error) {
+	cfg := fnenv.ParseInvokeOptions(opts)
 	if err := validate.WorkflowInvocationSpec(spec); err != nil {
 		return nil, err
 	}
@@ -87,14 +88,14 @@ func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvoc
 	defer fnenv.FnActive.WithLabelValues(Name).Dec()
 	defer fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	wfiID, err := rt.api.Invoke(spec, api.WithContext(ctx))
+	wfiID, err := rt.api.Invoke(spec, api.WithContext(cfg.Ctx))
 	if err != nil {
 		logrus.WithField("fnenv", Name).Errorf("Failed to invoke workflow: %v", err)
 		return nil, err
 	}
 	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", wfiID)
 
-	timedCtx, cancelFn := context.WithTimeout(ctx, rt.timeout)
+	timedCtx, cancelFn := context.WithTimeout(cfg.Ctx, rt.timeout)
 	defer cancelFn()
 	if pub, ok := rt.wfiCache.(pubsub.Publisher); ok {
 		sub := pub.Subscribe(pubsub.SubscriptionOptions{
