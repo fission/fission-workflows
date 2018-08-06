@@ -35,10 +35,14 @@ import:
   - graph
   - graph/topo
   - graph/simple
-- package: google.golang.org/grpc
-  version: ~1.10.0
 - package: github.com/golang/protobuf
   version: ~v1.0.0
+- package: google.golang.org/grpc
+  version: ~1.10.0
+- package: github.com/grpc-ecosystem/go-grpc-prometheus
+  version: ^1.2.0
+- package: github.com/grpc-ecosystem/go-grpc-middleware
+  version: v1.0.0
 - package: golang.org/x/net
   version: f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f
 - package: golang.org/x/text
@@ -63,8 +67,15 @@ import:
   version: ^0.8.0
 - package: github.com/prometheus/client_golang
   version: 0.8.0
-- package: github.com/grpc-ecosystem/go-grpc-prometheus
-  version: ^1.2.0
+- package: github.com/uber/jaeger-client-go
+  version: v2.14.0
+- package: github.com/uber/jaeger-lib
+  version: v1.5.0
+  subpackages:
+  - metrics
+- package: github.com/grpc-ecosystem/grpc-opentracing
+  subpackages:
+  - go/otgrpc
 testImport:
 - package: github.com/stretchr/testify
   version: 1.1.4

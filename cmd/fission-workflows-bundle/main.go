@@ -47,7 +47,8 @@ func main() {
 			WorkflowAPI:          c.Bool("api") || c.Bool("api-workflow"),
 			InvocationAPI:        c.Bool("api") || c.Bool("api-workflow-invocation"),
 			HTTPGateway:          c.Bool("api") || c.Bool("api-http"),
-			Metrics:              c.Bool("metrics") || c.Bool("metrics"),
+			Metrics:              c.Bool("metrics"),
+			Debug:                c.Bool("debug"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -184,6 +185,10 @@ func createCli() *cli.App {
 		cli.BoolFlag{
 			Name:  "metrics",
 			Usage: "Serve prometheus metrics",
+		},
+		cli.BoolFlag{
+			Name:  "api",
+			Usage: "Shortcut for serving all APIs over both gRPC and HTTP",
 		},
 	}
 
