@@ -73,8 +73,16 @@ type FissionOptions struct {
 	RouterAddr      string
 }
 
-// Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
+
+	err := run(ctx, opts)
+	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	time.Sleep(5 * time.Second)
+	return err
+}
+
+// Run serves enabled components in a blocking way
+func run(ctx context.Context, opts *Options) error {
 	log.WithFields(log.Fields{
 		"version": fmt.Sprintf("%+v", version.VersionInfo()),
 		"config":  fmt.Sprintf("%+v", opts),
@@ -315,8 +323,6 @@ func Run(ctx context.Context, opts *Options) error {
 	log.Info("Setup completed.")
 
 	<-ctx.Done()
-	log.WithField("reason", ctx.Err()).Info("Shutting down...")
-	time.Sleep(5 * time.Second)
 	return nil
 }
 

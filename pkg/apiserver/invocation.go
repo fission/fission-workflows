@@ -34,7 +34,7 @@ func NewInvocation(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvoca
 }
 
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
-	eventID, err := gi.api.Invoke(spec)
+	eventID, err := gi.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}

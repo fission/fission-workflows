@@ -26,7 +26,7 @@ func NewWorkflow(api *api.Workflow, cache fes.CacheReader) *Workflow {
 }
 
 func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*WorkflowIdentifier, error) {
-	id, err := ga.api.Create(spec)
+	id, err := ga.api.Create(spec, api.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}

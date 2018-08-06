@@ -87,7 +87,7 @@ func (rt *Runtime) InvokeWorkflow(ctx context.Context, spec *types.WorkflowInvoc
 	defer fnenv.FnActive.WithLabelValues(Name).Dec()
 	defer fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	wfiID, err := rt.api.Invoke(spec)
+	wfiID, err := rt.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		logrus.WithField("fnenv", Name).Errorf("Failed to invoke workflow: %v", err)
 		return nil, err

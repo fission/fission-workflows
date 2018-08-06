@@ -15,6 +15,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 )
@@ -156,6 +157,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 	if !ok {
 		panic(msg)
 	}
+	cr.evalCache.GetOrCreate(wfi.ID(), msg.SpanCtx)
 	cr.submitEval(wfi.ID())
 	return nil
 }
@@ -177,6 +179,10 @@ func (cr *Controller) Tick(tick uint64) error {
 
 func (cr *Controller) checkEvalCaches() error {
 	for id, state := range cr.evalCache.List() {
+		if state.IsFinished() {
+			continue
+		}
+
 		last, ok := state.Last()
 		if !ok {
 			continue
@@ -208,8 +214,11 @@ func (cr *Controller) checkModelCaches() error {
 		}
 
 		if !wi.Status.Finished() {
+			span := opentracing.GlobalTracer().StartSpan("recoverFromModelCache")
 			controller.EvalRecovered.WithLabelValues(Name, "cache").Inc()
+			cr.evalCache.GetOrCreate(wi.ID(), span.Context())
 			cr.submitEval(wi.ID())
+			span.Finish()
 		}
 	}
 	return nil
@@ -233,7 +242,11 @@ func (cr *Controller) submitEval(ids ...string) bool {
 func (cr *Controller) Evaluate(invocationID string) {
 	start := time.Now()
 	// Fetch and attempt to claim the evaluation
-	evalState := cr.evalCache.GetOrCreate(invocationID)
+	evalState, ok := cr.evalCache.Get(invocationID)
+	if !ok {
+		log.Warnf("Skipping evaluation of unknown invocation: %v", invocationID)
+		return
+	}
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
@@ -258,6 +271,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	if wfi.Status.Finished() {
 		wfiLog.Debugf("No need to evaluate finished invocation %v", invocationID)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
+		evalState.Finish(true, "finished")
 		return
 	}
 
@@ -304,6 +318,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 }
 
 func (cr *Controller) Close() error {
+	cr.evalCache.Close()
 	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(cr.sub)
 		if err != nil {

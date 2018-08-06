@@ -23,6 +23,8 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 			InvocationAPI:        true,
 			WorkflowAPI:          true,
 			AdminAPI:             true,
+			Metrics:              true,
+			Debug:                true,
 		}
 	}
 	go bundle.Run(ctx, &bundleOpts)

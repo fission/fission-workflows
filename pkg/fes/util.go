@@ -74,6 +74,7 @@ func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
 		Data:      data,
 		Timestamp: ptypes.TimestampNow(),
 		Type:      events.TypeOf(msg),
+		Metadata:  map[string]string{},
 	}, nil
 }
 

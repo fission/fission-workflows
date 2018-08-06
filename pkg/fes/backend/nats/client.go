@@ -12,8 +12,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats-streaming"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -105,14 +103,6 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			logrus.Error(err)
 			return
 		}
-		spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, event.Metadata)
-		span := opentracing.GlobalTracer().StartSpan(
-			"nats.Watch",
-			opentracing.FollowsFrom(spanCtx),
-			opentracing.Tag{Key: string(ext.Component), Value: "fes.nats"},
-			opentracing.Tag{Key: "event.type", Value: event.Type},
-		)
-		defer span.Finish()
 
 		logrus.WithFields(logrus.Fields{
 			"aggregate.type": event.Aggregate.Type,
@@ -122,7 +112,6 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 			"nats.Subject":   msg.Subject,
 		}).Debug("Publishing aggregate event to subscribers.")
 
-		// TODO pass tracing to pubsub
 		err = es.Publisher.Publish(event)
 		if err != nil {
 			logrus.Error(err)
