@@ -44,7 +44,7 @@ func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv a
 func (fp *Proxy) RegisterServer(mux *http.ServeMux) {
 	mux.HandleFunc("/", fp.handleRequest)
 	mux.HandleFunc("/v2/specialize", fp.handleSpecialize)
-	mux.HandleFunc("/healthz", fp.handleSpecialize)
+	mux.HandleFunc("/healthz", fp.handleHealthCheck)
 }
 
 func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
