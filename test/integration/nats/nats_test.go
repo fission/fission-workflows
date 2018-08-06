@@ -102,6 +102,7 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, events, 1)
 	event.Id = "1"
+	event.Metadata = nil
 	assert.Equal(t, event, events[0])
 	data, err := fes.UnmarshalEventData(events[0])
 	assert.NoError(t, err)

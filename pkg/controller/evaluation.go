@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -98,10 +97,6 @@ type EvalState struct {
 }
 
 func NewEvalState(id string, spanCtx opentracing.SpanContext) *EvalState {
-	spanCtx.ForeachBaggageItem(func(k, v string) bool {
-		fmt.Println(">>> ", k, " = ", v)
-		return true
-	})
 	e := &EvalState{
 		log:      EvalLog{},
 		id:       id,

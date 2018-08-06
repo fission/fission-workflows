@@ -33,7 +33,7 @@ func TestEvalLog_Append(t *testing.T) {
 }
 
 func TestEvalState_Lock(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 
 	<-es.Lock()
 	select {
@@ -45,7 +45,7 @@ func TestEvalState_Lock(t *testing.T) {
 }
 
 func TestEvalState_Free(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 
 	es.Free() // Idempotent
 
@@ -65,7 +65,7 @@ func TestEvalState_Free(t *testing.T) {
 }
 
 func TestEvalState_First(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 	assert.Equal(t, "id", es.ID())
 
 	// Test non-existent
@@ -81,7 +81,7 @@ func TestEvalState_First(t *testing.T) {
 }
 
 func TestEvalState_Last(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 	assert.Equal(t, "id", es.ID())
 
 	// Test non-existent
@@ -97,7 +97,7 @@ func TestEvalState_Last(t *testing.T) {
 }
 
 func TestEvalState_Count(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 	assert.Equal(t, "id", es.ID())
 
 	c := es.Count()
@@ -109,7 +109,7 @@ func TestEvalState_Count(t *testing.T) {
 }
 
 func TestEvalState_Logs(t *testing.T) {
-	es := NewEvalState("id")
+	es := NewEvalState("id", nil)
 	assert.Equal(t, "id", es.ID())
 
 	// Test non-existent
@@ -129,7 +129,7 @@ func TestEvalCache_GetOrCreate(t *testing.T) {
 	assert.False(t, ok)
 	assert.Empty(t, es)
 
-	es = ec.GetOrCreate(id)
+	es = ec.GetOrCreate(id, nil)
 	assert.Equal(t, id, es.ID())
 
 	es, ok = ec.Get(id)
@@ -141,7 +141,7 @@ func TestEvalCache_Invalidate(t *testing.T) {
 	ec := NewEvalCache()
 	id := "completedId"
 
-	ec.Put(NewEvalState(id))
+	ec.Put(NewEvalState(id, nil))
 	es, ok := ec.Get(id)
 	assert.True(t, ok)
 	assert.Equal(t, id, es.ID())
