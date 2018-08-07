@@ -75,10 +75,13 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvoca
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}
+	defer resp.Body.Close()
+
 	fnenv.FnActive.WithLabelValues(Name).Dec()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 
