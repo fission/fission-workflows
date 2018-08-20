@@ -117,20 +117,16 @@ func (cr *Controller) Init(sctx context.Context) error {
 	// process evaluation queue
 	pool := gopool.New(maxParallelExecutions)
 	go func(ctx context.Context) {
-		queue := cr.evalQueue.Chan()
 		for {
 			select {
-			case eval := <-queue:
-				func() {
-					ee := eval
-					err := pool.Submit(ctx, func() {
-						controller.EvalQueueSize.WithLabelValues("invocation").Dec()
-						cr.Evaluate(ee.ID())
-					})
-					if err != nil {
-						log.Errorf("failed to submit invocation %v for execution", eval.ID())
-					}
-				}()
+			case eval := <-cr.evalQueue.Chan():
+				err := pool.Submit(ctx, func() {
+					controller.EvalQueueSize.WithLabelValues("invocation").Dec()
+					cr.Evaluate(eval.ID())
+				})
+				if err != nil {
+					log.Errorf("failed to submit invocation %v for execution", eval.ID())
+				}
 			case <-ctx.Done():
 				log.Info("Evaluation queue listener stopped.")
 				return
