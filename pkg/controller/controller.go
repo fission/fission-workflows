@@ -57,7 +57,6 @@ type Controller interface {
 	Init(ctx context.Context) error
 	Tick(tick uint64) error
 	Notify(msg *fes.Notification) error
-	Evaluate(id string)
 }
 
 type Action interface {
