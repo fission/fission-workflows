@@ -6,6 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/opentracing/opentracing-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/workqueue"
+
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
@@ -16,10 +23,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/gopool"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/opentracing/opentracing-go"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -69,7 +72,7 @@ type Controller struct {
 	cancelFn      context.CancelFunc
 	evalPolicy    controller.Rule
 	evalStore     *controller.EvalStore
-	evalQueue     *controller.ConcurrentEvalStateHeap
+	workQueue     workqueue.RateLimitingInterface
 }
 
 func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
@@ -82,7 +85,7 @@ func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflo
 		invocationAPI: invocationAPI,
 		stateStore:    stateStore,
 		evalStore:     &controller.EvalStore{},
-		evalQueue:     controller.NewConcurrentEvalStateHeap(true),
+		workQueue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 	}
 
 	ctr.evalPolicy = defaultPolicy(ctr)
@@ -116,28 +119,7 @@ func (cr *Controller) Init(sctx context.Context) error {
 	}
 
 	// process evaluation queue
-	pool := gopool.New(maxParallelExecutions)
-	go func(ctx context.Context) {
-		queue := cr.evalQueue.Chan()
-		for {
-			select {
-			case eval := <-queue:
-				func() {
-					ee := eval
-					err := pool.Submit(ctx, func() {
-						controller.EvalQueueSize.WithLabelValues("invocation").Dec()
-						cr.Evaluate(ee.ID())
-					})
-					if err != nil {
-						log.Errorf("failed to submit invocation %v for execution", eval.ID())
-					}
-				}()
-			case <-ctx.Done():
-				log.Info("Evaluation queue listener stopped.")
-				return
-			}
-		}
-	}(ctx)
+	go wait.Until(cr.runWorker(sctx), time.Second, sctx.Done())
 
 	return nil
 }
@@ -183,7 +165,7 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 			panic(msg)
 		}
 		es := cr.evalStore.LoadOrStore(wfi.ID(), msg.SpanCtx)
-		cr.evalQueue.Push(es)
+		cr.workQueue.Add(es)
 	default:
 		log.Debugf("Controller ignored event type: %v", msg.EventType)
 	}
@@ -221,7 +203,7 @@ func (cr *Controller) checkEvalStore() error {
 		if time.Now().UnixNano() > reevaluateAt.UnixNano() {
 			controller.EvalRecovered.WithLabelValues(Name, "evalStore").Inc()
 			log.Infof("Adding missing invocation %v to the queue", id)
-			cr.evalQueue.Push(state)
+			cr.workQueue.Add(state)
 		}
 	}
 	return nil
@@ -248,7 +230,7 @@ func (cr *Controller) checkModelCaches() error {
 			span := opentracing.GlobalTracer().StartSpan("recoverFromModelCache")
 			controller.EvalRecovered.WithLabelValues(Name, "cache").Inc()
 			es := cr.evalStore.LoadOrStore(wi.ID(), span.Context())
-			cr.evalQueue.Push(es)
+			cr.workQueue.Add(es)
 			span.Finish()
 		}
 	}
@@ -355,6 +337,39 @@ func (cr *Controller) createFailAction(invocationID string, err error) controlle
 		InvocationID: invocationID,
 		Err:          err,
 	}
+}
+
+func (cr *Controller) runWorker(ctx context.Context) func() {
+	return func() {
+		pool := gopool.New(maxParallelExecutions)
+
+		for cr.processNextItem(ctx, pool) {
+			// continue looping
+		}
+	}
+}
+
+func (cr *Controller) processNextItem(ctx context.Context, pool *gopool.GoPool) bool {
+	key, quit := cr.workQueue.Get()
+	if quit {
+		return false
+	}
+	defer cr.workQueue.Done(key)
+
+	es := key.(*controller.EvalState)
+
+	err := pool.Submit(ctx, func() {
+		controller.EvalQueueSize.WithLabelValues("invocation").Dec()
+		cr.Evaluate(es.ID())
+	})
+	if err != nil {
+		log.Errorf("failed to submit invocation %v for execution", es.ID())
+	}
+
+	// No error, reset the ratelimit counters
+	cr.workQueue.Forget(key)
+
+	return true
 }
 
 func defaultPolicy(ctr *Controller) controller.Rule {
