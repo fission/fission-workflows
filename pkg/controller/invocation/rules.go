@@ -113,6 +113,7 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 			}
 			actions = append(actions, &ActionInvokeTask{
 				Wf:         wf,
+				ec:         ec.EvalState(),
 				Wfi:        wfi,
 				API:        sf.FunctionAPI,
 				Task:       invokeAction,

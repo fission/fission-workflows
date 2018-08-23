@@ -6,6 +6,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
@@ -34,7 +35,7 @@ func NewInvocation(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvoca
 }
 
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
-	eventID, err := gi.api.Invoke(spec)
+	eventID, err := gi.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
@@ -43,7 +44,7 @@ func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocation
 }
 
 func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
-	wfi, err := gi.fnenv.InvokeWorkflow(ctx, spec)
+	wfi, err := gi.fnenv.InvokeWorkflow(spec, fnenv.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}

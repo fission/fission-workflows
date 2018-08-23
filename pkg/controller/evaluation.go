@@ -1,8 +1,14 @@
 package controller
 
 import (
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
+	"github.com/sirupsen/logrus"
 )
 
 // EvalCache allows storing and retrieving EvalStates in a thread-safe way.
@@ -17,10 +23,10 @@ func NewEvalCache() *EvalCache {
 	}
 }
 
-func (e *EvalCache) GetOrCreate(id string) *EvalState {
+func (e *EvalCache) GetOrCreate(id string, spanCtx opentracing.SpanContext) *EvalState {
 	s, ok := e.Get(id)
 	if !ok {
-		s = NewEvalState(id)
+		s = NewEvalState(id, spanCtx)
 		e.Put(s)
 	}
 	return s
@@ -55,9 +61,20 @@ func (e *EvalCache) List() map[string]*EvalState {
 	return results
 }
 
+func (e *EvalCache) Close() error {
+	e.lock.RLock()
+	for _, es := range e.states {
+		err := es.Close()
+		if err != nil {
+			logrus.Errorf("Failed to close evaluation state: %v", err)
+		}
+	}
+	e.lock.RUnlock()
+	return nil
+}
+
 // EvalState is the state of a specific object that is evaluated in the controller.
 //
-// TODO add logger / or helper to log / context
 // TODO add a time before next evaluation -> backoff
 // TODO add current/in progress record
 type EvalState struct {
@@ -72,16 +89,57 @@ type EvalState struct {
 
 	// dataLock ensures thread-safe read and writes to this state. For example appending and reading logs.
 	dataLock sync.RWMutex
+
+	// Active evaluation span
+	span opentracing.Span
+
+	finished bool
 }
 
-func NewEvalState(id string) *EvalState {
+func NewEvalState(id string, spanCtx opentracing.SpanContext) *EvalState {
 	e := &EvalState{
 		log:      EvalLog{},
 		id:       id,
 		evalLock: make(chan struct{}, 1),
+		span:     opentracing.StartSpan("EvalState", opentracing.FollowsFrom(spanCtx)),
 	}
+	e.span.SetTag(string(ext.Component), "controller.workflow")
+	e.span.SetTag("workflow.id", id)
 	e.Free()
 	return e
+}
+
+func (e *EvalState) Span() opentracing.SpanContext {
+	return e.span.Context()
+}
+
+func (e *EvalState) IsFinished() bool {
+	e.dataLock.RLock()
+	defer e.dataLock.RUnlock()
+	return e.finished
+}
+
+func (e *EvalState) Finish(success bool, msg ...string) {
+	e.dataLock.Lock()
+	defer e.dataLock.Unlock()
+	if e.finished {
+		return
+	}
+	e.span.SetTag("success", success)
+	if len(msg) > 0 {
+		e.span.LogKV("reason", strings.Join(msg, " "))
+	}
+	e.span.Finish()
+	e.finished = true
+}
+
+func (e *EvalState) Log(fields ...log.Field) {
+	e.span.LogFields(fields...)
+}
+
+func (e *EvalState) Close() error {
+	e.Finish(false, "controller closed")
+	return nil
 }
 
 // Lock returns the single-buffer lock channel. A consumer has obtained exclusive access to this evaluation if it

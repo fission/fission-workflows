@@ -23,12 +23,12 @@ func NewAdminAPI(endpoint string, client http.Client) *AdminAPI {
 
 func (api *AdminAPI) Status(ctx context.Context) (*apiserver.Health, error) {
 	result := &apiserver.Health{}
-	err := call(http.MethodGet, api.formatURL("/healthz"), nil, result)
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/healthz"), nil, result)
 	return result, err
 }
 
 func (api *AdminAPI) Version(ctx context.Context) (*version.Info, error) {
 	result := &version.Info{}
-	err := call(http.MethodGet, api.formatURL("/version"), nil, result)
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/version"), nil, result)
 	return result, err
 }

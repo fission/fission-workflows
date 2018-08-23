@@ -137,6 +137,8 @@ func (c *Controller) Notify(msg *fes.Notification) error {
 		return fmt.Errorf("received notification of invalid type '%s'. Expected '*aggregates.Workflow'", reflect.TypeOf(msg.Payload))
 	}
 
+	// If the workflow is not yet tracked create an evalState for it.
+	c.evalCache.GetOrCreate(wf.ID(), msg.SpanCtx)
 	c.submitEval(wf.ID())
 	return nil
 }
@@ -144,7 +146,11 @@ func (c *Controller) Notify(msg *fes.Notification) error {
 func (c *Controller) Evaluate(workflowID string) {
 	start := time.Now()
 	// Fetch and attempt to claim the evaluation
-	evalState := c.evalCache.GetOrCreate(workflowID)
+	evalState, ok := c.evalCache.Get(workflowID)
+	if !ok {
+		logrus.Warnf("Skipping evaluation of unknown workflow: %v", workflowID)
+		return
+	}
 	select {
 	case <-evalState.Lock():
 		defer evalState.Free()
@@ -199,6 +205,7 @@ func (c *Controller) Evaluate(workflowID string) {
 }
 
 func (c *Controller) Close() error {
+	err := c.evalCache.Close()
 	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
 		err := invokePub.Unsubscribe(c.sub)
 		if err != nil {
@@ -209,7 +216,7 @@ func (c *Controller) Close() error {
 	}
 
 	c.cancelFn()
-	return nil
+	return err
 }
 
 func (c *Controller) submitEval(ids ...string) bool {

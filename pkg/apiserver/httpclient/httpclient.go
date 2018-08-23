@@ -3,6 +3,7 @@ package httpclient
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,7 +36,7 @@ func fromJSON(src io.Reader, dst proto.Message) error {
 	return jsonpb.Unmarshal(src, dst)
 }
 
-func call(method string, url string, in proto.Message, out proto.Message) error {
+func callWithJSON(ctx context.Context, method string, url string, in proto.Message, out proto.Message) error {
 	buf := bytes.NewBuffer(nil)
 	if in != nil {
 		err := toJSON(buf, in)
@@ -62,7 +64,15 @@ func call(method string, url string, in proto.Message, out proto.Message) error 
 		return fmt.Errorf("%v: %v", ErrRequestCreate, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := defaultHTTPClient.Do(req)
+
+	// If set, inject opentracing into HTTP request
+	span := opentracing.SpanFromContext(ctx)
+	if span != nil {
+		carrier := opentracing.HTTPHeadersCarrier(req.Header)
+		opentracing.GlobalTracer().Inject(span.Context(), opentracing.HTTPHeaders, carrier)
+	}
+
+	resp, err := defaultHTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("%v: %v", ErrRequestSend, err)
 	}

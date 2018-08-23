@@ -41,3 +41,7 @@ gracePeriod: 5
 # Environment specific configuration
 env:
   name: workflow
+
+# Jaeger-related configuration
+jaeger:
+  collector: jaeger-collector:14267

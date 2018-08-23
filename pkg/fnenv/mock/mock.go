@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/ptypes"
@@ -34,7 +35,7 @@ func NewRuntime() *Runtime {
 	}
 }
 
-func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec) (string, error) {
+func (mk *Runtime) InvokeAsync(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (string, error) {
 	fnName := spec.FnRef.ID
 
 	if _, ok := mk.Functions[fnName]; !ok {
@@ -95,7 +96,7 @@ func (mk *Runtime) MockComplete(fnInvocationID string) error {
 	return nil
 }
 
-func (mk *Runtime) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error) {
+func (mk *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (*types.TaskInvocationStatus, error) {
 	logrus.Info("Starting invocation...")
 	invocationID, err := mk.InvokeAsync(spec)
 	if err != nil {

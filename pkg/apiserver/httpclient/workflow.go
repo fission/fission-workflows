@@ -23,23 +23,23 @@ func NewWorkflowAPI(endpoint string, client http.Client) *WorkflowAPI {
 
 func (api *WorkflowAPI) Create(ctx context.Context, spec *types.WorkflowSpec) (*apiserver.WorkflowIdentifier, error) {
 	result := &apiserver.WorkflowIdentifier{}
-	err := call(http.MethodPost, api.formatURL("/workflow"), spec, result)
+	err := callWithJSON(ctx, http.MethodPost, api.formatURL("/workflow"), spec, result)
 	return result, err
 }
 
 func (api *WorkflowAPI) List(ctx context.Context) (*apiserver.SearchWorkflowResponse, error) {
 	result := &apiserver.SearchWorkflowResponse{}
-	err := call(http.MethodGet, api.formatURL("/workflow"), nil, result)
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/workflow"), nil, result)
 	return result, err
 }
 
 func (api *WorkflowAPI) Get(ctx context.Context, id string) (*types.Workflow, error) {
 	result := &types.Workflow{}
-	err := call(http.MethodGet, api.formatURL("/workflow/"+id), nil, result)
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/workflow/"+id), nil, result)
 	return result, err
 }
 
 func (api *WorkflowAPI) Delete(ctx context.Context, id string) error {
-	err := call(http.MethodDelete, api.formatURL("/workflow/"+id), nil, nil)
+	err := callWithJSON(ctx, http.MethodDelete, api.formatURL("/workflow/"+id), nil, nil)
 	return err
 }

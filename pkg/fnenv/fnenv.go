@@ -15,6 +15,7 @@
 package fnenv
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -58,7 +59,7 @@ type Runtime interface {
 	// spec contains the complete configuration needed for the execution.
 	// It returns the TaskInvocationStatus with a completed (FINISHED, FAILED, ABORTED) status.
 	// An error is returned only when error occurs outside of the runtime's control.
-	Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocationStatus, error)
+	Invoke(spec *types.TaskInvocationSpec, opts ...InvokeOption) (*types.TaskInvocationStatus, error)
 }
 
 // AsyncRuntime is a more extended interface that a runtime can optionally support. It allows for asynchronous
@@ -66,7 +67,7 @@ type Runtime interface {
 type AsyncRuntime interface {
 	// InvokeAsync invokes a function in the runtime based on the spec and returns an identifier to allow the caller
 	// to reference the invocation.
-	InvokeAsync(spec *types.TaskInvocationSpec) (asyncID string, err error)
+	InvokeAsync(spec *types.TaskInvocationSpec, opts ...InvokeOption) (asyncID string, err error)
 
 	// Cancel cancels a function invocation using the function invocation id.
 	Cancel(asyncID string) error
@@ -106,4 +107,28 @@ type RuntimeResolver interface {
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function within the scope
 	// of a runtime.
 	Resolve(ref types.FnRef) (string, error)
+}
+
+type InvokeConfig struct {
+	Ctx context.Context
+}
+
+type InvokeOption func(config *InvokeConfig)
+
+func ParseInvokeOptions(opts []InvokeOption) *InvokeConfig {
+	// Default
+	cfg := &InvokeConfig{
+		Ctx: context.Background(),
+	}
+	// Parse options
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return cfg
+}
+
+func WithContext(ctx context.Context) InvokeOption {
+	return func(config *InvokeConfig) {
+		config.Ctx = ctx
+	}
 }

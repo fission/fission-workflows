@@ -21,7 +21,7 @@ func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
 	runtime.timeout = 10 * time.Millisecond
 
-	_, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.Equal(t, api.ErrInvocationCanceled, err.Error())
 }
 
@@ -31,13 +31,13 @@ func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
 
-	_, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.EqualError(t, err, context.DeadlineExceeded.Error())
 }
 
 func TestRuntime_InvokeWorkflow_InvalidSpec(t *testing.T) {
 	runtime, _, _, _ := setup()
-	_, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec(""))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(""))
 	assert.IsType(t, validate.Error{}, err)
 }
 
@@ -54,7 +54,7 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	assert.Equal(t, output, wfi.GetStatus().GetOutput())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -82,7 +82,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 		assert.NoError(t, err)
 		pollCache.Put(entity)
 	}()
-	wfi, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	assert.Equal(t, output, wfi.GetStatus().GetOutput())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -102,7 +102,7 @@ func TestRuntime_InvokeWorkflow_Fail(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	assert.Equal(t, wfiErr.Error(), wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -121,7 +121,7 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(context.Background(), types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())

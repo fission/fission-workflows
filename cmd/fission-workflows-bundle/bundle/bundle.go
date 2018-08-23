@@ -31,17 +31,26 @@ import (
 	controllerc "github.com/fission/fission/controller/client"
 	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpcruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	grpc_opentracing "github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
+	jaegerprom "github.com/uber/jaeger-lib/metrics/prometheus"
 	"google.golang.org/grpc"
 )
 
 const (
-	gRPCAddress         = ":5555"
-	apiGatewayAddress   = ":8080"
-	fissionProxyAddress = ":8888"
+	gRPCAddress             = ":5555"
+	apiGatewayAddress       = ":8080"
+	fissionProxyAddress     = ":8888"
+	jaegerTracerServiceName = "fission.workflows"
 )
 
 type Options struct {
@@ -55,6 +64,7 @@ type Options struct {
 	HTTPGateway          bool
 	InvocationAPI        bool
 	Metrics              bool
+	Debug                bool
 }
 
 type FissionOptions struct {
@@ -63,19 +73,64 @@ type FissionOptions struct {
 	RouterAddr      string
 }
 
-// Run serves enabled components in a blocking way
 func Run(ctx context.Context, opts *Options) error {
+
+	err := run(ctx, opts)
+	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	time.Sleep(5 * time.Second)
+	return err
+}
+
+// Run serves enabled components in a blocking way
+func run(ctx context.Context, opts *Options) error {
 	log.WithFields(log.Fields{
 		"version": fmt.Sprintf("%+v", version.VersionInfo()),
 		"config":  fmt.Sprintf("%+v", opts),
 	}).Info("Starting bundle...")
 
+	// See https://github.com/jaegertracing/jaeger-client-go for the env vars to set; defaults to local Jaeger
+	// instance with default ports.
+	cfg, err := jaegercfg.FromEnv()
+	if err != nil {
+		log.Fatalf("Failed to read Jaeger config from env: %v", err)
+	}
+	if opts.Debug {
+		// Debug: do not sample down
+		cfg.Sampler = &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		}
+		cfg.Reporter = &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		}
+	}
+
+	// Initialize tracer with a logger and a metrics factory
+	closer, err := cfg.InitGlobalTracer(
+		jaegerTracerServiceName,
+		jaegercfg.Logger(jaegerlog.StdLogger),
+		jaegercfg.Metrics(jaegerprom.New()),
+	)
+	if err != nil {
+		log.Fatalf("Could not initialize jaeger tracer: %s", err.Error())
+	}
+	tracer := opentracing.GlobalTracer()
+	defer closer.Close()
+	log.Debugf("Configured Jaeger tracer '%s' (pushing traces to '%s')", jaegerTracerServiceName,
+		cfg.Sampler.SamplingServerURL)
+
 	var es fes.Backend
 	var esPub pubsub.Publisher
 
 	grpcServer := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
-		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_prometheus.StreamServerInterceptor,
+			grpc_opentracing.OpenTracingStreamServerInterceptor(tracer),
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_prometheus.UnaryServerInterceptor,
+			grpc_opentracing.OpenTracingServerInterceptor(tracer),
+		)),
 	)
 
 	//
@@ -252,27 +307,22 @@ func Run(ctx context.Context, opts *Options) error {
 
 		httpApiSrv := &http.Server{Addr: apiGatewayAddress}
 		httpMux.Handle("/", grpcMux)
-		httpApiSrv.Handler = handlers.LoggingHandler(os.Stdout, httpMux)
+		httpApiSrv.Handler = handlers.LoggingHandler(os.Stdout, tracingWrapper(httpMux))
 		go func() {
 			err := httpApiSrv.ListenAndServe()
 			log.WithField("err", err).Info("HTTP Gateway stopped")
 		}()
 		defer func() {
 			err := httpApiSrv.Shutdown(ctx)
-			if err != nil {
-				log.Errorf("Failed to stop HTTP API server: %v", err)
-			} else {
-				log.Info("Stopped HTTP API server")
-			}
+			log.Info("Stopped HTTP API server: %v", err)
 		}()
 
 		log.Info("Serving HTTP API gateway at: ", httpApiSrv.Addr)
 	}
 
 	log.Info("Setup completed.")
+
 	<-ctx.Done()
-	log.WithField("reason", ctx.Err()).Info("Shutting down...")
-	time.Sleep(5 * time.Second)
 	return nil
 }
 
@@ -388,7 +438,13 @@ func serveInvocationAPI(s *grpc.Server, es fes.Backend, wfiCache fes.CacheReader
 
 func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAddr string, workflowAPIAddr string,
 	invocationAPIAddr string) {
-	opts := []grpc.DialOption{grpc.WithInsecure()}
+	tracer := opentracing.GlobalTracer()
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithUnaryInterceptor(grpc_opentracing.OpenTracingClientInterceptor(tracer)),
+		grpc.WithStreamInterceptor(grpc_opentracing.OpenTracingStreamClientInterceptor(tracer)),
+	}
+
 	if adminAPIAddr != "" {
 		err := apiserver.RegisterAdminAPIHandlerFromEndpoint(ctx, mux, adminAPIAddr, opts)
 		if err != nil {
@@ -445,4 +501,30 @@ func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,
 
 func setupMetricsEndpoint(apiMux *http.ServeMux) {
 	apiMux.Handle("/metrics", promhttp.Handler())
+}
+
+var grpcGatewayTag = opentracing.Tag{Key: string(ext.Component), Value: "grpc-gateway"}
+
+func tracingWrapper(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		parentSpanContext, err := opentracing.GlobalTracer().Extract(
+			opentracing.HTTPHeaders,
+			opentracing.HTTPHeadersCarrier(r.Header))
+		if err == nil || err == opentracing.ErrSpanContextNotFound {
+			serverSpan := opentracing.GlobalTracer().StartSpan(
+				"ServeHTTP",
+				// this is magical, it attaches the new span to the parent parentSpanContext,
+				// and creates an unparented one if empty.
+				ext.RPCServerOption(parentSpanContext),
+				grpcGatewayTag,
+				opentracing.Tag{Key: string(ext.HTTPMethod), Value: r.Method},
+				opentracing.Tag{Key: string(ext.HTTPUrl), Value: r.URL},
+			)
+			r = r.WithContext(opentracing.ContextWithSpan(r.Context(), serverSpan))
+			defer serverSpan.Finish()
+		} else {
+			log.Errorf("Failed to extract tracer from HTTP request: %v", err)
+		}
+		h.ServeHTTP(w, r)
+	})
 }

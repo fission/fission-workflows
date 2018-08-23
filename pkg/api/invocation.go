@@ -10,6 +10,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
 )
 
 const ErrInvocationCanceled = "workflow invocation was canceled"
@@ -28,7 +30,8 @@ func NewInvocationAPI(esClient fes.Backend) *Invocation {
 // Invoke triggers the start of the invocation using the provided specification.
 // The function either returns the invocationID of the invocation or an error.
 // The error can be a validate.Err, proto marshall error, or a fes error.
-func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec) (string, error) {
+func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec, opts ...CallOption) (string, error) {
+	cfg := parseCallOptions(opts)
 	err := validate.WorkflowInvocationSpec(spec)
 	if err != nil {
 		return "", err
@@ -42,6 +45,17 @@ func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec) (string, error)
 	if err != nil {
 		return "", err
 	}
+
+	// If part of a span, add trace metadata to the event.
+	span := opentracing.SpanFromContext(cfg.ctx)
+	if span != nil {
+		err = opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap,
+			opentracing.TextMapCarrier(event.Metadata))
+		if err != nil {
+			logrus.Warnf("Failed to inject tracer context into event: %v", err)
+		}
+	}
+
 	err = ia.es.Append(event)
 	if err != nil {
 		return "", err

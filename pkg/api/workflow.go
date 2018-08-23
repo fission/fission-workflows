@@ -12,6 +12,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
 )
 
 // Workflow contains the API functionality for controlling workflow definitions.
@@ -30,7 +32,8 @@ func NewWorkflowAPI(esClient fes.Backend, resolver fnenv.Resolver) *Workflow {
 // The function either returns the id of the workflow or an error.
 // The error can be a validate.Err, proto marshall error, or a fes error.
 // TODO check if id already exists
-func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
+func (wa *Workflow) Create(workflow *types.WorkflowSpec, opts ...CallOption) (string, error) {
+	cfg := parseCallOptions(opts)
 	err := validate.WorkflowSpec(workflow)
 	if err != nil {
 		return "", err
@@ -48,6 +51,17 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// If part of a span, add trace metadata to the event.
+	span := opentracing.SpanFromContext(cfg.ctx)
+	if span != nil {
+		err = opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap,
+			opentracing.TextMapCarrier(event.Metadata))
+		if err != nil {
+			logrus.Warnf("Failed to inject tracer context into event: %v", err)
+		}
+	}
+
 	err = wa.es.Append(event)
 	if err != nil {
 		return "", err

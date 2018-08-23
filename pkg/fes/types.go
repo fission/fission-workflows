@@ -1,11 +1,14 @@
 package fes
 
-import "github.com/fission/fission-workflows/pkg/util/pubsub"
+import (
+	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
+)
 
 // Entity is a entity that can be updated
 // TODO we need to keep more event-related information (such as current index)
 type Entity interface {
-
 	// Entity-specific
 	ApplyEvent(event *Event) error
 
@@ -63,12 +66,22 @@ type Notification struct {
 	*pubsub.EmptyMsg
 	Payload   Entity
 	EventType string
+	SpanCtx   opentracing.SpanContext
 }
 
 func newNotification(entity Entity, event *Event) *Notification {
+	var spanCtx opentracing.SpanContext
+	if event.Metadata != nil {
+		sctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(event.Metadata))
+		if err != nil && err != opentracing.ErrSpanContextNotFound {
+			logrus.Warnf("failed to extract opentracing tracer from event: %v", err)
+		}
+		spanCtx = sctx
+	}
 	return &Notification{
 		EmptyMsg:  pubsub.NewEmptyMsg(event.Labels(), event.CreatedAt()),
 		Payload:   entity,
 		EventType: event.Type,
+		SpanCtx:   spanCtx,
 	}
 }

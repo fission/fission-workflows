@@ -26,7 +26,7 @@ func TestRuleExceededErrorCount_Eval(t *testing.T) {
 	}
 
 	// Not exceeded
-	es := NewEvalState("randomId")
+	es := NewEvalState("randomId", nil)
 	ctx := NewEvalContext(es)
 	rule.Eval(ctx)
 	assert.Equal(t, exceeded, 0)

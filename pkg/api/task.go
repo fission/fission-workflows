@@ -36,7 +36,8 @@ func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dyn
 // Invoke starts the execution of a task, changing the state of the task into RUNNING.
 // Currently it executes the underlying function synchronously and manage the execution until completion.
 // TODO make asynchronous
-func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, error) {
+func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*types.TaskInvocation, error) {
+	cfg := parseCallOptions(opts)
 	err := validate.TaskInvocationSpec(spec)
 	if err != nil {
 		return nil, err
@@ -59,11 +60,9 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec) (*types.TaskInvocation, e
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
-	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec)
+	// TODO propagate context
+	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
 	}

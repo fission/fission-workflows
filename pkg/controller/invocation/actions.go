@@ -1,6 +1,7 @@
 package invocation
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/imdario/mergo"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -65,6 +67,7 @@ func (a *ActionFail) Apply() error {
 
 // ActionInvokeTask invokes a function
 type ActionInvokeTask struct {
+	ec         *controller.EvalState
 	Wf         *types.Workflow
 	Wfi        *types.WorkflowInvocation
 	API        *api.Task
@@ -86,6 +89,8 @@ func (a *ActionInvokeTask) logger() logrus.FieldLogger {
 
 func (a *ActionInvokeTask) Apply() error {
 	log := a.logger()
+	span := opentracing.StartSpan("pkg/controller/invocation/actions/InvokeTask",
+		opentracing.ChildOf(a.ec.Span()))
 
 	// Find task
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
@@ -123,12 +128,13 @@ func (a *ActionInvokeTask) Apply() error {
 			log.Debugf("Using inputs: %v", i)
 		}
 	}
-	_, err = a.API.Invoke(spec)
+	ctx := opentracing.ContextWithSpan(context.Background(), span)
+	_, err = a.API.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		log.Errorf("Failed to execute task: %v", err)
 		return err
 	}
-
+	span.Finish()
 	return nil
 }
 
