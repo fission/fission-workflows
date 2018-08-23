@@ -1,10 +1,13 @@
 package protobuf
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -27,11 +30,14 @@ func (p *Parser) Parse(r io.Reader) (*types.WorkflowSpec, error) {
 	if err != nil {
 		return nil, err
 	}
-	var wf *types.WorkflowSpec
-	err = proto.Unmarshal(bs, wf)
-	if err != nil {
-		return nil, err
+	wf := &types.WorkflowSpec{}
+	protoErr := proto.Unmarshal(bs, wf)
+	if protoErr != nil {
+		// Fallback: it might be protobuf serialized into json.
+		jsonErr := jsonpb.Unmarshal(bytes.NewReader(bs), wf)
+		if jsonErr != nil {
+			return nil, fmt.Errorf("failed to parse protobuf-encoded workflow (proto: %v, jsonpb: %v)", protoErr, jsonErr)
+		}
 	}
-
 	return wf, nil
 }
