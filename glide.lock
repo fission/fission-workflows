@@ -1,5 +1,5 @@
-hash: f3fc6829d269cac2b9bb2e52b4351229795a2975899daecfc4ef72b8ef7bfc98
-updated: 2018-08-06T16:29:56.004655+02:00
+hash: 388fc1da35b61c83387241f47de9e4f9af37a0ffebd9f845eb2373951cf05bfd
+updated: 2018-08-24T11:09:52.354991+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -20,7 +20,7 @@ imports:
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
@@ -32,13 +32,15 @@ imports:
 - name: github.com/fatih/structs
   version: a720dfa8df582c51dee1b36feabb906bde1588bd
 - name: github.com/fission/fission
-  version: 9087ef5d49a9d0af2e0dcde3bd37c19772b72043
+  version: 95eef49cf8032dd9f9a2edcb985f91a7b1978e17
   subpackages:
   - cache
   - controller/client
   - crd
   - executor/client
   - pkg/apis/fission.io/v1
+  - redis
+  - redis/build/gen
   - router
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
@@ -58,13 +60,15 @@ imports:
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
   - gogoproto
+  - jsonpb
   - proto
   - protoc-gen-gogo/descriptor
   - sortkeys
+  - types
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 925541529c1fa6821df4e44ce2723319eb2be768
+  version: aa810b61a9c79d51363740d207bb46cf8e620ed5
   subpackages:
   - jsonpb
   - proto
@@ -76,6 +80,11 @@ imports:
   - ptypes/struct
   - ptypes/timestamp
   - ptypes/wrappers
+- name: github.com/gomodule/redigo
+  version: 2cd21d9966bf7ff9ae091419744f0b3fb0fecace
+  subpackages:
+  - internal
+  - redis
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gnostic
@@ -114,9 +123,9 @@ imports:
   subpackages:
   - go/otgrpc
 - name: github.com/hashicorp/errwrap
-  version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
+  version: d6c0cd88035724dd42e0f335ae30161c20575ecc
 - name: github.com/hashicorp/go-multierror
-  version: b7773ae218740a7be65057fc60b366a49b538a44
+  version: 3d5d8f294aa03d8e98859feac328afbdf1ae0703
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
@@ -124,7 +133,7 @@ imports:
 - name: github.com/howeyc/gopass
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/imdario/mergo
-  version: 9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4
+  version: 33882c6bfe701aca0ff1472aa8b4ebd6135a560d
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -188,7 +197,7 @@ imports:
   - token
   - underscore
 - name: github.com/robfig/cron
-  version: 2315d5715e36303a941d907f038da7f7c44c773b
+  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus

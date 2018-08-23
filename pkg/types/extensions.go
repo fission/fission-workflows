@@ -172,6 +172,10 @@ func (ti TaskInvocationStatus) Finished() bool {
 	return false
 }
 
+func (ti TaskInvocationStatus) Successful() bool {
+	return ti.GetStatus() == TaskInvocationStatus_SUCCEEDED
+}
+
 //
 // Task
 //
