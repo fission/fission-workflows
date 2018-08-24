@@ -3,8 +3,6 @@
 This provides a CLI for Fission Workflows, providing additional functionality for workflows over the regular functions 
 available in the Fission CLI.
 
-_Note: this is an experimental CLI -- in the near future fission-workflows will be merged into the Fission CLI._
-
 ## Installation
 ```bash
 go install
