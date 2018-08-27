@@ -91,6 +91,14 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 			return nil, err
 		}
 	}
+	task.Status = fnResult
+
+	if cfg.postTransformer != nil {
+		err = cfg.postTransformer(task)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
 		event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskSucceeded{
@@ -107,8 +115,6 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	if err != nil {
 		return nil, err
 	}
-
-	task.Status = fnResult
 	return task, nil
 }
 

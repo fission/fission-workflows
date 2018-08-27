@@ -456,6 +456,57 @@ func TestInvocationFailed(t *testing.T) {
 	// TODO generate consistent error report!
 }
 
+func TestInvocationWithForcedOutputs(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	cl, wi := setup()
+
+	// Test workflow creation
+	output := typedvalues.MustParse("overrided output")
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "t3",
+		Tasks: map[string]*types.TaskSpec{
+			"t1": {
+				FunctionRef: "noop",
+				// Output with a literal value
+				Output: output,
+			},
+			"t2": {
+				FunctionRef: "noop",
+				Inputs: map[string]*types.TypedValue{
+					types.InputMain: typedvalues.MustParse("{$.Tasks.t1.Output}"),
+				},
+				Requires: map[string]*types.TaskDependencyParameters{
+					"t1": {},
+				},
+				// Self-referencing output
+				Output: typedvalues.MustParse("{$.Tasks.t2.Output}"),
+			},
+			"t3": {
+				FunctionRef: "noop",
+				Inputs: map[string]*types.TypedValue{
+					types.InputMain: typedvalues.MustParse("initial output 2"),
+				},
+				Requires: map[string]*types.TaskDependencyParameters{
+					"t2": {},
+				},
+				// Referencing output of another task
+				Output: typedvalues.MustParse("{$.Tasks.t2.Output}"),
+			},
+		},
+	}
+	wfID, err := cl.Create(ctx, wfSpec)
+	assert.NoError(t, err)
+	wfi, err := wi.InvokeSync(ctx, &types.WorkflowInvocationSpec{
+		WorkflowId: wfID.GetId(),
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue()))
+	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue()))
+	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetOutput().GetValue()))
+}
+
 func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {
 	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
 	if err != nil {
