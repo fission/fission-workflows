@@ -98,8 +98,12 @@ func (oe *JavascriptExpressionParser) resolveExpr(rootScope interface{}, current
 
 	go func() {
 		<-time.After(ResolvingTimeout)
-		scoped.Interrupt <- func() {
+		select {
+		case scoped.Interrupt <- func() {
 			panic(ErrTimeOut)
+		}:
+		default:
+			// evaluation has already been interrupted / quit
 		}
 	}()
 

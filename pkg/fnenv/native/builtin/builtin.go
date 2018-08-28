@@ -36,7 +36,7 @@ func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...
 	if len(validTypes) > 0 {
 		valid := typedvalues.IsType(tv, validTypes...)
 		if !valid {
-			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %v)", key, validTypes)
+			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %v, was: %T)", key, validTypes, tv.Type)
 		}
 	}
 

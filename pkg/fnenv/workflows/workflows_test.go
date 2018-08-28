@@ -3,7 +3,6 @@ package workflows
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -71,7 +70,6 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
 		entities := cache.List()
-		fmt.Println(entities)
 		wfiID := entities[0].Id
 		err := invocationAPI.Complete(wfiID, output)
 		if err != nil {

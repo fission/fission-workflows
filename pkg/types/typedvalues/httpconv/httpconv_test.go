@@ -1,7 +1,6 @@
 package httpconv
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -50,8 +49,6 @@ func TestFormatRequest(t *testing.T) {
 	assert.Equal(t, headers["Header-Key"], target.Header["Header-Key"][0])
 
 	// Check query
-	fmt.Println(query)
-	fmt.Println(target.URL.Query())
 	assert.Equal(t, query["queryKey"], target.URL.Query()["queryKey"][0])
 
 	// Check method

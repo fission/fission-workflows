@@ -25,7 +25,7 @@ func TestEvalLog_Append(t *testing.T) {
 	}
 	log.Record(record2)
 
-	assert.Equal(t, 2, log.Count())
+	assert.Equal(t, 2, log.Len())
 	last, ok := log.Last()
 	assert.True(t, ok)
 	assert.EqualValues(t, record2, last)
@@ -100,11 +100,11 @@ func TestEvalState_Count(t *testing.T) {
 	es := NewEvalState("id", nil)
 	assert.Equal(t, "id", es.ID())
 
-	c := es.Count()
+	c := es.Len()
 	assert.Equal(t, 0, c)
 
 	es.Record(dummyRecord)
-	c = es.Count()
+	c = es.Len()
 	assert.Equal(t, 1, c)
 }
 
@@ -123,31 +123,31 @@ func TestEvalState_Logs(t *testing.T) {
 }
 
 func TestEvalCache_GetOrCreate(t *testing.T) {
-	ec := NewEvalCache()
+	ec := EvalStore{}
 	id := "foo"
-	es, ok := ec.Get(id)
+	es, ok := ec.Load(id)
 	assert.False(t, ok)
 	assert.Empty(t, es)
 
-	es = ec.GetOrCreate(id, nil)
+	es = ec.LoadOrStore(id, nil)
 	assert.Equal(t, id, es.ID())
 
-	es, ok = ec.Get(id)
+	es, ok = ec.Load(id)
 	assert.True(t, ok)
 	assert.Equal(t, id, es.ID())
 }
 
 func TestEvalCache_Invalidate(t *testing.T) {
-	ec := NewEvalCache()
+	ec := EvalStore{}
 	id := "completedId"
 
-	ec.Put(NewEvalState(id, nil))
-	es, ok := ec.Get(id)
+	ec.Store(NewEvalState(id, nil))
+	es, ok := ec.Load(id)
 	assert.True(t, ok)
 	assert.Equal(t, id, es.ID())
 
-	ec.Del(id)
-	es, ok = ec.Get(id)
+	ec.Delete(id)
+	es, ok = ec.Load(id)
 	assert.False(t, ok)
 	assert.Empty(t, es)
 }

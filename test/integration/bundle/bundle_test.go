@@ -14,6 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/test/integration"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -291,6 +292,65 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestParallelInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	wfSpec := types.NewWorkflowSpec()
+
+	taskSpec := &types.TaskSpec{
+		FunctionRef: builtin.Sleep,
+		Inputs:      typedvalues.Input("2s"),
+	}
+
+	wfSpec.AddTask("p1", taskSpec)
+	wfSpec.AddTask("p2", taskSpec)
+	wfSpec.AddTask("p3", taskSpec)
+	wfSpec.AddTask("p4", taskSpec)
+	wfSpec.AddTask("p5", taskSpec)
+	wfSpec.AddTask("await", &types.TaskSpec{
+		FunctionRef: builtin.Sleep,
+		Inputs:      typedvalues.Input("1s"),
+		Requires:    types.Require("p1", "p2", "p3", "p4", "p5"),
+	})
+	wfSpec.SetOutput("await")
+
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+	assert.NoError(t, err, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
+
+	// Check if pN tasks were run in parallel
+	var minStartTime, maxStartTime time.Time
+	for _, task := range wfi.Status.Tasks {
+		if strings.HasPrefix(task.Spec.TaskId, "p") {
+			tt, err := ptypes.Timestamp(task.Metadata.CreatedAt)
+			assert.NoError(t, err)
+			if minStartTime == (time.Time{}) || tt.Before(minStartTime) {
+				minStartTime = tt
+			}
+			if maxStartTime == (time.Time{}) || tt.After(maxStartTime) {
+				maxStartTime = tt
+			}
+		}
+	}
+	assert.InDelta(t, 0, maxStartTime.Sub(minStartTime).Nanoseconds(), float64(time.Second.Nanoseconds()))
+}
+
 func TestLongRunningWorkflowInvocation(t *testing.T) {
 	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancelFn()
@@ -505,6 +565,55 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue()))
 	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue()))
 	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetOutput().GetValue()))
+}
+
+func TestDeeplyNestedInvocation(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "CountUntil",
+		Tasks: map[string]*types.TaskSpec{
+			"CountUntil": {
+				FunctionRef: builtin.While,
+				Inputs: types.Inputs{
+					builtin.WhileInputExpr:  typedvalues.MustParse("{ !task().Inputs._prev || task().Inputs._prev < 5 }"),
+					builtin.WhileInputLimit: typedvalues.MustParse(10),
+					builtin.WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
+						FunctionRef: builtin.Noop,
+						Inputs: types.Inputs{
+							builtin.NoopInput: typedvalues.MustParse("{ (task().Inputs._prev || 0) + 1 }"),
+						},
+					}),
+				},
+			},
+		},
+	}
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+	}
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+
+	output := typedvalues.MustFormat(wfi.Status.Output)
+	assert.Equal(t, float64(5), output)
 }
 
 func setup() (apiserver.WorkflowAPIClient, apiserver.WorkflowInvocationAPIClient) {
