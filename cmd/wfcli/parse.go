@@ -22,7 +22,7 @@ var cmdParse = cli.Command{
 			Usage: "Indicate which parser plugin to use for the parsing (yaml|pb).",
 		},
 	},
-	Description: "Read YAML definitions to the executable JSON format (deprecated)",
+	Description: "Read workflow definitions to the executable JSON format",
 	Action: commandContext(func(ctx Context) error {
 
 		if ctx.NArg() == 0 {

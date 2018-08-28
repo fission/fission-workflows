@@ -17,3 +17,5 @@ fission-workflows-bundle
 fission-workflows-bundle-linux
 fission-workflows-bundle-osx
 fission-workflows-bundle-windows
+
+node_modules/

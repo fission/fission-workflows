@@ -1,0 +1,28 @@
+{
+  "name": "fission-workflows",
+  "version": "1.0.0",
+  "description": "JS library for writing Fission Workflows workflow definitions",
+  "main": "lib.js",
+  "scripts": {
+    "test": "mocha",
+    "generate-protobuf": "node_modules/protobufjs/bin/pbjs -t static-module ../pkg/types/types.proto > types.pb.js"
+  },
+  "author": "Erwin van Eyk",
+  "license": "Apache-2.0",
+  "keywords": [
+    "faas",
+    "serverless",
+    "composition",
+    "workflows"
+  ],
+  "dependencies": {
+    "protobufjs": "^6.8.8"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "files": [
+    "lib.js",
+    "types.pb.js"
+  ]
+}

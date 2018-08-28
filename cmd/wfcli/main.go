@@ -50,6 +50,7 @@ func main() {
 		cmdValidate,
 		cmdAdmin,
 		cmdVersion,
+		cmdParseJS, // TEMP
 	}
 	app.Run(os.Args)
 }
