@@ -59,7 +59,7 @@ if [ -z ${gitcommit:-} ] ; then
 fi
 goos=${goos:-linux}
 goarch=${goarch:-amd64}
-output_cli=${output_cli:-wfcli}
+output_cli=${output_cli:-fission-workflows}
 output_bundle=${output_bundle:-fission-workflows-bundle}
 
 echo "-------- Build config --------"
@@ -77,7 +77,7 @@ CGO_ENABLED=0 GOOS=${goos} GOARCH=${goarch} go build \
   -gcflags=-trimpath=${GOPATH} -asmflags=-trimpath=${GOPATH}\
   -ldflags '-X "${versionPath}.BuildDate=${date}"'\
   -o ${output_cli}\
-  github.com/fission/fission-workflows/cmd/wfcli/
+  github.com/fission/fission-workflows/cmd/fission-workflows/
 echo "$(pwd)/${output_cli}"
 
 # Build bundle

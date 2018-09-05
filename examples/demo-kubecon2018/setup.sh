@@ -20,7 +20,7 @@ for i in {1..5}; do fission fn list && break || sleep 5; done
 # Install newest version of fission workflows
 
 helm install ${FISSION_WORKFLOWS_DIR}/charts/fission-workflows --namespace fission --set "pullPolicy=Always,tag=${BUILD_TAG},bundleImage=${BUILD_NS}/fission-workflows-bundle,envImage=${BUILD_NS}/workflow-env,buildEnvImage=${BUILD_NS}/workflow-build-env" --debug --wait -n fission-workflows
-for i in {1..5}; do wfcli status && break || sleep 5; done
+for i in {1..5}; do fission-workflows status && break || sleep 5; done
 
 # Misc
 fission env create --name binary --image fission/binary-env

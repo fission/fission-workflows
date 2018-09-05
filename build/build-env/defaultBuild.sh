@@ -10,14 +10,14 @@ parse() {
     dst=$2
     echo "Parsing ${src} -> ${dst}"
     cat ${src}
-    if ! wfcli parse ${src} > ${dst} ; then
+    if ! fission-workflows parse ${src} > ${dst} ; then
         echo "Failed to parse ${SRC_PKG}"
         exit 12
     fi
     echo "Completed parsing ${src} -> ${dst}"
 }
 
-echo  "Building with $(wfcli version --client)..."
+echo  "Building with $(fission-workflows version --client)..."
 if [[ -f ${SRC_PKG} ]] ; then
     # Package is a single file
     echo "Package is a single file"

@@ -1,5 +1,5 @@
-hash: 388fc1da35b61c83387241f47de9e4f9af37a0ffebd9f845eb2373951cf05bfd
-updated: 2018-08-24T11:09:52.354991+02:00
+hash: 6903c5d9f84153e543483015f749a22afd7ca331b979a124c825ed977a4026d3
+updated: 2018-09-03T16:53:54.242728+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -38,6 +38,7 @@ imports:
   - controller/client
   - crd
   - executor/client
+  - fission/plugin
   - pkg/apis/fission.io/v1
   - redis
   - redis/build/gen
@@ -347,7 +348,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
-  version: 0f11257a8a25954878633ebdc9841c67d8f83bdb
+  version: 12444147eb1150aa5c80d2aae532cbc5b7be73d0
   subpackages:
   - admissionregistration/v1alpha1
   - admissionregistration/v1beta1
@@ -495,6 +496,7 @@ imports:
   - util/intstr
   - util/jsonpath
   - util/retry
+  - util/workqueue
 testImports:
 - name: github.com/Azure/go-ansiterm
   version: d6e3b3328b783f23731bc4d058875b0371ff8109

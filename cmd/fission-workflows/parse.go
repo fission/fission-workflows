@@ -8,13 +8,13 @@ import (
 	"github.com/fission/fission-workflows/pkg/parse"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/jsonpb"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 var cmdParse = cli.Command{
-	Name:    "parse",
-	Aliases: []string{"p"},
-	Usage:   "parse <path-to-source> ",
+	Name:  "parse",
+	Usage: "parse <path-to-workflow-file> ",
 	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "type, t",
@@ -26,7 +26,7 @@ var cmdParse = cli.Command{
 	Action: commandContext(func(ctx Context) error {
 
 		if ctx.NArg() == 0 {
-			panic("Need a path to a yaml Workflow definition")
+			log.Fatal("No file provided.")
 		}
 
 		parserType := ctx.String("type")

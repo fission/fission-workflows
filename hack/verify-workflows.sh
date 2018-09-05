@@ -12,7 +12,7 @@ find_files() {
     \) -name '*.wf.yaml'
 }
 
-TOOL="wfcli validate"
+TOOL="fission-workflows validate"
 bad_files=$(find_files | grep -v '.glide/cache' | xargs ${TOOL})
 if [[ -n "${bad_files}" ]]; then
   echo "The following workflows are invalid: "

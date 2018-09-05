@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/version"
+	"github.com/fission/fission/fission/plugin"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -21,8 +23,8 @@ func main() {
 	app.Email = "erwin@platform9.com"
 	app.Version = version.Version
 	app.EnableBashCompletion = true
-	app.Usage = "Fission Workflows CLI"
-	app.Description = "CLI for Fission Workflows"
+	app.Usage = "Inspect, manage, and debug workflow executions"
+	app.Description = app.Usage
 	app.HideVersion = true
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -36,9 +38,15 @@ func main() {
 			Value:  "/proxy/workflows-apiserver",
 			Usage:  "The path to prepend each of the commands",
 		},
+		cli.IntFlag{
+			Name:  "verbosity",
+			Value: 1,
+			Usage: "CLI verbosity (0 is quiet, 1 is the default, 2 is verbose.)",
+		},
 		cli.BoolFlag{
-			Name:   "debug, d",
-			EnvVar: "WFCLI_DEBUG",
+			Hidden: true,
+			Name:   "plugin",
+			Usage:  "Show Fission plugin info",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -50,6 +58,23 @@ func main() {
 		cmdValidate,
 		cmdAdmin,
 		cmdVersion,
+	}
+	app.Action = func(ctx *cli.Context) error {
+		if ctx.GlobalBool("plugin") {
+			bs, err := json.Marshal(plugin.Metadata{
+				Name:    "workflows",
+				Version: version.Version,
+				Aliases: []string{"wf"},
+				Usage:   ctx.App.Usage,
+			})
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(bs))
+			return nil
+		}
+		cli.ShowAppHelp(ctx)
+		return nil
 	}
 	app.Run(os.Args)
 }
@@ -100,10 +125,15 @@ func (c Context) Value(key interface{}) interface{} {
 
 func commandContext(fn func(c Context) error) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
-		if c.GlobalBool("debug") {
-			logrus.SetLevel(logrus.DebugLevel)
-		} else {
+		switch c.GlobalInt("verbosity") {
+		case 0:
+			logrus.SetLevel(logrus.ErrorLevel)
+		default:
+			fallthrough
+		case 1:
 			logrus.SetLevel(logrus.InfoLevel)
+		case 2:
+			logrus.SetLevel(logrus.DebugLevel)
 		}
 		return fn(Context{c})
 	}

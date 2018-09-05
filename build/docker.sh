@@ -19,8 +19,8 @@ if $NOBUILD ; then
         exit 1;
     fi
 
-    if [ ! -f ./wfcli ]; then
-        echo "Executable './wfcli' not found!"
+    if [ ! -f ./fission-workflows ]; then
+        echo "Executable './fission-workflows' not found!"
         exit 1;
     fi
 fi
@@ -41,8 +41,8 @@ docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
-echo "Building wfcli..."
-docker build --tag="${IMAGE_REPO}/wfcli:${IMAGE_TAG}" ${BUILD_ROOT}/wfcli-docker/ \
+echo "Building fission-workflows..."
+docker build --tag="${IMAGE_REPO}/fission-workflows-cli:${IMAGE_TAG}" ${BUILD_ROOT}/cli/ \
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}

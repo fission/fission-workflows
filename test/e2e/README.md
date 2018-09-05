@@ -25,7 +25,7 @@ ROOT     = root of the project
 # PATH
 kubectl (CLI)
 fission (CLI)
-wfcli   (CLI)
+fission-workflows   (CLI)
 python3
 ``` 
 

@@ -9,7 +9,7 @@ import (
 var cmdStatus = cli.Command{
 	Name:    "status",
 	Aliases: []string{"s"},
-	Usage:   "Check cluster status",
+	Usage:   "Check workflow engine status",
 	Action: commandContext(func(ctx Context) error {
 		client := getClient(ctx)
 		resp, err := client.Admin.Status(ctx)

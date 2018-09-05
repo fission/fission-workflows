@@ -7,8 +7,9 @@ import (
 )
 
 var cmdConfig = cli.Command{
-	Name:  "config",
-	Usage: "Print wfcli config",
+	Name:   "config",
+	Hidden: true,
+	Usage:  "Print fission-workflows config",
 	Action: commandContext(func(ctx Context) error {
 		fmt.Println("cli:")
 		for _, flag := range ctx.GlobalFlagNames() {

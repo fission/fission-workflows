@@ -62,12 +62,12 @@ emph "Building images..."
 bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
 
 # Ensure cli is in path
-emph "Copying wfcli to '${BIN_DIR}/wfcli'..."
+emph "Copying fission-workflows to '${BIN_DIR}/fission-workflows'..."
 bundleImage=${DOCKER_REPO}/fission-workflows-bundle:${TAG}
 bundleContainer=$(docker create ${bundleImage} tail /dev/null)
-docker cp ${bundleContainer}:/wfcli ${BIN_DIR}/wfcli
+docker cp ${bundleContainer}:/fission-workflows ${BIN_DIR}/fission-workflows
 docker rm -v ${bundleContainer}
-wfcli -h > /dev/null
+fission-workflows -h > /dev/null
 
 # Publish to gcloud
 emph "Pushing images to container registry..."
@@ -82,10 +82,10 @@ emph "Deploying Fission Workflows '${fissionWorkflowsHelmId}' to ns '${NS}'..."
 helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=Always,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
 
 # Wait for Fission Workflows to get ready
-wfcli config
+fission-workflows config
 emph "Waiting for Fission Workflows to be ready..."
 sleep 5
-retry wfcli status
+retry fission-workflows status
 echo
 emph "Fission Workflows deployed!"
 

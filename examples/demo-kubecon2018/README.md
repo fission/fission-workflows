@@ -3,7 +3,7 @@
 ## Prerequisites
 - fission (CLI)
 - kubectl (+ connected cluster)
-- wfcli (CLI for Fission Workflows)
+- fission-workflows (CLI plugin for Fission Workflows)
 - helm
 
 ## Usage

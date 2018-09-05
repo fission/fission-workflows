@@ -19,4 +19,4 @@ RUN if ! $NOBUILD ; then \
 FROM scratch
 
 COPY --from=builder /go/src/github.com/fission/fission-workflows/fission-workflows-bundle /fission-workflows-bundle
-COPY --from=builder /go/src/github.com/fission/fission-workflows/wfcli /wfcli
+COPY --from=builder /go/src/github.com/fission/fission-workflows/fission-workflows /fission-workflows

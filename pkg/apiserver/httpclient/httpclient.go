@@ -45,7 +45,7 @@ func callWithJSON(ctx context.Context, method string, url string, in proto.Messa
 		}
 	}
 	if logrus.GetLevel() == logrus.DebugLevel {
-		logrus.Debugf("--> %s - %s", method, url)
+		logrus.Debugf("--> %s %s", method, url)
 		if in != nil {
 			buf := bytes.NewBuffer(nil)
 			err := toJSON(buf, in)

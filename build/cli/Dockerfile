@@ -4,7 +4,7 @@ FROM $BUNDLE_IMAGE:$BUNDLE_TAG as workflows-bundle
 
 FROM scratch
 
-COPY --from=workflows-bundle /wfcli /wfcli
+COPY --from=workflows-bundle /fission-workflows /fission-workflows
 
-ENTRYPOINT ["/wfcli"]
+ENTRYPOINT ["/fission-workflows"]
 CMD ["-h"]
