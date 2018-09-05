@@ -382,17 +382,20 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 				},
 				Timeout: time.Duration(10) * time.Minute,
 			},
+
 			&controller.RuleExceededErrorCount{
 				OnExceeded: &ActionFail{
 					API: ctr.invocationAPI,
 				},
 				MaxErrorCount: 0,
 			},
-			&RuleHasCompleted{},
+
 			&RuleCheckIfCompleted{
 				InvocationAPI: ctr.invocationAPI,
 			},
+
 			&RuleWorkflowIsReady{},
+
 			&RuleSchedule{
 				Scheduler:     ctr.scheduler,
 				InvocationAPI: ctr.invocationAPI,
