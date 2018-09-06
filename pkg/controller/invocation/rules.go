@@ -44,17 +44,6 @@ func (ec WfiEvalContext) Invocation() *types.WorkflowInvocation {
 	return ec.wfi
 }
 
-type RuleHasCompleted struct{}
-
-func (cf *RuleHasCompleted) Eval(cec controller.EvalContext) controller.Action {
-	ec := EnsureInvocationContext(cec)
-	wfi := ec.Invocation()
-	if wfi.Status.Finished() {
-		log.Infof("No need to evaluate finished invocation %v", wfi.Metadata.Id)
-	}
-	return nil
-}
-
 type RuleWorkflowIsReady struct {
 }
 
