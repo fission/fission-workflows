@@ -11,7 +11,9 @@ const (
 )
 
 var (
-	ErrInvalidFnRef = errors.New("invalid function reference")
+	ErrInvalidFnRef   = errors.New("invalid function reference")
+	ErrFnRefNoRuntime = errors.New("fnref has empty runtime")
+	ErrFnRefNoID      = errors.New("fnref has empty ID")
 )
 
 func (m FnRef) Format() string {
@@ -29,16 +31,11 @@ func (m FnRef) Format() string {
 }
 
 func (m FnRef) IsValid() bool {
-	return IsFnRef(m.Format())
+	return ValidateFnRef(m, false) == nil
 }
 
 func (m FnRef) IsEmpty() bool {
-	return m.ID == "" && m.Runtime == ""
-}
-
-func IsFnRef(s string) bool {
-	_, err := ParseFnRef(s)
-	return err == nil
+	return m.ID == "" && m.Runtime == "" && m.Namespace == ""
 }
 
 func NewFnRef(runtime, ns, id string) FnRef {
@@ -50,6 +47,17 @@ func NewFnRef(runtime, ns, id string) FnRef {
 		Namespace: ns,
 		ID:        id,
 	}
+}
+
+func ValidateFnRef(fnref FnRef, allowEmptyNamespace bool) error {
+	if len(fnref.ID) == 0 {
+		return ErrFnRefNoID
+	}
+	if !allowEmptyNamespace && len(fnref.Runtime) == 0 {
+		return ErrFnRefNoRuntime
+	}
+
+	return nil
 }
 
 func ParseFnRef(s string) (FnRef, error) {

@@ -99,6 +99,7 @@ spec:
       args: [
       # Override workflow env CMD to optionally enable --debug
         "--nats",
+        "--http",
         "--fission",
         "--internal",
         "--controller",

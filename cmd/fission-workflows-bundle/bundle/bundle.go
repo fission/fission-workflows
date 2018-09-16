@@ -21,6 +21,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
+	fnhttp "github.com/fission/fission-workflows/pkg/fnenv/http"
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
@@ -58,6 +59,7 @@ type Options struct {
 	Nats                 *nats.Config
 	Fission              *FissionOptions
 	InternalRuntime      bool
+	HTTPRuntime          bool
 	InvocationController bool
 	WorkflowController   bool
 	AdminAPI             bool
@@ -186,6 +188,14 @@ func run(ctx context.Context, opts *Options) error {
 		}).Infof("Using Task Runtime: Fission")
 		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress, opts.Fission.RouterAddr)
 		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
+	}
+
+	if opts.HTTPRuntime {
+		httpRuntime := fnhttp.New()
+		resolvers["http"] = httpRuntime
+		resolvers["https"] = httpRuntime
+		runtimes["http"] = httpRuntime
+		runtimes["https"] = httpRuntime
 	}
 
 	//

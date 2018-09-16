@@ -25,6 +25,7 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 			AdminAPI:             true,
 			Metrics:              true,
 			Debug:                true,
+			HTTPRuntime:          true,
 		}
 	}
 	go bundle.Run(ctx, &bundleOpts)

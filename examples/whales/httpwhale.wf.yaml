@@ -4,14 +4,30 @@
 apiVersion: 1
 output: Whalify
 tasks:
+  # Fetch the IP using the internal function HTTP.
   FetchMyIp:
     run: http
     inputs:
       url: "http://ifconfig.co"
+
+  # Fetch the IP using the HTTP runtime.
+  FetchMyIp2:
+    run: "http://ifconfig.co"
+
+  EnsureEqualIPs:
+    run: if
+    inputs:
+      if: "{ output('FetchMyIp') != output('FetchMyIp2') }"
+      then:
+        run: fail
+        inputs: "{ output('FetchMyIp') + ' != ' + output('FetchMyIp2') }"
+    requires:
+    - GetIPWithInternalHTTPFunction
+    - FetchMyIp2
 
   Whalify:
     run: whalesay
     inputs:
       body: "{ output('FetchMyIp') }"
     requires:
-    - FetchMyIp
+    - EnsureEqualIPs

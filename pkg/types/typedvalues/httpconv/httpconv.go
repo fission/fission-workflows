@@ -64,6 +64,17 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	return target, nil
 }
 
+func ParseResponse(r *http.Response) (types.TypedValue, error) {
+	body := r.Body
+	defer r.Body.Close()
+	contentType := r.Header.Get(headerContentType)
+	output, err := ParseBody(body, contentType)
+	if err != nil {
+		return types.TypedValue{}, err
+	}
+	return output, nil
+}
+
 // ParseRequest maps the body of the HTTP request to a corresponding typedvalue.
 func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 	if len(contentType) == 0 {

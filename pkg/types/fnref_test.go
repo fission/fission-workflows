@@ -25,9 +25,7 @@ var parseCases = map[string]struct {
 func TestParse(t *testing.T) {
 	for input, expected := range parseCases {
 		t.Run(input, func(t *testing.T) {
-			valid := IsFnRef(input)
 			ref, err := ParseFnRef(input)
-			assert.Equal(t, expected.err == nil, valid)
 			assert.Equal(t, expected.err, err)
 			assert.EqualValues(t, expected.FnRef, ref)
 		})

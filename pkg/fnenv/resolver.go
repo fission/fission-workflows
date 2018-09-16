@@ -56,7 +56,7 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	}
 
 	if ref.Runtime != "" {
-		return ps.resolveForRuntime(ref)
+		return ps.resolveForRuntime(ref.Runtime, ref)
 	}
 
 	waitFor := len(ps.clients)
@@ -64,17 +64,15 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	defer close(resolved)
 	wg := sync.WaitGroup{}
 	wg.Add(waitFor)
-	var lastErr error
 	for cName := range ps.clients {
 		go func(cName string) {
-			def, err := ps.resolveForRuntime(types.FnRef{Runtime: cName, Namespace: ref.Namespace, ID: ref.ID})
+			def, err := ps.resolveForRuntime(cName, ref)
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
 					"err":     err,
 					"runtime": cName,
 					"fn":      targetFn,
 				}).Debug("Function not found.")
-				lastErr = err
 			} else {
 				resolved <- def
 			}
@@ -88,13 +86,12 @@ func (ps *MetaResolver) Resolve(targetFn string) (types.FnRef, error) {
 	case result := <-resolved:
 		return result, nil
 	default:
-		return types.FnRef{}, fmt.Errorf("failed to resolve function '%s' using clients '%v': %v",
-			targetFn, ps.clients, lastErr)
+		return types.FnRef{}, fmt.Errorf("failed to resolve function '%s' using clients '%v'", targetFn, ps.clients)
 	}
 }
 
-func (ps *MetaResolver) resolveForRuntime(ref types.FnRef) (types.FnRef, error) {
-	dst, ok := ps.clients[ref.Runtime]
+func (ps *MetaResolver) resolveForRuntime(runtime string, ref types.FnRef) (types.FnRef, error) {
+	dst, ok := ps.clients[runtime]
 	if !ok {
 		return types.FnRef{}, ErrInvalidRuntime
 	}
@@ -103,9 +100,9 @@ func (ps *MetaResolver) resolveForRuntime(ref types.FnRef) (types.FnRef, error) 
 		return types.FnRef{}, err
 	}
 
-	fnResolved.WithLabelValues(ref.Runtime).Inc()
+	fnResolved.WithLabelValues(runtime).Inc()
 	return types.FnRef{
-		Runtime:   ref.Runtime,
+		Runtime:   runtime,
 		Namespace: ref.Namespace,
 		ID:        rsv,
 	}, nil

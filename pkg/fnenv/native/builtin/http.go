@@ -1,18 +1,14 @@
 package builtin
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"strings"
 
+	"github.com/fission/fission-workflows/pkg/fnenv/http"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
-	"github.com/sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -57,53 +53,42 @@ httpExample:
 
 A complete example of this function can be found in the [httpwhale](../examples/whales/httpwhale.wf.yaml) example.
 */
-type FunctionHTTP struct{}
-
-func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	// Setup request
-	contentType := httpconv.DetermineContentTypeInputs(spec.Inputs)
-	headers := httpconv.FormatHeaders(spec.Inputs)
-	method := httpconv.FormatMethod(spec.Inputs)
-	// Get the actual url
-	uri, err := fn.getURI(spec.Inputs)
-	if err != nil {
-		return nil, err
-	}
-	var body io.ReadCloser
-
-	bodyTv, ok := spec.Inputs[types.InputMain]
-	if ok && bodyTv != nil {
-		bs, err := httpconv.FormatBody(*bodyTv, contentType)
-		if err != nil {
-			return nil, err
-		}
-		body = ioutil.NopCloser(bytes.NewReader(bs))
-	}
-
-	r, err := http.NewRequest(method, uri, body)
-	if err != nil {
-		return nil, err
-	}
-	r.Header = headers
-	r.Header.Set("Content-Type", contentType)
-
-	// Execute HTTP call
-	logrus.Infof("Executing request: %s %s - headers: {%v} - Body: %d", r.Method, r.URL, r.Header, body)
-	resp, err := http.DefaultClient.Do(r)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Infof("Received response: %s %s - headers: {%v} - Body: %d", resp.Status, resp.Request.URL, resp.Header, resp.ContentLength)
-
-	// Parse output
-	output, err := httpconv.ParseBody(resp.Body, r.Header.Get("Content-Type"))
-	return &output, err
+type FunctionHTTP struct {
+	runtime *http.Runtime
 }
 
-func (fn *FunctionHTTP) getURI(inputs map[string]*types.TypedValue) (string, error) {
+func NewFunctionHTTP() *FunctionHTTP {
+	return &FunctionHTTP{
+		runtime: http.New(),
+	}
+}
+
+func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+	targetUrl, err := fn.determineTargetURL(spec.Inputs)
+	if err != nil {
+		return nil, err
+	}
+	fnref, err := types.ParseFnRef(targetUrl)
+	if err != nil {
+		return nil, err
+	}
+	clonedSpec := proto.Clone(spec).(*types.TaskInvocationSpec)
+	clonedSpec.FnRef = &fnref
+
+	result, err := fn.runtime.Invoke(clonedSpec)
+	if err != nil {
+		return nil, err
+	}
+	if result.GetStatus() == types.TaskInvocationStatus_FAILED {
+		return nil, result.GetError()
+	}
+	return result.GetOutput(), nil
+}
+
+func (fn *FunctionHTTP) determineTargetURL(inputs map[string]*types.TypedValue) (string, error) {
 	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUrl, types.InputMain)
 	if tv == nil {
-		return "", errors.New("target URI is required for HTTP function")
+		return "", errors.New("target URL is required for HTTP function")
 	}
 	s, err := typedvalues.FormatString(tv)
 	if err != nil {
