@@ -11,9 +11,9 @@ var parseCases = map[string]struct {
 	err  error
 	full string
 }{
-	"noRuntime":                         {NewFnRef("", "default", "noRuntime"), nil, "default/noRuntime"},
-	"a://b":                             {NewFnRef("a", "default", "b"), nil, "a://default/b"},
-	"http://foobar":                     {NewFnRef("http", "default", "foobar"), nil, "http://default/foobar"},
+	"noRuntime":                         {NewFnRef("", "", "noRuntime"), nil, "noRuntime"},
+	"a://b":                             {NewFnRef("a", "", "b"), nil, "a://b"},
+	"http://foobar":                     {NewFnRef("http", "", "foobar"), nil, "http://foobar"},
 	"fission://fission-function/foobar": {NewFnRef("fission", "fission-function", "foobar"), nil, "fission://fission-function/foobar"},
 
 	"":             {FnRef{}, ErrInvalidFnRef, ""},
