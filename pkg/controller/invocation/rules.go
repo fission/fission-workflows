@@ -3,6 +3,8 @@ package invocation
 import (
 	"errors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -119,41 +121,54 @@ type RuleCheckIfCompleted struct {
 }
 
 func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {
-	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
-	wfi := ec.Invocation()
+	var (
+		err   error
+		ec    = EnsureInvocationContext(cec)
+		wf    = ec.Workflow()
+		wfi   = ec.Invocation()
+		tasks = types.GetTasks(wf, wfi)
+	)
+
+	log.WithFields(logrus.Fields{
+		"wfi-id": wfi.ID(),
+		"wf-id":  wf.ID(),
+	}).Debugf("check if all tasks are finished.")
+
 	// Check if the workflow invocation is complete
-	tasks := types.GetTasks(wf, wfi)
-	var err error
-	finished := true
-	success := true
 	for id := range tasks {
 		t, ok := wfi.Status.Tasks[id]
 		if !ok || !t.Status.Finished() {
-			finished = false
-			break
-		} else {
-			success = success && t.Status.Status == types.TaskInvocationStatus_SUCCEEDED
+			return nil
 		}
-	}
-	if finished {
-		var finalOutput *types.TypedValue
-		if len(wf.Spec.OutputTask) != 0 {
-			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
-		}
-
-		// TODO extract to action
-		if success {
-			err = cc.InvocationAPI.Complete(wfi.ID(), finalOutput)
-		} else {
+		if t.Status.Status != types.TaskInvocationStatus_SUCCEEDED {
 			err = cc.InvocationAPI.Fail(wfi.ID(), errors.New("not all tasks succeeded"))
-		}
-		if err != nil {
-			return &controller.ActionError{
-				Err: err,
+			if err != nil {
+				return &controller.ActionError{
+					Err: err,
+				}
 			}
 		}
 	}
+
+	var finalOutput *types.TypedValue
+	if len(wf.Spec.OutputTask) != 0 {
+		finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
+	}
+
+	log.WithFields(logrus.Fields{
+		"wfi-id":       wfi.ID(),
+		"wf-id":        wf.ID(),
+		"final-output": finalOutput,
+	}).Debugf("all tasks finished.")
+
+	// TODO extract to action
+	err = cc.InvocationAPI.Complete(wfi.ID(), finalOutput)
+	if err != nil {
+		return &controller.ActionError{
+			Err: err,
+		}
+	}
+
 	return nil
 }
 
