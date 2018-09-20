@@ -81,7 +81,7 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 			// TODO make more efficient (by moving list queries to cache)
 			entity, err := gi.wfiCache.GetAggregate(aggregate)
 			if err != nil {
-				logrus.Error("List: failed to fetch %v from cache: %v", aggregate, err)
+				logrus.Errorf("List: failed to fetch %v from cache: %v", aggregate, err)
 				continue
 			}
 			wfi := entity.(*aggregates.WorkflowInvocation)

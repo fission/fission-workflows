@@ -1,5 +1,5 @@
-hash: 6903c5d9f84153e543483015f749a22afd7ca331b979a124c825ed977a4026d3
-updated: 2018-09-03T16:53:54.242728+02:00
+hash: 8625631121e3da0aa6118e13145d87b9efb1659cb820d24b2c2f781af212556a
+updated: 2018-09-20T14:16:47.976902+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -68,6 +68,10 @@ imports:
   - types
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
+- name: github.com/golang/groupcache
+  version: 24b0969c4cb722950103eed87108c8d291a8df00
+  subpackages:
+  - lru
 - name: github.com/golang/protobuf
   version: aa810b61a9c79d51363740d207bb46cf8e620ed5
   subpackages:
@@ -128,7 +132,7 @@ imports:
 - name: github.com/hashicorp/go-multierror
   version: 3d5d8f294aa03d8e98859feac328afbdf1ae0703
 - name: github.com/hashicorp/golang-lru
-  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  version: 20f1fb78b0740ba8c3cb143a61e86ba5c8669768
   subpackages:
   - simplelru
 - name: github.com/howeyc/gopass
@@ -155,7 +159,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/nats-io/nats-streaming-server
-  version: 63e2c334b66dba3edade0047625a25c0d8f18f80
+  version: 8910c0c347bc51cc87227aeb27bef19d409bf5c2
   subpackages:
   - spb
   - util

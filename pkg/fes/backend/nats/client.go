@@ -169,8 +169,8 @@ func (es *EventStore) Append(event *fes.Event) error {
 
 // Get returns all events related to a specific aggregate
 func (es *EventStore) Get(aggregate fes.Aggregate) ([]*fes.Event, error) {
-	if !fes.ValidateAggregate(&aggregate) {
-		return nil, ErrInvalidAggregate
+	if err := fes.ValidateAggregate(&aggregate); err != nil {
+		return nil, err
 	}
 	subject := toSubject(aggregate)
 

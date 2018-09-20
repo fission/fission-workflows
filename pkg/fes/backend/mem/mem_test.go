@@ -1,6 +1,8 @@
 package mem
 
 import (
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -20,18 +22,134 @@ func newEvent(a fes.Aggregate, data []byte) *fes.Event {
 	return event
 }
 
+func setupBackend() *Backend {
+	return NewBackend()
+}
+
+// 2018-09-20: 0.5 ms
+func BenchmarkRoundtripSingleKey(b *testing.B) {
+	mem := setupBackend()
+	sub := mem.Subscribe()
+
+	// Generate test data
+	events := make([]*fes.Event, b.N)
+	for i := 0; i < b.N; i++ {
+		key := fes.NewAggregate("type", "id")
+		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := mem.Append(events[i])
+		if err != nil {
+			panic(err)
+		}
+		<-sub.Ch
+	}
+}
+
+// 2018-09-20: 2 ms
+func BenchmarkRoundtripManyKeys(b *testing.B) {
+	mem := setupBackend()
+	sub := mem.Subscribe()
+
+	// Generate test data
+	events := make([]*fes.Event, b.N)
+	for i := 0; i < b.N; i++ {
+		key := fes.NewAggregate("type", fmt.Sprintf("%d", i))
+		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
+	}
+
+	// Run benchmark based on roundtrip
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := mem.Append(events[i])
+		if err != nil {
+			panic(err)
+		}
+		<-sub.Ch
+	}
+}
+
+// 2018-09-20: 2-3 ms
+func BenchmarkRoundtripManyEvictions(b *testing.B) {
+	mem := setupBackend()
+	sub := mem.Subscribe()
+
+	mem.MaxKeys = int(math.Max(float64(b.N)/100, 1))
+
+	// Generate test data
+	events := make([]*fes.Event, b.N)
+	for i := 0; i < b.N; i++ {
+		key := fes.NewAggregate("type", fmt.Sprintf("%d", i))
+		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
+		events[i].Hints = &fes.EventHints{
+			Completed: true,
+		}
+	}
+
+	// Run benchmark based on roundtrip
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := mem.Append(events[i])
+		if err != nil {
+			panic(err)
+		}
+		<-sub.Ch
+	}
+}
+
+func TestBackendStoreFull(t *testing.T) {
+	mem := setupBackend()
+	mem.MaxKeys = 2
+	n := 3
+	events := make([]*fes.Event, n)
+	for i := 0; i < n; i++ {
+		key := fes.NewAggregate("entity", fmt.Sprintf("%d", i))
+		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
+	}
+	for _, event := range events {
+		err := mem.Append(event)
+		if err != nil {
+			assert.EqualError(t, err, fes.ErrEventStoreOverflow.WithAggregate(events[2].Aggregate).Error())
+		}
+	}
+}
+
+func TestBackendBufferEvict(t *testing.T) {
+	mem := setupBackend()
+	mem.MaxKeys = 3
+	n := 10
+	events := make([]*fes.Event, n)
+	mem.Append(newEvent(fes.NewAggregate("active", "1"), []byte("active stream")))
+	for i := 0; i < n; i++ {
+		key := fes.NewAggregate("entity", fmt.Sprintf("%d", i))
+		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
+		events[i].Hints = &fes.EventHints{
+			Completed: true,
+		}
+	}
+	for _, event := range events {
+		err := mem.Append(event)
+		assert.NoError(t, err)
+	}
+	assert.Equal(t, 2, mem.buf.Len())
+	assert.Equal(t, 1, len(mem.store))
+	assert.Equal(t, 3, mem.Len())
+}
+
 func TestBackend_Append(t *testing.T) {
-	mem := NewBackend()
+	mem := setupBackend()
 
 	event := newEvent(fes.NewAggregate("type", "id"), []byte("event 1"))
 	err := mem.Append(event)
 	assert.NoError(t, err)
-	assert.Len(t, mem.contents, 1)
+	assert.Equal(t, mem.Len(), 1)
 
 	event2 := newEvent(fes.Aggregate{}, []byte("event 1"))
 	err = mem.Append(event2)
-	assert.EqualError(t, err, ErrInvalidAggregate.Error())
-	assert.Len(t, mem.contents, 1)
+	assert.EqualError(t, err, fes.ErrInvalidAggregate.Error())
+	assert.Equal(t, mem.Len(), 1)
 
 	// Event under existing aggregate
 	event3, err := fes.NewEvent(fes.NewAggregate("type", "id"), &wrappers.BytesValue{
@@ -40,8 +158,8 @@ func TestBackend_Append(t *testing.T) {
 	assert.NoError(t, err)
 	err = mem.Append(event3)
 	assert.NoError(t, err)
-	assert.Len(t, mem.contents, 1)
-	assert.Len(t, mem.contents[fes.NewAggregate("type", "id")], 2)
+	assert.Equal(t, mem.Len(), 1)
+	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("type", "id"))), 2)
 
 	// Event under new aggregate
 	event4, err := fes.NewEvent(fes.NewAggregate("Type", "other"), &wrappers.BytesValue{
@@ -50,13 +168,13 @@ func TestBackend_Append(t *testing.T) {
 	assert.NoError(t, err)
 	err = mem.Append(event4)
 	assert.NoError(t, err)
-	assert.Len(t, mem.contents, 2)
-	assert.Len(t, mem.contents[fes.NewAggregate("Type", "other")], 1)
-	assert.Len(t, mem.contents[fes.NewAggregate("type", "id")], 2)
+	assert.Equal(t, mem.Len(), 2)
+	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("Type", "other"))), 1)
+	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("type", "id"))), 2)
 }
 
 func TestBackend_GetMultiple(t *testing.T) {
-	mem := NewBackend()
+	mem := setupBackend()
 	key := fes.NewAggregate("type", "id")
 	events := []*fes.Event{
 		newEvent(key, []byte("event 1")),
@@ -75,7 +193,7 @@ func TestBackend_GetMultiple(t *testing.T) {
 }
 
 func TestBackend_GetNonexistent(t *testing.T) {
-	mem := NewBackend()
+	mem := setupBackend()
 	key := fes.NewAggregate("type", "id")
 	getEvents, err := mem.Get(key)
 	assert.NoError(t, err)
@@ -83,7 +201,7 @@ func TestBackend_GetNonexistent(t *testing.T) {
 }
 
 func TestBackend_Subscribe(t *testing.T) {
-	mem := NewBackend()
+	mem := setupBackend()
 	key := fes.NewAggregate("type", "id")
 	sub := mem.Subscribe(pubsub.SubscriptionOptions{
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, key.Type),
@@ -107,4 +225,12 @@ func TestBackend_Subscribe(t *testing.T) {
 		receivedEvents = append(receivedEvents, event)
 	}
 	assert.EqualValues(t, events, receivedEvents)
+}
+
+func (b *Backend) mustGet(key fes.Aggregate) []*fes.Event {
+	val, ok, _ := b.get(key)
+	if !ok {
+		panic(fmt.Sprintf("expected value present for key %s", key))
+	}
+	return val
 }

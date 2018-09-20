@@ -235,7 +235,7 @@ func FormatMethod(inputs map[string]*types.TypedValue) string {
 		if err == nil {
 			return contentType
 		}
-		logrus.Error("Invalid method in inputs: %+v", tv)
+		logrus.Errorf("Invalid method in inputs: %+v", tv)
 	}
 	return methodDefault
 }
@@ -354,7 +354,7 @@ func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 		if err == nil {
 			return contentType
 		}
-		logrus.Error("Invalid content type in inputs: %+v", ctTv)
+		logrus.Errorf("Invalid content type in inputs: %+v", ctTv)
 	}
 
 	// Otherwise, check for label on body input

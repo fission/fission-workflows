@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	backend fes.Backend
+	backend *nats.EventStore
 )
 
 // Tests the event store implementation with a live NATS cluster.
@@ -66,6 +66,16 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			return fmt.Errorf("failed to connect to cluster: %v", err)
 		}
+
+		err = backend.Watch(fes.Aggregate{Type: "invocation"})
+		if err != nil {
+			panic(err)
+		}
+		err = backend.Watch(fes.Aggregate{Type: "workflow"})
+		if err != nil {
+			panic(err)
+		}
+
 		return nil
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)

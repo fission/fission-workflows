@@ -60,6 +60,9 @@ func NewBaseEntity(thiz Entity, aggregate Aggregate) *BaseEntity {
 	}
 }
 
-func ValidateAggregate(a *Aggregate) bool {
-	return a != nil && len(a.Type) != 0 && len(a.Id) != 0
+func ValidateAggregate(a *Aggregate) error {
+	if a != nil && len(a.Type) != 0 && len(a.Id) != 0 {
+		return nil
+	}
+	return ErrInvalidAggregate.WithAggregate(a)
 }
