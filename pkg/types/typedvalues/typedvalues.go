@@ -92,7 +92,6 @@ func (pf *ComposedParserFormatter) Parse(ctx Parser, i interface{}) (*types.Type
 				return nil, err
 			}
 		}
-		logrus.Debugf("Parser success: %t", tv)
 		return tv, nil
 	}
 	logrus.Debugf("No parsers for %t", i)

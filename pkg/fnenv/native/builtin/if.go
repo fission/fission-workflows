@@ -77,7 +77,7 @@ func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue,
 	}
 
 	// Output consequent or alternative based on condition
-	logrus.Infof("If-task has evaluated to '%b''", condition)
+	logrus.Infof("If-task has evaluated to '%v''", condition)
 	if condition {
 		return consequent, nil
 	}

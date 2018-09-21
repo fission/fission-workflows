@@ -1,6 +1,8 @@
 package fes
 
 import (
+	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
@@ -85,3 +87,26 @@ func newNotification(entity Entity, event *Event) *Notification {
 		SpanCtx:   spanCtx,
 	}
 }
+
+type EventStoreErr struct {
+	S string
+	K *Aggregate
+}
+
+func (err *EventStoreErr) WithAggregate(aggregate *Aggregate) *EventStoreErr {
+	err.K = aggregate
+	return err
+}
+
+func (err *EventStoreErr) Error() string {
+	if err.K == nil {
+		return err.S
+	} else {
+		return fmt.Sprintf("%v: %s", err.K.Format(), err.S)
+	}
+}
+
+var (
+	ErrInvalidAggregate   = &EventStoreErr{S: "invalid aggregate"}
+	ErrEventStoreOverflow = &EventStoreErr{S: "event store out of space"}
+)

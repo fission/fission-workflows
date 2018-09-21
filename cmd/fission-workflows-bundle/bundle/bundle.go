@@ -314,7 +314,7 @@ func run(ctx context.Context, opts *Options) error {
 		}()
 		defer func() {
 			err := httpApiSrv.Shutdown(ctx)
-			log.Info("Stopped HTTP API server: %v", err)
+			log.Infof("Stopped HTTP API server: %v", err)
 		}()
 
 		log.Info("Serving HTTP API gateway at: ", httpApiSrv.Addr)

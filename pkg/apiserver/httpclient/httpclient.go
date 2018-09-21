@@ -56,7 +56,7 @@ func callWithJSON(ctx context.Context, method string, url string, in proto.Messa
 			if err != nil {
 				logrus.Errorf("Failed to read debug data: %v", err)
 			}
-			logrus.Debug("body: '%v'", data)
+			logrus.Debugf("body: '%v'", data)
 		}
 	}
 	req, err := http.NewRequest(method, url, buf)

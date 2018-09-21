@@ -108,7 +108,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
 		msg, _ := typedvalues.Format(&output)
-		ctxLog.Warnf("[%s] Failed %v: %v", resp.StatusCode, msg)
+		ctxLog.Warnf("[%s] Failed %v: %v", fnRef.ID, resp.StatusCode, msg)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{

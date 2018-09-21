@@ -98,7 +98,6 @@ func (fn *FunctionSwitch) getCases(inputs map[string]*types.TypedValue) (map[str
 		for _, c := range ir {
 			m, ok := c.(map[string]interface{})
 			if !ok {
-				logrus.Warnf("Invalid case provided: %t", m)
 				return nil, nil, errors.New("invalid case provided")
 			}
 			tva, err := typedvalues.Parse(m[SwitchCaseValue])
