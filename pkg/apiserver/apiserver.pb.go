@@ -106,7 +106,7 @@ func (m *WorkflowInvocationIdentifier) GetId() string {
 }
 
 type WorkflowInvocationList struct {
-	Invocations []string `protobuf:"bytes,1,rep,name=invocations" json:"invocations,omitempty"`
+	Invocations []string `protobuf:"bytes,1,rep,name=store" json:"store,omitempty"`
 }
 
 func (m *WorkflowInvocationList) Reset()                    { *m = WorkflowInvocationList{} }

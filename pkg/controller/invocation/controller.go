@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,12 +22,9 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/util/gopool"
-	"github.com/fission/fission-workflows/pkg/util/labels"
-	"github.com/fission/fission-workflows/pkg/util/pubsub"
 )
 
 const (
-	NotificationBuffer    = 100
 	maxParallelExecutions = 1000
 	Name                  = "invocation"
 )
@@ -62,24 +60,23 @@ func init() {
 }
 
 type Controller struct {
-	invokeCache   fes.CacheReader
-	wfCache       fes.CacheReader
+	invocations   *store.Invocations
+	workflows     *store.Workflows
 	taskAPI       *api.Task
 	invocationAPI *api.Invocation
 	stateStore    *expr.Store
 	scheduler     *scheduler.WorkflowScheduler
-	sub           *pubsub.Subscription
 	cancelFn      context.CancelFunc
 	evalPolicy    controller.Rule
 	evalStore     *controller.EvalStore
 	workQueue     workqueue.RateLimitingInterface
 }
 
-func NewController(invokeCache fes.CacheReader, wfCache fes.CacheReader, workflowScheduler *scheduler.WorkflowScheduler,
+func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.WorkflowScheduler,
 	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
-		invokeCache:   invokeCache,
-		wfCache:       wfCache,
+		invocations:   invocations,
+		workflows:     workflows,
 		scheduler:     workflowScheduler,
 		taskAPI:       taskAPI,
 		invocationAPI: invocationAPI,
@@ -97,26 +94,33 @@ func (cr *Controller) Init(sctx context.Context) error {
 	cr.cancelFn = cancelFn
 
 	// Subscribe to invocation creations and task events.
-	selector := labels.In(fes.PubSubLabelAggregateType, "invocation", "function")
-	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
-		cr.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
-			Buffer:       NotificationBuffer,
-			LabelMatcher: selector,
-		})
-
-		// Invocation Notification listener
-		go func(ctx context.Context) {
-			for {
-				select {
-				case notification := <-cr.sub.Ch:
-					cr.handleMsg(notification)
-				case <-ctx.Done():
-					log.Info("Notification listener stopped.")
-					return
+	go func(ctx context.Context) {
+		sub := cr.invocations.GetInvocationUpdates()
+		if sub == nil {
+			log.Warn("Invocation cache does not support pubsub.")
+			return
+		}
+		for {
+			select {
+			case msg := <-sub.Ch:
+				update, err := sub.ToNotification(msg)
+				if err != nil {
+					log.Warnf("Failed to convert pubsub message to notification: %v", err)
 				}
+				err = cr.Notify(update)
+				if err != nil {
+					log.Errorf("Failed to notify controller of update: %v", err)
+				}
+			case <-ctx.Done():
+				err := sub.Close()
+				if err != nil {
+					log.Error(err)
+				}
+				log.Info("Notification listener stopped.")
+				return
 			}
-		}(ctx)
-	}
+		}
+	}(ctx)
 
 	// process evaluation queue
 	go wait.Until(cr.runWorker(sctx), time.Second, sctx.Done())
@@ -124,49 +128,35 @@ func (cr *Controller) Init(sctx context.Context) error {
 	return nil
 }
 
-func (cr *Controller) handleMsg(msg pubsub.Msg) error {
-	switch n := msg.(type) {
-	case *fes.Notification:
-		cr.Notify(n)
-	default:
-		log.WithField("notification", n).Warn("Ignoring unknown notification type")
-	}
-	return nil
-}
-
-func (cr *Controller) Notify(msg *fes.Notification) error {
+func (cr *Controller) Notify(update *fes.Notification) error {
 	log.WithFields(logrus.Fields{
-		"notification": msg.EventType,
-		"labels":       msg.Labels(),
-	}).Debugf("Controller event: %v", msg.EventType)
+		"notification": update.EventType,
+		"labels":       update.Labels(),
+	}).Debugf("Controller event: %v", update.EventType)
+	entity, err := store.ParseNotificationToInvocation(update)
+	if err != nil {
+		return err
+	}
 
-	switch msg.EventType {
+	switch update.EventType {
 	case events.EventInvocationCompleted:
 		fallthrough
 	case events.EventInvocationCanceled:
 		fallthrough
 	case events.EventInvocationFailed:
-		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
-		if !ok {
-			log.Warn("Event did not contain invocation payload", msg)
-		}
 		// TODO mark to clean up later instead
-		cr.stateStore.Delete(wfi.ID())
-		cr.evalStore.Delete(wfi.ID())
-		log.Infof("Removed invocation %v from eval state", wfi.ID())
+		cr.stateStore.Delete(entity.ID())
+		cr.evalStore.Delete(entity.ID())
+		log.Infof("Removed entity %v from eval state", entity.ID())
 	case events.EventTaskFailed:
 		fallthrough
 	case events.EventTaskSucceeded:
 		fallthrough
 	case events.EventInvocationCreated:
-		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
-		if !ok {
-			panic(msg)
-		}
-		es := cr.evalStore.LoadOrStore(wfi.ID(), msg.SpanCtx)
+		es := cr.evalStore.LoadOrStore(entity.ID(), update.SpanCtx)
 		cr.workQueue.Add(es)
 	default:
-		log.Debugf("Controller ignored event type: %v", msg.EventType)
+		log.Debugf("Controller ignored event type: %v", update.EventType)
 	}
 	return nil
 }
@@ -211,7 +201,7 @@ func (cr *Controller) checkEvalStore() error {
 // checkCaches iterates over the current caches submitting evaluation for invocation when needed
 func (cr *Controller) checkModelCaches() error {
 	// Short control loop
-	entities := cr.invokeCache.List()
+	entities := cr.invocations.List()
 	for _, entity := range entities {
 		// Ignore those that are in the evalStore; those will get picked up by checkEvalStore.
 		if _, ok := cr.evalStore.Load(entity.Id); ok {
@@ -219,7 +209,7 @@ func (cr *Controller) checkModelCaches() error {
 		}
 
 		wi := aggregates.NewWorkflowInvocation(entity.Id)
-		err := cr.invokeCache.Get(wi)
+		err := cr.invocations.Get(wi)
 		if err != nil {
 			log.Errorf("Failed to read '%v' from cache: %v.", wi.Aggregate(), err)
 			continue
@@ -256,10 +246,9 @@ func (cr *Controller) Evaluate(invocationID string) {
 	log.Debugf("Evaluating invocation %s", invocationID)
 
 	// Fetch the workflow invocation for the provided invocation id
-	wfi := aggregates.NewWorkflowInvocation(invocationID)
-	err := cr.invokeCache.Get(wfi)
+	wfi, err := cr.invocations.GetInvocation(invocationID)
 	// TODO move to rule
-	if err != nil && wfi.WorkflowInvocation == nil {
+	if err != nil && wfi == nil {
 		log.Errorf("controller failed to get invocation for invocation id '%s': %v", invocationID, err)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
@@ -273,10 +262,9 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 
 	// Fetch the workflow relevant to the invocation
-	wf := aggregates.NewWorkflow(wfi.Spec.WorkflowId)
-	err = cr.wfCache.Get(wf)
+	wf, err := cr.workflows.GetWorkflow(wfi.GetSpec().GetWorkflowId())
 	// TODO move to rule
-	if err != nil && wf.Workflow == nil {
+	if err != nil && wf == nil {
 		log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
 			invocationID, err)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
@@ -286,7 +274,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 	// Evaluate invocation
 	record := controller.NewEvalRecord() // TODO implement rulepath + cause
 
-	ec := NewEvalContext(evalState, wf.Workflow, wfi.WorkflowInvocation)
+	ec := NewEvalContext(evalState, wf, wfi)
 
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action
@@ -317,15 +305,6 @@ func (cr *Controller) Evaluate(invocationID string) {
 
 func (cr *Controller) Close() error {
 	cr.evalStore.Close()
-	if invokePub, ok := cr.invokeCache.(pubsub.Publisher); ok {
-		err := invokePub.Unsubscribe(cr.sub)
-		if err != nil {
-			log.Errorf("Failed to unsubscribe from invocation cache: %v", err)
-		} else {
-			log.Info("Unsubscribed from invocation cache")
-		}
-	}
-
 	cr.cancelFn()
 	return nil
 }

@@ -2,8 +2,7 @@ package apiserver
 
 import (
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
-	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -13,13 +12,13 @@ import (
 // Workflow is responsible for all functionality related to managing workflows.
 type Workflow struct {
 	api   *api.Workflow
-	cache fes.CacheReader
+	store *store.Workflows
 }
 
-func NewWorkflow(api *api.Workflow, cache fes.CacheReader) *Workflow {
+func NewWorkflow(api *api.Workflow, store *store.Workflows) *Workflow {
 	wf := &Workflow{
 		api:   api,
-		cache: cache,
+		store: store,
 	}
 
 	return wf
@@ -35,12 +34,11 @@ func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*Work
 }
 
 func (ga *Workflow) Get(ctx context.Context, workflowID *WorkflowIdentifier) (*types.Workflow, error) {
-	entity := aggregates.NewWorkflow(workflowID.GetId())
-	err := ga.cache.Get(entity)
+	wf, err := ga.store.GetWorkflow(workflowID.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
-	return entity.Workflow, nil
+	return wf, nil
 }
 
 func (ga *Workflow) Delete(ctx context.Context, workflowID *WorkflowIdentifier) (*empty.Empty, error) {
@@ -53,7 +51,7 @@ func (ga *Workflow) Delete(ctx context.Context, workflowID *WorkflowIdentifier) 
 
 func (ga *Workflow) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
 	var results []string
-	wfs := ga.cache.List()
+	wfs := ga.store.List()
 	for _, result := range wfs {
 		results = append(results, result.Id)
 	}

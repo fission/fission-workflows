@@ -8,6 +8,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -26,7 +27,7 @@ func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 
 func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
-	runtime.wfiCache = fes.NewMapCache() // ensure that cache does not support pubsub
+	runtime.store = store.NewInvocationStore(fes.NewMapCache()) // ensure that cache does not support pubsub
 	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
 
@@ -62,8 +63,8 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 
 func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
-	pollCache := fes.NewMapCache() // ensure that cache does not support pubsub
-	runtime.wfiCache = pollCache
+	pollCache := store.NewInvocationStore(fes.NewMapCache()) // ensure that cache does not support pubsub
+	runtime.store = pollCache
 
 	output := typedvalues.MustParse("foo")
 	go func() {
@@ -78,7 +79,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		entity, err := cache.GetAggregate(fes.NewAggregate(aggregates.TypeWorkflowInvocation, wfiID))
 		assert.NoError(t, err)
-		pollCache.Put(entity)
+		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity) // A bit hacky..
 	}()
 	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
@@ -155,7 +156,7 @@ func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	cache := fes.NewSubscribedCache(context.Background(), fes.NewMapCache(), func() fes.Entity {
 		return aggregates.NewWorkflowInvocation("")
 	}, backend.Subscribe())
-	runtime := NewRuntime(invocationAPI, cache)
+	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(cache))
 	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, cache
 }

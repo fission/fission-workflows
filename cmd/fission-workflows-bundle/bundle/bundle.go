@@ -10,6 +10,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -153,8 +154,8 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	// Caches
-	wfiCache := getWorkflowInvocationCache(ctx, esPub)
-	wfCache := getWorkflowCache(ctx, esPub)
+	wfiCache := getInvocationStore(ctx, esPub)
+	wfCache := getWorkflowStore(ctx, esPub)
 
 	//
 	// Function Runtimes
@@ -326,27 +327,27 @@ func run(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func getWorkflowCache(ctx context.Context, eventPub pubsub.Publisher) func() fes.CacheReaderWriter {
-	var wfCache fes.CacheReaderWriter
-	return func() fes.CacheReaderWriter {
-		if wfCache != nil {
-			return wfCache
+func getWorkflowStore(ctx context.Context, eventPub pubsub.Publisher) func() *store.Workflows {
+	var workflows *store.Workflows
+	return func() *store.Workflows {
+		if workflows != nil {
+			return workflows
 		}
 
-		wfCache = setupWorkflowCache(ctx, eventPub)
-		return wfCache
+		c := setupWorkflowCache(ctx, eventPub)
+		return store.NewWorkflowsStore(c)
 	}
 }
 
-func getWorkflowInvocationCache(ctx context.Context, eventPub pubsub.Publisher) func() fes.CacheReaderWriter {
-	var wfiCache fes.CacheReaderWriter
-	return func() fes.CacheReaderWriter {
-		if wfiCache != nil {
-			return wfiCache
+func getInvocationStore(ctx context.Context, eventPub pubsub.Publisher) func() *store.Invocations {
+	var invocations *store.Invocations
+	return func() *store.Invocations {
+		if invocations != nil {
+			return invocations
 		}
 
-		wfiCache = setupWorkflowInvocationCache(ctx, eventPub)
-		return wfiCache
+		c := setupWorkflowInvocationCache(ctx, eventPub)
+		return store.NewInvocationStore(c)
 	}
 }
 
@@ -378,11 +379,11 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 		panic(err)
 	}
 
-	err = es.Watch(fes.Aggregate{Type: "invocation"})
+	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation})
 	if err != nil {
 		panic(err)
 	}
-	err = es.Watch(fes.Aggregate{Type: "workflow"})
+	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflow})
 	if err != nil {
 		panic(err)
 	}
@@ -393,25 +394,25 @@ func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub
 	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
 		LabelMatcher: labels.Or(
-			labels.In(fes.PubSubLabelAggregateType, "invocation"),
-			labels.In("parent.type", "invocation")),
+			labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
+			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
 	})
 	wi := func() fes.Entity {
 		return aggregates.NewWorkflowInvocation("")
 	}
 
-	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("invocation"), wi, invokeSub)
+	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache(aggregates.TypeWorkflowInvocation), wi, invokeSub)
 }
 
 func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
 	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer:       10,
-		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, "workflow"),
+		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
 	})
 	wb := func() fes.Entity {
 		return aggregates.NewWorkflow("")
 	}
-	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache("workflow"), wb, wfSub)
+	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache(aggregates.TypeWorkflow), wb, wfSub)
 }
 
 func serveAdminAPI(s *grpc.Server) {
@@ -421,17 +422,17 @@ func serveAdminAPI(s *grpc.Server) {
 }
 
 func serveWorkflowAPI(s *grpc.Server, es fes.Backend, resolvers map[string]fnenv.RuntimeResolver,
-	wfCache fes.CacheReader) {
+	store *store.Workflows) {
 	workflowParser := fnenv.NewMetaResolver(resolvers)
 	workflowAPI := api.NewWorkflowAPI(es, workflowParser)
-	workflowServer := apiserver.NewWorkflow(workflowAPI, wfCache)
+	workflowServer := apiserver.NewWorkflow(workflowAPI, store)
 	apiserver.RegisterWorkflowAPIServer(s, workflowServer)
 	log.Infof("Serving workflow gRPC API at %s.", gRPCAddress)
 }
 
-func serveInvocationAPI(s *grpc.Server, es fes.Backend, wfiCache fes.CacheReader) {
+func serveInvocationAPI(s *grpc.Server, es fes.Backend, store *store.Invocations) {
 	invocationAPI := api.NewInvocationAPI(es)
-	invocationServer := apiserver.NewInvocation(invocationAPI, wfiCache)
+	invocationServer := apiserver.NewInvocation(invocationAPI, store)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
 	log.Infof("Serving workflow invocation gRPC API at %s.", gRPCAddress)
 }
@@ -470,19 +471,19 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 	}
 }
 
-func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, wfiCache fes.CacheReader,
-	wfCache fes.CacheReader, resolvers map[string]fnenv.RuntimeResolver) {
+func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, invocations *store.Invocations,
+	workflows *store.Workflows, resolvers map[string]fnenv.RuntimeResolver) {
 
 	workflowParser := fnenv.NewMetaResolver(resolvers)
 	workflowAPI := api.NewWorkflowAPI(es, workflowParser)
-	wfServer := apiserver.NewWorkflow(workflowAPI, wfCache)
+	wfServer := apiserver.NewWorkflow(workflowAPI, workflows)
 	wfiAPI := api.NewInvocationAPI(es)
-	wfiServer := apiserver.NewInvocation(wfiAPI, wfiCache)
+	wfiServer := apiserver.NewInvocation(wfiAPI, invocations)
 	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 
-func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.CacheReader, es fes.Backend,
+func setupInvocationController(invocations *store.Invocations, workflows *store.Workflows, es fes.Backend,
 	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
@@ -490,13 +491,13 @@ func setupInvocationController(invocationCache fes.CacheReader, wfCache fes.Cach
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
 	s := &scheduler.WorkflowScheduler{}
 	stateStore := expr.NewStore()
-	return wfictr.NewController(invocationCache, wfCache, s, taskAPI, invocationAPI, stateStore)
+	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore)
 }
 
-func setupWorkflowController(wfCache fes.CacheReader, es fes.Backend,
+func setupWorkflowController(store *store.Workflows, es fes.Backend,
 	fnResolvers map[string]fnenv.RuntimeResolver) *wfctr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
-	return wfctr.NewController(wfCache, workflowAPI)
+	return wfctr.NewController(store, workflowAPI)
 }
 
 func setupMetricsEndpoint(apiMux *http.ServeMux) {
