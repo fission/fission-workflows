@@ -140,13 +140,12 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		"labels":       msg.Labels(),
 	}).Debugf("Controller event: %v", msg.EventType)
 
-	// TODO avoid struct creations
 	switch msg.EventType {
-	case events.TypeOf(&events.InvocationCompleted{}):
+	case events.EventInvocationCompleted:
 		fallthrough
-	case events.TypeOf(&events.InvocationCanceled{}):
+	case events.EventInvocationCanceled:
 		fallthrough
-	case events.TypeOf(&events.InvocationFailed{}):
+	case events.EventInvocationFailed:
 		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
 		if !ok {
 			log.Warn("Event did not contain invocation payload", msg)
@@ -155,11 +154,11 @@ func (cr *Controller) Notify(msg *fes.Notification) error {
 		cr.stateStore.Delete(wfi.ID())
 		cr.evalStore.Delete(wfi.ID())
 		log.Infof("Removed invocation %v from eval state", wfi.ID())
-	case events.TypeOf(&events.TaskFailed{}):
+	case events.EventTaskFailed:
 		fallthrough
-	case events.TypeOf(&events.TaskSucceeded{}):
+	case events.EventTaskSucceeded:
 		fallthrough
-	case events.TypeOf(&events.InvocationCreated{}):
+	case events.EventInvocationCreated:
 		wfi, ok := msg.Payload.(*aggregates.WorkflowInvocation)
 		if !ok {
 			panic(msg)

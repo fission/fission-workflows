@@ -2,13 +2,13 @@ package fes
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -59,21 +59,27 @@ type EventOpts struct {
 }
 
 func NewEvent(aggregate Aggregate, msg proto.Message) (*Event, error) {
-	var data *any.Any
 	if msg == nil {
-		return nil, errors.New("event cannot have no message")
+		return nil, errors.New("msg cannot have no message")
 	}
 
-	d, err := ptypes.MarshalAny(msg)
+	data, err := ptypes.MarshalAny(msg)
 	if err != nil {
 		return nil, err
 	}
-	data = d
+
+	var t string
+	if e, ok := msg.(events.Event); ok {
+		t = e.Type()
+	} else {
+		reflect.Indirect(reflect.ValueOf(msg)).Type().Name()
+	}
+
 	return &Event{
 		Aggregate: &aggregate,
 		Data:      data,
 		Timestamp: ptypes.TimestampNow(),
-		Type:      events.TypeOf(msg),
+		Type:      t,
 		Metadata:  map[string]string{},
 	}, nil
 }

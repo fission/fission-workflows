@@ -36,9 +36,9 @@ const (
 
 // TODO to fsm
 var terminationEvent = []string{
-	events.TypeOf(&events.InvocationCompleted{}),
-	events.TypeOf(&events.InvocationCanceled{}),
-	events.TypeOf(&events.InvocationFailed{}),
+	events.EventInvocationCompleted,
+	events.EventInvocationCanceled,
+	events.EventInvocationFailed,
 }
 
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
