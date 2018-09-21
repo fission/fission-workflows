@@ -28,21 +28,21 @@ cleanup_fission() {
 
     emph "Removing custom resources..."
     clean_tpr_crd_resources || true
-    kubectl delete all --all -n ${NS}
-    kubectl delete all --all -n ${NS_FUNCTION}
-    kubectl delete all --all -n ${NS_BUILDER}
+    kubectl delete all --force --now --all -n ${NS}
+    kubectl delete all --force --now --all -n ${NS_FUNCTION}
+    kubectl delete all --force --now --all -n ${NS_BUILDER}
 
 
     # Trigger deletion of all namespaces before waiting - for concurrency of deletion
     emph "Forcing deletion of namespaces..."
-    kubectl delete ns/${NS} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_BUILDER} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
-    kubectl delete ns/${NS_FUNCTION} --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS} --force --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_BUILDER} --force --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
+    kubectl delete ns/${NS_FUNCTION} --force --now > /dev/null 2>&1 # Sometimes it is not deleted by helm delete
 
     # Wait until all namespaces are actually deleted!
     emph "Awaiting deletion of namespaces..."
     verify_ns_deleted() {
-        kubectl delete ns/${1} --now 2>&1  | grep -qv "Error from server (Conflict):"
+        kubectl delete ns/${1} --force --now 2>&1  | grep -qv "Error from server (Conflict):"
     }
     # Namespaces sometimes take a long time to delete for some reason
     sleep 10
