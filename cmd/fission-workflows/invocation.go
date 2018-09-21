@@ -180,20 +180,41 @@ func invocationsList(out io.Writer, wfiAPI *httpclient.InvocationAPI, since time
 	if err != nil {
 		panic(err)
 	}
-	sort.Strings(wis.Invocations)
-	var rows [][]string
+
+	var invocations []*types.WorkflowInvocation
 	for _, wfiID := range wis.Invocations {
 		wi, err := wfiAPI.Get(ctx, wfiID)
 		if err != nil {
 			panic(err)
 		}
+		if len(wi.Spec.ParentId) != 0 {
+			continue
+		}
+
+		invocations = append(invocations, wi)
+	}
+
+	sort.Slice(invocations, func(i, j int) bool {
+		tsi, err := ptypes.Timestamp(invocations[i].Status.UpdatedAt)
+		if err != nil {
+			panic(err)
+		}
+		tsj, err := ptypes.Timestamp(invocations[j].Status.UpdatedAt)
+		if err != nil {
+			panic(err)
+		}
+		return tsi.Before(tsj)
+	})
+
+	var rows [][]string
+	for _, wi := range invocations {
 		updated := ptypes.TimestampString(wi.Status.UpdatedAt)
 		created := ptypes.TimestampString(wi.Metadata.CreatedAt)
 
 		// TODO add filter params to endpoint instead
 		// TODO filter old invocations and system invocations
 
-		rows = append(rows, []string{wfiID, wi.Spec.WorkflowId, wi.Status.Status.String(),
+		rows = append(rows, []string{wi.ID(), wi.Spec.WorkflowId, wi.Status.Status.String(),
 			created, updated})
 	}
 
