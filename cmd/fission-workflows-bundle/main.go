@@ -49,7 +49,6 @@ func main() {
 			HTTPGateway:          c.Bool("api") || c.Bool("api-http"),
 			Metrics:              c.Bool("metrics"),
 			Debug:                c.Bool("debug"),
-			HTTPRuntime:          c.Bool("http"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -154,10 +153,6 @@ func createCli() *cli.App {
 		cli.BoolFlag{
 			Name:  "internal",
 			Usage: "Use internal function runtime",
-		},
-		cli.BoolFlag{
-			Name:  "http",
-			Usage: "Use http function runtime",
 		},
 		cli.BoolFlag{
 			Name:  "controller",

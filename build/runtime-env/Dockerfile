@@ -20,7 +20,6 @@ ENV ES_NATS_CLUSTER fissionMQTrigger
 # Remove APIs when components stabilize
 ENTRYPOINT ["/fission-workflows-bundle", \
             "--nats", \
-            "--http", \
             "--fission", \
             "--internal", \
             "--controller", \
