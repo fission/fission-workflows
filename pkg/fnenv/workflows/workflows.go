@@ -18,6 +18,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -44,15 +45,15 @@ var terminationEvent = []string{
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
 	api          *api.Invocation
-	wfiCache     fes.CacheReader
+	store        *store.Invocations
 	timeout      time.Duration
 	pollInterval time.Duration
 }
 
-func NewRuntime(api *api.Invocation, wfiCache fes.CacheReader) *Runtime {
+func NewRuntime(api *api.Invocation, store *store.Invocations) *Runtime {
 	return &Runtime{
 		api:          api,
-		wfiCache:     wfiCache,
+		store:        store,
 		pollInterval: PollInterval,
 		timeout:      Timeout,
 	}
@@ -97,7 +98,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 
 	timedCtx, cancelFn := context.WithTimeout(cfg.Ctx, rt.timeout)
 	defer cancelFn()
-	if pub, ok := rt.wfiCache.(pubsub.Publisher); ok {
+	if pub, ok := rt.store.CacheReader.(pubsub.Publisher); ok {
 		sub := pub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer: 1,
 			LabelMatcher: labels.And(
@@ -140,15 +141,13 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 // checkForResult checks if the invocation with the specified ID has completed yet.
 // If so it will return the workflow invocation object, otherwise it will return nil.
 func (rt *Runtime) checkForResult(wfiID string) *types.WorkflowInvocation {
-	wi := aggregates.NewWorkflowInvocation(wfiID)
-	err := rt.wfiCache.Get(wi)
+	wi, err := rt.store.GetInvocation(wfiID)
 	if err != nil {
 		logrus.Debugf("Could not find workflow invocation in cache: %v", err)
 	}
 	if wi != nil && wi.GetStatus() != nil && wi.GetStatus().Finished() {
-		return wi.WorkflowInvocation
+		return wi
 	}
-
 	return nil
 }
 

@@ -3,16 +3,14 @@ package workflow
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/util/gopool"
-	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,7 +18,6 @@ import (
 )
 
 const (
-	NotificationBuffer    = 100
 	defaultEvalQueueSize  = 50
 	Name                  = "workflow"
 	maxParallelExecutions = 100
@@ -53,7 +50,7 @@ func init() {
 // WorkflowController is the controller concerned with the lifecycle of workflows. It handles responsibilities, such as
 // parsing of workflows.
 type Controller struct {
-	wfCache    fes.CacheReader
+	workflows  *store.Workflows
 	api        *api.Workflow
 	sub        *pubsub.Subscription
 	cancelFn   context.CancelFunc
@@ -62,10 +59,10 @@ type Controller struct {
 	evalPolicy controller.Rule
 }
 
-func NewController(wfCache fes.CacheReader, wfAPI *api.Workflow) *Controller {
+func NewController(workflows *store.Workflows, api *api.Workflow) *Controller {
 	ctr := &Controller{
-		wfCache:   wfCache,
-		api:       wfAPI,
+		workflows: workflows,
+		api:       api,
 		evalQueue: make(chan string, defaultEvalQueueSize),
 		evalCache: &controller.EvalStore{},
 	}
@@ -78,26 +75,33 @@ func (c *Controller) Init(sctx context.Context) error {
 	c.cancelFn = cancelFn
 
 	// Subscribe to invocation creations and task events.
-	selector := labels.In(fes.PubSubLabelAggregateType, "workflow")
-	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
-		c.sub = invokePub.Subscribe(pubsub.SubscriptionOptions{
-			Buffer:       NotificationBuffer,
-			LabelMatcher: selector,
-		})
-
-		// Workflow Notification listener
-		go func(ctx context.Context) {
-			for {
-				select {
-				case notification := <-c.sub.Ch:
-					c.handleMsg(notification)
-				case <-ctx.Done():
-					log.Debug("Notification listener closed.")
-					return
+	go func(ctx context.Context) {
+		sub := c.workflows.GetWorkflowUpdates()
+		if sub == nil {
+			log.Warn("Workflow cache does not support pubsub.")
+			return
+		}
+		for {
+			select {
+			case msg := <-sub.Ch:
+				update, err := sub.ToNotification(msg)
+				if err != nil {
+					log.Warnf("Failed to convert pubsub message to notification: %v", err)
 				}
+				err = c.Notify(update)
+				if err != nil {
+					log.Errorf("Failed to notify controller of update: %v", err)
+				}
+			case <-ctx.Done():
+				err := sub.Close()
+				if err != nil {
+					log.Error(err)
+				}
+				log.Info("Notification listener stopped.")
+				return
 			}
-		}(ctx)
-	}
+		}
+	}(ctx)
 
 	// process evaluation queue
 	pool := gopool.New(maxParallelExecutions)
@@ -119,32 +123,19 @@ func (c *Controller) Init(sctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) handleMsg(msg pubsub.Msg) error {
-	log.WithField("labels", msg.Labels()).Debug("Handling invocation notification.")
-	switch n := msg.(type) {
-	case *fes.Notification:
-		c.Notify(n)
-	default:
-		log.WithField("notification", n).Warn("Ignoring unknown notification type")
-	}
-	return nil
-}
-
 func (c *Controller) Tick(tick uint64) error {
 	// TODO short loop: eval cache
 	// TODO longer loop: cache
 	return nil
 }
 
-func (c *Controller) Notify(msg *fes.Notification) error {
-	wf, ok := msg.Payload.(*aggregates.Workflow)
-	if !ok {
-		return fmt.Errorf("received notification of invalid type '%s'. Expected '*aggregates.Workflow'", reflect.TypeOf(msg.Payload))
+func (c *Controller) Notify(update *fes.Notification) error {
+	workflow, err := store.ParseNotificationToWorkflow(update)
+	if err != nil {
+		return err
 	}
-
-	// If the workflow is not yet tracked create an evalState for it.
-	c.evalCache.LoadOrStore(wf.ID(), msg.SpanCtx)
-	c.submitEval(wf.ID())
+	c.evalCache.LoadOrStore(workflow.ID(), update.SpanCtx)
+	c.submitEval(workflow.ID())
 	return nil
 }
 
@@ -168,10 +159,9 @@ func (c *Controller) Evaluate(workflowID string) {
 	log.Debugf("evaluating workflow %s", workflowID)
 
 	// Fetch the workflow relevant to the invocation
-	wf := aggregates.NewWorkflow(workflowID)
-	err := c.wfCache.Get(wf)
+	wf, err := c.workflows.GetWorkflow(workflowID)
 	// TODO move to rule
-	if err != nil && wf.Workflow == nil {
+	if err != nil && wf == nil {
 		logrus.Errorf("controller failed to get workflow '%s': %v", workflowID, err)
 		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
 		return
@@ -180,7 +170,7 @@ func (c *Controller) Evaluate(workflowID string) {
 	// Evaluate invocation
 	record := controller.NewEvalRecord() // TODO implement rulepath + cause
 
-	ec := NewEvalContext(evalState, wf.Workflow)
+	ec := NewEvalContext(evalState, wf)
 
 	action := c.evalPolicy.Eval(ec)
 	if action == nil {
@@ -211,15 +201,6 @@ func (c *Controller) Evaluate(workflowID string) {
 
 func (c *Controller) Close() error {
 	err := c.evalCache.Close()
-	if invokePub, ok := c.wfCache.(pubsub.Publisher); ok {
-		err := invokePub.Unsubscribe(c.sub)
-		if err != nil {
-			log.Errorf("Failed to unsubscribe from workflow cache: %v", err)
-		} else {
-			log.Info("Unsubscribed from workflow cache")
-		}
-	}
-
 	c.cancelFn()
 	return err
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
-	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -15,11 +15,19 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Invocation is responsible for all functionality related to managing invocations.
+// Invocation is responsible for all functionality related to managing store.
 type Invocation struct {
-	api      *api.Invocation
-	wfiCache fes.CacheReader
-	fnenv    *workflows.Runtime
+	api   *api.Invocation
+	store *store.Invocations
+	fnenv *workflows.Runtime
+}
+
+func NewInvocation(api *api.Invocation, store *store.Invocations) WorkflowInvocationAPIServer {
+	return &Invocation{
+		api:   api,
+		store: store,
+		fnenv: workflows.NewRuntime(api, store),
+	}
 }
 
 func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
@@ -28,10 +36,6 @@ func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocati
 		return nil, toErrorStatus(err)
 	}
 	return &empty.Empty{}, nil
-}
-
-func NewInvocation(api *api.Invocation, wfiCache fes.CacheReader) WorkflowInvocationAPIServer {
-	return &Invocation{api, wfiCache, workflows.NewRuntime(api, wfiCache)}
 }
 
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
@@ -61,27 +65,26 @@ func (gi *Invocation) Cancel(ctx context.Context, invocationID *WorkflowInvocati
 }
 
 func (gi *Invocation) Get(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
-	wi := aggregates.NewWorkflowInvocation(invocationID.GetId())
-	err := gi.wfiCache.Get(wi)
+	wi, err := gi.store.GetInvocation(invocationID.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
-	return wi.WorkflowInvocation, nil
+	return wi, nil
 }
 
 func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*WorkflowInvocationList, error) {
 	var invocations []string
-	as := gi.wfiCache.List()
+	as := gi.store.List()
 	for _, aggregate := range as {
 		if aggregate.Type != aggregates.TypeWorkflowInvocation {
-			return nil, toErrorStatus(errors.New("invalid type in invocation cache"))
+			return nil, toErrorStatus(errors.New("invalid type in invocation store"))
 		}
 
 		if len(query.Workflows) > 0 {
-			// TODO make more efficient (by moving list queries to cache)
-			entity, err := gi.wfiCache.GetAggregate(aggregate)
+			// TODO make more efficient (by moving list queries to store)
+			entity, err := gi.store.GetAggregate(aggregate)
 			if err != nil {
-				logrus.Errorf("List: failed to fetch %v from cache: %v", aggregate, err)
+				logrus.Errorf("List: failed to fetch %v from store: %v", aggregate, err)
 				continue
 			}
 			wfi := entity.(*aggregates.WorkflowInvocation)

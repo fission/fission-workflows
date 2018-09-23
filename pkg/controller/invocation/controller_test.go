@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
@@ -30,7 +31,8 @@ func TestController_Lifecycle(t *testing.T) {
 		"mock": mockRuntime,
 	}, es, dynamicAPI)
 
-	ctr := NewController(cache, cache, s, taskAPI, wfiAPI, expr.NewStore())
+	ctr := NewController(store.NewInvocationStore(cache), store.NewWorkflowsStore(cache), s, taskAPI, wfiAPI,
+		expr.NewStore())
 
 	err := ctr.Init(context.TODO())
 	assert.NoError(t, err)

@@ -64,6 +64,10 @@ type CacheReaderWriter interface {
 
 type StringMatcher func(target string) bool
 
+var (
+	DefaultNotificationBuffer = 64
+)
+
 type Notification struct {
 	*pubsub.EmptyMsg
 	Payload   Entity
