@@ -1,21 +1,14 @@
-package fes
+package cache
 
 import (
-	"fmt"
-	"sync"
 	"time"
 
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	PubSubLabelEventID       = "event.id"
-	PubSubLabelEventType     = "event.type"
-	PubSubLabelAggregateType = "aggregate.type"
-	PubSubLabelAggregateID   = "aggregate.id"
 )
 
 var (
@@ -25,124 +18,85 @@ var (
 		Name:      "current_cache_counts",
 		Help:      "The current number of entries in the caches",
 	}, []string{"name"})
-	// TODO add additional metrics once cache has been improved
 )
 
 func init() {
 	prometheus.MustRegister(cacheCount)
 }
 
-// MapCache provides a simple non-preempting map-based CacheReaderWriter implementation.
-type MapCache struct {
-	Name     string
-	contents map[string]map[string]Entity // Map: AggregateType -> AggregateId -> entity
-	lock     *sync.RWMutex
+type LRUCache struct {
+	contents *lru.Cache
 }
 
-func NewMapCache() *MapCache {
-	c := &MapCache{
-		contents: map[string]map[string]Entity{},
-		lock:     &sync.RWMutex{},
+func NewLRUCache(size int) *LRUCache {
+	c, err := lru.New(size)
+	if err != nil {
+		panic(err)
 	}
-	c.Name = fmt.Sprintf("%p", c)
-	return c
-}
-
-func NewNamedMapCache(name string) *MapCache {
-	return &MapCache{
-		contents: map[string]map[string]Entity{},
-		lock:     &sync.RWMutex{},
-		Name:     name,
+	return &LRUCache{
+		contents: c,
 	}
 }
 
-func (rc *MapCache) Get(entity Entity) error {
-	if err := ValidateEntity(entity); err != nil {
+func (c *LRUCache) Get(entity fes.Entity) error {
+	if err := fes.ValidateEntity(entity); err != nil {
 		return err
 	}
-
-	ref := entity.Aggregate()
-	cached, err := rc.GetAggregate(ref)
+	e, err := c.GetAggregate(entity.Aggregate())
 	if err != nil {
 		return err
 	}
-	if cached == nil {
-		return ErrEntityNotFound.WithEntity(entity)
-	}
 
-	e := entity.UpdateState(cached)
-
-	return e
+	return entity.UpdateState(e)
 }
 
-func (rc *MapCache) GetAggregate(aggregate Aggregate) (Entity, error) {
-	if err := ValidateAggregate(&aggregate); err != nil {
+func (c *LRUCache) GetAggregate(a fes.Aggregate) (fes.Entity, error) {
+	if err := fes.ValidateAggregate(&a); err != nil {
 		return nil, err
 	}
-
-	rc.lock.RLock()
-	defer rc.lock.RUnlock()
-	aType, ok := rc.contents[aggregate.Type]
+	i, ok := c.contents.Get(a)
 	if !ok {
-		return nil, nil
+		return nil, fes.ErrEntityNotFound.WithAggregate(&a)
 	}
-
-	cached, ok := aType[aggregate.Id]
-	if !ok {
-		return nil, nil
-	}
-
-	return cached, nil
+	return i.(fes.Entity), nil
 }
 
-func (rc *MapCache) Put(entity Entity) error {
-	if err := ValidateEntity(entity); err != nil {
+func (c *LRUCache) Put(entity fes.Entity) error {
+	if err := fes.ValidateEntity(entity); err != nil {
 		return err
 	}
-	ref := entity.Aggregate()
-
-	rc.lock.Lock()
-	defer rc.lock.Unlock()
-	if _, ok := rc.contents[ref.Type]; !ok {
-		rc.contents[ref.Type] = map[string]Entity{}
-	}
-	rc.contents[ref.Type][ref.Id] = entity
-	cacheCount.WithLabelValues(rc.Name).Inc()
+	c.contents.Add(entity.Aggregate(), entity)
 	return nil
 }
 
-func (rc *MapCache) Invalidate(ref *Aggregate) {
-	if err := ValidateAggregate(ref); err != nil {
-		return
-	}
-	rc.lock.Lock()
-	defer rc.lock.Unlock()
-	delete(rc.contents[ref.Type], ref.Id)
-	cacheCount.WithLabelValues(rc.Name).Dec()
-}
-
-func (rc *MapCache) List() []Aggregate {
-	rc.lock.RLock()
-	defer rc.lock.RUnlock()
-	var results []Aggregate
-	for atype := range rc.contents {
-		for _, entity := range rc.contents[atype] {
-			results = append(results, entity.Aggregate())
-		}
+func (c *LRUCache) List() []fes.Aggregate {
+	keys := c.contents.Keys()
+	results := make([]fes.Aggregate, len(keys))
+	for i, key := range keys {
+		results[i] = key.(fes.Aggregate)
 	}
 	return results
+}
+
+func (c *LRUCache) Invalidate(a fes.Aggregate) {
+	if err := fes.ValidateAggregate(&a); err != nil {
+		logrus.Warnf("Failed to invalidate entry in cache: %v", err)
+		return
+	}
+	c.contents.Remove(a)
 }
 
 // A SubscribedCache is subscribed to an event emitter
 type SubscribedCache struct {
 	pubsub.Publisher
-	CacheReaderWriter
+	fes.CacheReaderWriter
 	createdAt     time.Time
-	entityFactory func() Entity
+	entityFactory func() fes.Entity
 	closeC        chan struct{}
 }
 
-func NewSubscribedCache(cache CacheReaderWriter, factory func() Entity, sub *pubsub.Subscription) *SubscribedCache {
+func NewSubscribedCache(cache fes.CacheReaderWriter, factory func() fes.Entity,
+	sub *pubsub.Subscription) *SubscribedCache {
 	c := &SubscribedCache{
 		Publisher:         pubsub.NewPublisher(),
 		CacheReaderWriter: cache,
@@ -158,7 +112,7 @@ func NewSubscribedCache(cache CacheReaderWriter, factory func() Entity, sub *pub
 				logrus.Debug("SubscribedCache: listener stopped.")
 				return
 			case e := <-sub.Ch:
-				event, ok := e.(*Event)
+				event, ok := e.(*fes.Event)
 				if !ok {
 					logrus.WithField("event", e).Error("Ignoring received malformed event.")
 					continue
@@ -177,15 +131,15 @@ func NewSubscribedCache(cache CacheReaderWriter, factory func() Entity, sub *pub
 
 // applyEvent applies an event to the cache. It retrieves the corresponding entity from the cache, copies it,
 // applies the event to it, and replaces the old with the new entity in the cache.
-func (uc *SubscribedCache) applyEvent(event *Event) error {
+func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 	logrus.WithFields(logrus.Fields{
-		PubSubLabelEventID:       event.Id,
-		PubSubLabelEventType:     event.Type,
-		PubSubLabelAggregateID:   event.Aggregate.Id,
-		PubSubLabelAggregateType: event.Aggregate.Type,
+		fes.PubSubLabelEventID:       event.Id,
+		fes.PubSubLabelEventType:     event.Type,
+		fes.PubSubLabelAggregateID:   event.Aggregate.Id,
+		fes.PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
-	if err := ValidateEvent(event); err != nil {
+	if err := fes.ValidateEvent(event); err != nil {
 		return err
 	}
 
@@ -200,7 +154,7 @@ func (uc *SubscribedCache) applyEvent(event *Event) error {
 	entityCopy := entity.CopyEntity()
 
 	// Apply the event on to the new copy of the entity
-	err = Project(entityCopy, event)
+	err = fes.Project(entityCopy, event)
 	if err != nil {
 		return err
 	}
@@ -216,7 +170,7 @@ func (uc *SubscribedCache) applyEvent(event *Event) error {
 	ets, _ := ptypes.Timestamp(event.Timestamp)
 	if ets.After(uc.createdAt) {
 		// Publish the event (along with the updated entity) to subscribers
-		n := newNotification(entityCopy, event)
+		n := fes.NewNotification(entityCopy, event)
 		logrus.WithFields(logrus.Fields{
 			"event.id":          event.Id,
 			"aggregate.id":      event.Aggregate.Id,
@@ -233,12 +187,12 @@ func (uc *SubscribedCache) Close() error {
 	return nil
 }
 
-func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *Event) (Entity, error) {
+func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *fes.Event) (fes.Entity, error) {
 	cached, err := uc.GetAggregate(*event.Aggregate)
-	if err != nil {
+	if err != nil && err != fes.ErrEntityNotFound {
 		return nil, err
 	}
-	if cached == nil {
+	if cached == nil || err == fes.ErrEntityNotFound {
 		// Case: for task events the parent entity (the invocation) handles the events.
 		// So we need to send the event there.
 		if event.Parent != nil {
@@ -252,7 +206,7 @@ func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *Event) (Entity, e
 		}
 		// We truly can't find a entity responsible for the event
 		if cached == nil {
-			return nil, ErrEntityNotFound.WithEvent(event)
+			return nil, fes.ErrEntityNotFound.WithEvent(event)
 		}
 	}
 	return cached, nil
@@ -260,12 +214,12 @@ func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *Event) (Entity, e
 
 // LoadingCache looks into a backing data store in case there is a cache miss
 type LoadingCache struct {
-	cache         CacheReaderWriter
-	client        Backend
-	entityFactory func() Entity
+	cache         fes.CacheReaderWriter
+	client        fes.Backend
+	entityFactory func(fes.Aggregate) fes.Entity
 }
 
-func NewLoadingCache(cache CacheReaderWriter, client Backend, entityFactory func() Entity) *LoadingCache {
+func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, entityFactory func(fes.Aggregate) fes.Entity) *LoadingCache {
 	return &LoadingCache{
 		cache:         cache,
 		client:        client,
@@ -275,7 +229,7 @@ func NewLoadingCache(cache CacheReaderWriter, client Backend, entityFactory func
 
 // TODO provide option to force fallback or only do quick cache lookup.
 // TODO sync cache with store while you are at it.
-func (c *LoadingCache) List() []Aggregate {
+func (c *LoadingCache) List() []fes.Aggregate {
 	// First c
 	esAggregates, err := c.client.List(nil)
 	if err != nil {
@@ -284,32 +238,45 @@ func (c *LoadingCache) List() []Aggregate {
 	return esAggregates
 }
 
-func (c *LoadingCache) GetAggregate(a Aggregate) (Entity, error) {
-	if err := ValidateAggregate(&a); err != nil {
+func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
+	if err := fes.ValidateAggregate(&key); err != nil {
 		return nil, err
 	}
 
-	entity := c.entityFactory()
-	err := c.getFromEventStore(a, entity)
+	entity := c.entityFactory(key)
+	err := c.getFromEventStore(key, entity)
 	if err != nil {
 		return nil, err
 	}
 	return entity, nil
 }
 
-func (c *LoadingCache) Get(entity Entity) error {
-	if err := ValidateEntity(entity); err != nil {
+func (c *LoadingCache) Get(entity fes.Entity) error {
+	if err := fes.ValidateEntity(entity); err != nil {
 		return err
 	}
 
 	return c.getFromEventStore(entity.Aggregate(), entity)
 }
 
+func (c *LoadingCache) Put(entity fes.Entity) error {
+	return c.cache.Put(entity)
+}
+
+func (c *LoadingCache) Invalidate(key fes.Aggregate) {
+	c.cache.Invalidate(key)
+}
+
+func (c *LoadingCache) Load(key fes.Aggregate) error {
+	_, err := c.GetAggregate(key)
+	return err
+}
+
 // getFromEventStore assumes that it can mutate target entity
-func (c *LoadingCache) getFromEventStore(aggregate Aggregate, target Entity) error {
+func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Entity) error {
 	err := c.cache.Get(target)
 	if err != nil {
-		if !ErrEntityNotFound.Is(err) {
+		if !fes.ErrEntityNotFound.Is(err) {
 			return err
 		}
 
@@ -319,17 +286,17 @@ func (c *LoadingCache) getFromEventStore(aggregate Aggregate, target Entity) err
 			return err
 		}
 		if len(events) == 0 {
-			return ErrEntityNotFound.WithAggregate(&aggregate).WithEntity(target)
+			return fes.ErrEntityNotFound.WithAggregate(&aggregate).WithEntity(target)
 		}
 
 		// Reconstruct entity by replaying all events
-		err = Project(target, events...)
+		err = fes.Project(target, events...)
 		if err != nil {
 			return err
 		}
 
 		// EvalCache entityFactory
-		return c.cache.Put(target) // TODO ensure entity is a copy
+		return c.Put(target) // TODO ensure entity is a copy
 	}
 
 	return nil

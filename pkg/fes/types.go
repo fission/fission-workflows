@@ -1,12 +1,6 @@
 package fes
 
-import (
-	"fmt"
-
-	"github.com/fission/fission-workflows/pkg/util/pubsub"
-	"github.com/opentracing/opentracing-go"
-	"github.com/sirupsen/logrus"
-)
+import "fmt"
 
 // Entity is a entity that can be updated
 type Entity interface {
@@ -37,7 +31,7 @@ type Backend interface {
 
 	// Get fetches all events that belong to a specific aggregate
 	Get(aggregate Aggregate) ([]*Event, error)
-	List(matcher StringMatcher) ([]Aggregate, error)
+	List(matcher AggregateMatcher) ([]Aggregate, error)
 }
 
 // Projector projects events onto an entity
@@ -53,7 +47,7 @@ type CacheReader interface {
 
 type CacheWriter interface {
 	Put(entity Entity) error
-	Invalidate(entity *Aggregate)
+	Invalidate(entity Aggregate)
 }
 
 type CacheReaderWriter interface {
@@ -61,35 +55,7 @@ type CacheReaderWriter interface {
 	CacheWriter
 }
 
-type StringMatcher func(target string) bool
-
-var (
-	DefaultNotificationBuffer = 64
-)
-
-type Notification struct {
-	*pubsub.EmptyMsg
-	Payload   Entity
-	EventType string
-	SpanCtx   opentracing.SpanContext
-}
-
-func newNotification(entity Entity, event *Event) *Notification {
-	var spanCtx opentracing.SpanContext
-	if event.Metadata != nil {
-		sctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(event.Metadata))
-		if err != nil && err != opentracing.ErrSpanContextNotFound {
-			logrus.Warnf("failed to extract opentracing tracer from event: %v", err)
-		}
-		spanCtx = sctx
-	}
-	return &Notification{
-		EmptyMsg:  pubsub.NewEmptyMsg(event.Labels(), event.CreatedAt()),
-		Payload:   entity,
-		EventType: event.Type,
-		SpanCtx:   spanCtx,
-	}
-}
+type AggregateMatcher func(Aggregate) bool
 
 // EventStoreErr is the base error type returned by functions in the fes package.
 //
@@ -144,11 +110,14 @@ func (err *EventStoreErr) WithError(cause error) *EventStoreErr {
 }
 
 func (err *EventStoreErr) Error() string {
-	if err.K == nil {
-		return err.S
-	} else {
-		return fmt.Sprintf("%v: %s", err.K.Format(), err.S)
+	msg := err.S
+	if err.K != nil && !(len(err.K.Id) == 0 && len(err.K.Type) == 0) {
+		msg = fmt.Sprintf("%s: %s", err.K.Format(), msg)
 	}
+	if err.C != nil {
+		msg = fmt.Sprintf("%s: %s", msg, err.C.Error())
+	}
+	return msg
 }
 
 var (

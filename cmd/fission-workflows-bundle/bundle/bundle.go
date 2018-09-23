@@ -21,6 +21,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
+	"github.com/fission/fission-workflows/pkg/fes/cache"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
@@ -54,6 +55,8 @@ const (
 	apiGatewayAddress       = ":8080"
 	fissionProxyAddress     = ":8888"
 	jaegerTracerServiceName = "fission.workflows"
+	WorkflowsCacheSize      = 10000
+	InvocationsCacheSize    = 1000000
 )
 
 type App struct {
@@ -361,24 +364,21 @@ func Run(ctx context.Context, opts *Options) error {
 func getWorkflowStore(app *App, eventPub pubsub.Publisher) func() *store.Workflows {
 	var workflows *store.Workflows
 	return func() *store.Workflows {
-		if workflows != nil {
-			return workflows
+		if workflows == nil {
+			workflows = store.NewWorkflowsStore(setupWorkflowCache(app, eventPub))
 		}
-
-		c := setupWorkflowCache(app, eventPub)
-		return store.NewWorkflowsStore(c)
+		return workflows
 	}
 }
 
 func getInvocationStore(app *App, eventPub pubsub.Publisher) func() *store.Invocations {
 	var invocations *store.Invocations
 	return func() *store.Invocations {
-		if invocations != nil {
-			return invocations
+		if invocations == nil {
+			invocations = store.NewInvocationStore(setupWorkflowInvocationCache(app, eventPub))
 		}
+		return invocations
 
-		c := setupWorkflowInvocationCache(app, eventPub)
-		return store.NewInvocationStore(c)
 	}
 }
 
@@ -421,7 +421,7 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 	return es
 }
 
-func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher) *fes.SubscribedCache {
+func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher) *cache.SubscribedCache {
 	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
 		LabelMatcher: labels.Or(
@@ -429,18 +429,18 @@ func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher)
 			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
 	})
 	name := aggregates.TypeWorkflowInvocation
-	c := fes.NewSubscribedCache(fes.NewNamedMapCache(name), aggregates.NewInvocationEntity, invokeSub)
+	c := cache.NewSubscribedCache(cache.NewLRUCache(InvocationsCacheSize), aggregates.NewInvocationEntity, invokeSub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
 }
 
-func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
+func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher) *cache.SubscribedCache {
 	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer:       10,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
 	})
 	name := aggregates.TypeWorkflow
-	c := fes.NewSubscribedCache(fes.NewNamedMapCache(name), aggregates.NewWorkflowEntity, wfSub)
+	c := cache.NewSubscribedCache(cache.NewLRUCache(WorkflowsCacheSize), aggregates.NewWorkflowEntity, wfSub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
 }

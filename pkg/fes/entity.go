@@ -16,6 +16,9 @@ type BaseEntity struct {
 }
 
 func (am *BaseEntity) Aggregate() Aggregate {
+	if am == nil {
+		return Aggregate{}
+	}
 	return am.aggregate
 }
 

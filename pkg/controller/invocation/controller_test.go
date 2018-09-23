@@ -7,8 +7,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
-	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
+	"github.com/fission/fission-workflows/pkg/fes/testutil"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/mock"
 	"github.com/fission/fission-workflows/pkg/scheduler"
@@ -16,7 +16,7 @@ import (
 )
 
 func TestController_Lifecycle(t *testing.T) {
-	cache := fes.NewMapCache()
+	cache := testutil.NewCache()
 	s := &scheduler.WorkflowScheduler{}
 	es := mem.NewBackend()
 	mockRuntime := mock.NewRuntime()

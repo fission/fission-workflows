@@ -11,6 +11,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
+	"github.com/fission/fission-workflows/pkg/fes/cache"
+	"github.com/fission/fission-workflows/pkg/fes/testutil"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
@@ -27,7 +29,7 @@ func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 
 func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
-	runtime.store = store.NewInvocationStore(fes.NewMapCache()) // ensure that cache does not support pubsub
+	runtime.store = store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
 	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
 
@@ -62,22 +64,22 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 }
 
 func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
-	runtime, invocationAPI, _, cache := setup()
-	pollCache := store.NewInvocationStore(fes.NewMapCache()) // ensure that cache does not support pubsub
+	runtime, invocationAPI, _, c := setup()
+	pollCache := store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
 	runtime.store = pollCache
 
 	output := typedvalues.MustParse("foo")
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
-		entities := cache.List()
+		entities := c.List()
 		wfiID := entities[0].Id
 		err := invocationAPI.Complete(wfiID, output)
 		if err != nil {
 			panic(err)
 		}
 		time.Sleep(50 * time.Millisecond)
-		entity, err := cache.GetAggregate(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: wfiID})
+		entity, err := c.GetAggregate(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: wfiID})
 		assert.NoError(t, err)
 		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity) // A bit hacky..
 	}()
@@ -153,8 +155,8 @@ func TestRuntime_Invoke(t *testing.T) {
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
-	cache := fes.NewSubscribedCache(fes.NewMapCache(), aggregates.NewInvocationEntity, backend.Subscribe())
-	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(cache))
+	c := cache.NewSubscribedCache(testutil.NewCache(), aggregates.NewInvocationEntity, backend.Subscribe())
+	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c))
 	runtime.timeout = 5 * time.Second
-	return runtime, invocationAPI, backend, cache
+	return runtime, invocationAPI, backend, c
 }

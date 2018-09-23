@@ -47,6 +47,7 @@ func TestMain(m *testing.M) {
 
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
 	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancelFn()
 	cl, _ := setup()
@@ -62,7 +63,7 @@ func TestWorkflowCreate(t *testing.T) {
 		},
 	}
 	wfId, err := cl.Create(ctx, spec)
-	defer cl.Delete(ctx, wfId)
+	// defer cl.Delete(ctx, wfId)
 	assert.NoError(t, err)
 	assert.NotNil(t, wfId)
 	assert.NotEmpty(t, wfId.GetId())

@@ -5,6 +5,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -71,6 +72,7 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.Status = types.WorkflowStatus_DELETED
 	default:
 		key := wf.Aggregate()
+		logrus.Debugf("------> %T", m)
 		return fes.ErrUnsupportedEntityEvent.WithAggregate(&key).WithEvent(event)
 	}
 	wf.Metadata.Generation++
@@ -95,7 +97,7 @@ func (wf *Workflow) ensureNextEvent(event *fes.Event) error {
 		return err
 	}
 
-	if event.Aggregate.Type != TypeWorkflowInvocation {
+	if event.Aggregate.Type != TypeWorkflow {
 		return fes.ErrUnsupportedEntityEvent.WithEntity(wf).WithEvent(event)
 	}
 	// TODO check sequence of event

@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package fission.workflows.eventstore.testutil;
+option go_package = "testutil";
+
+// DummyEvent is a stub implementation of a fes.Event
+message DummyEvent {
+    string msg = 1;
+}

@@ -208,7 +208,7 @@ func (es *EventStore) Get(aggregate fes.Aggregate) ([]*fes.Event, error) {
 }
 
 // List returns all entities of which the subject matches the matcher. A nil matcher is considered a 'match-all'.
-func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+func (es *EventStore) List(matcher fes.AggregateMatcher) ([]fes.Aggregate, error) {
 	subjects, err := es.conn.List(matcher)
 	if err != nil {
 		return nil, err

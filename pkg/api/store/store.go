@@ -25,7 +25,7 @@ func NewWorkflowsStore(workflows fes.CacheReader) *Workflows {
 // GetWorkflow returns an event-sourced workflow.
 // If an error occurred the error is returned, if no workflow was found both return values are nil.
 func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
-	key := fes.NewAggregate(aggregates.TypeWorkflow, workflowID)
+	key := fes.Aggregate{Type: aggregates.TypeWorkflow, Id: workflowID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func NewInvocationStore(invocations fes.CacheReader) *Invocations {
 // GetInvocation returns an event-sourced invocation.
 // If an error occurred the error is returned, if no invocation was found both return values are nil.
 func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocation, error) {
-	key := fes.NewAggregate(aggregates.TypeWorkflowInvocation, invocationID)
+	key := fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: invocationID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err

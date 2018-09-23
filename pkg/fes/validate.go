@@ -25,32 +25,36 @@ func ValidateAggregate(aggregate *Aggregate) error {
 // - It does not check the event ID, since events that have not been persisted do not have an ID assigned yet.
 func ValidateEvent(event *Event) error {
 	if event == nil {
-		return errors.New("event is nil")
+		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event is nil"))
 	}
 	if len(event.Type) == 0 {
-		return errors.New("event has no event type")
+		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event has no event type"))
 	}
 	if err := ValidateAggregate(event.Aggregate); err != nil {
-		return err
+		return ErrInvalidEvent.WithEvent(event).WithError(err)
 	}
 	if event.Parent != nil {
 		if err := ValidateAggregate(event.Parent); err != nil {
-			return err
+			return ErrInvalidEvent.WithEvent(event).WithError(err)
 		}
 	}
 	if event.Timestamp == nil {
-		return errors.New("event has no timestamp")
+		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event has no timestamp"))
 	}
 	if event.Data == nil {
-		return errors.New("event has no data")
+		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event has no data"))
 	}
 	return nil
 }
 
 func ValidateEntity(entity Entity) error {
 	if entity == nil {
-		return errors.New("entity is nil")
+		return ErrInvalidEntity.WithEntity(entity).WithError(errors.New("entity is nil"))
 	}
 	key := entity.Aggregate()
-	return ValidateAggregate(&key)
+	err := ValidateAggregate(&key)
+	if err != nil {
+		return ErrInvalidEntity.WithEntity(entity).WithError(err)
+	}
+	return nil
 }

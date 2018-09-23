@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	fesnats "github.com/fission/fission-workflows/pkg/fes/backend/nats"
+	"github.com/fission/fission-workflows/pkg/fes/testutil"
 	"github.com/fission/fission-workflows/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -101,10 +102,9 @@ func TestNatsBackend_GetNonExistent(t *testing.T) {
 
 func TestNatsBackend_Append(t *testing.T) {
 	key := fes.Aggregate{Type: "someType", Id: "someId"}
-	dummyEvent := &fes.DummyEvent{Msg: "dummy"}
-	event, err := fes.NewEvent(key, dummyEvent)
-	assert.NoError(t, err)
-	err = backend.Append(event)
+	dummyEvent := &testutil.DummyEvent{Msg: "dummy"}
+	event := testutil.CreateDummyEvent(key, dummyEvent)
+	err := backend.Append(event)
 	assert.NoError(t, err)
 
 	// check
@@ -119,7 +119,7 @@ func TestNatsBackend_Append(t *testing.T) {
 }
 
 func TestNatsBackend_List(t *testing.T) {
-	subjects, err := backend.List(func(s string) bool { return true })
+	subjects, err := backend.List(func(_ fes.Aggregate) bool { return true })
 	assert.NoError(t, err)
 	assert.NotEmpty(t, subjects)
 }

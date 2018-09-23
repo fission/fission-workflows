@@ -167,10 +167,10 @@ func (b *Backend) Len() int {
 	return int(atomic.LoadInt32(b.entries))
 }
 
-func (b *Backend) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+func (b *Backend) List(matcher fes.AggregateMatcher) ([]fes.Aggregate, error) {
 	var results []fes.Aggregate
 	for key := range b.store {
-		if matcher == nil || matcher(key.Type+key.Id) {
+		if matcher == nil || matcher(key) {
 			results = append(results, key)
 		}
 	}
