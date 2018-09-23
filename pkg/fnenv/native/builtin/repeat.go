@@ -51,7 +51,7 @@ A complete example of this function can be found in the [repeatwhale](../example
 // TODO minor: chose between unrolled loop and dynamic loop based on number of tasks for performance
 type FunctionRepeat struct{}
 
-func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 
 	n, ok := spec.Inputs[RepeatInputTimes]
 	if !ok {

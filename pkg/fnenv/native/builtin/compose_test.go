@@ -12,7 +12,7 @@ func TestFunctionComposePassInput(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				ComposeInput: typedvalues.MustParse(expected),
 			},
 		},
@@ -23,7 +23,7 @@ func TestFunctionComposeEmpty(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{},
+			Inputs: map[string]*typedvalues.TypedValue{},
 		},
 		nil)
 }
@@ -32,7 +32,7 @@ func TestFunctionComposeObject(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionCompose{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				"foo":     typedvalues.MustParse(true),
 				"bar":     typedvalues.MustParse(false),
 				"default": typedvalues.MustParse("hello"),

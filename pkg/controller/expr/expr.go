@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
-	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/robertkrimen/otto"
@@ -27,13 +26,13 @@ var (
 	DefaultResolver = NewJavascriptExpressionParser()
 )
 
-func Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error) {
+func Resolve(rootScope interface{}, currentTask string, expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 	return DefaultResolver.Resolve(rootScope, currentTask, expr)
 }
 
 // resolver resolves an expression within a given context/scope.
 type Resolver interface {
-	Resolve(rootScope interface{}, currentTask string, expr *types.TypedValue) (*types.TypedValue, error)
+	Resolve(rootScope interface{}, currentTask string, expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error)
 }
 
 // Function is an interface for providing functions that are able to be injected into the Otto runtime.
@@ -55,7 +54,7 @@ func NewJavascriptExpressionParser() *JavascriptExpressionParser {
 }
 
 func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask string,
-	expr *types.TypedValue) (*types.TypedValue, error) {
+	expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 
 	switch typedvalues.ValueType(expr.GetType()) {
 	case typedvalues.TypeList:
@@ -70,7 +69,7 @@ func (oe *JavascriptExpressionParser) Resolve(rootScope interface{}, currentTask
 }
 
 func (oe *JavascriptExpressionParser) resolveExpr(rootScope interface{}, currentTask string,
-	expr *types.TypedValue) (*types.TypedValue, error) {
+	expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 
 	if !typedvalues.IsType(expr, typedvalues.TypeExpression) {
 		return nil, errors.New("expected expression to resolve")
@@ -135,7 +134,7 @@ func (oe *JavascriptExpressionParser) resolveExpr(rootScope interface{}, current
 }
 
 func (oe *JavascriptExpressionParser) resolveMap(rootScope interface{}, currentTask string,
-	expr *types.TypedValue) (*types.TypedValue, error) {
+	expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 
 	if !typedvalues.IsType(expr, typedvalues.TypeMap) {
 		return nil, errors.New("expected map to resolve")
@@ -170,7 +169,7 @@ func (oe *JavascriptExpressionParser) resolveMap(rootScope interface{}, currentT
 }
 
 func (oe *JavascriptExpressionParser) resolveList(rootScope interface{}, currentTask string,
-	expr *types.TypedValue) (*types.TypedValue, error) {
+	expr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 
 	if !typedvalues.IsType(expr, typedvalues.TypeList) {
 		return nil, errors.New("expected list to resolve")

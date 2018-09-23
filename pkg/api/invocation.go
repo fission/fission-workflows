@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/opentracing/opentracing-go"
@@ -91,7 +92,7 @@ func (ia *Invocation) Cancel(invocationID string) error {
 // Complete forces the completion of an invocation. This function - used by the controller - is the only way
 // to ensure that a workflow invocation turns into the COMPLETED state.
 // If the API fails to append the event to the event store, it will return an error.
-func (ia *Invocation) Complete(invocationID string, output *types.TypedValue) error {
+func (ia *Invocation) Complete(invocationID string, output *typedvalues.TypedValue) error {
 	if len(invocationID) == 0 {
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}

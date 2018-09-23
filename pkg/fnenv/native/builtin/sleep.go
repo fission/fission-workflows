@@ -44,7 +44,7 @@ A complete example of this function can be found in the [sleepalot](../examples/
 */
 type FunctionSleep struct{}
 
-func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 	duration := SleepInputDefault
 	input, ok := spec.Inputs[SleepInput]
 	if ok {

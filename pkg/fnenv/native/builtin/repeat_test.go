@@ -16,7 +16,7 @@ func TestFunctionRepeat_Invoke(t *testing.T) {
 
 	repeatFn := &FunctionRepeat{}
 	spec := &types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			RepeatInputDo:    typedvalues.MustParse(taskToRepeat),
 			RepeatInputTimes: typedvalues.MustParse(10),
 		},

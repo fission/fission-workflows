@@ -11,7 +11,7 @@ import (
 func TestFunctionForeach_Invoke(t *testing.T) {
 	foreachElements := []interface{}{1, 2, 3, 4, "foo"}
 	out, err := (&FunctionForeach{}).Invoke(&types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			ForeachInputForeach: typedvalues.MustParse(foreachElements),
 			ForeachInputDo: typedvalues.MustParse(&types.TaskSpec{
 				FunctionRef: Noop,

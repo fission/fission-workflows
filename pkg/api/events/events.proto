@@ -4,6 +4,7 @@ package fission.workflows.events;
 option go_package = "events";
 
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
+import "github.com/fission/fission-workflows/pkg/types/typedvalues/typedvalues.proto";
 
 //
 // Workflow

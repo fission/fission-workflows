@@ -11,7 +11,6 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/graph"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"gonum.org/v1/gonum/graph/topo"
 )
 
@@ -297,15 +296,16 @@ func format(rawErr error, depth int) string {
 	}
 }
 
-func Flow(flow typedvalues.Flow) error {
-	if flow.IsEmpty() {
-		return ErrObjectEmpty
-	}
-	wf := flow.Workflow()
-	if wf != nil {
-		return WorkflowSpec(wf)
-	}
-	return TaskSpec(flow.Task())
+func Flow(flow types.Flow) error {
+	// 	if flow.IsEmpty() {
+	// 		return ErrObjectEmpty
+	// 	}
+	// 	wf := flow.Workflow()
+	// 	if wf != nil {
+	// 		return WorkflowSpec(wf)
+	// 	}
+	// 	return TaskSpec(flow.Task())
+	panic("implement")
 }
 
 func NewError(subject string, errs ...error) error {

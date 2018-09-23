@@ -53,7 +53,7 @@ A complete example of this function can be found in the [foreachwhale](../exampl
 */
 type FunctionForeach struct{}
 
-func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 	// Verify and parse foreach
 	headerTv, err := ensureInput(spec.GetInputs(), ForeachInputForeach)
 	if err != nil {
@@ -65,7 +65,7 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 	}
 	foreach, ok := i.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("condition '%v' needs to be a 'array', but was '%v'", i, headerTv.Type)
+		return nil, fmt.Errorf("condition '%v' needs to be a 'array', but was '%v'", i, headerTv.ValueType())
 	}
 
 	// Parse task

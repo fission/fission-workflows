@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -167,13 +168,13 @@ func NewTaskInvocation(id string) *TaskInvocation {
 	}
 }
 
-func SingleInput(key string, t *TypedValue) map[string]*TypedValue {
-	return map[string]*TypedValue{
+func SingleInput(key string, t *typedvalues.TypedValue) map[string]*typedvalues.TypedValue {
+	return map[string]*typedvalues.TypedValue{
 		key: t,
 	}
 }
 
-func SingleDefaultInput(t *TypedValue) map[string]*TypedValue {
+func SingleDefaultInput(t *typedvalues.TypedValue) map[string]*typedvalues.TypedValue {
 	return SingleInput(InputMain, t)
 }
 
@@ -212,11 +213,11 @@ type TaskInstance struct {
 }
 
 type NamedTypedValue struct {
-	TypedValue
+	typedvalues.TypedValue
 	name string
 }
 
-type Inputs map[string]*TypedValue
+type Inputs map[string]*typedvalues.TypedValue
 
 func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *TaskInvocationSpec {
 	return &TaskInvocationSpec{

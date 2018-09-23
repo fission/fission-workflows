@@ -7,13 +7,14 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
 // Func is the type for mocked functions used in the mock.Runtime
-type Func func(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
+type Func func(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error)
 
 // Runtime mocks the implementation of the various runtime.
 //

@@ -1,9 +1,7 @@
 package types
 
 import (
-	"fmt"
-	"strings"
-
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 )
@@ -33,46 +31,6 @@ var taskFinalStates = []TaskInvocationStatus_Status{
 	TaskInvocationStatus_ABORTED,
 	TaskInvocationStatus_SKIPPED,
 	TaskInvocationStatus_SUCCEEDED,
-}
-
-//
-// TypedValue
-//
-
-// Prints a short description of the Value
-func (tv TypedValue) Short() string {
-	var val string
-	if len(tv.Value) > typedValueShortMaxLen {
-		val = fmt.Sprintf("%s[..%d..]", tv.Value[:typedValueShortMaxLen], len(tv.Value)-typedValueShortMaxLen)
-	} else {
-		val = fmt.Sprintf("%s", tv.Value)
-	}
-
-	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
-}
-
-func (tv *TypedValue) SetLabel(k string, v string) *TypedValue {
-	if tv == nil {
-		return tv
-	}
-	if tv.Labels == nil {
-		tv.Labels = map[string]string{}
-	}
-	tv.Labels[k] = v
-
-	return tv
-}
-
-func (tv *TypedValue) GetLabel(k string) (string, bool) {
-	if tv == nil {
-		return "", false
-	}
-
-	if tv.Labels == nil {
-		tv.Labels = map[string]string{}
-	}
-	v, ok := tv.Labels[k]
-	return v, ok
 }
 
 //
@@ -188,9 +146,9 @@ func (m *Task) ID() string {
 // TaskSpec
 //
 
-func (m *TaskSpec) Input(key string, val *TypedValue) *TaskSpec {
+func (m *TaskSpec) Input(key string, val *typedvalues.TypedValue) *TaskSpec {
 	if len(m.Inputs) == 0 {
-		m.Inputs = map[string]*TypedValue{}
+		m.Inputs = map[string]*typedvalues.TypedValue{}
 	}
 	m.Inputs[key] = val
 

@@ -34,7 +34,7 @@ func makeTestScope() *Scope {
 			Tasks: map[string]*types.TaskSpec{
 				"TaskA": {
 					FunctionRef: "fissionFunction",
-					Inputs: map[string]*types.TypedValue{
+					Inputs: map[string]*typedvalues.TypedValue{
 						types.InputMain: typedvalues.MustParse("input-default"),
 						"otherInput":    typedvalues.MustParse("input-otherInput"),
 					},
@@ -48,7 +48,7 @@ func makeTestScope() *Scope {
 		},
 		Spec: &types.WorkflowInvocationSpec{
 			WorkflowId: "testWorkflow",
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				types.InputMain: typedvalues.MustParse("body"),
 				"headers":       typedvalues.MustParse("http-headers"),
 			},

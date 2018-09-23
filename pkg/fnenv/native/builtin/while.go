@@ -64,7 +64,7 @@ A complete example of this function can be found in the [whilewhale](../examples
 */
 type FunctionWhile struct{}
 
-func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 	// Expr
 	exprTv, err := ensureInput(spec.Inputs, WhileInputExpr, typedvalues.TypeBool)
 	if err != nil {
@@ -78,7 +78,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 	if !ok {
 		return nil, fmt.Errorf("could not get source of '%v'", expr)
 	}
-	exprSrcTv, err := typedvalues.ParseExpression(exprSrc)
+	exprSrcTv, err := typedvalues.Parse(exprSrc)
 	if err != nil {
 		return nil, err
 	}
@@ -167,20 +167,20 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVal
 		Tasks: map[string]*types.TaskSpec{
 			"wait": {
 				FunctionRef: Sleep,
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					SleepInput: delayTv,
 				},
 			},
 			"action": {
 				FunctionRef: Noop,
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					NoopInput: action,
 				},
 				Requires: types.Require("wait"),
 			},
 			"condition": {
 				FunctionRef: While,
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					WhileInputExpr:   exprSrcTv,
 					WhileInputDelay:  delayTv,
 					WhileInputLimit:  limitTv,

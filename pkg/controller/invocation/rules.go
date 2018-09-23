@@ -137,7 +137,7 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 		}
 	}
 	if finished {
-		var finalOutput *types.TypedValue
+		var finalOutput *typedvalues.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
 			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
 		}

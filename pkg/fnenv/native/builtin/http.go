@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/http"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -63,7 +64,12 @@ func NewFunctionHTTP() *FunctionHTTP {
 	}
 }
 
-func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
+	// Setup request
+	contentType := httpconv.DetermineContentTypeInputs(spec.Inputs)
+	headers := httpconv.FormatHeaders(spec.Inputs)
+	method := httpconv.FormatMethod(spec.Inputs)
+	// Get the actual url
 	targetUrl, err := fn.determineTargetURL(spec.Inputs)
 	if err != nil {
 		return nil, err
@@ -85,7 +91,7 @@ func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	return result.GetOutput(), nil
 }
 
-func (fn *FunctionHTTP) determineTargetURL(inputs map[string]*types.TypedValue) (string, error) {
+func (fn *FunctionHTTP) determineTargetURL(inputs map[string]*typedvalues.TypedValue) (string, error) {
 	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUrl, types.InputMain)
 	if tv == nil {
 		return "", errors.New("target URL is required for HTTP function")

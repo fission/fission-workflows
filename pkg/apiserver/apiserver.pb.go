@@ -20,9 +20,9 @@ package apiserver
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import fission_workflows_types "github.com/fission/fission-workflows/pkg/types"
+import fission_workflows_types1 "github.com/fission/fission-workflows/pkg/types"
 import fission_workflows_version "github.com/fission/fission-workflows/pkg/version"
-import google_protobuf1 "github.com/golang/protobuf/ptypes/empty"
+import google_protobuf2 "github.com/golang/protobuf/ptypes/empty"
 import _ "google.golang.org/genproto/googleapis/api/annotations"
 
 import (
@@ -106,7 +106,7 @@ func (m *WorkflowInvocationIdentifier) GetId() string {
 }
 
 type WorkflowInvocationList struct {
-	Invocations []string `protobuf:"bytes,1,rep,name=store" json:"store,omitempty"`
+	Invocations []string `protobuf:"bytes,1,rep,name=invocations" json:"invocations,omitempty"`
 }
 
 func (m *WorkflowInvocationList) Reset()                    { *m = WorkflowInvocationList{} }
@@ -157,11 +157,11 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for WorkflowAPI service
 
 type WorkflowAPIClient interface {
-	Create(ctx context.Context, in *fission_workflows_types.WorkflowSpec, opts ...grpc.CallOption) (*WorkflowIdentifier, error)
-	List(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*SearchWorkflowResponse, error)
-	Get(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*fission_workflows_types.Workflow, error)
-	Delete(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*google_protobuf1.Empty, error)
-	Validate(ctx context.Context, in *fission_workflows_types.WorkflowSpec, opts ...grpc.CallOption) (*google_protobuf1.Empty, error)
+	Create(ctx context.Context, in *fission_workflows_types1.WorkflowSpec, opts ...grpc.CallOption) (*WorkflowIdentifier, error)
+	List(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*SearchWorkflowResponse, error)
+	Get(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*fission_workflows_types1.Workflow, error)
+	Delete(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*google_protobuf2.Empty, error)
+	Validate(ctx context.Context, in *fission_workflows_types1.WorkflowSpec, opts ...grpc.CallOption) (*google_protobuf2.Empty, error)
 }
 
 type workflowAPIClient struct {
@@ -172,7 +172,7 @@ func NewWorkflowAPIClient(cc *grpc.ClientConn) WorkflowAPIClient {
 	return &workflowAPIClient{cc}
 }
 
-func (c *workflowAPIClient) Create(ctx context.Context, in *fission_workflows_types.WorkflowSpec, opts ...grpc.CallOption) (*WorkflowIdentifier, error) {
+func (c *workflowAPIClient) Create(ctx context.Context, in *fission_workflows_types1.WorkflowSpec, opts ...grpc.CallOption) (*WorkflowIdentifier, error) {
 	out := new(WorkflowIdentifier)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowAPI/Create", in, out, c.cc, opts...)
 	if err != nil {
@@ -181,7 +181,7 @@ func (c *workflowAPIClient) Create(ctx context.Context, in *fission_workflows_ty
 	return out, nil
 }
 
-func (c *workflowAPIClient) List(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*SearchWorkflowResponse, error) {
+func (c *workflowAPIClient) List(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*SearchWorkflowResponse, error) {
 	out := new(SearchWorkflowResponse)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowAPI/List", in, out, c.cc, opts...)
 	if err != nil {
@@ -190,8 +190,8 @@ func (c *workflowAPIClient) List(ctx context.Context, in *google_protobuf1.Empty
 	return out, nil
 }
 
-func (c *workflowAPIClient) Get(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*fission_workflows_types.Workflow, error) {
-	out := new(fission_workflows_types.Workflow)
+func (c *workflowAPIClient) Get(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*fission_workflows_types1.Workflow, error) {
+	out := new(fission_workflows_types1.Workflow)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowAPI/Get", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -199,8 +199,8 @@ func (c *workflowAPIClient) Get(ctx context.Context, in *WorkflowIdentifier, opt
 	return out, nil
 }
 
-func (c *workflowAPIClient) Delete(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*google_protobuf1.Empty, error) {
-	out := new(google_protobuf1.Empty)
+func (c *workflowAPIClient) Delete(ctx context.Context, in *WorkflowIdentifier, opts ...grpc.CallOption) (*google_protobuf2.Empty, error) {
+	out := new(google_protobuf2.Empty)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowAPI/Delete", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -208,8 +208,8 @@ func (c *workflowAPIClient) Delete(ctx context.Context, in *WorkflowIdentifier, 
 	return out, nil
 }
 
-func (c *workflowAPIClient) Validate(ctx context.Context, in *fission_workflows_types.WorkflowSpec, opts ...grpc.CallOption) (*google_protobuf1.Empty, error) {
-	out := new(google_protobuf1.Empty)
+func (c *workflowAPIClient) Validate(ctx context.Context, in *fission_workflows_types1.WorkflowSpec, opts ...grpc.CallOption) (*google_protobuf2.Empty, error) {
+	out := new(google_protobuf2.Empty)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowAPI/Validate", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -220,11 +220,11 @@ func (c *workflowAPIClient) Validate(ctx context.Context, in *fission_workflows_
 // Server API for WorkflowAPI service
 
 type WorkflowAPIServer interface {
-	Create(context.Context, *fission_workflows_types.WorkflowSpec) (*WorkflowIdentifier, error)
-	List(context.Context, *google_protobuf1.Empty) (*SearchWorkflowResponse, error)
-	Get(context.Context, *WorkflowIdentifier) (*fission_workflows_types.Workflow, error)
-	Delete(context.Context, *WorkflowIdentifier) (*google_protobuf1.Empty, error)
-	Validate(context.Context, *fission_workflows_types.WorkflowSpec) (*google_protobuf1.Empty, error)
+	Create(context.Context, *fission_workflows_types1.WorkflowSpec) (*WorkflowIdentifier, error)
+	List(context.Context, *google_protobuf2.Empty) (*SearchWorkflowResponse, error)
+	Get(context.Context, *WorkflowIdentifier) (*fission_workflows_types1.Workflow, error)
+	Delete(context.Context, *WorkflowIdentifier) (*google_protobuf2.Empty, error)
+	Validate(context.Context, *fission_workflows_types1.WorkflowSpec) (*google_protobuf2.Empty, error)
 }
 
 func RegisterWorkflowAPIServer(s *grpc.Server, srv WorkflowAPIServer) {
@@ -232,7 +232,7 @@ func RegisterWorkflowAPIServer(s *grpc.Server, srv WorkflowAPIServer) {
 }
 
 func _WorkflowAPI_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(fission_workflows_types.WorkflowSpec)
+	in := new(fission_workflows_types1.WorkflowSpec)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -244,13 +244,13 @@ func _WorkflowAPI_Create_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: "/fission.workflows.apiserver.WorkflowAPI/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowAPIServer).Create(ctx, req.(*fission_workflows_types.WorkflowSpec))
+		return srv.(WorkflowAPIServer).Create(ctx, req.(*fission_workflows_types1.WorkflowSpec))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _WorkflowAPI_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(google_protobuf1.Empty)
+	in := new(google_protobuf2.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func _WorkflowAPI_List_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/fission.workflows.apiserver.WorkflowAPI/List",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowAPIServer).List(ctx, req.(*google_protobuf1.Empty))
+		return srv.(WorkflowAPIServer).List(ctx, req.(*google_protobuf2.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -304,7 +304,7 @@ func _WorkflowAPI_Delete_Handler(srv interface{}, ctx context.Context, dec func(
 }
 
 func _WorkflowAPI_Validate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(fission_workflows_types.WorkflowSpec)
+	in := new(fission_workflows_types1.WorkflowSpec)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func _WorkflowAPI_Validate_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/fission.workflows.apiserver.WorkflowAPI/Validate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowAPIServer).Validate(ctx, req.(*fission_workflows_types.WorkflowSpec))
+		return srv.(WorkflowAPIServer).Validate(ctx, req.(*fission_workflows_types1.WorkflowSpec))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -356,21 +356,21 @@ type WorkflowInvocationAPIClient interface {
 	// Create a new workflow invocation
 	//
 	// In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
-	Invoke(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*WorkflowInvocationIdentifier, error)
-	InvokeSync(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*fission_workflows_types.WorkflowInvocation, error)
+	Invoke(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*WorkflowInvocationIdentifier, error)
+	InvokeSync(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*fission_workflows_types1.WorkflowInvocation, error)
 	// Cancel a workflow invocation
 	//
 	// This action is irreverisble. A canceled invocation cannot be resumed or restarted.
 	// In case that an invocation already is canceled, has failed or has completed, nothing happens.
 	// In case that an invocation does not exist a HTTP 404 error status is returned.
-	Cancel(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*google_protobuf1.Empty, error)
+	Cancel(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*google_protobuf2.Empty, error)
 	List(ctx context.Context, in *InvocationListQuery, opts ...grpc.CallOption) (*WorkflowInvocationList, error)
 	// Get the specification and status of a workflow invocation
 	//
 	// Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
 	// To lighten the request load, consider using a more specific request.
-	Get(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*fission_workflows_types.WorkflowInvocation, error)
-	Validate(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*google_protobuf1.Empty, error)
+	Get(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*fission_workflows_types1.WorkflowInvocation, error)
+	Validate(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*google_protobuf2.Empty, error)
 }
 
 type workflowInvocationAPIClient struct {
@@ -381,7 +381,7 @@ func NewWorkflowInvocationAPIClient(cc *grpc.ClientConn) WorkflowInvocationAPICl
 	return &workflowInvocationAPIClient{cc}
 }
 
-func (c *workflowInvocationAPIClient) Invoke(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*WorkflowInvocationIdentifier, error) {
+func (c *workflowInvocationAPIClient) Invoke(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*WorkflowInvocationIdentifier, error) {
 	out := new(WorkflowInvocationIdentifier)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowInvocationAPI/Invoke", in, out, c.cc, opts...)
 	if err != nil {
@@ -390,8 +390,8 @@ func (c *workflowInvocationAPIClient) Invoke(ctx context.Context, in *fission_wo
 	return out, nil
 }
 
-func (c *workflowInvocationAPIClient) InvokeSync(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*fission_workflows_types.WorkflowInvocation, error) {
-	out := new(fission_workflows_types.WorkflowInvocation)
+func (c *workflowInvocationAPIClient) InvokeSync(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*fission_workflows_types1.WorkflowInvocation, error) {
+	out := new(fission_workflows_types1.WorkflowInvocation)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowInvocationAPI/InvokeSync", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -399,8 +399,8 @@ func (c *workflowInvocationAPIClient) InvokeSync(ctx context.Context, in *fissio
 	return out, nil
 }
 
-func (c *workflowInvocationAPIClient) Cancel(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*google_protobuf1.Empty, error) {
-	out := new(google_protobuf1.Empty)
+func (c *workflowInvocationAPIClient) Cancel(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*google_protobuf2.Empty, error) {
+	out := new(google_protobuf2.Empty)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowInvocationAPI/Cancel", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -417,8 +417,8 @@ func (c *workflowInvocationAPIClient) List(ctx context.Context, in *InvocationLi
 	return out, nil
 }
 
-func (c *workflowInvocationAPIClient) Get(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*fission_workflows_types.WorkflowInvocation, error) {
-	out := new(fission_workflows_types.WorkflowInvocation)
+func (c *workflowInvocationAPIClient) Get(ctx context.Context, in *WorkflowInvocationIdentifier, opts ...grpc.CallOption) (*fission_workflows_types1.WorkflowInvocation, error) {
+	out := new(fission_workflows_types1.WorkflowInvocation)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowInvocationAPI/Get", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -426,8 +426,8 @@ func (c *workflowInvocationAPIClient) Get(ctx context.Context, in *WorkflowInvoc
 	return out, nil
 }
 
-func (c *workflowInvocationAPIClient) Validate(ctx context.Context, in *fission_workflows_types.WorkflowInvocationSpec, opts ...grpc.CallOption) (*google_protobuf1.Empty, error) {
-	out := new(google_protobuf1.Empty)
+func (c *workflowInvocationAPIClient) Validate(ctx context.Context, in *fission_workflows_types1.WorkflowInvocationSpec, opts ...grpc.CallOption) (*google_protobuf2.Empty, error) {
+	out := new(google_protobuf2.Empty)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.WorkflowInvocationAPI/Validate", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -441,21 +441,21 @@ type WorkflowInvocationAPIServer interface {
 	// Create a new workflow invocation
 	//
 	// In case the invocation specification is missing fields or contains invalid fields, a HTTP 400 is returned.
-	Invoke(context.Context, *fission_workflows_types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error)
-	InvokeSync(context.Context, *fission_workflows_types.WorkflowInvocationSpec) (*fission_workflows_types.WorkflowInvocation, error)
+	Invoke(context.Context, *fission_workflows_types1.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error)
+	InvokeSync(context.Context, *fission_workflows_types1.WorkflowInvocationSpec) (*fission_workflows_types1.WorkflowInvocation, error)
 	// Cancel a workflow invocation
 	//
 	// This action is irreverisble. A canceled invocation cannot be resumed or restarted.
 	// In case that an invocation already is canceled, has failed or has completed, nothing happens.
 	// In case that an invocation does not exist a HTTP 404 error status is returned.
-	Cancel(context.Context, *WorkflowInvocationIdentifier) (*google_protobuf1.Empty, error)
+	Cancel(context.Context, *WorkflowInvocationIdentifier) (*google_protobuf2.Empty, error)
 	List(context.Context, *InvocationListQuery) (*WorkflowInvocationList, error)
 	// Get the specification and status of a workflow invocation
 	//
 	// Get returns three different aspects of the workflow invocation, namely the spec (specification), status and logs.
 	// To lighten the request load, consider using a more specific request.
-	Get(context.Context, *WorkflowInvocationIdentifier) (*fission_workflows_types.WorkflowInvocation, error)
-	Validate(context.Context, *fission_workflows_types.WorkflowInvocationSpec) (*google_protobuf1.Empty, error)
+	Get(context.Context, *WorkflowInvocationIdentifier) (*fission_workflows_types1.WorkflowInvocation, error)
+	Validate(context.Context, *fission_workflows_types1.WorkflowInvocationSpec) (*google_protobuf2.Empty, error)
 }
 
 func RegisterWorkflowInvocationAPIServer(s *grpc.Server, srv WorkflowInvocationAPIServer) {
@@ -463,7 +463,7 @@ func RegisterWorkflowInvocationAPIServer(s *grpc.Server, srv WorkflowInvocationA
 }
 
 func _WorkflowInvocationAPI_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(fission_workflows_types.WorkflowInvocationSpec)
+	in := new(fission_workflows_types1.WorkflowInvocationSpec)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -475,13 +475,13 @@ func _WorkflowInvocationAPI_Invoke_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/fission.workflows.apiserver.WorkflowInvocationAPI/Invoke",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowInvocationAPIServer).Invoke(ctx, req.(*fission_workflows_types.WorkflowInvocationSpec))
+		return srv.(WorkflowInvocationAPIServer).Invoke(ctx, req.(*fission_workflows_types1.WorkflowInvocationSpec))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _WorkflowInvocationAPI_InvokeSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(fission_workflows_types.WorkflowInvocationSpec)
+	in := new(fission_workflows_types1.WorkflowInvocationSpec)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func _WorkflowInvocationAPI_InvokeSync_Handler(srv interface{}, ctx context.Cont
 		FullMethod: "/fission.workflows.apiserver.WorkflowInvocationAPI/InvokeSync",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowInvocationAPIServer).InvokeSync(ctx, req.(*fission_workflows_types.WorkflowInvocationSpec))
+		return srv.(WorkflowInvocationAPIServer).InvokeSync(ctx, req.(*fission_workflows_types1.WorkflowInvocationSpec))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -553,7 +553,7 @@ func _WorkflowInvocationAPI_Get_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _WorkflowInvocationAPI_Validate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(fission_workflows_types.WorkflowInvocationSpec)
+	in := new(fission_workflows_types1.WorkflowInvocationSpec)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -565,7 +565,7 @@ func _WorkflowInvocationAPI_Validate_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/fission.workflows.apiserver.WorkflowInvocationAPI/Validate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(WorkflowInvocationAPIServer).Validate(ctx, req.(*fission_workflows_types.WorkflowInvocationSpec))
+		return srv.(WorkflowInvocationAPIServer).Validate(ctx, req.(*fission_workflows_types1.WorkflowInvocationSpec))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -606,8 +606,8 @@ var _WorkflowInvocationAPI_serviceDesc = grpc.ServiceDesc{
 // Client API for AdminAPI service
 
 type AdminAPIClient interface {
-	Status(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*Health, error)
-	Version(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*fission_workflows_version.Info, error)
+	Status(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*Health, error)
+	Version(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*fission_workflows_version.Info, error)
 }
 
 type adminAPIClient struct {
@@ -618,7 +618,7 @@ func NewAdminAPIClient(cc *grpc.ClientConn) AdminAPIClient {
 	return &adminAPIClient{cc}
 }
 
-func (c *adminAPIClient) Status(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*Health, error) {
+func (c *adminAPIClient) Status(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*Health, error) {
 	out := new(Health)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.AdminAPI/Status", in, out, c.cc, opts...)
 	if err != nil {
@@ -627,7 +627,7 @@ func (c *adminAPIClient) Status(ctx context.Context, in *google_protobuf1.Empty,
 	return out, nil
 }
 
-func (c *adminAPIClient) Version(ctx context.Context, in *google_protobuf1.Empty, opts ...grpc.CallOption) (*fission_workflows_version.Info, error) {
+func (c *adminAPIClient) Version(ctx context.Context, in *google_protobuf2.Empty, opts ...grpc.CallOption) (*fission_workflows_version.Info, error) {
 	out := new(fission_workflows_version.Info)
 	err := grpc.Invoke(ctx, "/fission.workflows.apiserver.AdminAPI/Version", in, out, c.cc, opts...)
 	if err != nil {
@@ -639,8 +639,8 @@ func (c *adminAPIClient) Version(ctx context.Context, in *google_protobuf1.Empty
 // Server API for AdminAPI service
 
 type AdminAPIServer interface {
-	Status(context.Context, *google_protobuf1.Empty) (*Health, error)
-	Version(context.Context, *google_protobuf1.Empty) (*fission_workflows_version.Info, error)
+	Status(context.Context, *google_protobuf2.Empty) (*Health, error)
+	Version(context.Context, *google_protobuf2.Empty) (*fission_workflows_version.Info, error)
 }
 
 func RegisterAdminAPIServer(s *grpc.Server, srv AdminAPIServer) {
@@ -648,7 +648,7 @@ func RegisterAdminAPIServer(s *grpc.Server, srv AdminAPIServer) {
 }
 
 func _AdminAPI_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(google_protobuf1.Empty)
+	in := new(google_protobuf2.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -660,13 +660,13 @@ func _AdminAPI_Status_Handler(srv interface{}, ctx context.Context, dec func(int
 		FullMethod: "/fission.workflows.apiserver.AdminAPI/Status",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).Status(ctx, req.(*google_protobuf1.Empty))
+		return srv.(AdminAPIServer).Status(ctx, req.(*google_protobuf2.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AdminAPI_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(google_protobuf1.Empty)
+	in := new(google_protobuf2.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -678,7 +678,7 @@ func _AdminAPI_Version_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/fission.workflows.apiserver.AdminAPI/Version",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AdminAPIServer).Version(ctx, req.(*google_protobuf1.Empty))
+		return srv.(AdminAPIServer).Version(ctx, req.(*google_protobuf2.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

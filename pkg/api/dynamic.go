@@ -23,14 +23,14 @@ func NewDynamicApi(wfAPI *Workflow, wfiAPI *Invocation) *Dynamic {
 
 // AddDynamicFlow inserts the flow as a 'dynamic task' into the workflow invocation with id invocationID as the child
 // of the parent task.
-func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow typedvalues.Flow) error {
+func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow types.Flow) error {
 	if err := validate.Flow(flow); err != nil {
 		return err
 	}
 	switch flow.Type() {
-	case typedvalues.Workflow:
+	case types.FlowTypeWorkflow:
 		return ap.addDynamicWorkflow(invocationID, parentTaskID, flow.Workflow(), &types.TaskSpec{})
-	case typedvalues.Task:
+	case types.FlowTypeTask:
 		return ap.addDynamicTask(invocationID, parentTaskID, flow.Task())
 	default:
 		panic("validated flow was still empty")
@@ -72,7 +72,7 @@ func (ap *Dynamic) addDynamicWorkflow(invocationID string, parentTaskID string, 
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfRef.Format()
-	proxyTaskSpec.Input(types.InputParent, typedvalues.ParseString(invocationID))
+	proxyTaskSpec.Input(types.InputParent, typedvalues.MustParse(invocationID))
 	proxyTaskID := parentTaskID + "_child"
 	proxyTask := types.NewTask(proxyTaskID, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec

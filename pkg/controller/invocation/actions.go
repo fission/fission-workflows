@@ -156,7 +156,7 @@ func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
 	return nil
 }
 
-func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *types.TypedValue) (*types.TypedValue, error) {
+func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
 	log := a.logger()
 
 	// Setup the scope for the expressions
@@ -188,7 +188,7 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 	return resolvedOutput, nil
 }
 
-func (a *ActionInvokeTask) resolveInputs(inputs map[string]*types.TypedValue) (map[string]*types.TypedValue, error) {
+func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedValue) (map[string]*typedvalues.TypedValue, error) {
 	log := a.logger()
 
 	// Setup the scope for the expressions
@@ -210,7 +210,7 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*types.TypedValue) (m
 	}
 
 	// Resolve each of the inputs (based on priority)
-	resolvedInputs := map[string]*types.TypedValue{}
+	resolvedInputs := map[string]*typedvalues.TypedValue{}
 	for _, input := range typedvalues.Prioritize(inputs) {
 		resolvedInput, err := expr.Resolve(scope, a.Task.Id, input.Val)
 		if err != nil {

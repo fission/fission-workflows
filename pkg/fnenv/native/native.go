@@ -8,6 +8,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
@@ -21,7 +22,7 @@ const (
 
 // An InternalFunction is a function that will be executed in the same process as the invoker.
 type InternalFunction interface {
-	Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error)
+	Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error)
 }
 
 // FunctionEnv for executing low overhead functions, such as control flow constructs, inside the workflow engine

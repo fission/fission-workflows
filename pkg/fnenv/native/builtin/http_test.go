@@ -41,7 +41,7 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMethod: typedvalues.MustParse(http.MethodPost),
 			HttpInputUrl:      typedvalues.MustParse(ts.URL),
 			types.InputMain:   typedvalues.MustParse(body),
@@ -64,7 +64,7 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMethod: typedvalues.MustParse(http.MethodDelete),
 			HttpInputUrl:      typedvalues.MustParse(ts.URL),
 			types.InputMain:   typedvalues.MustParse(body),

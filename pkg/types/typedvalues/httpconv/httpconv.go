@@ -32,8 +32,8 @@ const (
 )
 
 // ParseRequest maps a HTTP request to a target map of typedvalues.
-func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
-	target := map[string]*types.TypedValue{}
+func ParseRequest(r *http.Request) (map[string]*typedvalues.TypedValue, error) {
+	target := map[string]*typedvalues.TypedValue{}
 	// Content-Type is a common problem, so log this for every request
 	contentType := r.Header.Get(headerContentType)
 
@@ -64,24 +64,24 @@ func ParseRequest(r *http.Request) (map[string]*types.TypedValue, error) {
 	return target, nil
 }
 
-func ParseResponse(r *http.Response) (types.TypedValue, error) {
+func ParseResponse(r *http.Response) (typedvalues.TypedValue, error) {
 	body := r.Body
 	defer r.Body.Close()
 	contentType := r.Header.Get(headerContentType)
 	output, err := ParseBody(body, contentType)
 	if err != nil {
-		return types.TypedValue{}, err
+		return typedvalues.TypedValue{}, err
 	}
 	return output, nil
 }
 
 // ParseRequest maps the body of the HTTP request to a corresponding typedvalue.
-func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
+func ParseBody(data io.Reader, contentType string) (typedvalues.TypedValue, error) {
 	if len(contentType) == 0 {
 		contentType = contentTypeDefault
 	}
 
-	tv := types.TypedValue{}
+	tv := typedvalues.TypedValue{}
 	tv.SetLabel(headerContentType, contentType)
 
 	bs, err := ioutil.ReadAll(data)
@@ -97,12 +97,12 @@ func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 		if err != nil {
 			logrus.Warnf("Failed to parse JSON data (len: %v, data: '%.50s' cause: %v), skipping further parsing.",
 				len(bs), string(bs), err)
-			tv = *typedvalues.ParseBytes(bs)
+			tv = *typedvalues.MustParse(bs)
 		} else {
 			tv = *typedvalues.MustParse(i)
 		}
 	case contentTypeText:
-		tv = *typedvalues.ParseString(string(bs))
+		tv = *typedvalues.MustParse(string(bs))
 	case contentTypeProtobuf:
 		fallthrough
 	case contentTypeTask:
@@ -123,19 +123,19 @@ func ParseBody(data io.Reader, contentType string) (types.TypedValue, error) {
 		// In other cases do not attempt to interpret the data
 		fallthrough
 	case contentTypeBytes:
-		tv = *typedvalues.ParseBytes(bs)
+		tv = *typedvalues.MustParse(bs)
 	}
 
 	return tv, nil
 }
 
 // ParseMethod maps the method param from a request to a TypedValue
-func ParseMethod(r *http.Request) types.TypedValue {
-	return *typedvalues.ParseString(r.Method)
+func ParseMethod(r *http.Request) typedvalues.TypedValue {
+	return *typedvalues.MustParse(r.Method)
 }
 
 // ParseHeaders maps the headers from a request to the "headers" key in the target map
-func ParseHeaders(r *http.Request) types.TypedValue {
+func ParseHeaders(r *http.Request) typedvalues.TypedValue {
 	// For now we do not support multi-valued headers
 	headers := flattenMultimap(r.Header)
 
@@ -144,7 +144,7 @@ func ParseHeaders(r *http.Request) types.TypedValue {
 }
 
 // ParseQuery maps the query params from a request to the "query" key in the target map
-func ParseQuery(r *http.Request) types.TypedValue {
+func ParseQuery(r *http.Request) typedvalues.TypedValue {
 	// For now we do not support multi-valued query params
 	query := flattenMultimap(r.URL.Query())
 
@@ -157,7 +157,7 @@ func ParseQuery(r *http.Request) types.TypedValue {
 //
 
 // FormatResponse maps an TypedValue to an HTTP response
-func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *types.Error) {
+func FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
 	if w == nil {
 		panic("cannot format response to nil")
 	}
@@ -170,7 +170,7 @@ func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *
 
 	if output == nil {
 		w.WriteHeader(http.StatusNoContent)
-		output = typedvalues.ParseNil()
+		output = typedvalues.MustParse(nil)
 		return
 	}
 
@@ -188,7 +188,7 @@ func FormatResponse(w http.ResponseWriter, output *types.TypedValue, outputErr *
 }
 
 // FormatRequest maps a map of typed values to an HTTP request
-func FormatRequest(source map[string]*types.TypedValue, target *http.Request) error {
+func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Request) error {
 	if target == nil {
 		panic("cannot format request to nil")
 	}
@@ -239,7 +239,7 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 	return nil
 }
 
-func FormatMethod(inputs map[string]*types.TypedValue, defaultMethod string) string {
+func FormatMethod(inputs map[string]*typedvalues.TypedValue, defaultMethod string) string {
 	tv, ok := inputs[types.InputMethod]
 	if ok && tv != nil {
 		contentType, err := typedvalues.FormatString(tv)
@@ -252,7 +252,7 @@ func FormatMethod(inputs map[string]*types.TypedValue, defaultMethod string) str
 }
 
 // FUTURE: support multivalued query params
-func FormatQuery(inputs map[string]*types.TypedValue) url.Values {
+func FormatQuery(inputs map[string]*typedvalues.TypedValue) url.Values {
 	queryInput := inputs[types.InputQuery]
 	if queryInput == nil {
 		return nil
@@ -276,7 +276,7 @@ func FormatQuery(inputs map[string]*types.TypedValue) url.Values {
 	return target
 }
 
-func FormatBody(value types.TypedValue, contentType string) ([]byte, error) {
+func FormatBody(value typedvalues.TypedValue, contentType string) ([]byte, error) {
 	if len(contentType) == 0 {
 		contentType = contentTypeDefault
 	}
@@ -329,7 +329,7 @@ func FormatBody(value types.TypedValue, contentType string) ([]byte, error) {
 	return bs, nil
 }
 
-func DetermineContentType(value *types.TypedValue) string {
+func DetermineContentType(value *typedvalues.TypedValue) string {
 	if value == nil {
 		return contentTypeBytes
 	}
@@ -340,24 +340,25 @@ func DetermineContentType(value *types.TypedValue) string {
 	}
 
 	// Otherwise, check for primitive types of the main input
-	switch typedvalues.ValueType(value.Type) {
-	// TODO task and workflow
-	case typedvalues.TypeMap:
-		fallthrough
-	case typedvalues.TypeList:
-		return contentTypeJSON
-	case typedvalues.TypeNumber:
-		fallthrough
-	case typedvalues.TypeExpression:
-		fallthrough
-	case typedvalues.TypeString:
-		return contentTypeText
-	default:
-		return contentTypeBytes
-	}
+	// switch typedvalues.ValueType(value.Type) { // TODO !!!
+	// // TODO task and workflow
+	// case typedvalues.TypeMap:
+	// 	fallthrough
+	// case typedvalues.TypeList:
+	// 	return contentTypeJSON
+	// case typedvalues.TypeNumber:
+	// 	fallthrough
+	// case typedvalues.TypeExpression:
+	// 	fallthrough
+	// case typedvalues.TypeString:
+	// 	return contentTypeText
+	// default:
+	// 	return contentTypeBytes
+	// }
+	return contentTypeBytes
 }
 
-func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
+func DetermineContentTypeInputs(inputs map[string]*typedvalues.TypedValue) string {
 	// Check for forced contentType in inputs
 	ctTv, ok := inputs[inputContentType]
 	if ok && ctTv != nil {
@@ -377,7 +378,7 @@ func DetermineContentTypeInputs(inputs map[string]*types.TypedValue) string {
 }
 
 // FUTURE: support multi-headers at some point
-func FormatHeaders(inputs map[string]*types.TypedValue) http.Header {
+func FormatHeaders(inputs map[string]*typedvalues.TypedValue) http.Header {
 	headers := http.Header{}
 	rawHeaders, ok := inputs[types.InputHeaders]
 	if !ok || rawHeaders == nil {

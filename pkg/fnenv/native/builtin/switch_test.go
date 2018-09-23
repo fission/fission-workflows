@@ -12,7 +12,7 @@ func TestFunctionSwitch_Invoke(t *testing.T) {
 	val := "case1Val"
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			SwitchInputCondition: typedvalues.ParseString("case1"),
 			SwitchInputCases: typedvalues.MustParse([]interface{}{
 				switchCase("case1", val),
@@ -28,7 +28,7 @@ func TestFunctionSwitch_Invoke(t *testing.T) {
 func TestFunctionSwitch_InvokeDefaultCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			SwitchInputCondition: typedvalues.ParseString("case1"),
 			SwitchInputCases: typedvalues.MustParse([]interface{}{
 				switchCase("case2", "case2"),
@@ -44,7 +44,7 @@ func TestFunctionSwitch_InvokeDefaultCase(t *testing.T) {
 func TestFunctionSwitch_InvokeNoCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			SwitchInputCondition: typedvalues.MustParse("case1"),
 			"case2":              typedvalues.MustParse("case2"),
 		},
@@ -57,7 +57,7 @@ func TestFunctionSwitch_InvokeNoCase(t *testing.T) {
 func TestFunctionSwitch_InvokeNoSwitch(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			"case2": typedvalues.MustParse("case2"),
 		},
 	}

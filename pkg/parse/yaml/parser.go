@@ -101,14 +101,14 @@ func parseTask(t *taskSpec) (*types.TaskSpec, error) {
 }
 
 // parseInputs parses the inputs of a task. This is typically a map[interface{}]interface{}.
-func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
+func parseInputs(i interface{}) (map[string]*typedvalues.TypedValue, error) {
 	if i == nil {
-		return map[string]*types.TypedValue{}, nil
+		return map[string]*typedvalues.TypedValue{}, nil
 	}
 
 	switch v := i.(type) {
 	case map[string]interface{}:
-		result := map[string]*types.TypedValue{}
+		result := map[string]*typedvalues.TypedValue{}
 		for inputKey, inputVal := range v {
 			typedVal, err := parseInput(inputVal)
 			if err != nil {
@@ -118,7 +118,7 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 		}
 		return result, nil
 	case map[interface{}]interface{}:
-		result := map[string]*types.TypedValue{}
+		result := map[string]*typedvalues.TypedValue{}
 		for inputKey, inputVal := range v {
 			k := fmt.Sprintf("%v", inputKey)
 			typedVal, err := parseInput(inputVal)
@@ -133,12 +133,12 @@ func parseInputs(i interface{}) (map[string]*types.TypedValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]*types.TypedValue{
+	return map[string]*typedvalues.TypedValue{
 		types.InputMain: p,
 	}, nil
 }
 
-func parseInput(i interface{}) (*types.TypedValue, error) {
+func parseInput(i interface{}) (*typedvalues.TypedValue, error) {
 	// Handle special cases
 	switch t := i.(type) {
 	case []interface{}:

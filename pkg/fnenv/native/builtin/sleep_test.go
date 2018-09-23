@@ -15,7 +15,7 @@ func TestSleepFunctionString(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				SleepInput: typedvalues.MustParse("1000ms"),
 			},
 		},
@@ -29,7 +29,7 @@ func TestSleepFunctionInt(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionSleep{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				SleepInput: typedvalues.MustParse(1000),
 			},
 		},

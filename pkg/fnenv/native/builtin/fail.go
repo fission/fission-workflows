@@ -41,8 +41,8 @@ A runnable example of this function can be found in the [failwhale](../examples/
 */
 type FunctionFail struct{}
 
-func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	var output *types.TypedValue
+func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
+	var output *typedvalues.TypedValue
 	switch len(spec.GetInputs()) {
 	case 0:
 		output = defaultErrMsg

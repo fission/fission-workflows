@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +20,7 @@ func TestValueTester(t *testing.T) {
 			tv, err := Parse(testCase.input)
 			fmt.Printf("Typed value: %+v\n", tv)
 			assert.NoError(t, err)
-			assert.Equal(t, testCase.expectedType, ValueType(tv.Type))
+			assert.Equal(t, testCase.expectedType, tv.ValueType())
 			i, err := Format(tv)
 			assert.NoError(t, err)
 			assert.Equal(t, testCase.input, i)
@@ -35,7 +34,7 @@ func TestValueTester(t *testing.T) {
 type testCase struct {
 	name         string
 	input        interface{}
-	expectedType ValueType
+	expectedType string
 }
 
 var parseFormatTests = []testCase{
@@ -115,18 +114,23 @@ var parseFormatTests = []testCase{
 		input:        map[string]interface{}{"a": map[string]interface{}{"b": map[string]interface{}{"c": "{d}"}}},
 		expectedType: TypeMap,
 	},
-	{
-		input:        types.NewTaskSpec("fn1").Input("inputK", MustParse("e2")),
-		expectedType: TypeTask,
-	},
-	{
-		input: &types.WorkflowSpec{
-			ApiVersion: "v1",
-			OutputTask: "t1",
-			Tasks: types.Tasks{
-				"t1": types.NewTaskSpec("fn1").Input("inputK", MustParse("e2")),
-			},
-		},
-		expectedType: TypeWorkflow,
-	},
+}
+
+func BenchmarkParse(b *testing.B) {
+	for _, testCase := range parseFormatTests {
+		b.Run(testCase.expectedType+"_parse", func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				Parse(testCase.input)
+			}
+		})
+	}
+	for _, testCase := range parseFormatTests {
+		tv, _ := Parse(testCase.input)
+
+		b.Run(testCase.expectedType+"_format", func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				Format(tv)
+			}
+		})
+	}
 }

@@ -14,7 +14,7 @@ func TestFunctionIfConsequentFlow(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				IfInputCondition: typedvalues.MustParse(true),
 				IfInputThen:      typedvalues.MustParse(expectedTask),
 			},
@@ -32,7 +32,7 @@ func TestFunctionIfAlternativeFlow(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				IfInputCondition: typedvalues.MustParse(false),
 				IfInputThen:      typedvalues.MustParse(task),
 				IfInputElse:      typedvalues.MustParse(alternativeTask),
@@ -45,7 +45,7 @@ func TestFunctionIfLiteral(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				IfInputCondition: typedvalues.MustParse(true),
 				IfInputThen:      typedvalues.MustParse("foo"),
 				IfInputElse:      typedvalues.MustParse("bar"),
@@ -58,7 +58,7 @@ func TestFunctionIfMissingAlternative(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionIf{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
+			Inputs: map[string]*typedvalues.TypedValue{
 				IfInputCondition: typedvalues.MustParse(false),
 				IfInputThen:      typedvalues.MustParse("then"),
 			},

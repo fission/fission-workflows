@@ -19,7 +19,7 @@ func TestParseProto(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -28,7 +28,7 @@ func TestParseProto(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
@@ -48,7 +48,7 @@ func TestParseJson(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -57,7 +57,7 @@ func TestParseJson(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},

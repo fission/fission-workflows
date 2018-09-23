@@ -94,7 +94,7 @@ func TestWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -103,7 +103,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
@@ -123,7 +123,7 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMain: tv,
 		},
 	}
@@ -167,7 +167,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Tasks.someConditionalTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -177,23 +177,23 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 			"someConditionalTask": {
 				FunctionRef: "if",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					builtin.IfInputCondition: typedvalues.MustParse("{$.Invocation.Inputs.default == 'FOO'}"),
 					builtin.IfInputThen: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
-						Inputs: map[string]*types.TypedValue{
+						Inputs: map[string]*typedvalues.TypedValue{
 							types.InputMain: typedvalues.MustParse("{'consequent: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 					builtin.IfInputElse: typedvalues.ParseTask(&types.TaskSpec{
 						FunctionRef: "noop",
-						Inputs: map[string]*types.TypedValue{
+						Inputs: map[string]*typedvalues.TypedValue{
 							types.InputMain: typedvalues.MustParse("{'alternative: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
@@ -212,7 +212,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMain: typedvalues.MustParse("foo"),
 		},
 	}
@@ -238,19 +238,19 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"nestedTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					builtin.NoopInput: typedvalues.ParseWorkflow(&types.WorkflowSpec{
 						OutputTask: "b",
 						Tasks: map[string]*types.TaskSpec{
 							"a": {
 								FunctionRef: "noop",
-								Inputs: map[string]*types.TypedValue{
+								Inputs: map[string]*typedvalues.TypedValue{
 									types.InputMain: typedvalues.MustParse("inner1"),
 								},
 							},
 							"b": {
 								FunctionRef: "noop",
-								Inputs: map[string]*types.TypedValue{
+								Inputs: map[string]*typedvalues.TypedValue{
 									types.InputMain: typedvalues.MustParse("{output('a')}"),
 								},
 								Requires: map[string]*types.TaskDependencyParameters{
@@ -263,7 +263,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 			},
 			"finalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("output('nestedTask')"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -534,7 +534,7 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 			},
 			"t2": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("{$.Tasks.t1.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
@@ -545,7 +545,7 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 			},
 			"t3": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
+				Inputs: map[string]*typedvalues.TypedValue{
 					types.InputMain: typedvalues.MustParse("initial output 2"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{

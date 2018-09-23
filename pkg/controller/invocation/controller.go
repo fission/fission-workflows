@@ -170,7 +170,6 @@ func (cr *Controller) Tick(tick uint64) error {
 
 	// Long loop: to check if there are any orphans
 	if tick%50 == 0 {
-		log.Debug("Checking model caches for missing invocations")
 		err = cr.checkModelCaches()
 	}
 

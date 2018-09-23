@@ -30,7 +30,7 @@ func TestFormatRequest(t *testing.T) {
 		URL: reqURL,
 		// TODO verify that existing headers, query params, etc stay in tact.
 	}
-	source := map[string]*types.TypedValue{
+	source := map[string]*typedvalues.TypedValue{
 		types.InputMain:    unsafe(typedvalues.Parse(body)),
 		types.InputQuery:   unsafe(typedvalues.Parse(query)),
 		types.InputHeaders: unsafe(typedvalues.Parse(headers)),
@@ -142,7 +142,7 @@ func createRequest(method string, rawURL string, headers map[string]string, body
 	}
 }
 
-func unsafe(i *types.TypedValue, e error) *types.TypedValue {
+func unsafe(i *typedvalues.TypedValue, e error) *typedvalues.TypedValue {
 	if e != nil {
 		panic(e)
 	}

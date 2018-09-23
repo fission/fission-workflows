@@ -147,7 +147,7 @@ func TestScope(t *testing.T) {
 	assert.Equal(t, expected, resolvedString)
 }
 
-func mustParseExpr(s string) *types.TypedValue {
+func mustParseExpr(s string) *typedvalues.TypedValue {
 	tv := typedvalues.MustParse(s)
 	if !typedvalues.IsType(tv, typedvalues.TypeExpression) {
 		panic(fmt.Sprintf("Should be an expression, but was '%v'", tv.Type))

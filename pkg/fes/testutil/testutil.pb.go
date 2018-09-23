@@ -27,6 +27,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+// DummyEvent is a stub implementation of a fes.Event
 type DummyEvent struct {
 	Msg string `protobuf:"bytes,1,opt,name=msg" json:"msg,omitempty"`
 }

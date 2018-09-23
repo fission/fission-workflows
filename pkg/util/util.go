@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -111,5 +112,37 @@ func (e *SyncMapLen) Range(f func(key interface{}, value interface{}) bool) {
 func LogIfError(err error) {
 	if err != nil {
 		logrus.Error(err)
+	}
+}
+
+// Numeric is a representation
+type Number struct {
+	val float64 // Fix loss of precision in uint64 and int64
+}
+
+func (n Number) Value() interface{} {
+	// TODO return original type
+	return n.val
+}
+
+func ToNumber(val interface{}) (Number, error) {
+	switch t := val.(type) {
+	case float64:
+		return Number{val: t}, nil
+	case float32:
+		return Number{val: float64(t)}, nil
+	case int:
+		return Number{val: float64(t)}, nil
+	case int32:
+		return Number{val: float64(t)}, nil
+	case int16:
+		return Number{val: float64(t)}, nil
+	case int64:
+		return Number{val: float64(t)}, nil
+	case int8:
+		return Number{val: float64(t)}, nil
+	default:
+		return Number{}, errors.New("not a supported number (int, int8, int16, int32, int64, float32, " +
+			"and float64)")
 	}
 }
