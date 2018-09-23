@@ -77,7 +77,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 			panic(err)
 		}
 		time.Sleep(50 * time.Millisecond)
-		entity, err := cache.GetAggregate(fes.NewAggregate(aggregates.TypeWorkflowInvocation, wfiID))
+		entity, err := cache.GetAggregate(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: wfiID})
 		assert.NoError(t, err)
 		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity) // A bit hacky..
 	}()
@@ -153,9 +153,7 @@ func TestRuntime_Invoke(t *testing.T) {
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
-	cache := fes.NewSubscribedCache(context.Background(), fes.NewMapCache(), func() fes.Entity {
-		return aggregates.NewWorkflowInvocation("")
-	}, backend.Subscribe())
+	cache := fes.NewSubscribedCache(fes.NewMapCache(), aggregates.NewInvocationEntity, backend.Subscribe())
 	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(cache))
 	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, cache

@@ -91,7 +91,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNatsBackend_GetNonExistent(t *testing.T) {
-	key := fes.NewAggregate("nonExistentType", "nonExistentId")
+	key := fes.Aggregate{Type: "nonExistentType", Id: "nonExistentId"}
 
 	// check
 	events, err := backend.Get(key)
@@ -100,7 +100,7 @@ func TestNatsBackend_GetNonExistent(t *testing.T) {
 }
 
 func TestNatsBackend_Append(t *testing.T) {
-	key := fes.NewAggregate("someType", "someId")
+	key := fes.Aggregate{Type: "someType", Id: "someId"}
 	dummyEvent := &fes.DummyEvent{Msg: "dummy"}
 	event, err := fes.NewEvent(key, dummyEvent)
 	assert.NoError(t, err)
@@ -113,13 +113,13 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.Len(t, events, 1)
 	assert.Equal(t, event.GetType(), events[0].GetType())
 	assert.Equal(t, event.GetTimestamp().GetNanos(), events[0].GetTimestamp().GetNanos())
-	data, err := fes.UnmarshalEventData(events[0])
+	data, err := fes.ParseEventData(events[0])
 	assert.NoError(t, err)
 	assert.Equal(t, dummyEvent, data)
 }
 
 func TestNatsBackend_List(t *testing.T) {
-	subjects, err := backend.List(fes.ContainsMatcher(""))
+	subjects, err := backend.List(func(s string) bool { return true })
 	assert.NoError(t, err)
 	assert.NotEmpty(t, subjects)
 }

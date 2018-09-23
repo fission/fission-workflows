@@ -7,7 +7,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -42,7 +41,10 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		return wi.applyTaskEvent(event)
 	}
 
-	eventData, err := fes.UnmarshalEventData(event)
+	if err := wi.ensureNextEvent(event); err != nil {
+		return err
+	}
+	eventData, err := fes.ParseEventData(event)
 	if err != nil {
 		return err
 	}
@@ -59,41 +61,30 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 			Status: &types.WorkflowInvocationStatus{
 				Status:       types.WorkflowInvocationStatus_IN_PROGRESS,
 				Tasks:        map[string]*types.TaskInvocation{},
-				UpdatedAt:    event.GetTimestamp(),
 				DynamicTasks: map[string]*types.Task{},
 			},
 		}
 	case *events.InvocationCanceled:
 		wi.Status.Status = types.WorkflowInvocationStatus_ABORTED
-		wi.Status.UpdatedAt = event.GetTimestamp()
 		wi.Status.Error = m.GetError()
 	case *events.InvocationCompleted:
-		if wi.Status == nil {
-			wi.Status = &types.WorkflowInvocationStatus{}
-		}
-
 		wi.Status.Status = types.WorkflowInvocationStatus_SUCCEEDED
 		wi.Status.Output = m.GetOutput()
-		wi.Status.UpdatedAt = event.GetTimestamp()
 	case *events.InvocationTaskAdded:
 		task := m.GetTask()
 		if wi.Status.DynamicTasks == nil {
 			wi.Status.DynamicTasks = map[string]*types.Task{}
 		}
 		wi.Status.DynamicTasks[task.ID()] = task
-
-		log.WithFields(log.Fields{
-			"id":          task.ID(),
-			"functionRef": task.Spec.FunctionRef,
-		}).Debug("Added dynamic task.")
 	case *events.InvocationFailed:
 		wi.Status.Error = m.GetError()
 		wi.Status.Status = types.WorkflowInvocationStatus_FAILED
 	default:
-		log.WithFields(log.Fields{
-			"aggregate": wi.Aggregate(),
-		}).Warnf("Skipping unimplemented event: %T", eventData)
+		key := wi.Aggregate()
+		return fes.ErrUnsupportedEntityEvent.WithAggregate(&key).WithEvent(event)
 	}
+	wi.Metadata.Generation++
+	wi.Status.UpdatedAt = event.GetTimestamp()
 	return err
 }
 
@@ -120,7 +111,7 @@ func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	return nil
 }
 
-func (wi *WorkflowInvocation) GenericCopy() fes.Entity {
+func (wi *WorkflowInvocation) CopyEntity() fes.Entity {
 	n := &WorkflowInvocation{
 		WorkflowInvocation: wi.Copy(),
 	}
@@ -130,4 +121,20 @@ func (wi *WorkflowInvocation) GenericCopy() fes.Entity {
 
 func (wi *WorkflowInvocation) Copy() *types.WorkflowInvocation {
 	return proto.Clone(wi.WorkflowInvocation).(*types.WorkflowInvocation)
+}
+
+func NewInvocationEntity() fes.Entity {
+	return NewWorkflowInvocation("")
+}
+
+func (wi *WorkflowInvocation) ensureNextEvent(event *fes.Event) error {
+	if err := fes.ValidateEvent(event); err != nil {
+		return err
+	}
+
+	if event.Aggregate.Type != TypeWorkflowInvocation {
+		return fes.ErrUnsupportedEntityEvent.WithEntity(wi).WithEvent(event)
+	}
+	// TODO check sequence of event
+	return nil
 }

@@ -34,7 +34,7 @@ func BenchmarkRoundtripSingleKey(b *testing.B) {
 	// Generate test data
 	events := make([]*fes.Event, b.N)
 	for i := 0; i < b.N; i++ {
-		key := fes.NewAggregate("type", "id")
+		key := fes.Aggregate{Type: "type", Id: "id"}
 		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
 	}
 
@@ -56,7 +56,7 @@ func BenchmarkRoundtripManyKeys(b *testing.B) {
 	// Generate test data
 	events := make([]*fes.Event, b.N)
 	for i := 0; i < b.N; i++ {
-		key := fes.NewAggregate("type", fmt.Sprintf("%d", i))
+		key := fes.Aggregate{Type: "type", Id: fmt.Sprintf("%d", i)}
 		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
 	}
 
@@ -81,7 +81,7 @@ func BenchmarkRoundtripManyEvictions(b *testing.B) {
 	// Generate test data
 	events := make([]*fes.Event, b.N)
 	for i := 0; i < b.N; i++ {
-		key := fes.NewAggregate("type", fmt.Sprintf("%d", i))
+		key := fes.Aggregate{Type: "entity", Id: fmt.Sprintf("%d", i)}
 		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
 		events[i].Hints = &fes.EventHints{
 			Completed: true,
@@ -105,7 +105,7 @@ func TestBackendStoreFull(t *testing.T) {
 	n := 3
 	events := make([]*fes.Event, n)
 	for i := 0; i < n; i++ {
-		key := fes.NewAggregate("entity", fmt.Sprintf("%d", i))
+		key := fes.Aggregate{Type: "entity", Id: fmt.Sprintf("%d", i)}
 		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
 	}
 	for _, event := range events {
@@ -121,9 +121,9 @@ func TestBackendBufferEvict(t *testing.T) {
 	mem.MaxKeys = 3
 	n := 10
 	events := make([]*fes.Event, n)
-	mem.Append(newEvent(fes.NewAggregate("active", "1"), []byte("active stream")))
+	mem.Append(newEvent(fes.Aggregate{Type: "active", Id: "1"}, []byte("active stream")))
 	for i := 0; i < n; i++ {
-		key := fes.NewAggregate("entity", fmt.Sprintf("%d", i))
+		key := fes.Aggregate{Type: "entity", Id: fmt.Sprintf("%d", i)}
 		events[i] = newEvent(key, []byte(fmt.Sprintf("event-%d", i)))
 		events[i].Hints = &fes.EventHints{
 			Completed: true,
@@ -141,41 +141,43 @@ func TestBackendBufferEvict(t *testing.T) {
 func TestBackend_Append(t *testing.T) {
 	mem := setupBackend()
 
-	event := newEvent(fes.NewAggregate("type", "id"), []byte("event 1"))
+	event := newEvent(fes.Aggregate{Type: "type", Id: "id"}, []byte("event 1"))
 	err := mem.Append(event)
 	assert.NoError(t, err)
 	assert.Equal(t, mem.Len(), 1)
 
-	event2 := newEvent(fes.Aggregate{}, []byte("event 1"))
+	// Test if invalid event is rejected by the event store
+	event2 := newEvent(fes.Aggregate{Type: "type", Id: "id"}, []byte("event 1"))
+	event2.Aggregate = &fes.Aggregate{}
 	err = mem.Append(event2)
 	assert.EqualError(t, err, fes.ErrInvalidAggregate.Error())
 	assert.Equal(t, mem.Len(), 1)
 
 	// Event under existing aggregate
-	event3, err := fes.NewEvent(fes.NewAggregate("type", "id"), &wrappers.BytesValue{
+	event3, err := fes.NewEvent(fes.Aggregate{Type: "type", Id: "id"}, &wrappers.BytesValue{
 		Value: []byte("event 2"),
 	})
 	assert.NoError(t, err)
 	err = mem.Append(event3)
 	assert.NoError(t, err)
 	assert.Equal(t, mem.Len(), 1)
-	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("type", "id"))), 2)
+	assert.Equal(t, len(mem.mustGet(fes.Aggregate{Type: "type", Id: "id"})), 2)
 
 	// Event under new aggregate
-	event4, err := fes.NewEvent(fes.NewAggregate("Type", "other"), &wrappers.BytesValue{
+	event4, err := fes.NewEvent(fes.Aggregate{Type: "Type", Id: "other"}, &wrappers.BytesValue{
 		Value: []byte("event 1"),
 	})
 	assert.NoError(t, err)
 	err = mem.Append(event4)
 	assert.NoError(t, err)
 	assert.Equal(t, mem.Len(), 2)
-	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("Type", "other"))), 1)
-	assert.Equal(t, len(mem.mustGet(fes.NewAggregate("type", "id"))), 2)
+	assert.Equal(t, len(mem.mustGet(fes.Aggregate{Type: "Type", Id: "other"})), 1)
+	assert.Equal(t, len(mem.mustGet(fes.Aggregate{Type: "type", Id: "id"})), 2)
 }
 
 func TestBackend_GetMultiple(t *testing.T) {
 	mem := setupBackend()
-	key := fes.NewAggregate("type", "id")
+	key := fes.Aggregate{Type: "type", Id: "id"}
 	events := []*fes.Event{
 		newEvent(key, []byte("event 1")),
 		newEvent(key, []byte("event 2")),
@@ -194,7 +196,7 @@ func TestBackend_GetMultiple(t *testing.T) {
 
 func TestBackend_GetNonexistent(t *testing.T) {
 	mem := setupBackend()
-	key := fes.NewAggregate("type", "id")
+	key := fes.Aggregate{Type: "type", Id: "id"}
 	getEvents, err := mem.Get(key)
 	assert.NoError(t, err)
 	assert.EqualValues(t, []*fes.Event{}, getEvents)
@@ -202,7 +204,7 @@ func TestBackend_GetNonexistent(t *testing.T) {
 
 func TestBackend_Subscribe(t *testing.T) {
 	mem := setupBackend()
-	key := fes.NewAggregate("type", "id")
+	key := fes.Aggregate{Type: "type", Id: "id"}
 	sub := mem.Subscribe(pubsub.SubscriptionOptions{
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, key.Type),
 	})

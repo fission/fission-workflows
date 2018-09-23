@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 )
 
 // UID generates a unique id
@@ -105,4 +106,10 @@ func (e *SyncMapLen) Delete(id string) {
 
 func (e *SyncMapLen) Range(f func(key interface{}, value interface{}) bool) {
 	e.mp.Range(f)
+}
+
+func LogIfError(err error) {
+	if err != nil {
+		logrus.Error(err)
+	}
 }

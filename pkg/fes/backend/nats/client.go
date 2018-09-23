@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	defaultClient = "fes"
+	defaultClient  = "fes"
+	defaultCluster = "fes-cluster"
 )
 
 var (
@@ -80,6 +81,9 @@ func Connect(cfg Config) (*EventStore, error) {
 	if cfg.URL == "" {
 		cfg.URL = nats.DefaultURL
 	}
+	if cfg.Cluster == "" {
+		cfg.Cluster = defaultCluster
+	}
 	url := stan.NatsURL(cfg.URL)
 	conn, err := stan.Connect(cfg.Cluster, cfg.Client, url)
 	if err != nil {
@@ -96,6 +100,13 @@ func Connect(cfg Config) (*EventStore, error) {
 
 // Watch a aggregate type for new events. The events are emitted over the publisher interface.
 func (es *EventStore) Watch(aggregate fes.Aggregate) error {
+	if len(aggregate.Id) == 0 {
+		aggregate.Id = "*"
+	}
+	if err := fes.ValidateAggregate(&aggregate); err != nil {
+		return err
+	}
+
 	subject := fmt.Sprintf("%s.>", aggregate.Type)
 	sub, err := es.conn.Subscribe(subject, func(msg *stan.Msg) {
 		event, err := toEvent(msg)
@@ -142,6 +153,10 @@ func (es *EventStore) Close() error {
 
 // Append publishes (and persists) an event on the NATS message queue
 func (es *EventStore) Append(event *fes.Event) error {
+	if err := fes.ValidateEvent(event); err != nil {
+		return err
+	}
+
 	// TODO make generic / configurable whether to fold event into parent's Subject
 	subject := toSubject(*event.Aggregate)
 	if event.Parent != nil {
@@ -192,9 +207,9 @@ func (es *EventStore) Get(aggregate fes.Aggregate) ([]*fes.Event, error) {
 	return results, nil
 }
 
-// List returns all entities of which the subject matches the StringMatcher
-func (es *EventStore) List(matchFn fes.StringMatcher) ([]fes.Aggregate, error) {
-	subjects, err := es.conn.List(matchFn)
+// List returns all entities of which the subject matches the matcher. A nil matcher is considered a 'match-all'.
+func (es *EventStore) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
+	subjects, err := es.conn.List(matcher)
 	if err != nil {
 		return nil, err
 	}

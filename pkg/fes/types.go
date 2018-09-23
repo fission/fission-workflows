@@ -9,7 +9,6 @@ import (
 )
 
 // Entity is a entity that can be updated
-// TODO we need to keep more event-related information (such as current index)
 type Entity interface {
 	// Entity-specific
 	ApplyEvent(event *Event) error
@@ -19,13 +18,13 @@ type Entity interface {
 	// This is implemented by BaseEntity
 	Aggregate() Aggregate
 
-	// UpdateState mutates the current entity to the provided target state
+	// UpdateState mutates the current entity to the provided entityFactory state
 	//
 	// This is implemented by BaseEntity, can be overridden for performance approach
 	UpdateState(targetState Entity) error
 
 	// Copy copies the actual wrapped object. This is useful to get a snapshot of the state.
-	GenericCopy() Entity
+	CopyEntity() Entity
 }
 
 type EventAppender interface {
@@ -41,7 +40,7 @@ type Backend interface {
 	List(matcher StringMatcher) ([]Aggregate, error)
 }
 
-// Projector projects events into an entity
+// Projector projects events onto an entity
 type Projector interface {
 	Project(target Entity, events ...*Event) error
 }
@@ -92,13 +91,55 @@ func newNotification(entity Entity, event *Event) *Notification {
 	}
 }
 
+// EventStoreErr is the base error type returned by functions in the fes package.
+//
+// Based on the context it provides additional information, such as the aggregate and event related to the error.
 type EventStoreErr struct {
+	// S is the description of the error. (required)
 	S string
+
+	// K is the aggregate related to the error. (optional)
 	K *Aggregate
+
+	// E is the event related to the error. (optional)
+	E *Event
+
+	// C is the underlying cause of the error. (optional)
+	C error
 }
 
 func (err *EventStoreErr) WithAggregate(aggregate *Aggregate) *EventStoreErr {
 	err.K = aggregate
+	return err
+}
+
+func (err *EventStoreErr) WithEntity(entity Entity) *EventStoreErr {
+	key := entity.Aggregate()
+	err.K = &key
+	return err
+}
+
+func (err *EventStoreErr) WithEvent(event *Event) *EventStoreErr {
+	err.E = event
+	if err.K == nil {
+		return err.WithAggregate(event.Aggregate)
+	}
+	return err
+}
+
+func (err *EventStoreErr) Is(other error) bool {
+	if err != nil && other == nil {
+		return false
+	}
+	esErr, ok := other.(*EventStoreErr)
+	if !ok {
+		return false
+	}
+	return esErr.S == err.S
+}
+
+func (err *EventStoreErr) WithError(cause error) *EventStoreErr {
+	err.C = cause
 	return err
 }
 
@@ -111,6 +152,11 @@ func (err *EventStoreErr) Error() string {
 }
 
 var (
-	ErrInvalidAggregate   = &EventStoreErr{S: "invalid aggregate"}
-	ErrEventStoreOverflow = &EventStoreErr{S: "event store out of space"}
+	ErrInvalidAggregate       = &EventStoreErr{S: "invalid aggregate"}
+	ErrInvalidEvent           = &EventStoreErr{S: "invalid event"}
+	ErrInvalidEntity          = &EventStoreErr{S: "invalid entity"}
+	ErrEventStoreOverflow     = &EventStoreErr{S: "event store out of space"}
+	ErrUnsupportedEntityEvent = &EventStoreErr{S: "event not supported"}
+	ErrCorruptedEventPayload  = &EventStoreErr{S: "failed to parse event payload"}
+	ErrEntityNotFound         = &EventStoreErr{S: "entity not found"}
 )

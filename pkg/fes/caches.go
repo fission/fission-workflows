@@ -1,8 +1,6 @@
 package fes
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -21,8 +19,6 @@ const (
 )
 
 var (
-	ErrNotFound = errors.New("could not find entity")
-
 	cacheCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "fes",
 		Subsystem: "cache",
@@ -61,23 +57,17 @@ func NewNamedMapCache(name string) *MapCache {
 }
 
 func (rc *MapCache) Get(entity Entity) error {
-	if entity == nil {
-		return errors.New("entity is nil")
-	}
-
-	ref := entity.Aggregate()
-	err := validateAggregate(ref)
-	if err != nil {
+	if err := ValidateEntity(entity); err != nil {
 		return err
 	}
 
+	ref := entity.Aggregate()
 	cached, err := rc.GetAggregate(ref)
 	if err != nil {
 		return err
 	}
-
 	if cached == nil {
-		return ErrNotFound
+		return ErrEntityNotFound.WithEntity(entity)
 	}
 
 	e := entity.UpdateState(cached)
@@ -86,8 +76,7 @@ func (rc *MapCache) Get(entity Entity) error {
 }
 
 func (rc *MapCache) GetAggregate(aggregate Aggregate) (Entity, error) {
-	err := validateAggregate(aggregate)
-	if err != nil {
+	if err := ValidateAggregate(&aggregate); err != nil {
 		return nil, err
 	}
 
@@ -107,11 +96,10 @@ func (rc *MapCache) GetAggregate(aggregate Aggregate) (Entity, error) {
 }
 
 func (rc *MapCache) Put(entity Entity) error {
-	ref := entity.Aggregate()
-	err := validateAggregate(ref)
-	if err != nil {
+	if err := ValidateEntity(entity); err != nil {
 		return err
 	}
+	ref := entity.Aggregate()
 
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
@@ -124,6 +112,9 @@ func (rc *MapCache) Put(entity Entity) error {
 }
 
 func (rc *MapCache) Invalidate(ref *Aggregate) {
+	if err := ValidateAggregate(ref); err != nil {
+		return
+	}
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
 	delete(rc.contents[ref.Type], ref.Id)
@@ -142,39 +133,40 @@ func (rc *MapCache) List() []Aggregate {
 	return results
 }
 
-// A SubscribedCache is subscribed to some event emitter, using a mutex to ensure thread safety
+// A SubscribedCache is subscribed to an event emitter
 type SubscribedCache struct {
 	pubsub.Publisher
 	CacheReaderWriter
-	ts     time.Time
-	target func() Entity // TODO extract to a TypedSubscription
+	createdAt     time.Time
+	entityFactory func() Entity
+	closeC        chan struct{}
 }
 
-func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target func() Entity, sub *pubsub.Subscription) *SubscribedCache {
+func NewSubscribedCache(cache CacheReaderWriter, factory func() Entity, sub *pubsub.Subscription) *SubscribedCache {
 	c := &SubscribedCache{
 		Publisher:         pubsub.NewPublisher(),
 		CacheReaderWriter: cache,
-		target:            target,
-		ts:                time.Now(),
+		entityFactory:     factory,
+		createdAt:         time.Now(),
 	}
 
+	c.closeC = make(chan struct{})
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-c.closeC:
 				logrus.Debug("SubscribedCache: listener stopped.")
 				return
-			case msg := <-sub.Ch:
-				// Discard invalid messages
-				event, ok := msg.(*Event)
+			case e := <-sub.Ch:
+				event, ok := e.(*Event)
 				if !ok {
-					logrus.WithField("msg", msg).Error("Received a malformed message. Ignoring.")
+					logrus.WithField("event", e).Error("Ignoring received malformed event.")
 					continue
 				}
-				logrus.WithField("msg", msg.Labels()).Debug("EvalCache received new event.")
-				err := c.ApplyEvent(event)
+				logrus.WithField("msg", e.Labels()).Debug("SubscribedCache: received event.")
+				err := c.applyEvent(event)
 				if err != nil {
-					logrus.WithField("err", err).Error("Failed to handle event. Continuing.")
+					logrus.WithField("event", event).Errorf("Failed to handle event: %v", err)
 				}
 			}
 		}
@@ -183,7 +175,9 @@ func NewSubscribedCache(ctx context.Context, cache CacheReaderWriter, target fun
 	return c
 }
 
-func (uc *SubscribedCache) ApplyEvent(event *Event) error {
+// applyEvent applies an event to the cache. It retrieves the corresponding entity from the cache, copies it,
+// applies the event to it, and replaces the old with the new entity in the cache.
+func (uc *SubscribedCache) applyEvent(event *Event) error {
 	logrus.WithFields(logrus.Fields{
 		PubSubLabelEventID:       event.Id,
 		PubSubLabelEventType:     event.Type,
@@ -191,142 +185,151 @@ func (uc *SubscribedCache) ApplyEvent(event *Event) error {
 		PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
-	cached, err := uc.GetAggregate(*event.GetAggregate())
+	if err := ValidateEvent(event); err != nil {
+		return err
+	}
+
+	// Attempt to fetch the entity from the cache.
+	entity, err := uc.getOrCreateAggregateForEvent(event)
 	if err != nil {
 		return err
 	}
 
-	if cached == nil {
-		if event.Parent != nil {
-			c, err := uc.GetAggregate(*event.Parent)
-			if err != nil {
-				return err
-			}
-			cached = c
-		} else {
-			cached = uc.target()
-		}
+	// Clone the entity to avoid race conflicts with subscribers of the cache.
+	// TODO maybe safer and more readable to replace implementation by a immutable projection?
+	entityCopy := entity.CopyEntity()
 
-		if cached == nil {
-			return ErrNotFound
-		}
-	}
-
-	// clone to avoid race conflicts with subscribers of the cache.
-	cached = cached.GenericCopy()
-
-	err = Project(cached, event)
+	// Apply the event on to the new copy of the entity
+	err = Project(entityCopy, event)
 	if err != nil {
 		return err
 	}
 
-	err = uc.Put(cached)
+	// Replace the old entity in the cache with the new (copied) entity
+	err = uc.Put(entityCopy)
 	if err != nil {
 		return err
 	}
 
-	// Do not publish replayed events as notifications
-	// TODO replace with a token or flag that cache has cached up.
+	// Do not publish replayed events as notifications.
+	// We assume that this includes all events with a timestamp of before the cache was created.
 	ets, _ := ptypes.Timestamp(event.Timestamp)
-	if ets.After(uc.ts) {
-		n := newNotification(cached, event)
+	if ets.After(uc.createdAt) {
+		// Publish the event (along with the updated entity) to subscribers
+		n := newNotification(entityCopy, event)
 		logrus.WithFields(logrus.Fields{
 			"event.id":          event.Id,
 			"aggregate.id":      event.Aggregate.Id,
 			"aggregate.type":    event.Aggregate.Type,
 			"notification.type": n.EventType,
-		}).Debug("EvalCache handling done. Sending out Notification.")
-		err = uc.Publisher.Publish(n)
+		}).Debug("SubscribedCache: publishing notification of event.")
+		return uc.Publisher.Publish(n)
 	}
-	return err
+	return nil
 }
 
-// FallbackCache looks into a backing data store in case there is a cache miss
-type FallbackCache struct {
-	cache  CacheReaderWriter
-	client Backend
-	domain StringMatcher
-	target func() Entity // TODO extract to a TypedSubscription
+func (uc *SubscribedCache) Close() error {
+	close(uc.closeC)
+	return nil
 }
 
-func (c *FallbackCache) List() []Aggregate {
-	esAggregates, err := c.client.List(c.domain)
+func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *Event) (Entity, error) {
+	cached, err := uc.GetAggregate(*event.Aggregate)
 	if err != nil {
-		logrus.WithField("matcher", c.domain).
-			WithField("err", err).
-			Error("Failed to list event store aggregates")
+		return nil, err
 	}
-	for _, aggregate := range esAggregates {
-		entity, err := c.cache.GetAggregate(aggregate)
-		if err != nil || entity == nil {
-			events, err := c.client.Get(aggregate)
-			if err != nil {
-				logrus.WithField("err", err).Error("failed to get missed entity from event store")
-				continue
-			}
-			e := c.target()
-			err = Project(e, events...)
-			if err != nil {
-				logrus.WithField("err", err).Error("failed to project missed entity")
-				continue
-			}
-			err = c.cache.Put(e)
-			if err != nil {
-				logrus.WithField("err", err).Error("failed to store missed entity")
-				continue
-			}
-		}
-	}
-	return esAggregates
-}
-
-func (c *FallbackCache) GetAggregate(a Aggregate) (Entity, error) {
-	cached, err := c.cache.GetAggregate(a)
-	if err != nil {
-		if err == ErrNotFound {
-			logrus.WithField("entity", a).Info("EvalCache miss! Checking backing event store.")
-			entity := c.target()
-			err := c.getFromEventStore(a, entity)
+	if cached == nil {
+		// Case: for task events the parent entity (the invocation) handles the events.
+		// So we need to send the event there.
+		if event.Parent != nil {
+			c, err := uc.GetAggregate(*event.Parent)
 			if err != nil {
 				return nil, err
 			}
-			return entity, nil
+			cached = c
+		} else {
+			cached = uc.entityFactory()
+		}
+		// We truly can't find a entity responsible for the event
+		if cached == nil {
+			return nil, ErrEntityNotFound.WithEvent(event)
 		}
 	}
 	return cached, nil
 }
 
-func (c *FallbackCache) Get(entity Entity) error {
-	err := c.cache.Get(entity)
-	if err != nil {
-		if err == ErrNotFound {
-			logrus.WithField("entity", entity.Aggregate()).Info("EvalCache miss! Checking backing event store.")
-			return c.getFromEventStore(entity.Aggregate(), entity)
-		}
-	}
-	return nil
+// LoadingCache looks into a backing data store in case there is a cache miss
+type LoadingCache struct {
+	cache         CacheReaderWriter
+	client        Backend
+	entityFactory func() Entity
 }
 
-func (c *FallbackCache) getFromEventStore(aggregate Aggregate, target Entity) error {
-	// Look up relevant events in event store
-	events, err := c.client.Get(aggregate)
-	if err != nil {
-		return err
+func NewLoadingCache(cache CacheReaderWriter, client Backend, entityFactory func() Entity) *LoadingCache {
+	return &LoadingCache{
+		cache:         cache,
+		client:        client,
+		entityFactory: entityFactory,
 	}
-	if len(events) == 0 {
-		return ErrNotFound
+}
+
+// TODO provide option to force fallback or only do quick cache lookup.
+// TODO sync cache with store while you are at it.
+func (c *LoadingCache) List() []Aggregate {
+	// First c
+	esAggregates, err := c.client.List(nil)
+	if err != nil {
+		logrus.Errorf("Failed to list event store aggregates: %v", err)
+	}
+	return esAggregates
+}
+
+func (c *LoadingCache) GetAggregate(a Aggregate) (Entity, error) {
+	if err := ValidateAggregate(&a); err != nil {
+		return nil, err
 	}
 
-	// Reconstruct target
-	err = Project(target, events...)
+	entity := c.entityFactory()
+	err := c.getFromEventStore(a, entity)
 	if err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (c *LoadingCache) Get(entity Entity) error {
+	if err := ValidateEntity(entity); err != nil {
 		return err
 	}
 
-	// EvalCache target
-	err = c.cache.Put(target) // TODO ensure target is a copy
+	return c.getFromEventStore(entity.Aggregate(), entity)
+}
+
+// getFromEventStore assumes that it can mutate target entity
+func (c *LoadingCache) getFromEventStore(aggregate Aggregate, target Entity) error {
+	err := c.cache.Get(target)
 	if err != nil {
-		logrus.WithField("target", target).WithField("err", err).Warn("Failed to cache fetched target")
+		if !ErrEntityNotFound.Is(err) {
+			return err
+		}
+
+		// Look up relevant events in event store
+		events, err := c.client.Get(aggregate)
+		if err != nil {
+			return err
+		}
+		if len(events) == 0 {
+			return ErrEntityNotFound.WithAggregate(&aggregate).WithEntity(target)
+		}
+
+		// Reconstruct entity by replaying all events
+		err = Project(target, events...)
+		if err != nil {
+			return err
+		}
+
+		// EvalCache entityFactory
+		return c.cache.Put(target) // TODO ensure entity is a copy
 	}
 
 	return nil

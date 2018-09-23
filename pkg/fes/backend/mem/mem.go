@@ -103,7 +103,7 @@ func NewBackend(cfgs ...Config) *Backend {
 }
 
 func (b *Backend) Append(event *fes.Event) error {
-	if err := fes.ValidateAggregate(event.Aggregate); err != nil {
+	if err := fes.ValidateEvent(event); err != nil {
 		return err
 	}
 	key := *event.Aggregate
@@ -167,10 +167,10 @@ func (b *Backend) Len() int {
 	return int(atomic.LoadInt32(b.entries))
 }
 
-func (b *Backend) List(matchFn fes.StringMatcher) ([]fes.Aggregate, error) {
+func (b *Backend) List(matcher fes.StringMatcher) ([]fes.Aggregate, error) {
 	var results []fes.Aggregate
 	for key := range b.store {
-		if matchFn(key.Type + key.Id) {
+		if matcher == nil || matcher(key.Type+key.Id) {
 			results = append(results, key)
 		}
 	}
