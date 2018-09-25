@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -60,9 +61,32 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 	if err != nil {
 		return nil, err
 	}
+	// Ensure that the default method is GET (not POST).
+	req.Method = httpconv.FormatMethod(spec.GetInputs(), http.MethodGet)
+
+	logrus.Infof("HTTP request: %s %v", req.Method, req.URL)
+	if logrus.GetLevel() == logrus.DebugLevel {
+		fmt.Println("--- HTTP Request ---")
+		bs, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			logrus.Error(err)
+		}
+		fmt.Println(string(bs))
+		fmt.Println("--- HTTP Request end ---")
+	}
 	resp, err := r.Client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	logrus.Infof("HTTP response: %d - %s", resp.StatusCode, resp.Header.Get("Content-Type"))
+	if logrus.GetLevel() == logrus.DebugLevel {
+		fmt.Println("--- HTTP Response ---")
+		bs, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			logrus.Error(err)
+		}
+		fmt.Println(string(bs))
+		fmt.Println("--- HTTP Response end ---")
 	}
 
 	output, err := httpconv.ParseResponse(resp)

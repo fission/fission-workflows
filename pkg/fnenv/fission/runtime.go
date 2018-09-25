@@ -3,7 +3,9 @@ package fission
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -86,6 +88,15 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
 	ctxLog.Infof("Invoking Fission function: '%v'.", req.URL)
+	if logrus.GetLevel() == logrus.DebugLevel {
+		fmt.Println("--- HTTP Request ---")
+		bs, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			logrus.Error(err)
+		}
+		fmt.Println(string(bs))
+		fmt.Println("--- HTTP Request end ---")
+	}
 	resp, err := http.DefaultClient.Do(req.WithContext(cfg.Ctx))
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
@@ -95,15 +106,22 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	fnenv.FnActive.WithLabelValues(Name).Dec()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 
+	ctxLog.Infof("Fission function response: %d - %s", resp.StatusCode, resp.Header.Get("Content-Type"))
+	if logrus.GetLevel() == logrus.DebugLevel {
+		fmt.Println("--- HTTP Response ---")
+		bs, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			logrus.Error(err)
+		}
+		fmt.Println(string(bs))
+		fmt.Println("--- HTTP Response end ---")
+	}
+
 	// Parse output
-	output, err := httpconv.ParseBody(resp.Body, resp.Header.Get("Content-Type"))
+	output, err := httpconv.ParseResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse output: %v", err)
 	}
-
-	ctxLog.Infof("[%s][status]: %v", fnRef.ID, resp.StatusCode)
-	ctxLog.Infof("[%s][Content-Type]: %v ", fnRef.ID, resp.Header.Get("Content-Type"))
-	ctxLog.Infof("[%s][output]: '%s'", fnRef.ID, typedvalues.MustFormat(&output))
 
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
@@ -169,9 +187,11 @@ func createFunctionMeta(fn types.FnRef) *metav1.ObjectMeta {
 }
 
 func (fe *FunctionEnv) createRouterURL(fn types.FnRef) string {
-	if fn.Namespace == metav1.NamespaceDefault {
-		return fe.routerURL + "/fission-function/" + fn.ID
+	id := strings.TrimLeft(fn.ID, "/")
+	baseUrl := strings.TrimRight(fe.routerURL, "/")
+	var ns string
+	if fn.Namespace != metav1.NamespaceDefault && len(fn.Namespace) != 0 {
+		ns = strings.Trim(fn.Namespace, "/") + "/"
 	}
-
-	return fe.routerURL + "/fission-function/" + fn.Namespace + "/" + fn.ID
+	return fmt.Sprintf("%s/fission-function/%s%s", baseUrl, ns, id)
 }

@@ -28,7 +28,7 @@ const (
 	contentTypeWorkflow = "application/vnd.fission.workflows.task"     // Default format: protobuf, +json for json
 	contentTypeProtobuf = "application/protobuf"                       // Default format: protobuf, +json for json
 	contentTypeDefault  = contentTypeText
-	methodDefault       = http.MethodPost
+	DefaultMethod       = http.MethodPost
 )
 
 // ParseRequest maps a HTTP request to a target map of typedvalues.
@@ -211,7 +211,7 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 	}
 
 	// Map method input to HTTP method
-	method := FormatMethod(source)
+	method := FormatMethod(source, DefaultMethod)
 	target.Method = method
 
 	// Map query input to URL query
@@ -239,7 +239,7 @@ func FormatRequest(source map[string]*types.TypedValue, target *http.Request) er
 	return nil
 }
 
-func FormatMethod(inputs map[string]*types.TypedValue) string {
+func FormatMethod(inputs map[string]*types.TypedValue, defaultMethod string) string {
 	tv, ok := inputs[types.InputMethod]
 	if ok && tv != nil {
 		contentType, err := typedvalues.FormatString(tv)
@@ -248,7 +248,7 @@ func FormatMethod(inputs map[string]*types.TypedValue) string {
 		}
 		logrus.Errorf("Invalid method in inputs: %+v", tv)
 	}
-	return methodDefault
+	return defaultMethod
 }
 
 // FUTURE: support multivalued query params

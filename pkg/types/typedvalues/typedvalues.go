@@ -85,7 +85,7 @@ func (pf *ComposedParserFormatter) Parse(ctx Parser, i interface{}) (*types.Type
 		logrus.Debugf("Trying to parse with: %T", parser)
 		tv, err := parser.Parse(ctx, i)
 		if err != nil {
-			logrus.Debugf("Parser error %t", err)
+			logrus.Debugf("Parser error: %v", err)
 			if isErrUnsupported(err) {
 				continue
 			} else {
@@ -94,7 +94,7 @@ func (pf *ComposedParserFormatter) Parse(ctx Parser, i interface{}) (*types.Type
 		}
 		return tv, nil
 	}
-	logrus.Debugf("No parsers for %t", i)
+	logrus.Debugf("No parsers for %T", i)
 	return nil, TypedValueErr{
 		src: i,
 		err: ErrUnsupportedType,
