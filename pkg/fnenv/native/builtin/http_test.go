@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,11 +30,15 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, string(data))
+		bs, err := json.Marshal(string(data))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Fprint(w, string(bs))
 	}))
 	defer ts.Close()
 
-	fn := &FunctionHTTP{}
+	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
@@ -56,7 +61,7 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	fn := &FunctionHTTP{}
+	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*types.TypedValue{
@@ -68,6 +73,6 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 			}),
 		},
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, "expected error\n", typedvalues.MustFormat(out))
+	assert.Error(t, err)
+	assert.Nil(t, out)
 }

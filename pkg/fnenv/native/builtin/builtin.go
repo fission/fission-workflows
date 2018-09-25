@@ -19,7 +19,7 @@ var DefaultBuiltinFunctions = map[string]native.InternalFunction{
 	Repeat:     &FunctionRepeat{},
 	Javascript: NewFunctionJavascript(),
 	Fail:       &FunctionFail{},
-	Http:       &FunctionHTTP{},
+	Http:       NewFunctionHTTP(),
 	Foreach:    &FunctionForeach{},
 	Switch:     &FunctionSwitch{},
 	While:      &FunctionWhile{},

@@ -2,29 +2,18 @@ package types
 
 import (
 	"errors"
-	"fmt"
-	"regexp"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"net/url"
+	"strings"
 )
 
 const (
 	RuntimeDelimiter = "://"
 )
 
-const (
-	// These are the index of capture groups for the FnRef regex
-	groupFnRef = iota
-	groupRuntime
-	groupNamespace
-	groupRuntimeID
-)
-
 var (
-	fnRefReg        = regexp.MustCompile(fmt.Sprintf("^(?:(\\w+)%s)?(?:([a-zA-Z0-9][a-zA-Z0-9_-]{1,128})/)?(\\w+)$", RuntimeDelimiter))
-	ErrInvalidFnRef = errors.New("invalid function reference")
-	ErrNoRuntime    = errors.New("function reference does not contain a runtime")
-	ErrNoRuntimeID  = errors.New("function reference does not contain a runtimeId")
+	ErrInvalidFnRef   = errors.New("invalid function reference")
+	ErrFnRefNoRuntime = errors.New("fnref has empty runtime")
+	ErrFnRefNoID      = errors.New("fnref has empty ID")
 )
 
 func (m FnRef) Format() string {
@@ -42,16 +31,11 @@ func (m FnRef) Format() string {
 }
 
 func (m FnRef) IsValid() bool {
-	return IsFnRef(m.Format())
+	return ValidateFnRef(m, false) == nil
 }
 
 func (m FnRef) IsEmpty() bool {
-	return m.ID == "" && m.Runtime == ""
-}
-
-func IsFnRef(s string) bool {
-	_, err := ParseFnRef(s)
-	return err == nil
+	return m.ID == "" && m.Runtime == "" && m.Namespace == ""
 }
 
 func NewFnRef(runtime, ns, id string) FnRef {
@@ -65,20 +49,35 @@ func NewFnRef(runtime, ns, id string) FnRef {
 	}
 }
 
+func ValidateFnRef(fnref FnRef, allowEmptyNamespace bool) error {
+	if len(fnref.ID) == 0 {
+		return ErrFnRefNoID
+	}
+	if !allowEmptyNamespace && len(fnref.Runtime) == 0 {
+		return ErrFnRefNoRuntime
+	}
+
+	return nil
+}
+
 func ParseFnRef(s string) (FnRef, error) {
-	matches := fnRefReg.FindStringSubmatch(s)
-	if matches == nil {
+	u, err := url.Parse(s)
+	if err != nil {
 		return FnRef{}, ErrInvalidFnRef
 	}
-
-	ns := matches[groupNamespace]
-	if len(ns) == 0 {
-		ns = metav1.NamespaceDefault
+	scheme := u.Scheme
+	ns := u.Host
+	id := strings.Trim(u.Path, "/")
+	if len(id) == 0 {
+		id = strings.Trim(u.Host, "/")
+		ns = ""
 	}
-
+	if len(id) == 0 {
+		return FnRef{}, ErrInvalidFnRef
+	}
 	return FnRef{
-		Runtime:   matches[groupRuntime],
+		Runtime:   scheme,
 		Namespace: ns,
-		ID:        matches[groupRuntimeID],
+		ID:        id,
 	}, nil
 }

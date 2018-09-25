@@ -19,9 +19,13 @@ func NewResolver(controller *client.Client) *Resolver {
 func (re *Resolver) Resolve(ref types.FnRef) (string, error) {
 	// Currently we just use the controller API to check if the function exists.
 	log.Infof("Resolving function: %s", ref.ID)
+	ns := ref.Namespace
+	if len(ns) == 0 {
+		ns = metav1.NamespaceDefault
+	}
 	_, err := re.controller.FunctionGet(&metav1.ObjectMeta{
 		Name:      ref.ID,
-		Namespace: ref.Namespace,
+		Namespace: ns,
 	})
 	if err != nil {
 		return "", err
