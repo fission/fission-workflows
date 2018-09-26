@@ -28,7 +28,7 @@ func TestResolveTestRootScopePath(t *testing.T) {
 		t.Error(err)
 	}
 
-	resolvedString, err := typedvalues.Format(resolved)
+	resolvedString, err := typedvalues.Unwrap(resolved)
 	if err != nil {
 		t.Error(err)
 	}
@@ -44,7 +44,7 @@ func TestResolveTestScopePath(t *testing.T) {
 	resolved, err := exprParser.Resolve(rootScope, currentTask, mustParseExpr("{"+varCurrentTask+"}"))
 	assert.NoError(t, err)
 
-	resolvedString, err := typedvalues.Format(resolved)
+	resolvedString, err := typedvalues.Unwrap(resolved)
 	assert.NoError(t, err)
 
 	assert.Equal(t, currentTask, resolvedString)
@@ -58,7 +58,7 @@ func TestResolveLiteral(t *testing.T) {
 	resolved, err := exprParser.Resolve(rootScope, "output", mustParseExpr(fmt.Sprintf("{'%s'}", expected)))
 	assert.NoError(t, err)
 
-	resolvedString, _ := typedvalues.Format(resolved)
+	resolvedString, _ := typedvalues.Unwrap(resolved)
 	assert.Equal(t, expected, resolvedString)
 }
 
@@ -71,7 +71,7 @@ func TestResolveTransformation(t *testing.T) {
 	resolved, err := exprParser.Resolve(rootScope, "", mustParseExpr(fmt.Sprintf("{'%s'.toUpperCase()}", src)))
 	assert.NoError(t, err)
 
-	resolvedString, _ := typedvalues.Format(resolved)
+	resolvedString, _ := typedvalues.Unwrap(resolved)
 	assert.Equal(t, expected, resolvedString)
 }
 
@@ -82,14 +82,14 @@ func TestResolveInjectedFunction(t *testing.T) {
 	resolved, err := exprParser.Resolve(rootScope, "", mustParseExpr("{uid()}"))
 	assert.NoError(t, err)
 
-	resolvedString, _ := typedvalues.Format(resolved)
+	resolvedString, _ := typedvalues.Unwrap(resolved)
 
 	assert.NotEmpty(t, resolvedString)
 }
 
 func TestScope(t *testing.T) {
 	expected := "hello world"
-	expectedOutput, _ := typedvalues.Parse(expected)
+	expectedOutput, _ := typedvalues.Wrap(expected)
 
 	actualScope, _ := NewScope(&types.Workflow{
 		Metadata: &types.ObjectMetadata{
@@ -143,14 +143,14 @@ func TestScope(t *testing.T) {
 	resolved, err := exprParser.Resolve(actualScope, "fooTask", mustParseExpr("{$.Tasks.fooTask.Output}"))
 	assert.NoError(t, err)
 
-	resolvedString, _ := typedvalues.Format(resolved)
+	resolvedString, _ := typedvalues.Unwrap(resolved)
 	assert.Equal(t, expected, resolvedString)
 }
 
 func mustParseExpr(s string) *typedvalues.TypedValue {
-	tv := typedvalues.MustParse(s)
-	if !typedvalues.IsType(tv, typedvalues.TypeExpression) {
-		panic(fmt.Sprintf("Should be an expression, but was '%v'", tv.Type))
+	tv := typedvalues.MustWrap(s)
+	if tv.ValueType() != typedvalues.TypeExpression {
+		panic(fmt.Sprintf("Should be %v, but was '%v'", typedvalues.TypeExpression, tv.ValueType()))
 	}
 
 	return tv

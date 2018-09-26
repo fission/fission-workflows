@@ -13,7 +13,7 @@ const (
 	FailInputMsg = types.InputMain
 )
 
-var defaultErrMsg = typedvalues.MustParse("fail function triggered")
+var defaultErrMsg = typedvalues.MustWrap("fail function triggered")
 
 /*
 FunctionFail is a function that always fails. This can be used to short-circuit workflows in
@@ -58,7 +58,7 @@ func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 		"output": output,
 	}).Info("Internal Fail-function invoked.")
 
-	msg, err := typedvalues.Format(output)
+	msg, err := typedvalues.Unwrap(output)
 	if err != nil {
 		return nil, err
 	}

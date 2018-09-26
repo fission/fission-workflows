@@ -1,9 +1,11 @@
 package httpconv
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"testing"
@@ -27,23 +29,25 @@ func TestFormatRequest(t *testing.T) {
 		panic(err)
 	}
 	target := &http.Request{
-		URL: reqURL,
-		// TODO verify that existing headers, query params, etc stay in tact.
+		URL:    reqURL,
+		Header: http.Header{},
 	}
 	source := map[string]*typedvalues.TypedValue{
-		types.InputMain:    unsafe(typedvalues.Parse(body)),
-		types.InputQuery:   unsafe(typedvalues.Parse(query)),
-		types.InputHeaders: unsafe(typedvalues.Parse(headers)),
-		types.InputMethod:  unsafe(typedvalues.Parse(method)),
+		types.InputMain:    typedvalues.MustWrap(body),
+		types.InputQuery:   typedvalues.MustWrap(query),
+		types.InputHeaders: typedvalues.MustWrap(headers),
+		types.InputMethod:  typedvalues.MustWrap(method),
 	}
 
 	err = FormatRequest(source, target)
 	assert.NoError(t, err)
-
+	bss, _ := httputil.DumpRequest(target, true)
+	fmt.Println(string(bss))
 	// Check body
 	bs, err := ioutil.ReadAll(target.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(bs))
+	assert.Equal(t, target.Header.Get(headerContentType), "text/plain")
 
 	// Check headers
 	assert.Equal(t, headers["Header-Key"], target.Header["Header-Key"][0])
@@ -66,17 +70,17 @@ func TestParseRequestComplete(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check body
-	ibody, err := typedvalues.Format(target[types.InputMain])
+	ibody, err := typedvalues.Unwrap(target[types.InputBody])
 	assert.NoError(t, err)
 	assert.Equal(t, body, ibody)
 
 	// Check method
-	method, err := typedvalues.Format(target[types.InputMethod])
+	method, err := typedvalues.Unwrap(target[types.InputMethod])
 	assert.NoError(t, err)
 	assert.Equal(t, http.MethodPut, method)
 
 	// Check headers
-	rawHeader, err := typedvalues.Format(target[types.InputHeaders])
+	rawHeader, err := typedvalues.Unwrap(target[types.InputHeaders])
 	assert.NoError(t, err)
 	headers := rawHeader.(map[string]interface{})
 	assert.IsType(t, map[string]interface{}{}, rawHeader)
@@ -84,7 +88,7 @@ func TestParseRequestComplete(t *testing.T) {
 	assert.Equal(t, nil, headers["nonExistent"])
 
 	// Check query
-	rawQuery, err := typedvalues.Format(target[types.InputQuery])
+	rawQuery, err := typedvalues.Unwrap(target[types.InputQuery])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawQuery)
 	query := rawQuery.(map[string]interface{})
@@ -103,24 +107,24 @@ func TestParseRequestMinimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check body
-	ibody, err := typedvalues.Format(target[types.InputMain])
+	ibody, err := typedvalues.Unwrap(target[types.InputBody])
 	assert.NoError(t, err)
 	assert.Equal(t, body, ibody)
 
 	// Check method
-	method, err := typedvalues.Format(target[types.InputMethod])
+	method, err := typedvalues.Unwrap(target[types.InputMethod])
 	assert.NoError(t, err)
 	assert.Equal(t, http.MethodPut, method)
 
 	// Check headers
-	rawHeader, err := typedvalues.Format(target[types.InputHeaders])
+	rawHeader, err := typedvalues.Unwrap(target[types.InputHeaders])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawHeader)
 	headers := rawHeader.(map[string]interface{})
 	assert.Equal(t, nil, headers["nonExistent"])
 
 	// Check query
-	rawQuery, err := typedvalues.Format(target[types.InputQuery])
+	rawQuery, err := typedvalues.Unwrap(target[types.InputQuery])
 	assert.NoError(t, err)
 	assert.IsType(t, map[string]interface{}{}, rawQuery)
 	query := rawQuery.(map[string]interface{})
@@ -140,11 +144,4 @@ func createRequest(method string, rawURL string, headers map[string]string, body
 		Header: mheaders,
 		Body:   body,
 	}
-}
-
-func unsafe(i *typedvalues.TypedValue, e error) *typedvalues.TypedValue {
-	if e != nil {
-		panic(e)
-	}
-	return i
 }

@@ -184,7 +184,7 @@ func parseInput(i interface{}) (*typedvalues.TypedValue, error) {
 				i = res
 			}
 		} else {
-			p, err := typedvalues.Parse(res)
+			p, err := typedvalues.Wrap(res)
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +204,7 @@ func parseInput(i interface{}) (*typedvalues.TypedValue, error) {
 		i = w
 	}
 
-	p, err := typedvalues.Parse(i)
+	p, err := typedvalues.Wrap(i)
 	if err != nil {
 		return nil, err
 	}

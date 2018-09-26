@@ -7,6 +7,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/sirupsen/logrus"
 )
 
@@ -70,45 +71,42 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Ty
 	if err != nil {
 		return nil, err
 	}
-	expr, err := typedvalues.FormatBool(exprTv)
+	expr, err := typedvalues.UnwrapBool(exprTv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format while condition to a boolean: %v", err)
 	}
-	exprSrc, ok := exprTv.GetLabel("src")
+	exprSrc, ok := exprTv.GetMetadataValue("src")
 	if !ok {
 		return nil, fmt.Errorf("could not get source of '%v'", expr)
 	}
-	exprSrcTv, err := typedvalues.Parse(exprSrc)
+	exprSrcTv, err := typedvalues.Wrap(exprSrc)
 	if err != nil {
 		return nil, err
 	}
 
 	// Limit
-	limitTv, err := ensureInput(spec.Inputs, WhileInputLimit, typedvalues.TypeNumber)
+	limitTv, err := ensureInput(spec.Inputs, WhileInputLimit, typedvalues.TypeNumber...)
 	if err != nil {
 		return nil, err
 	}
-	l, err := typedvalues.FormatNumber(limitTv)
+	limit, err := typedvalues.UnwrapInt64(limitTv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format limit to a number: %v", err)
 	}
-	limit := int64(l)
-
 	// Counter
 	var count int64
 	if countTv, ok := spec.Inputs["_count"]; ok {
-		n, err := typedvalues.FormatNumber(countTv)
+		count, err = typedvalues.UnwrapInt64(countTv)
 		if err != nil {
 			return nil, fmt.Errorf("failed to format _count to a number: %v", err)
 		}
-		count = int64(n)
 	}
 
 	// Delay
 	delay := WhileDefaultDelay
 	delayTv, ok := spec.Inputs[WhileInputDelay]
 	if ok {
-		s, err := typedvalues.FormatString(delayTv)
+		s, err := typedvalues.UnwrapString(delayTv)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse delay (%v) to string: %v", delayTv, err)
 		}
@@ -118,7 +116,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Ty
 		}
 		delay = d
 	}
-	delayTv = typedvalues.MustParse(delay.String())
+	delayTv = typedvalues.MustWrap(delay.String())
 
 	// Action
 	action, err := ensureInput(spec.Inputs, WhileInputAction)
@@ -140,23 +138,23 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Ty
 	}
 
 	// Create the while-specific inputs
-	prevTv := typedvalues.MustParse("{output('action')}")
-	prevTv.SetLabel("priority", "100")
-	countTv := typedvalues.MustParse(count + 1)
-	countTv.SetLabel("priority", "100")
-	logrus.Infof("count: %v (<= %v)", count, limit)
+	prevTv := typedvalues.MustWrap("{output('action')}")
+	prevTv.SetMetadata(typedvalues.MetadataPriority, "100")
+	countTv := typedvalues.MustWrap(count + 1)
+	countTv.SetMetadata(typedvalues.MetadataPriority, "100")
+	logrus.Infof("[while] count: %v (limit %v)", count, limit)
 
 	// If the action is a control flow construct add the while-specific inputs
-	if typedvalues.IsControlFlow(action.Type) {
-		flow, err := typedvalues.FormatControlFlow(action)
+	if controlflow.IsControlFlow(action) {
+		cf, err := controlflow.UnwrapControlFlow(action)
 		if err != nil {
 			return nil, fmt.Errorf("failed to format workflow action: %v", err)
 		}
 		if count > 0 {
-			flow.Input("_prev", *prevTv)
+			cf.Input("_prev", *prevTv)
 		}
-		flow.Input("_count", *countTv)
-		action, err = typedvalues.ParseControlFlow(flow)
+		cf.Input("_count", *countTv)
+		action, err = typedvalues.Wrap(cf.Proto())
 		if err != nil {
 			return nil, fmt.Errorf("failed to format task action: %v", err)
 		}
@@ -192,8 +190,7 @@ func (fn *FunctionWhile) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Ty
 			},
 		},
 	}
-
-	wfTv, err := typedvalues.Parse(wf)
+	wfTv, err := typedvalues.Wrap(wf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create while workflow: %v", err)
 	}

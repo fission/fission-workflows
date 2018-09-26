@@ -178,7 +178,7 @@ func toWorkflowSpec(spec *types.TaskInvocationSpec) (*types.WorkflowInvocationSp
 	// Prepare inputs
 	wfSpec := spec.ToWorkflowSpec()
 	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
-		parentID, err := typedvalues.FormatString(parentTv)
+		parentID, err := typedvalues.UnwrapString(parentTv)
 		if err != nil {
 			return nil, fmt.Errorf("invalid parent id %v (%v)", parentTv, err)
 		}

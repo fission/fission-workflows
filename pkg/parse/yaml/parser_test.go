@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,8 +82,8 @@ tasks:
 		assert.Equal(t, int(wf.Tasks[id].Await), len(task.Requires))
 
 		acmeDefaultInput := wf.Tasks["acme"].Inputs["default"]
-		assert.Equal(t, typedvalues.TypeMap, acmeDefaultInput.Type)
-		i, err := typedvalues.Format(acmeDefaultInput)
+		assert.Equal(t, typedvalues.TypeMap, acmeDefaultInput.ValueType())
+		i, err := typedvalues.Unwrap(acmeDefaultInput)
 		assert.NoError(t, err)
 		assert.Equal(t, i, map[string]interface{}{
 			"a": "b",
@@ -117,11 +118,11 @@ tasks:
 	assert.True(t, ok)
 	wfInput, ok := barTask.Inputs["default"]
 	assert.True(t, ok)
-	innerWf, err := typedvalues.FormatWorkflow(wfInput)
+	innerWf, err := controlflow.UnwrapWorkflow(wfInput)
 	assert.NoError(t, err)
 	assert.Equal(t, "$.tasks.inner.dynamic", innerWf.OutputTask)
 	assert.Equal(t, "v42", innerWf.ApiVersion)
-	assert.Equal(t, "foobar", typedvalues.MustFormat(innerWf.Tasks["inner"].Inputs["default"]))
+	assert.Equal(t, "foobar", typedvalues.MustUnwrap(innerWf.Tasks["inner"].Inputs["default"]))
 	assert.Equal(t, "dynamic", innerWf.Tasks["inner"].FunctionRef)
 }
 

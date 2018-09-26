@@ -6,6 +6,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 )
 
 const (
@@ -59,7 +60,7 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.
 	if err != nil {
 		return nil, err
 	}
-	i, err := typedvalues.Format(headerTv)
+	i, err := typedvalues.Unwrap(headerTv)
 	if err != nil {
 		return nil, err
 	}
@@ -68,35 +69,35 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.
 		return nil, fmt.Errorf("condition '%v' needs to be a 'array', but was '%v'", i, headerTv.ValueType())
 	}
 
-	// Parse task
-	taskTv, err := ensureInput(spec.GetInputs(), ForeachInputDo, typedvalues.TypeTask)
+	// Wrap task
+	taskTv, err := ensureInput(spec.GetInputs(), ForeachInputDo, controlflow.TypeTask)
 	if err != nil {
 		return nil, err
 	}
-	flow, err := typedvalues.FormatControlFlow(taskTv)
+	flow, err := controlflow.UnwrapControlFlow(taskTv)
 	if err != nil {
 		return nil, err
 	}
-	if flow.Workflow() != nil {
+	if flow.GetWorkflow() != nil {
 		return nil, errors.New("foreach does not support workflow inputs (yet)")
 	}
 
-	// Parse collect
+	// Wrap collect
 	collect := true
 	collectTv, ok := spec.Inputs[ForeachInputCollect]
 	if ok {
-		b, err := typedvalues.FormatBool(collectTv)
+		b, err := typedvalues.UnwrapBool(collectTv)
 		if err != nil {
 			return nil, fmt.Errorf("collect could not be parsed into a boolean: %v", err)
 		}
 		collect = b
 	}
 
-	// Parse sequential
+	// Wrap sequential
 	var seq bool
 	seqTv, ok := spec.Inputs[ForeachInputSequential]
 	if ok {
-		b, err := typedvalues.FormatBool(seqTv)
+		b, err := typedvalues.UnwrapBool(seqTv)
 		if err != nil {
 			return nil, fmt.Errorf("sequential could not be parsed into a boolean: %v", err)
 		}
@@ -113,12 +114,12 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.
 	var tasks []string // Needed to preserve order of the input array
 	for k, item := range foreach {
 		f := flow.Clone()
-		itemTv := typedvalues.MustParse(item)
-		itemTv.SetLabel("priority", "1000") // Ensure that item is resolved before other parameters
+		itemTv := typedvalues.MustWrap(item)
+		itemTv.SetMetadata(typedvalues.MetadataPriority, "1000") // Ensure that item is resolved before other parameters
 		f.Input("_item", *itemTv)
 
 		// TODO support workflows
-		t := f.Task()
+		t := f.GetTask()
 		name := fmt.Sprintf("do_%d", k)
 		wf.AddTask(name, t)
 		tasks = append(tasks, name)
@@ -140,8 +141,8 @@ func (fn *FunctionForeach) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.
 			output = append(output, fmt.Sprintf("{output('%s')}", k))
 		}
 	}
-	ct.Input(ComposeInput, typedvalues.MustParse(output))
+	ct.Input(ComposeInput, typedvalues.MustWrap(output))
 	wf.AddTask("collector", ct)
 
-	return typedvalues.Parse(wf)
+	return typedvalues.Wrap(wf)
 }

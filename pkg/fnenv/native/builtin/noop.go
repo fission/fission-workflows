@@ -54,6 +54,6 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 		"invocation": spec.InvocationId,
 		"task":       spec.TaskId,
 	}).Infof("[internal://%s] %v", Noop,
-		typedvalues.MustFormat(output))
+		typedvalues.MustUnwrap(output))
 	return output, nil
 }

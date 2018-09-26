@@ -66,8 +66,8 @@ func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typed
 	consequent := spec.GetInputs()[IfInputThen]
 	alternative := spec.GetInputs()[IfInputElse]
 
-	// Parse condition to a bool
-	i, err := typedvalues.Format(expr)
+	// Wrap condition to a bool
+	i, err := typedvalues.Unwrap(expr)
 	if err != nil {
 		return nil, err
 	}

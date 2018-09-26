@@ -2,10 +2,10 @@ package builtin
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -58,33 +58,19 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.T
 		return nil, fmt.Errorf("repeat needs '%s'", RepeatInputTimes)
 	}
 
-	// Parse condition to a int
-	i, err := typedvalues.Format(n)
+	// Wrap condition to a int
+	times, err := typedvalues.UnwrapInt64(n)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO fix int typedvalue
-	var times int64
-	f, ok := i.(float64)
-	if ok {
-		times = int64(f)
-	} else {
-		// Fallback: attempt to convert string to int
-		t, err := strconv.Atoi(fmt.Sprintf("%s", i))
-		if err != nil {
-			return nil, fmt.Errorf("condition '%s' needs to be a 'int64', but was '%T'", i, i)
-		}
-		times = int64(t)
-	}
-
-	// Parse do task
+	// Wrap do task
 	// TODO does a workflow also work?
 	doVal, ok := spec.Inputs[RepeatInputDo]
 	if !ok {
 		return nil, fmt.Errorf("repeat needs '%s'", RepeatInputDo)
 	}
-	doTask, err := typedvalues.FormatTask(doVal)
+	doTask, err := controlflow.UnwrapTask(doVal)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +78,7 @@ func (fn *FunctionRepeat) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.T
 
 	if times > 0 {
 		// TODO add context
-		return typedvalues.MustParse(&types.WorkflowSpec{
+		return typedvalues.MustWrap(&types.WorkflowSpec{
 			OutputTask: taskID(times - 1),
 			Tasks:      createRepeatTasks(doTask, times),
 		}), nil
@@ -110,8 +96,8 @@ func createRepeatTasks(task *types.TaskSpec, times int64) map[string]*types.Task
 			prevTask := taskID(n - 1)
 			do.Require(prevTask)
 			// TODO move prev to a reserved namespace, to avoid conflicts
-			prev := typedvalues.MustParse(fmt.Sprintf("{output('%s')}", prevTask))
-			prev.SetLabel("priority", "100")
+			prev := typedvalues.MustWrap(fmt.Sprintf("{output('%s')}", prevTask))
+			prev.SetMetadata(typedvalues.MetadataPriority, "100")
 			do.Input(RepeatInputPrev, prev)
 		}
 		tasks[id] = do

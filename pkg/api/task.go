@@ -8,7 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
@@ -37,6 +37,7 @@ func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dyn
 // Currently it executes the underlying function synchronously and manage the execution until completion.
 // TODO make asynchronous
 func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*types.TaskInvocation, error) {
+	log := logrus.WithField("fn", spec.FnRef).WithField("wi", spec.InvocationId).WithField("task", spec.TaskId)
 	cfg := parseCallOptions(opts)
 	err := validate.TaskInvocationSpec(spec)
 	if err != nil {
@@ -68,10 +69,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 	if err != nil {
 		// TODO improve error handling here (retries? internal or task related error?)
-		logrus.WithField("task", spec.FnRef).
-			WithField("wi", spec.InvocationId).
-			WithField("task", spec.TaskId).
-			Infof("Failed to invoke task: %v", err)
+		log.Infof("Failed to invoke task: %v", err)
 		esErr := ap.Fail(spec.InvocationId, taskID, err.Error())
 		if esErr != nil {
 			return nil, esErr
@@ -80,9 +78,9 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 
 	// TODO to a middleware component
-	if typedvalues.IsControlFlow(typedvalues.ValueType(fnResult.GetOutput().GetType())) {
-		logrus.Info("Adding dynamic flow")
-		flow, err := typedvalues.FormatControlFlow(fnResult.GetOutput())
+	if controlflow.IsControlFlow(fnResult.GetOutput()) {
+		log.Info("Adding dynamic flow")
+		flow, err := controlflow.UnwrapControlFlow(fnResult.GetOutput())
 		if err != nil {
 			return nil, err
 		}

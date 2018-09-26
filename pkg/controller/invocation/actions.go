@@ -121,7 +121,7 @@ func (a *ActionInvokeTask) Apply() error {
 	}
 	log.Infof("Executing function: %v", spec.GetFnRef().Format())
 	if logrus.GetLevel() == logrus.DebugLevel {
-		i, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, spec.GetInputs())
+		i, err := typedvalues.UnwrapMapTypedValue(spec.GetInputs())
 		if err != nil {
 			log.Errorf("Failed to format inputs for debugging: %v", err)
 		} else {
@@ -143,7 +143,7 @@ func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
 	if ti.GetStatus().Successful() {
 		output := task.GetSpec().GetOutput()
 		if output != nil {
-			if output.GetType() == typedvalues.TypeExpression {
+			if output.ValueType() == typedvalues.TypeExpression {
 				tv, err := a.resolveOutput(ti, output)
 				if err != nil {
 					return err
@@ -178,7 +178,7 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 	}
 
 	// Add the current output
-	scope.Tasks[a.Task.Id].Output = typedvalues.MustFormat(ti.GetStatus().GetOutput())
+	scope.Tasks[a.Task.Id].Output = typedvalues.MustUnwrap(ti.GetStatus().GetOutput())
 
 	// Resolve the output expression
 	resolvedOutput, err := expr.Resolve(scope, a.Task.Id, outputExpr)
@@ -217,11 +217,11 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 			return nil, fmt.Errorf("failed to resolve input field %v: %v", input.Key, err)
 		}
 		resolvedInputs[input.Key] = resolvedInput
-		log.Infof("Resolved field %v: %v -> %v", input.Key, typedvalues.MustFormat(input.Val),
-			util.Truncate(typedvalues.MustFormat(resolvedInput), 100))
+		log.Infof("Resolved field %v: %v -> %v", input.Key, typedvalues.MustUnwrap(input.Val),
+			util.Truncate(typedvalues.MustUnwrap(resolvedInput), 100))
 
 		// Update the scope with the resolved type
-		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustFormat(resolvedInput)
+		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustUnwrap(resolvedInput)
 	}
 	return resolvedInputs, nil
 }

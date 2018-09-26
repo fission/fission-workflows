@@ -226,3 +226,9 @@ func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *Tas
 		InvocationId: invocationId,
 	}
 }
+
+func Input(val interface{}) map[string]*typedvalues.TypedValue {
+	return map[string]*typedvalues.TypedValue{
+		InputMain: typedvalues.MustWrap(val),
+	}
+}

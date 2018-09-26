@@ -3,6 +3,7 @@ package expr
 import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -51,12 +52,12 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error)
 	tasks := map[string]*TaskScope{}
 	for taskId, task := range types.GetTasks(wf, wfi) {
 		// Dep: pipe output of dynamic tasks
-		t := typedvalues.ResolveTaskOutput(taskId, wfi)
-		output, err := typedvalues.Format(t)
+		t := controlflow.ResolveTaskOutput(taskId, wfi)
+		output, err := typedvalues.Unwrap(t)
 		if err != nil {
 			panic(err)
 		}
-		inputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, task.Spec.Inputs)
+		inputs, err := typedvalues.UnwrapMapTypedValue(task.Spec.Inputs)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)
 		}
@@ -70,7 +71,7 @@ func NewScope(wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error)
 		}
 	}
 
-	invocInputs, err := typedvalues.FormatTypedValueMap(typedvalues.DefaultParserFormatter, wfi.Spec.Inputs)
+	invocInputs, err := typedvalues.UnwrapMapTypedValue(wfi.Spec.Inputs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to format invocation inputs")
 	}

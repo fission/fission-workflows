@@ -9,6 +9,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -139,7 +140,7 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	if finished {
 		var finalOutput *typedvalues.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
-			finalOutput = typedvalues.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
+			finalOutput = controlflow.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
 		}
 
 		// TODO extract to action

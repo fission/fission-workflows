@@ -48,7 +48,7 @@ func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 	duration := SleepInputDefault
 	input, ok := spec.Inputs[SleepInput]
 	if ok {
-		i, err := typedvalues.Format(input)
+		i, err := typedvalues.Unwrap(input)
 		if err != nil {
 			return nil, err
 		}
@@ -60,10 +60,16 @@ func (f *FunctionSleep) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 				return nil, err
 			}
 			duration = d
+		case int32:
+			duration = time.Duration(t) * time.Millisecond
+		case int64:
+			duration = time.Duration(t) * time.Millisecond
+		case float32:
+			duration = time.Duration(t) * time.Millisecond
 		case float64:
 			duration = time.Duration(t) * time.Millisecond
 		default:
-			return nil, fmt.Errorf("invalid input '%v'", input.Type)
+			return nil, fmt.Errorf("invalid input '%v'", input.ValueType())
 		}
 	}
 

@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/proto"
 )
@@ -23,15 +24,15 @@ func NewDynamicApi(wfAPI *Workflow, wfiAPI *Invocation) *Dynamic {
 
 // AddDynamicFlow inserts the flow as a 'dynamic task' into the workflow invocation with id invocationID as the child
 // of the parent task.
-func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow types.Flow) error {
+func (ap *Dynamic) AddDynamicFlow(invocationID string, parentTaskID string, flow controlflow.Flow) error {
 	if err := validate.Flow(flow); err != nil {
 		return err
 	}
 	switch flow.Type() {
-	case types.FlowTypeWorkflow:
-		return ap.addDynamicWorkflow(invocationID, parentTaskID, flow.Workflow(), &types.TaskSpec{})
-	case types.FlowTypeTask:
-		return ap.addDynamicTask(invocationID, parentTaskID, flow.Task())
+	case controlflow.FlowTypeWorkflow:
+		return ap.addDynamicWorkflow(invocationID, parentTaskID, flow.GetWorkflow(), &types.TaskSpec{})
+	case controlflow.FlowTypeTask:
+		return ap.addDynamicTask(invocationID, parentTaskID, flow.GetTask())
 	default:
 		panic("validated flow was still empty")
 	}
@@ -72,7 +73,7 @@ func (ap *Dynamic) addDynamicWorkflow(invocationID string, parentTaskID string, 
 	// Generate Proxy Task
 	proxyTaskSpec := proto.Clone(stubTask).(*types.TaskSpec)
 	proxyTaskSpec.FunctionRef = wfRef.Format()
-	proxyTaskSpec.Input(types.InputParent, typedvalues.MustParse(invocationID))
+	proxyTaskSpec.Input(types.InputParent, typedvalues.MustWrap(invocationID))
 	proxyTaskID := parentTaskID + "_child"
 	proxyTask := types.NewTask(proxyTaskID, proxyTaskSpec.FunctionRef)
 	proxyTask.Spec = proxyTaskSpec

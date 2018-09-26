@@ -1,40 +1,60 @@
+// package typedvalues provides a data container for annotating, interpreting, and transferring arbitrary data.
+//
+// It revolves around the TypedValue struct type. Users typically serialize generic (though not entirely generic yet)
+// Golang data to a TypedValue in order to serialize and transfer it. Users can set and get annotations from the
+// TypedValue, which is for example used to preserve important headers from a HTTP request from which the entity
+// was parsed.
+//
+// The package relies heavily on Protobuf. Besides the primitive types, it supports any entity implementing the
+// proto.Message interface. Internally the TypedValue uses the Protobuf Golang implementation for serializing and
+// deserializing the TypedValue.
+//
+// In Workflows TypedValues are used for: serialization, allowing it to store the data in the same format as the
+// workflow structures; storing metadata of task outputs, by annotating the TypedValues; and data evaluation,
+// by parsing and formatting task inputs and outputs into structured data (where possible).
 package typedvalues
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/pkg/errors"
+)
+
+const (
+	TypeUrlPrefix = "types.fission.io/"
 )
 
 var (
-	TypeBool       = "bool"
-	TypeNumber     = "number"
-	TypeNil        = "nil"
-	TypeString     = "string"
-	TypeBytes      = "bytes"
-	TypeExpression = "expression"
-	TypeTask       = "task"
-	TypeWorkflow   = "workflow"
-	TypeMap        = "map"
-	TypeList       = "list"
-)
-
-var (
-	expressionRe = regexp.MustCompile("^\\{(.*)\\}$")
+	expressionRe            = regexp.MustCompile("^\\{(.*)\\}$")
+	ErrIllegalTypeAssertion = errors.New("illegal type assertion")
+	ErrUnsupportedType      = errors.New("unsupported type")
 )
 
 // TODO add caching to formatting and parsing
 
 func (m *TypedValue) ValueType() string {
-	return m.Value.TypeUrl
+	if m == nil || m.Value == nil {
+		return ""
+	}
+	typeUrl := m.Value.TypeUrl
+	pos := strings.Index(typeUrl, TypeUrlPrefix)
+	if pos == 0 {
+		return typeUrl[len(TypeUrlPrefix):]
+	}
+	return typeUrl
 }
 
 func (m *TypedValue) Interface() interface{} {
-	return MustFormat(m)
+	if m == nil || m.Value == nil {
+		return nil
+	}
+	return MustUnwrap(m)
 }
 
 func (m *TypedValue) Float64() float64 {
@@ -57,63 +77,60 @@ func (m *TypedValue) Float64() float64 {
 	}
 }
 
-//
-// TypedValue
-//
-
-// Prints a short description of the Value
-func (tv TypedValue) Short() string {
-	// var val string
-	// if len(tv.Value) > typedValueShortMaxLen {
-	// 	val = fmt.Sprintf("%s[..%d..]", tv.Value[:typedValueShortMaxLen], len(tv.Value)-typedValueShortMaxLen)
-	// } else {
-	// 	val = fmt.Sprintf("%s", tv.Value)
-	// }
-	//
-	// return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", tv.Type, strings.Replace(val, "\n", "", -1))
-	return ""
+// Short prints a short description of the Value
+func (m *TypedValue) Short() string {
+	if m == nil {
+		return ""
+	}
+	return fmt.Sprintf("<Type=\"%s\", Val=\"%v\">", m.ValueType(), len(m.GetValue().GetValue()))
 }
 
-func (tv *TypedValue) SetLabel(k string, v string) *TypedValue {
-	// if tv == nil {
-	// 	return tv
-	// }
-	// if tv.Labels == nil {
-	// 	tv.Labels = map[string]string{}
-	// }
-	// tv.Labels[k] = v
-	//
-	return tv
+func (m *TypedValue) SetMetadata(k string, v string) *TypedValue {
+	if m == nil {
+		return m
+	}
+	if m.Metadata == nil {
+		m.Metadata = map[string]string{}
+	}
+	m.Metadata[k] = v
+
+	return m
 }
 
-func (tv *TypedValue) GetLabel(k string) (string, bool) {
-	// if tv == nil {
-	// 	return "", false
-	// }
-	//
-	// if tv.Labels == nil {
-	// 	tv.Labels = map[string]string{}
-	// }
-	// v, ok := tv.Labels[k]
+func (m *TypedValue) GetMetadataValue(k string) (string, bool) {
+	if m == nil {
+		return "", false
+	}
 
-	return "", true
+	if m.Metadata == nil {
+		m.Metadata = map[string]string{}
+	}
+	v, ok := m.Metadata[k]
+	return v, ok
 }
 
-func Format(tv *TypedValue) (interface{}, error) {
-	var dynamic ptypes.DynamicAny
-	err := ptypes.UnmarshalAny(tv.Value, &dynamic)
+func (m *TypedValue) Equals(other *TypedValue) bool {
+	return proto.Equal(m, other)
+}
+
+func Unwrap(tv *TypedValue) (interface{}, error) {
+	if tv == nil {
+		return nil, nil
+	}
+
+	msg, err := UnwrapProto(tv)
 	if err != nil {
 		return nil, err
 	}
 
 	var i interface{}
-	switch t := dynamic.Message.(type) {
+	switch t := msg.(type) {
 	case *MapValue:
 		mapValue := make(map[string]interface{}, len(t.Value))
 		for k, v := range t.Value {
-			entry, err := Format(v)
+			entry, err := Unwrap(v)
 			if err != nil {
-				return TypedValue{}, fmt.Errorf("map[%s]: %v", k, err)
+				return TypedValue{}, errors.Wrapf(err, "failed to format map[%s]", k)
 			}
 			mapValue[k] = entry
 		}
@@ -121,9 +138,9 @@ func Format(tv *TypedValue) (interface{}, error) {
 	case *ArrayValue:
 		arrayValue := make([]interface{}, len(t.Value))
 		for k, v := range t.Value {
-			entry, err := Format(v)
+			entry, err := Unwrap(v)
 			if err != nil {
-				return TypedValue{}, fmt.Errorf("[%d]: %v", k, err)
+				return TypedValue{}, errors.Wrapf(err, "failed to format array[%d]", k)
 			}
 			arrayValue[k] = entry
 		}
@@ -151,22 +168,28 @@ func Format(tv *TypedValue) (interface{}, error) {
 	case *NilValue:
 		i = nil
 	default:
-		// Message does not have to be unwrapped
+		// Message does not have to be unwrapped(?)
 		i = t
 	}
 
 	return i, nil
 }
 
-func Parse(val interface{}) (*TypedValue, error) {
+func Wrap(val interface{}) (*TypedValue, error) {
 	var msg proto.Message
 	switch t := val.(type) {
+	case *TypedValue:
+		return t, nil
+	case []*TypedValue:
+		msg = &ArrayValue{Value: t}
+	case map[string]*TypedValue:
+		msg = &MapValue{Value: t}
 	case map[string]interface{}:
 		values := make(map[string]*TypedValue, len(t))
 		for k, v := range t {
-			tv, err := Parse(v)
+			tv, err := Wrap(v)
 			if err != nil {
-				return nil, fmt.Errorf("map[%s]: %v", k, err)
+				return nil, errors.Wrapf(err, "failed to parse map[%s]", k)
 			}
 			values[k] = tv
 		}
@@ -174,9 +197,9 @@ func Parse(val interface{}) (*TypedValue, error) {
 	case []interface{}:
 		values := make([]*TypedValue, len(t))
 		for i, v := range t {
-			tv, err := Parse(v)
+			tv, err := Wrap(v)
 			if err != nil {
-				return nil, fmt.Errorf("array[%d]: %v", i, err)
+				return nil, errors.Wrapf(err, "failed to parse array[%d]", i)
 			}
 			values[i] = tv
 		}
@@ -197,6 +220,8 @@ func Parse(val interface{}) (*TypedValue, error) {
 		msg = &wrappers.DoubleValue{Value: t}
 	case int64:
 		msg = &wrappers.Int64Value{Value: t}
+	case int:
+		msg = &wrappers.Int32Value{Value: int32(t)}
 	case int32:
 		msg = &wrappers.Int32Value{Value: t}
 	case uint32:
@@ -208,9 +233,9 @@ func Parse(val interface{}) (*TypedValue, error) {
 	case nil:
 		msg = &NilValue{}
 	default:
-		return nil, fmt.Errorf("cannot parse unsupported %T", t)
+		return nil, errors.Wrapf(ErrUnsupportedType, "parse %T", t)
 	}
-	marshaled, err := ptypes.MarshalAny(msg)
+	marshaled, err := marshalAny(msg)
 	if err != nil {
 		return nil, err
 	}
@@ -220,48 +245,211 @@ func Parse(val interface{}) (*TypedValue, error) {
 	}, nil
 }
 
-func MustParse(val interface{}) *TypedValue {
-	tv, err := Parse(val)
+func MustWrap(val interface{}) *TypedValue {
+	tv, err := Wrap(val)
 	if err != nil {
 		panic(err)
 	}
 	return tv
 }
 
-func MustFormat(tv *TypedValue) interface{} {
-	i, err := Format(tv)
+func MustUnwrap(tv *TypedValue) interface{} {
+	i, err := Unwrap(tv)
 	if err != nil {
 		panic(err)
 	}
 	return i
 }
 
-func FormatString(tv *TypedValue) (string, error) {
-	i, err := Format(tv)
+func UnwrapString(tv *TypedValue) (string, error) {
+	i, err := Unwrap(tv)
 	if err != nil {
 		return "", err
 	}
 
 	s, ok := i.(string)
 	if !ok {
-		return "", errors.New("not string")
+		return "", ErrIllegalTypeAssertion
 	}
 	return s, nil
 }
 
-func FormatBool(tv *TypedValue) (bool, error) {
-	i, err := Format(tv)
+func UnwrapProto(tv *TypedValue) (proto.Message, error) {
+	var dynamic ptypes.DynamicAny
+	err := ptypes.UnmarshalAny(tv.Value, &dynamic)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return dynamic.Message, nil
+}
+
+func UnwrapBytes(tv *TypedValue) ([]byte, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return nil, err
+	}
+
+	s, ok := i.([]byte)
+	if !ok {
+		return nil, ErrIllegalTypeAssertion
+	}
+	return s, nil
+}
+
+func UnwrapBool(tv *TypedValue) (bool, error) {
+	i, err := Unwrap(tv)
 	if err != nil {
 		return false, err
 	}
 
 	s, ok := i.(bool)
 	if !ok {
-		return false, errors.New("not string")
+		return false, ErrIllegalTypeAssertion
 	}
 	return s, nil
 }
 
-func FormatNumber(tv *TypedValue) (float64, error) {
-	panic("todo")
+func UnwrapArray(tv *TypedValue) ([]interface{}, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return nil, err
+	}
+
+	s, ok := i.([]interface{})
+	if !ok {
+		return nil, ErrIllegalTypeAssertion
+	}
+	return s, nil
+}
+
+func UnwrapTypedValueArray(tv *TypedValue) ([]*TypedValue, error) {
+	arrayWrapper := &ArrayValue{}
+	err := ptypes.UnmarshalAny(tv.Value, arrayWrapper)
+	if err != nil {
+		return nil, ErrIllegalTypeAssertion
+	}
+
+	arrayValue := make([]*TypedValue, len(arrayWrapper.Value))
+	for k, v := range arrayWrapper.Value {
+		arrayValue[k] = v
+	}
+	return arrayValue, nil
+}
+
+func UnwrapTypedValueMap(tv *TypedValue) (map[string]*TypedValue, error) {
+	mapWrapper := &MapValue{}
+	err := ptypes.UnmarshalAny(tv.Value, mapWrapper)
+	if err != nil {
+		return nil, ErrIllegalTypeAssertion
+	}
+
+	mapValue := make(map[string]*TypedValue, len(mapWrapper.Value))
+	for k, v := range mapWrapper.Value {
+		mapValue[k] = v
+	}
+	return mapValue, nil
+}
+
+func UnwrapMapTypedValue(tvs map[string]*TypedValue) (map[string]interface{}, error) {
+	tv, err := Wrap(tvs)
+	if err != nil {
+		return nil, err
+	}
+	return UnwrapMap(tv)
+}
+
+func UnwrapMap(tv *TypedValue) (map[string]interface{}, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return nil, err
+	}
+
+	s, ok := i.(map[string]interface{})
+	if !ok {
+		return nil, ErrIllegalTypeAssertion
+	}
+	return s, nil
+}
+
+// TODO reduce verbosity of these numberic implementations
+func UnwrapInt64(tv *TypedValue) (int64, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return 0, err
+	}
+
+	switch t := i.(type) {
+	case int64:
+		return int64(t), nil
+	case int32:
+		return int64(t), nil
+	case uint32:
+		return int64(t), nil
+	case uint64:
+		return int64(t), nil
+	case float32:
+		return int64(t), nil
+	case float64:
+		return int64(t), nil
+	default:
+		return 0, ErrIllegalTypeAssertion
+	}
+}
+
+func UnwrapFloat64(tv *TypedValue) (float64, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return 0, err
+	}
+
+	switch t := i.(type) {
+	case int64:
+		return float64(t), nil
+	case int32:
+		return float64(t), nil
+	case uint32:
+		return float64(t), nil
+	case uint64:
+		return float64(t), nil
+	case float32:
+		return float64(t), nil
+	case float64:
+		return float64(t), nil
+	default:
+		return 0, ErrIllegalTypeAssertion
+	}
+}
+
+func UnwrapExpression(tv *TypedValue) (string, error) {
+	i, err := Unwrap(tv)
+	if err != nil {
+		return "", err
+	}
+
+	s, ok := i.(string)
+	if !ok {
+		return "", ErrIllegalTypeAssertion
+	}
+	if !IsExpression(s) {
+		return "", ErrIllegalTypeAssertion
+	}
+	return s, nil
+}
+
+func RemoveExpressionDelimiters(expr string) string {
+	return expressionRe.ReplaceAllString(expr, "$1")
+}
+
+func IsExpression(s string) bool {
+	return expressionRe.MatchString(s)
+}
+
+// marshalAny takes the protocol buffer and encodes it into google.protobuf.Any, without prepending the Google API URL.
+func marshalAny(pb proto.Message) (*any.Any, error) {
+	value, err := proto.Marshal(pb)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &any.Any{TypeUrl: TypeUrlPrefix + proto.MessageName(pb), Value: value}, nil
 }

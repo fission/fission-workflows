@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 // UID generates a unique id
@@ -113,6 +116,10 @@ func LogIfError(err error) {
 	if err != nil {
 		logrus.Error(err)
 	}
+}
+
+func AssertProtoEqual(t *testing.T, expected, actual proto.Message) {
+	assert.True(t, proto.Equal(expected, actual), "expected: %v, actual: %v", expected, actual)
 }
 
 // Numeric is a representation

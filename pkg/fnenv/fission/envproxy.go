@@ -129,17 +129,18 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 			Message: "Unknown error",
 		}
 	}
+
+	// Get output
+	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
+
 	// Logging
 	if !wi.Status.Successful() {
 		logrus.Errorf("Invocation not successful, was '%v': %v", wi.Status.Status.String(), wi.Status.Error.Error())
 	} else if wi.Status.Output == nil {
 		logrus.Infof("Invocation '%v' has no output.", fnID)
 	} else {
-		logrus.Infof("Response Content-Type: %v", httpconv.DetermineContentType(wi.Status.Output))
+		logrus.Infof("Response Content-Type: %v", w.Header().Get("Content-Type"))
 	}
-
-	// Get output
-	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
 }
 
 func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {

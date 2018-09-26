@@ -19,11 +19,17 @@ var (
 )
 
 func New() *Runtime {
-	return &Runtime{Client: http.DefaultClient}
+	mapper := httpconv.DefaultHTTPMapper.Clone()
+	mapper.DefaultHTTPMethod = http.MethodGet
+	return &Runtime{
+		Client: http.DefaultClient,
+		mapper: mapper,
+	}
 }
 
 type Runtime struct {
 	Client *http.Client
+	mapper *httpconv.HTTPMapper
 }
 
 // Example: https://us-east1-personal-erwinvaneyk.cloudfunctions.net/helloworld
@@ -61,8 +67,6 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 	if err != nil {
 		return nil, err
 	}
-	// Ensure that the default method is GET (not POST).
-	req.Method = httpconv.FormatMethod(spec.GetInputs(), http.MethodGet)
 
 	logrus.Infof("HTTP request: %s %v", req.Method, req.URL)
 	if logrus.GetLevel() == logrus.DebugLevel {
@@ -94,16 +98,16 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		msg, _ := typedvalues.Format(&output)
+		msg, _ := typedvalues.Unwrap(output)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
 			Error: &types.Error{
-				Message: fmt.Sprintf("http function error: %v", msg),
+				Message: fmt.Sprintf("HTTP runtime request error: %v", msg),
 			},
 		}, nil
 	}
 	return &types.TaskInvocationStatus{
 		Status: types.TaskInvocationStatus_SUCCEEDED,
-		Output: &output,
+		Output: output,
 	}, nil
 }

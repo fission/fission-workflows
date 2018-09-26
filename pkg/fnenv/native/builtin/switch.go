@@ -81,7 +81,7 @@ func (fn *FunctionSwitch) getSwitch(inputs map[string]*typedvalues.TypedValue) (
 	if err != nil {
 		return "", err
 	}
-	return typedvalues.FormatString(tv)
+	return typedvalues.UnwrapString(tv)
 }
 
 func (fn *FunctionSwitch) getCases(inputs map[string]*typedvalues.TypedValue) (map[string]*typedvalues.TypedValue,
@@ -91,7 +91,7 @@ func (fn *FunctionSwitch) getCases(inputs map[string]*typedvalues.TypedValue) (m
 
 	switchCases, ok := inputs[SwitchInputCases]
 	if ok {
-		ir, err := typedvalues.FormatArray(switchCases)
+		ir, err := typedvalues.UnwrapArray(switchCases)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -100,7 +100,7 @@ func (fn *FunctionSwitch) getCases(inputs map[string]*typedvalues.TypedValue) (m
 			if !ok {
 				return nil, nil, errors.New("invalid case provided")
 			}
-			tva, err := typedvalues.Parse(m[SwitchCaseValue])
+			tva, err := typedvalues.Wrap(m[SwitchCaseValue])
 			if err != nil {
 				return nil, nil, err
 			}

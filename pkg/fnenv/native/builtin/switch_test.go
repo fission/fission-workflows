@@ -13,27 +13,27 @@ func TestFunctionSwitch_Invoke(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*typedvalues.TypedValue{
-			SwitchInputCondition: typedvalues.ParseString("case1"),
-			SwitchInputCases: typedvalues.MustParse([]interface{}{
+			SwitchInputCondition: typedvalues.MustWrap("case1"),
+			SwitchInputCases: typedvalues.MustWrap([]interface{}{
 				switchCase("case1", val),
 			}),
-			SwitchInputDefaultCase: typedvalues.MustParse("default"),
+			SwitchInputDefaultCase: typedvalues.MustWrap("default"),
 		},
 	}
 	out, err := fn.Invoke(spec)
 	assert.NoError(t, err)
-	assert.Equal(t, "case1Val", typedvalues.MustFormat(out))
+	assert.Equal(t, "case1Val", typedvalues.MustUnwrap(out))
 }
 
 func TestFunctionSwitch_InvokeDefaultCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*typedvalues.TypedValue{
-			SwitchInputCondition: typedvalues.ParseString("case1"),
-			SwitchInputCases: typedvalues.MustParse([]interface{}{
+			SwitchInputCondition: typedvalues.MustWrap("case1"),
+			SwitchInputCases: typedvalues.MustWrap([]interface{}{
 				switchCase("case2", "case2"),
 			}),
-			SwitchInputDefaultCase: typedvalues.MustParse("default"),
+			SwitchInputDefaultCase: typedvalues.MustWrap("default"),
 		},
 	}
 	out, err := fn.Invoke(spec)
@@ -45,8 +45,8 @@ func TestFunctionSwitch_InvokeNoCase(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*typedvalues.TypedValue{
-			SwitchInputCondition: typedvalues.MustParse("case1"),
-			"case2":              typedvalues.MustParse("case2"),
+			SwitchInputCondition: typedvalues.MustWrap("case1"),
+			"case2":              typedvalues.MustWrap("case2"),
 		},
 	}
 	out, err := fn.Invoke(spec)
@@ -58,7 +58,7 @@ func TestFunctionSwitch_InvokeNoSwitch(t *testing.T) {
 	fn := &FunctionSwitch{}
 	spec := &types.TaskInvocationSpec{
 		Inputs: map[string]*typedvalues.TypedValue{
-			"case2": typedvalues.MustParse("case2"),
+			"case2": typedvalues.MustWrap("case2"),
 		},
 	}
 	out, err := fn.Invoke(spec)

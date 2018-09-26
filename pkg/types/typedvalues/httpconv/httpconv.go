@@ -1,221 +1,220 @@
-// package httpconv provides methods for mapping typedvalues to HTTP requests and HTTP responses to typedvalues.
+// package httpconv provides methods for mapping TypedValues to and from HTTP requests and responses.
+//
+// Any interaction with HTTP requests or responses should be handled by the high-level implementations in this
+// package, such as ParseResponse, FormatResponse, ParseRequest, or FormatRequest.
+//
+// Although you get most reliable results by properly formatting your requests (especially the Content-Type header)
+// this package aims to be lenient by trying to infer content-types, and so on.
 package httpconv
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
-	"strings"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/golang/protobuf/proto"
+	"github.com/fission/fission-workflows/pkg/util/mediatype"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	inputContentType    = "content-type"
-	headerContentType   = "Content-Type"
-	contentTypeJSON     = "application/json"
-	contentTypeBytes    = "application/octet-stream"
-	contentTypeText     = "text/plain"
-	contentTypeTask     = "application/vnd.fission.workflows.workflow" // Default format: protobuf, +json for json
-	contentTypeWorkflow = "application/vnd.fission.workflows.task"     // Default format: protobuf, +json for json
-	contentTypeProtobuf = "application/protobuf"                       // Default format: protobuf, +json for json
-	contentTypeDefault  = contentTypeText
-	DefaultMethod       = http.MethodPost
+	inputContentType  = "content-type"
+	headerContentType = "Content-Type"
 )
 
+var DefaultHTTPMapper = &HTTPMapper{
+	DefaultHTTPMethod: http.MethodPost,
+	ValueTypeResolver: func(tv *typedvalues.TypedValue) *mediatype.MediaType {
+		// Check metadata of the value
+		if tv == nil {
+			return MediaTypeBytes
+		}
+
+		if ct, ok := tv.GetMetadataValue(headerContentType); ok {
+			mt, err := mediatype.Parse(ct)
+			if err == nil {
+				return mt
+			}
+		}
+
+		// Handle special cases
+		switch tv.ValueType() {
+		case typedvalues.TypeBytes:
+			return MediaTypeBytes
+		case typedvalues.TypeNil:
+			return MediaTypeBytes
+		case typedvalues.TypeString:
+			return MediaTypeText
+		}
+
+		// For all other structured values, use JSON
+		return MediaTypeJSON
+	},
+	MediaTypeResolver: func(mt *mediatype.MediaType) ParserFormatter {
+
+		// Choose the mapper based on some hard-coded heuristics
+		switch mt.Identifier() {
+		case MediaTypeJSON.String(), "text/json":
+			return jsonMapper
+		case MediaTypeText.String():
+			return textMapper
+		case MediaTypeBytes.String():
+			return bytesMapper
+		case MediaTypeProtobuf.String(), "application/vnd.google.protobuf", "application/x.google.protobuf",
+			"application/x.protobuf":
+			return protobufMapper
+		}
+
+		// text/* -> TextMapper
+		if mt.Type == "text" {
+			return textMapper
+		}
+
+		// application/* -> BytesMapper
+		if mt.Type == "application" {
+			return bytesMapper
+		}
+
+		// All other: use default
+		return bytesMapper
+	},
+}
+
+func ParseRequest(req *http.Request) (map[string]*typedvalues.TypedValue, error) {
+	return DefaultHTTPMapper.ParseRequest(req)
+}
+
+func ParseResponse(resp *http.Response) (*typedvalues.TypedValue, error) {
+	return DefaultHTTPMapper.ParseResponse(resp)
+}
+
+func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Request) error {
+	return DefaultHTTPMapper.FormatRequest(source, target)
+}
+
+func FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
+	DefaultHTTPMapper.FormatResponse(w, output, outputErr)
+}
+
+type HTTPMapper struct {
+	DefaultHTTPMethod string
+	ValueTypeResolver func(tv *typedvalues.TypedValue) *mediatype.MediaType
+	DefaultMediaType  *mediatype.MediaType
+	MediaTypeResolver func(mediaType *mediatype.MediaType) ParserFormatter
+}
+
+func (h *HTTPMapper) ParseResponse(resp *http.Response) (*typedvalues.TypedValue, error) {
+	contentType := h.getRequestContentType(resp.Header)
+	defer resp.Body.Close()
+	return DefaultHTTPMapper.parseBody(resp.Body, contentType)
+}
+
 // ParseRequest maps a HTTP request to a target map of typedvalues.
-func ParseRequest(r *http.Request) (map[string]*typedvalues.TypedValue, error) {
-	target := map[string]*typedvalues.TypedValue{}
-	// Content-Type is a common problem, so log this for every request
-	contentType := r.Header.Get(headerContentType)
+func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.TypedValue, error) {
+	// Determine content-type
+	contentType := h.getRequestContentType(req.Header)
 
-	// Map body to "main" input
-	bodyInput, err := ParseBody(r.Body, contentType)
-	defer r.Body.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse request: %v", err)
-	}
-
-	target[types.InputBody] = &bodyInput
-
-	// Deprecated: body is mapped to 'default'
-	target[types.InputMain] = &bodyInput
-
-	// Map query to "query.x"
-	query := ParseQuery(r)
-	target[types.InputQuery] = &query
-
-	// Map headers to "headers.x"
-	headers := ParseHeaders(r)
-	target[types.InputHeaders] = &headers
-
-	// Map http method to "method"
-	method := ParseMethod(r)
-	target[types.InputMethod] = &method
-
-	return target, nil
-}
-
-func ParseResponse(r *http.Response) (typedvalues.TypedValue, error) {
-	body := r.Body
-	defer r.Body.Close()
-	contentType := r.Header.Get(headerContentType)
-	output, err := ParseBody(body, contentType)
-	if err != nil {
-		return typedvalues.TypedValue{}, err
-	}
-	return output, nil
-}
-
-// ParseRequest maps the body of the HTTP request to a corresponding typedvalue.
-func ParseBody(data io.Reader, contentType string) (typedvalues.TypedValue, error) {
-	if len(contentType) == 0 {
-		contentType = contentTypeDefault
-	}
-
-	tv := typedvalues.TypedValue{}
-	tv.SetLabel(headerContentType, contentType)
-
-	bs, err := ioutil.ReadAll(data)
-	if err != nil {
-		return tv, err
-	}
-
-	// Attempt to parse body according to provided ContentType
-	switch normalizeContentType(contentType) {
-	case contentTypeJSON:
-		var i interface{}
-		err := json.Unmarshal(bs, &i)
-		if err != nil {
-			logrus.Warnf("Failed to parse JSON data (len: %v, data: '%.50s' cause: %v), skipping further parsing.",
-				len(bs), string(bs), err)
-			tv = *typedvalues.MustParse(bs)
-		} else {
-			tv = *typedvalues.MustParse(i)
+	var body *typedvalues.TypedValue
+	var err error
+	// TODO support multipart
+	switch contentType.Identifier() {
+	// Special case: application/x-www-form-urlencoded is the only content-type (?) which can also store data in the url
+	case "application/x-www-form-urlencoded":
+		req.ParseForm()
+		mp := map[string]interface{}{}
+		// simplify the map, because we don't support multi-value maps yet
+		for k, vs := range req.Form {
+			if len(vs) > 0 {
+				mp[k] = vs[0]
+			}
 		}
-	case contentTypeText:
-		tv = *typedvalues.MustParse(string(bs))
-	case contentTypeProtobuf:
-		fallthrough
-	case contentTypeTask:
-		fallthrough
-	case contentTypeWorkflow:
-		// TODO support json-encoded workflow/task
-		var m proto.Message
-		err := proto.Unmarshal(bs, m)
+		body, err = typedvalues.Wrap(mp)
 		if err != nil {
-			return tv, err
+			return nil, errors.Errorf("failed to parse form request: %v", err)
 		}
-		t, err := typedvalues.Parse(m)
-		if err != nil {
-			return tv, err
-		}
-		tv = *t
+
+	// Default case parse body using the Parser interface
 	default:
-		// In other cases do not attempt to interpret the data
-		fallthrough
-	case contentTypeBytes:
-		tv = *typedvalues.MustParse(bs)
+		body, err = h.parseBody(req.Body, contentType)
+		defer req.Body.Close()
+		if err != nil {
+			return nil, errors.Errorf("failed to parse request: %v", err)
+		}
 	}
 
-	return tv, nil
+	return map[string]*typedvalues.TypedValue{
+		// Map body to "main" input
+		types.InputBody: body,
+
+		// Map query to "query.x"
+		types.InputQuery: h.parseQuery(req),
+
+		// Map headers to "headers.x"
+		types.InputHeaders: h.parseHeaders(req),
+
+		// Map http method to "method"
+		types.InputMethod: h.parseMethod(req),
+	}, nil
 }
-
-// ParseMethod maps the method param from a request to a TypedValue
-func ParseMethod(r *http.Request) typedvalues.TypedValue {
-	return *typedvalues.MustParse(r.Method)
-}
-
-// ParseHeaders maps the headers from a request to the "headers" key in the target map
-func ParseHeaders(r *http.Request) typedvalues.TypedValue {
-	// For now we do not support multi-valued headers
-	headers := flattenMultimap(r.Header)
-
-	tv := typedvalues.MustParse(headers)
-	return *tv
-}
-
-// ParseQuery maps the query params from a request to the "query" key in the target map
-func ParseQuery(r *http.Request) typedvalues.TypedValue {
-	// For now we do not support multi-valued query params
-	query := flattenMultimap(r.URL.Query())
-
-	tv := typedvalues.MustParse(query)
-	return *tv
-}
-
-//
-// formatting logic
-//
 
 // FormatResponse maps an TypedValue to an HTTP response
-func FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
+func (h *HTTPMapper) FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
 	if w == nil {
 		panic("cannot format response to nil")
 	}
 
 	if outputErr != nil {
-		// TODO provide different http codes based on error
 		http.Error(w, outputErr.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if output == nil {
 		w.WriteHeader(http.StatusNoContent)
-		output = typedvalues.MustParse(nil)
+		output = typedvalues.MustWrap(nil)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	contentType := DetermineContentType(output)
-	w.Header().Set(headerContentType, contentType)
-	bs, err := FormatBody(*output, contentType)
+	contentType := h.ValueTypeResolver(output)
+	err := h.formatBody(w, output, contentType)
 	if err != nil {
-		FormatResponse(w, nil, &types.Error{
+		h.FormatResponse(w, nil, &types.Error{
 			Message: fmt.Sprintf("Failed to format response body: %v", err),
 		})
 	}
-	w.Write(bs)
 	return
 }
 
 // FormatRequest maps a map of typed values to an HTTP request
-func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Request) error {
+func (h *HTTPMapper) FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Request) error {
 	if target == nil {
 		panic("cannot format request to nil")
 	}
 
 	// Map content-type to the request's content-type
-	contentType := DetermineContentTypeInputs(source)
+	contentType := h.determineContentTypeFromInputs(source)
 
 	// Map 'body' input to the body of the request
-	mainInput, ok := source[types.InputBody]
-	if !ok {
-		mainInput, ok = source[types.InputMain]
-	}
-	if ok && mainInput != nil {
-		bs, err := FormatBody(*mainInput, contentType)
+	mainInput := getFirstDefined(source, types.InputBody, types.InputMain)
+	if mainInput != nil {
+		err := h.formatBody(&requestWriter{req: target}, mainInput, contentType)
 		if err != nil {
 			return err
 		}
-		target.Body = ioutil.NopCloser(bytes.NewReader(bs))
-		target.ContentLength = int64(len(bs))
 	}
 
 	// Map method input to HTTP method
-	method := FormatMethod(source, DefaultMethod)
+	method := h.formatMethod(source)
 	target.Method = method
 
 	// Map query input to URL query
-	query := FormatQuery(source)
+	query := h.formatQuery(source)
 	if query != nil {
 		if target.URL == nil {
 			panic("request has no URL")
@@ -224,7 +223,7 @@ func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Reque
 	}
 
 	// Map headers input to HTTP headers
-	headers := FormatHeaders(source)
+	headers := h.formatHeaders(source)
 	if target.Header == nil {
 		target.Header = headers
 	} else {
@@ -234,32 +233,67 @@ func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Reque
 			}
 		}
 	}
-	target.Header.Set(headerContentType, contentType)
-
 	return nil
 }
 
-func FormatMethod(inputs map[string]*typedvalues.TypedValue, defaultMethod string) string {
+func (h *HTTPMapper) Clone() *HTTPMapper {
+	return &HTTPMapper{
+		DefaultMediaType:  h.DefaultMediaType.Copy(),
+		DefaultHTTPMethod: h.DefaultHTTPMethod,
+		ValueTypeResolver: h.ValueTypeResolver,
+		MediaTypeResolver: h.MediaTypeResolver,
+	}
+}
+
+// parseBody maps the body of the HTTP request to a corresponding typedvalue.
+func (h *HTTPMapper) parseBody(data io.Reader, contentType *mediatype.MediaType) (*typedvalues.TypedValue, error) {
+	if contentType == nil {
+		contentType = h.DefaultMediaType
+	}
+
+	return h.MediaTypeResolver(contentType).Parse(contentType, data)
+}
+
+// parseMethod maps the method param from a request to a TypedValue
+func (h *HTTPMapper) parseMethod(r *http.Request) *typedvalues.TypedValue {
+	return typedvalues.MustWrap(r.Method)
+}
+
+// parseHeaders maps the headers from a request to the "headers" key in the target map
+func (h *HTTPMapper) parseHeaders(r *http.Request) *typedvalues.TypedValue {
+	// For now we do not support multi-valued headers
+	headers := flattenMultimap(r.Header)
+	return typedvalues.MustWrap(headers)
+}
+
+// parseQuery maps the query params from a request to the "query" key in the target map
+func (h *HTTPMapper) parseQuery(r *http.Request) *typedvalues.TypedValue {
+	// For now we do not support multi-valued query params
+	query := flattenMultimap(r.URL.Query())
+	return typedvalues.MustWrap(query)
+}
+
+func (h *HTTPMapper) formatMethod(inputs map[string]*typedvalues.TypedValue) string {
 	tv, ok := inputs[types.InputMethod]
 	if ok && tv != nil {
-		contentType, err := typedvalues.FormatString(tv)
+		contentType, err := typedvalues.UnwrapString(tv)
 		if err == nil {
 			return contentType
 		}
 		logrus.Errorf("Invalid method in inputs: %+v", tv)
 	}
-	return defaultMethod
+	return h.DefaultHTTPMethod
 }
 
 // FUTURE: support multivalued query params
-func FormatQuery(inputs map[string]*typedvalues.TypedValue) url.Values {
+func (h *HTTPMapper) formatQuery(inputs map[string]*typedvalues.TypedValue) url.Values {
 	queryInput := inputs[types.InputQuery]
 	if queryInput == nil {
 		return nil
 	}
 	target := url.Values{}
 
-	i, err := typedvalues.Format(queryInput)
+	i, err := typedvalues.Unwrap(queryInput)
 	if err != nil {
 		logrus.Errorf("Failed to format headers: %v", err)
 	}
@@ -276,109 +310,60 @@ func FormatQuery(inputs map[string]*typedvalues.TypedValue) url.Values {
 	return target
 }
 
-func FormatBody(value typedvalues.TypedValue, contentType string) ([]byte, error) {
-	if len(contentType) == 0 {
-		contentType = contentTypeDefault
+func (h *HTTPMapper) formatBody(w http.ResponseWriter, body *typedvalues.TypedValue, contentType *mediatype.MediaType) error {
+	if contentType == nil {
+		contentType = h.ValueTypeResolver(body)
 	}
 
-	i, err := typedvalues.Format(&value)
+	return h.MediaTypeResolver(contentType).Format(w, body)
+}
+
+func (h *HTTPMapper) findAndParseContentType(inputs map[string]*typedvalues.TypedValue) (*mediatype.MediaType, error) {
+	// Check the input[content-type]
+	s, err := typedvalues.UnwrapString(inputs[inputContentType])
+	if err == nil {
+		return mediatype.Parse(s)
+	}
+
+	// Check the input[headers][content-type
+	headers, err := typedvalues.UnwrapMap(inputs[types.InputHeaders])
 	if err != nil {
 		return nil, err
 	}
 
-	// Attempt to parse body according to provided ContentType
-	var bs []byte
-	switch normalizeContentType(contentType) {
-	case contentTypeJSON:
-		bs, err = json.Marshal(i)
-		if err != nil {
-			return nil, err
-		}
-	case contentTypeText:
-		switch t := i.(type) {
-		case string:
-			bs = []byte(t)
-		case []byte:
-			bs = t
-		default:
-			bs = []byte(fmt.Sprintf("%v", t))
-		}
-	case contentTypeProtobuf:
-		fallthrough
-	case contentTypeTask:
-		fallthrough
-	case contentTypeWorkflow:
-		// TODO support json
-		m, ok := i.(proto.Message)
-		if !ok {
-			return nil, fmt.Errorf("illegal content type '%T', should be protobuf", i)
-		}
-		bs, err = proto.Marshal(m)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		fallthrough
-	case contentTypeBytes:
-		var ok bool
-		bs, ok = i.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("illegal content type '%T', should be []byte", i)
-		}
+	ctHeader, ok := headers[headerContentType].(string)
+	if !ok {
+		return nil, errors.New("cannot find or parse content-type")
 	}
-	return bs, nil
+
+	return mediatype.Parse(ctHeader)
 }
 
-func DetermineContentType(value *typedvalues.TypedValue) string {
-	if value == nil {
-		return contentTypeBytes
+func (h *HTTPMapper) determineContentTypeFromInputs(inputs map[string]*typedvalues.TypedValue) *mediatype.MediaType {
+	if inputs == nil {
+		return h.DefaultMediaType
 	}
 
-	ct, ok := value.GetLabel(headerContentType)
-	if ok && len(ct) > 0 {
-		return ct
+	mt, err := h.findAndParseContentType(inputs)
+	if err != nil {
+		mt = h.ValueTypeResolver(getFirstDefined(inputs, types.InputBody, types.InputMain))
 	}
-
-	// Otherwise, check for primitive types of the main input
-	// switch typedvalues.ValueType(value.Type) { // TODO !!!
-	// // TODO task and workflow
-	// case typedvalues.TypeMap:
-	// 	fallthrough
-	// case typedvalues.TypeList:
-	// 	return contentTypeJSON
-	// case typedvalues.TypeNumber:
-	// 	fallthrough
-	// case typedvalues.TypeExpression:
-	// 	fallthrough
-	// case typedvalues.TypeString:
-	// 	return contentTypeText
-	// default:
-	// 	return contentTypeBytes
-	// }
-	return contentTypeBytes
+	return mt
 }
 
-func DetermineContentTypeInputs(inputs map[string]*typedvalues.TypedValue) string {
-	// Check for forced contentType in inputs
-	ctTv, ok := inputs[inputContentType]
-	if ok && ctTv != nil {
-		contentType, err := typedvalues.FormatString(ctTv)
-		if err == nil {
-			return contentType
-		}
-		logrus.Errorf("Invalid content type in inputs: %+v", ctTv)
-	}
-
-	// Otherwise, check for label on body input
-	if inputs[types.InputBody] != nil {
-		return DetermineContentType(inputs[types.InputBody])
+func (h *HTTPMapper) getRequestContentType(headers http.Header) *mediatype.MediaType {
+	var contentType *mediatype.MediaType
+	ct, err := mediatype.Parse(headers.Get(headerContentType))
+	if err != nil {
+		contentType = h.DefaultMediaType
 	} else {
-		return DetermineContentType(inputs[types.InputMain])
+		contentType = ct
 	}
+	return contentType
 }
 
 // FUTURE: support multi-headers at some point
-func FormatHeaders(inputs map[string]*typedvalues.TypedValue) http.Header {
+func (h *HTTPMapper) formatHeaders(inputs map[string]*typedvalues.TypedValue) http.Header {
 	headers := http.Header{}
 	rawHeaders, ok := inputs[types.InputHeaders]
 	if !ok || rawHeaders == nil {
@@ -386,7 +371,7 @@ func FormatHeaders(inputs map[string]*typedvalues.TypedValue) http.Header {
 	}
 
 	// TODO handle partial map
-	i, err := typedvalues.Format(rawHeaders)
+	i, err := typedvalues.Unwrap(rawHeaders)
 	if err != nil {
 		logrus.Errorf("Failed to format headers: %v", err)
 	}
@@ -415,18 +400,38 @@ func flattenMultimap(mm map[string][]string) map[string]interface{} {
 	return target
 }
 
-func normalizeContentType(contentType string) string {
-	contentType = strings.ToLower(strings.TrimSpace(contentType))
-	matchContentType := contentType
-	// Heuristics, because everything to do with HTTP is ambiguous...
-	if strings.Contains(contentType, "json") { // TODO exclude JSON representation of protobuf objects
-		matchContentType = contentTypeJSON
+// requestWriter is a wrapper over http.Request to ensure that it conforms with the http.ResponseWriter interface
+type requestWriter struct {
+	req *http.Request
+	buf *bytes.Buffer
+}
+
+func (req *requestWriter) Header() http.Header {
+	return req.req.Header
+}
+
+func (req *requestWriter) Write(data []byte) (int, error) {
+	if req.buf == nil {
+		req.buf = &bytes.Buffer{}
+		req.req.Body = ioutil.NopCloser(req.buf)
 	}
-	if strings.HasPrefix(contentType, "text") {
-		matchContentType = contentTypeText
+	n, err := req.buf.Write(data)
+	if err != nil {
+		return n, err
 	}
-	if strings.Contains(contentType, "protobuf") {
-		matchContentType = contentTypeProtobuf
+	req.Header().Set("Content-Length", fmt.Sprintf("%d", req.buf.Len()))
+	return n, nil
+}
+
+func (req *requestWriter) WriteHeader(statusCode int) {
+	return // Not relevant for http.Request
+}
+
+func getFirstDefined(inputs map[string]*typedvalues.TypedValue, keys ...string) *typedvalues.TypedValue {
+	for _, key := range keys {
+		if val, ok := inputs[key]; ok {
+			return val
+		}
 	}
-	return matchContentType
+	return nil
 }
