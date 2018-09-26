@@ -854,7 +854,7 @@ func (m *Error) GetMessage() string {
 
 // FnRef is an immutable, unique reference to a function on a specific function runtime environment.
 //
-// The string representation (via String or Unwrap): runtime://runtimeId
+// The string representation (via String or Format): runtime://runtimeId
 type FnRef struct {
 	// Runtime is the Function Runtime environment (fnenv) that was used to resolve the function.
 	Runtime string `protobuf:"bytes,2,opt,name=runtime" json:"runtime,omitempty"`

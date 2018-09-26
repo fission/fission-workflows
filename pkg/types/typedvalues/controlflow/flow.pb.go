@@ -28,6 +28,9 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+// Flow is a generic data type to provide a common API to working with dynamic tasks and workflows
+// If a flow contains both a task and a workflow, behavior is non-standard,
+// but should in principle default to the task.
 type Flow struct {
 	Workflow *fission_workflows_types1.WorkflowSpec `protobuf:"bytes,1,opt,name=workflow" json:"workflow,omitempty"`
 	Task     *fission_workflows_types1.TaskSpec     `protobuf:"bytes,2,opt,name=task" json:"task,omitempty"`
