@@ -5,7 +5,7 @@ set -eu
 . $(dirname $0)/utils.sh
 
 BIN_DIR=/tmp/fission-workflow-ci/bin
-FISSION_VERSION=${FISSION_VERSION:-0.9.1}
+FISSION_VERSION=${FISSION_VERSION:-0.10.0}
 fissionHelmId=fission
 fissionWorkflowsHelmId=fission-workflows
 NS=fission
