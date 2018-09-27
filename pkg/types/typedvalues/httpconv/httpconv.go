@@ -406,24 +406,27 @@ type requestWriter struct {
 	buf *bytes.Buffer
 }
 
-func (req *requestWriter) Header() http.Header {
-	return req.req.Header
+func (rw *requestWriter) Header() http.Header {
+	if rw.req.Header == nil {
+		rw.req.Header = http.Header{}
+	}
+	return rw.req.Header
 }
 
-func (req *requestWriter) Write(data []byte) (int, error) {
-	if req.buf == nil {
-		req.buf = &bytes.Buffer{}
-		req.req.Body = ioutil.NopCloser(req.buf)
+func (rw *requestWriter) Write(data []byte) (int, error) {
+	if rw.buf == nil {
+		rw.buf = &bytes.Buffer{}
+		rw.req.Body = ioutil.NopCloser(rw.buf)
 	}
-	n, err := req.buf.Write(data)
+	n, err := rw.buf.Write(data)
 	if err != nil {
 		return n, err
 	}
-	req.Header().Set("Content-Length", fmt.Sprintf("%d", req.buf.Len()))
+	rw.Header().Set("Content-Length", fmt.Sprintf("%d", rw.buf.Len()))
 	return n, nil
 }
 
-func (req *requestWriter) WriteHeader(statusCode int) {
+func (rw *requestWriter) WriteHeader(statusCode int) {
 	return // Not relevant for http.Request
 }
 

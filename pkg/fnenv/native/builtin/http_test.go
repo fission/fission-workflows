@@ -68,6 +68,6 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 			}),
 		},
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, "expected error\n", typedvalues.MustUnwrap(out))
+	assert.Nil(t, out)
+	assert.Error(t, err, "expected error\n")
 }
