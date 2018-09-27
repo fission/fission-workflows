@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"runtime/debug"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -184,7 +183,6 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 }
 
 func (uc *SubscribedCache) Close() error {
-	debug.PrintStack() // Flaky
 	close(uc.closeC)
 	return nil
 }
@@ -229,10 +227,11 @@ func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, entityFact
 	}
 }
 
+// List for a LoadingCache returns the keys of all entities in the cache.
+//
 // TODO provide option to force fallback or only do quick cache lookup.
 // TODO sync cache with store while you are at it.
 func (c *LoadingCache) List() []fes.Aggregate {
-	// First c
 	esAggregates, err := c.client.List(nil)
 	if err != nil {
 		logrus.Errorf("Failed to list event store aggregates: %v", err)
@@ -298,7 +297,7 @@ func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Ent
 		}
 
 		// EvalCache entityFactory
-		return c.Put(target) // TODO ensure entity is a copy
+		return c.Put(target)
 	}
 
 	return nil

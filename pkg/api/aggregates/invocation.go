@@ -82,7 +82,6 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 		wi.Status.Status = types.WorkflowInvocationStatus_FAILED
 	default:
 		key := wi.Aggregate()
-		logrus.Debugf("------> %T", m)
 		return fes.ErrUnsupportedEntityEvent.WithAggregate(&key).WithEvent(event)
 	}
 	wi.Metadata.Generation++
