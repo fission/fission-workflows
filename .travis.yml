@@ -21,7 +21,7 @@ env:
     - KUBECONFIG=${HOME}/.kube/config
     - PATH=/tmp/fission-workflow-ci/bin:${PATH}
     - BIN_DIR=/tmp/fission-workflow-ci/bin
-    - FISSION_VERSION=0.9.1
+    - FISSION_VERSION=0.10.0
     - HELM_VERSION=2.8.2
     - KUBECTL_VERSION=1.9.6
 
