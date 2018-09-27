@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"runtime/debug"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -183,6 +184,7 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 }
 
 func (uc *SubscribedCache) Close() error {
+	debug.PrintStack() // Flaky
 	close(uc.closeC)
 	return nil
 }
