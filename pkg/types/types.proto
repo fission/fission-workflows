@@ -233,7 +233,6 @@ message ObjectMetadata {
     int64 generation = 4;
 }
 
-
 message Error {
     //    string code = 1;
     string message = 2;
