@@ -28,7 +28,10 @@ type MediaType struct {
 }
 
 func (m *MediaType) Copy() *MediaType {
-	copiedParams := make(map[string]string, len(m.Parameters))
+	if m == nil {
+		return &MediaType{}
+	}
+	copiedParams := map[string]string{}
 	for k, v := range m.Parameters {
 		copiedParams[k] = v
 	}
