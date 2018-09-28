@@ -21,14 +21,14 @@ func NewWorkflowAPI(endpoint string, client http.Client) *WorkflowAPI {
 	}
 }
 
-func (api *WorkflowAPI) Create(ctx context.Context, spec *types.WorkflowSpec) (*apiserver.WorkflowIdentifier, error) {
-	result := &apiserver.WorkflowIdentifier{}
+func (api *WorkflowAPI) Create(ctx context.Context, spec *types.WorkflowSpec) (*types.ObjectMetadata, error) {
+	result := &types.ObjectMetadata{}
 	err := callWithJSON(ctx, http.MethodPost, api.formatURL("/workflow"), spec, result)
 	return result, err
 }
 
-func (api *WorkflowAPI) List(ctx context.Context) (*apiserver.SearchWorkflowResponse, error) {
-	result := &apiserver.SearchWorkflowResponse{}
+func (api *WorkflowAPI) List(ctx context.Context) (*apiserver.WorkflowList, error) {
+	result := &apiserver.WorkflowList{}
 	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/workflow"), nil, result)
 	return result, err
 }

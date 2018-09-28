@@ -21,9 +21,9 @@ func NewInvocationAPI(endpoint string, client http.Client) *InvocationAPI {
 	}
 }
 
-func (api *InvocationAPI) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*apiserver.
-	WorkflowInvocationIdentifier, error) {
-	result := &apiserver.WorkflowInvocationIdentifier{}
+func (api *InvocationAPI) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.ObjectMetadata,
+	error) {
+	result := &types.ObjectMetadata{}
 	err := callWithJSON(ctx, http.MethodPost, api.formatURL("/invocation"), spec, result)
 	return result, err
 }

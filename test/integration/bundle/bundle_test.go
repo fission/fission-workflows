@@ -144,7 +144,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	deadline := time.Now().Add(time.Duration(10) * time.Second)
 	tick := time.NewTicker(time.Duration(100) * time.Millisecond)
 	for ti := range tick.C {
-		invoc, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wiId})
+		invoc, err := wi.Get(ctx, &types.ObjectMetadata{Id: wiId})
 		assert.NoError(t, err)
 		if invoc.Status.Finished() || ti.After(deadline) {
 			invocation = invoc
@@ -459,7 +459,7 @@ func TestWorkflowCancellation(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	wfiID := wfis.Invocations[0]
-	wfi, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wfiID})
+	wfi, err := wi.Get(ctx, &types.ObjectMetadata{Id: wfiID})
 	assert.NoError(t, err)
 	assert.False(t, wfi.GetStatus().Successful())
 	assert.True(t, wfi.GetStatus().Finished())
