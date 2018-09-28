@@ -67,7 +67,6 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
 	default:
 		key := ti.Aggregate()
-		logrus.Debugf("task ------> %T", m)
 		return fes.ErrUnsupportedEntityEvent.WithAggregate(&key).WithEvent(event)
 	}
 	ti.Metadata.Generation++

@@ -150,7 +150,7 @@ func TestBackend_Append(t *testing.T) {
 	event2 := newEvent(fes.Aggregate{Type: "type", Id: "id"}, []byte("event 1"))
 	event2.Aggregate = &fes.Aggregate{}
 	err = mem.Append(event2)
-	assert.EqualError(t, err, fes.ErrInvalidEvent.Error())
+	assert.Equal(t, err.(fes.EventStoreErr).S, fes.ErrInvalidEvent.Error())
 	assert.Equal(t, mem.Len(), 1)
 
 	// Event under existing aggregate

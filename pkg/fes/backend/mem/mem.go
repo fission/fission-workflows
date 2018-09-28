@@ -107,10 +107,11 @@ func (b *Backend) Append(event *fes.Event) error {
 		return err
 	}
 	key := *event.Aggregate
+	var newEntry bool
 
 	b.storeLock.Lock()
+	defer b.storeLock.Unlock()
 
-	var newEntry bool
 	events, ok, fromStore := b.get(key)
 	if !ok {
 		events = []*fes.Event{}
@@ -118,14 +119,12 @@ func (b *Backend) Append(event *fes.Event) error {
 
 		// Verify that there is space for the new event
 		if !b.fitBuffer() {
-			b.storeLock.Unlock()
 			return fes.ErrEventStoreOverflow.WithAggregate(&key)
 		}
 	}
 
 	// Check if event stream is not out of limit
 	if b.MaxEventsPerKey > 0 && len(events) > b.MaxEventsPerKey {
-		b.storeLock.Unlock()
 		return ErrEventLimitExceeded.WithAggregate(&key)
 	}
 
@@ -139,7 +138,6 @@ func (b *Backend) Append(event *fes.Event) error {
 	if event.GetHints().GetCompleted() {
 		b.demote(key)
 	}
-	b.storeLock.Unlock()
 	err := b.Publish(event)
 
 	if newEntry {
@@ -155,8 +153,9 @@ func (b *Backend) Get(key fes.Aggregate) ([]*fes.Event, error) {
 	if err := fes.ValidateAggregate(&key); err != nil {
 		return nil, err
 	}
-
+	b.storeLock.RLock()
 	events, ok, _ := b.get(key)
+	b.storeLock.RUnlock()
 	if !ok {
 		events = []*fes.Event{}
 	}
@@ -167,13 +166,16 @@ func (b *Backend) Len() int {
 	return int(atomic.LoadInt32(b.entries))
 }
 
+// Note: list does not return the cache contents
 func (b *Backend) List(matcher fes.AggregateMatcher) ([]fes.Aggregate, error) {
 	var results []fes.Aggregate
+	b.storeLock.RLock()
 	for key := range b.store {
 		if matcher == nil || matcher(key) {
 			results = append(results, key)
 		}
 	}
+	b.storeLock.RUnlock()
 	return results, nil
 }
 

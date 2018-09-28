@@ -102,6 +102,6 @@ func (wf *Workflow) ensureNextEvent(event *fes.Event) error {
 	return nil
 }
 
-func NewWorkflowEntity() fes.Entity {
-	return NewWorkflow("")
+func NewWorkflowEntity(key fes.Aggregate) fes.Entity {
+	return NewWorkflow(key.GetId())
 }

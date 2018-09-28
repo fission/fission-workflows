@@ -1,6 +1,8 @@
 package fes
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Entity is a entity that can be updated
 type Entity interface {
@@ -42,6 +44,11 @@ type Projector interface {
 type CacheReader interface {
 	Get(entity Entity) error
 	List() []Aggregate
+
+	// GetAggregate retrieves an entity by its (aggregate) key, guaranteeing that either the entity or error is non-nil.
+	//
+	// If the aggregate was invalid, a fes.ErrInvalidAggregate error is returned.
+	// If no entity for the aggregate exists, fes.ErrNotFound error is returned
 	GetAggregate(a Aggregate) (Entity, error)
 }
 
@@ -74,18 +81,18 @@ type EventStoreErr struct {
 	C error
 }
 
-func (err *EventStoreErr) WithAggregate(aggregate *Aggregate) *EventStoreErr {
+func (err EventStoreErr) WithAggregate(aggregate *Aggregate) EventStoreErr {
 	err.K = aggregate
 	return err
 }
 
-func (err *EventStoreErr) WithEntity(entity Entity) *EventStoreErr {
+func (err EventStoreErr) WithEntity(entity Entity) EventStoreErr {
 	key := entity.Aggregate()
 	err.K = &key
 	return err
 }
 
-func (err *EventStoreErr) WithEvent(event *Event) *EventStoreErr {
+func (err EventStoreErr) WithEvent(event *Event) EventStoreErr {
 	err.E = event
 	if err.K == nil {
 		return err.WithAggregate(event.Aggregate)
@@ -94,22 +101,22 @@ func (err *EventStoreErr) WithEvent(event *Event) *EventStoreErr {
 }
 
 func (err *EventStoreErr) Is(other error) bool {
-	if err != nil && other == nil {
-		return false
+	if err == nil || other == nil {
+		return err == other
 	}
-	esErr, ok := other.(*EventStoreErr)
+	esErr, ok := other.(EventStoreErr)
 	if !ok {
 		return false
 	}
 	return esErr.S == err.S
 }
 
-func (err *EventStoreErr) WithError(cause error) *EventStoreErr {
+func (err EventStoreErr) WithError(cause error) EventStoreErr {
 	err.C = cause
 	return err
 }
 
-func (err *EventStoreErr) Error() string {
+func (err EventStoreErr) Error() string {
 	msg := err.S
 	if err.K != nil && !(len(err.K.Id) == 0 && len(err.K.Type) == 0) {
 		msg = fmt.Sprintf("%s: %s", err.K.Format(), msg)
@@ -121,11 +128,11 @@ func (err *EventStoreErr) Error() string {
 }
 
 var (
-	ErrInvalidAggregate       = &EventStoreErr{S: "invalid aggregate"}
-	ErrInvalidEvent           = &EventStoreErr{S: "invalid event"}
-	ErrInvalidEntity          = &EventStoreErr{S: "invalid entity"}
-	ErrEventStoreOverflow     = &EventStoreErr{S: "event store out of space"}
-	ErrUnsupportedEntityEvent = &EventStoreErr{S: "event not supported"}
-	ErrCorruptedEventPayload  = &EventStoreErr{S: "failed to parse event payload"}
-	ErrEntityNotFound         = &EventStoreErr{S: "entity not found"}
+	ErrInvalidAggregate       = EventStoreErr{S: "invalid aggregate"}
+	ErrInvalidEvent           = EventStoreErr{S: "invalid event"}
+	ErrInvalidEntity          = EventStoreErr{S: "invalid entity"}
+	ErrEventStoreOverflow     = EventStoreErr{S: "event store out of space"}
+	ErrUnsupportedEntityEvent = EventStoreErr{S: "event not supported"}
+	ErrCorruptedEventPayload  = EventStoreErr{S: "failed to parse event payload"}
+	ErrEntityNotFound         = EventStoreErr{S: "entity not found"}
 )

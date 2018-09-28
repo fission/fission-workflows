@@ -1,12 +1,11 @@
 package aggregates
 
 import (
-	"errors"
-
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -91,7 +90,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 
 func (wi *WorkflowInvocation) applyTaskEvent(event *fes.Event) error {
 	if wi.Aggregate() != *event.Parent {
-		return errors.New("function does not belong to invocation")
+		return errors.Errorf("event does not belong to invocation: (expected: %v, value: %v)", wi.Aggregate(), *event.Parent)
 	}
 	taskID := event.Aggregate.Id
 	task, ok := wi.Status.Tasks[taskID]
@@ -124,8 +123,10 @@ func (wi *WorkflowInvocation) Copy() *types.WorkflowInvocation {
 	return proto.Clone(wi.WorkflowInvocation).(*types.WorkflowInvocation)
 }
 
-func NewInvocationEntity() fes.Entity {
-	return NewWorkflowInvocation("")
+func NewInvocationEntity(key fes.Aggregate) fes.Entity {
+	wia := &WorkflowInvocation{}
+	wia.BaseEntity = fes.NewBaseEntity(wia, key)
+	return wia
 }
 
 func (wi *WorkflowInvocation) ensureNextEvent(event *fes.Event) error {

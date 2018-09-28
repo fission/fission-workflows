@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -91,11 +92,11 @@ type SubscribedCache struct {
 	pubsub.Publisher
 	fes.CacheReaderWriter
 	createdAt     time.Time
-	entityFactory func() fes.Entity
+	entityFactory func(fes.Aggregate) fes.Entity
 	closeC        chan struct{}
 }
 
-func NewSubscribedCache(cache fes.CacheReaderWriter, factory func() fes.Entity,
+func NewSubscribedCache(cache fes.CacheReaderWriter, factory func(fes.Aggregate) fes.Entity,
 	sub *pubsub.Subscription) *SubscribedCache {
 	c := &SubscribedCache{
 		Publisher:         pubsub.NewPublisher(),
@@ -188,28 +189,30 @@ func (uc *SubscribedCache) Close() error {
 }
 
 func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *fes.Event) (fes.Entity, error) {
-	cached, err := uc.GetAggregate(*event.Aggregate)
+	key := getKey(event)
+	cached, err := uc.GetAggregate(key)
 	if err != nil && err != fes.ErrEntityNotFound {
 		return nil, err
 	}
-	if cached == nil || err == fes.ErrEntityNotFound {
-		// Case: for task events the parent entity (the invocation) handles the events.
-		// So we need to send the event there.
-		if event.Parent != nil {
-			c, err := uc.GetAggregate(*event.Parent)
-			if err != nil {
-				return nil, err
-			}
-			cached = c
-		} else {
-			cached = uc.entityFactory()
-		}
-		// We truly can't find a entity responsible for the event
-		if cached == nil {
-			return nil, fes.ErrEntityNotFound.WithEvent(event)
-		}
+	if cached != nil {
+		return cached, nil
 	}
-	return cached, nil
+	// Case: for task events the parent entity (the invocation) handles the events.
+	// So we need to send the event there.
+	if event.Parent != nil {
+		parentKey := *event.Parent
+		c, err := uc.GetAggregate(parentKey)
+		if err != nil {
+			return nil, err
+		}
+		if c != nil {
+			return c, nil
+		}
+		return uc.entityFactory(parentKey), nil
+	} else {
+		// Final alternative: create a new entity
+		return uc.entityFactory(key), nil
+	}
 }
 
 // LoadingCache looks into a backing data store in case there is a cache miss
@@ -232,11 +235,7 @@ func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, entityFact
 // TODO provide option to force fallback or only do quick cache lookup.
 // TODO sync cache with store while you are at it.
 func (c *LoadingCache) List() []fes.Aggregate {
-	esAggregates, err := c.client.List(nil)
-	if err != nil {
-		logrus.Errorf("Failed to list event store aggregates: %v", err)
-	}
-	return esAggregates
+	return c.cache.List()
 }
 
 func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
@@ -278,7 +277,7 @@ func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Ent
 	err := c.cache.Get(target)
 	if err != nil {
 		if !fes.ErrEntityNotFound.Is(err) {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// Look up relevant events in event store
@@ -287,7 +286,7 @@ func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Ent
 			return err
 		}
 		if len(events) == 0 {
-			return fes.ErrEntityNotFound.WithAggregate(&aggregate).WithEntity(target)
+			return fes.ErrEntityNotFound.WithAggregate(&aggregate)
 		}
 
 		// Reconstruct entity by replaying all events
@@ -301,4 +300,13 @@ func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Ent
 	}
 
 	return nil
+}
+
+// To ensure that tasks end up in invocation entities: if an event has a parent aggregate,
+// this means that the event should be send to the parent aggregate instead.
+func getKey(e *fes.Event) fes.Aggregate {
+	if e.Parent != nil {
+		return *e.Parent
+	}
+	return *e.Aggregate
 }

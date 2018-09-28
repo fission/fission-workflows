@@ -129,12 +129,11 @@ func Run(ctx context.Context, opts *Options) error {
 	if opts.Debug {
 		// Debug: do not sample down
 		cfg.Sampler = &jaegercfg.SamplerConfig{
+
 			Type:  jaeger.SamplerTypeConst,
 			Param: 1,
 		}
-		cfg.Reporter = &jaegercfg.ReporterConfig{
-			LogSpans: true,
-		}
+		cfg.Reporter = &jaegercfg.ReporterConfig{}
 	}
 
 	// Initialize tracer with a logger and a metrics factory
@@ -168,25 +167,28 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	// Event Store
 	//
+	var eventStore fes.Backend
 	if opts.Nats != nil {
 		log.WithFields(log.Fields{
 			"url":     "!redacted!",
 			"cluster": opts.Nats.Cluster,
 			"client":  opts.Nats.Client,
 		}).Infof("Using event store: NATS")
-		natsEs := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
-		es = natsEs
-		esPub = natsEs
+		natsBackend := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
+		es = natsBackend
+		esPub = natsBackend
+		eventStore = natsBackend
 	} else {
 		log.Warn("No event store provided; using the development, in-memory event store")
-		backend := mem.NewBackend()
-		es = backend
-		esPub = backend
+		memBackend := mem.NewBackend()
+		es = memBackend
+		esPub = memBackend
+		eventStore = memBackend
 	}
 
 	// Caches
-	wfiCache := getInvocationStore(app, esPub)
-	wfCache := getWorkflowStore(app, esPub)
+	wfiCache := getInvocationStore(app, esPub, eventStore)
+	wfCache := getWorkflowStore(app, esPub, eventStore)
 
 	//
 	// Function Runtimes
@@ -361,21 +363,21 @@ func Run(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func getWorkflowStore(app *App, eventPub pubsub.Publisher) func() *store.Workflows {
+func getWorkflowStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Workflows {
 	var workflows *store.Workflows
 	return func() *store.Workflows {
 		if workflows == nil {
-			workflows = store.NewWorkflowsStore(setupWorkflowCache(app, eventPub))
+			workflows = store.NewWorkflowsStore(setupWorkflowCache(app, eventPub, backend))
 		}
 		return workflows
 	}
 }
 
-func getInvocationStore(app *App, eventPub pubsub.Publisher) func() *store.Invocations {
+func getInvocationStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Invocations {
 	var invocations *store.Invocations
 	return func() *store.Invocations {
 		if invocations == nil {
-			invocations = store.NewInvocationStore(setupWorkflowInvocationCache(app, eventPub))
+			invocations = store.NewInvocationStore(setupWorkflowInvocationCache(app, eventPub, backend))
 		}
 		return invocations
 
@@ -421,26 +423,38 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 	return es
 }
 
-func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher) *cache.SubscribedCache {
-	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
+func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
+	sub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
 		LabelMatcher: labels.Or(
 			labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
 			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
 	})
 	name := aggregates.TypeWorkflowInvocation
-	c := cache.NewSubscribedCache(cache.NewLRUCache(InvocationsCacheSize), aggregates.NewInvocationEntity, invokeSub)
+	c := cache.NewSubscribedCache(
+		cache.NewLoadingCache(
+			cache.NewLRUCache(InvocationsCacheSize),
+			backend,
+			aggregates.NewInvocationEntity),
+		aggregates.NewInvocationEntity,
+		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
 }
 
-func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher) *cache.SubscribedCache {
-	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
+func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
+	sub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer:       10,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
 	})
 	name := aggregates.TypeWorkflow
-	c := cache.NewSubscribedCache(cache.NewLRUCache(WorkflowsCacheSize), aggregates.NewWorkflowEntity, wfSub)
+	c := cache.NewSubscribedCache(
+		cache.NewLoadingCache(
+			cache.NewLRUCache(WorkflowsCacheSize),
+			backend,
+			aggregates.NewWorkflowEntity),
+		aggregates.NewWorkflowEntity,
+		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
 }

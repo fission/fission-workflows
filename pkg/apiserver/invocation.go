@@ -1,8 +1,6 @@
 package apiserver
 
 import (
-	"errors"
-
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
@@ -77,7 +75,8 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 	as := gi.store.List()
 	for _, aggregate := range as {
 		if aggregate.Type != aggregates.TypeWorkflowInvocation {
-			return nil, toErrorStatus(errors.New("invalid type in invocation store"))
+			logrus.Errorf("Invalid type in invocation store: %v", aggregate.Format())
+			continue
 		}
 
 		if len(query.Workflows) > 0 {
