@@ -25,7 +25,7 @@ func NewWorkflowsStore(workflows fes.CacheReader) *Workflows {
 // GetWorkflow returns an event-sourced workflow.
 // If an error occurred the error is returned, if no workflow was found both return values are nil.
 func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
-	key := fes.NewAggregate(aggregates.TypeWorkflow, workflowID)
+	key := fes.Aggregate{Type: aggregates.TypeWorkflow, Id: workflowID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err
@@ -50,20 +50,22 @@ func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
 // In the future we can fallback to pull-based mechanisms
 func (s *Workflows) GetWorkflowUpdates() *WorkflowSubscription {
 	selector := labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow)
-	invokePub, ok := s.CacheReader.(pubsub.Publisher)
+	workflowPub, ok := s.CacheReader.(pubsub.Publisher)
 	if !ok {
 		return nil
 	}
 
-	return &WorkflowSubscription{
-		Subscription: invokePub.Subscribe(pubsub.SubscriptionOptions{
+	sub := &WorkflowSubscription{
+		Subscription: workflowPub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer:       fes.DefaultNotificationBuffer,
 			LabelMatcher: selector,
 		}),
-		closeFn: func() error {
-			return invokePub.Close()
-		},
 	}
+
+	sub.closeFn = func() error {
+		return workflowPub.Unsubscribe(sub.Subscription)
+	}
+	return sub
 }
 
 type Invocations struct {
@@ -79,7 +81,7 @@ func NewInvocationStore(invocations fes.CacheReader) *Invocations {
 // GetInvocation returns an event-sourced invocation.
 // If an error occurred the error is returned, if no invocation was found both return values are nil.
 func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocation, error) {
-	key := fes.NewAggregate(aggregates.TypeWorkflowInvocation, invocationID)
+	key := fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: invocationID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err
@@ -104,20 +106,21 @@ func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocat
 // In the future we can fallback to pull-based mechanisms
 func (s *Invocations) GetInvocationUpdates() *InvocationSubscription {
 	selector := labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation, aggregates.TypeTaskInvocation)
-	invokePub, ok := s.CacheReader.(pubsub.Publisher)
+	invocationPub, ok := s.CacheReader.(pubsub.Publisher)
 	if !ok {
 		return nil
 	}
 
-	return &InvocationSubscription{
-		Subscription: invokePub.Subscribe(pubsub.SubscriptionOptions{
+	sub := &InvocationSubscription{
+		Subscription: invocationPub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer:       fes.DefaultNotificationBuffer,
 			LabelMatcher: selector,
 		}),
-		closeFn: func() error {
-			return invokePub.Close()
-		},
 	}
+	sub.closeFn = func() error {
+		return invocationPub.Unsubscribe(sub.Subscription)
+	}
+	return sub
 }
 
 type WorkflowSubscription struct {

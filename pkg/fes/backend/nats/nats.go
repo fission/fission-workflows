@@ -247,7 +247,9 @@ func (wc *WildcardConn) publishActivity(activity *subjectEvent) error {
 	return nil
 }
 
-func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
+// List retrieves all mentioned entities on the activity channel. The results can be filtered using the matcher, with
+// a nil matcher equivalent to a 'match-all'.
+func (wc *WildcardConn) List(matcher fes.AggregateMatcher) ([]string, error) {
 
 	msgs, err := wc.Conn.MsgSeqRange(subjectActivity, firstMsg, mostRecentMsg)
 	if err != nil {
@@ -266,7 +268,8 @@ func (wc *WildcardConn) List(matcher fes.StringMatcher) ([]string, error) {
 		}
 
 		subject := subjectEvent.Subject
-		if matcher(subject) {
+		aggregate := toAggregate(subject)
+		if matcher == nil || (aggregate != nil && matcher(*aggregate)) {
 			count := 1
 			if c, ok := subjectCount[subject]; ok {
 				count += c

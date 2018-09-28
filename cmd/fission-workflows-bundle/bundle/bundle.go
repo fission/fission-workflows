@@ -2,7 +2,9 @@ package bundle
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -19,6 +21,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
+	"github.com/fission/fission-workflows/pkg/fes/cache"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
@@ -52,7 +55,39 @@ const (
 	apiGatewayAddress       = ":8080"
 	fissionProxyAddress     = ":8888"
 	jaegerTracerServiceName = "fission.workflows"
+	WorkflowsCacheSize      = 10000
+	InvocationsCacheSize    = 1000000
 )
+
+type App struct {
+	*Options
+	closers map[string]io.Closer
+}
+
+func (app *App) RegisterCloser(name string, closer io.Closer) {
+	if _, ok := app.closers[name]; ok {
+		panic(fmt.Sprintf("duplicate registry for key %s", name))
+	}
+
+	app.closers[name] = closer
+}
+
+func (app *App) Close() error {
+	var errorOccured bool
+	for name, closer := range app.closers {
+		err := closer.Close()
+		if err != nil {
+			log.Errorf("Error while closing %s: %v", name, err)
+			errorOccured = true
+		} else {
+			log.Infof("Closed %s", name)
+		}
+	}
+	if errorOccured {
+		return errors.New("error(s) occurred while closing application")
+	}
+	return nil
+}
 
 type Options struct {
 	Nats                 *nats.Config
@@ -74,20 +109,16 @@ type FissionOptions struct {
 	RouterAddr      string
 }
 
-func Run(ctx context.Context, opts *Options) error {
-
-	err := run(ctx, opts)
-	log.WithField("reason", ctx.Err()).Info("Shutting down...")
-	time.Sleep(5 * time.Second)
-	return err
-}
-
 // Run serves enabled components in a blocking way
-func run(ctx context.Context, opts *Options) error {
+func Run(ctx context.Context, opts *Options) error {
 	log.WithFields(log.Fields{
 		"version": fmt.Sprintf("%+v", version.VersionInfo()),
 		"config":  fmt.Sprintf("%+v", opts),
 	}).Info("Starting bundle...")
+	app := &App{
+		Options: opts,
+		closers: map[string]io.Closer{},
+	}
 
 	// See https://github.com/jaegertracing/jaeger-client-go for the env vars to set; defaults to local Jaeger
 	// instance with default ports.
@@ -98,12 +129,11 @@ func run(ctx context.Context, opts *Options) error {
 	if opts.Debug {
 		// Debug: do not sample down
 		cfg.Sampler = &jaegercfg.SamplerConfig{
+
 			Type:  jaeger.SamplerTypeConst,
 			Param: 1,
 		}
-		cfg.Reporter = &jaegercfg.ReporterConfig{
-			LogSpans: true,
-		}
+		cfg.Reporter = &jaegercfg.ReporterConfig{}
 	}
 
 	// Initialize tracer with a logger and a metrics factory
@@ -137,25 +167,28 @@ func run(ctx context.Context, opts *Options) error {
 	//
 	// Event Store
 	//
+	var eventStore fes.Backend
 	if opts.Nats != nil {
 		log.WithFields(log.Fields{
 			"url":     "!redacted!",
 			"cluster": opts.Nats.Cluster,
 			"client":  opts.Nats.Client,
 		}).Infof("Using event store: NATS")
-		natsEs := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
-		es = natsEs
-		esPub = natsEs
+		natsBackend := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
+		es = natsBackend
+		esPub = natsBackend
+		eventStore = natsBackend
 	} else {
 		log.Warn("No event store provided; using the development, in-memory event store")
-		backend := mem.NewBackend()
-		es = backend
-		esPub = backend
+		memBackend := mem.NewBackend()
+		es = memBackend
+		esPub = memBackend
+		eventStore = memBackend
 	}
 
 	// Caches
-	wfiCache := getInvocationStore(ctx, esPub)
-	wfCache := getWorkflowStore(ctx, esPub)
+	wfiCache := getInvocationStore(app, esPub, eventStore)
+	wfCache := getWorkflowStore(app, esPub, eventStore)
 
 	//
 	// Function Runtimes
@@ -324,30 +357,30 @@ func run(ctx context.Context, opts *Options) error {
 	log.Info("Setup completed.")
 
 	<-ctx.Done()
+	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	util.LogIfError(app.Close())
+	time.Sleep(5 * time.Second) // Hack: wait a bit to ensure all goroutines are shutdown.
 	return nil
 }
 
-func getWorkflowStore(ctx context.Context, eventPub pubsub.Publisher) func() *store.Workflows {
+func getWorkflowStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Workflows {
 	var workflows *store.Workflows
 	return func() *store.Workflows {
-		if workflows != nil {
-			return workflows
+		if workflows == nil {
+			workflows = store.NewWorkflowsStore(setupWorkflowCache(app, eventPub, backend))
 		}
-
-		c := setupWorkflowCache(ctx, eventPub)
-		return store.NewWorkflowsStore(c)
+		return workflows
 	}
 }
 
-func getInvocationStore(ctx context.Context, eventPub pubsub.Publisher) func() *store.Invocations {
+func getInvocationStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Invocations {
 	var invocations *store.Invocations
 	return func() *store.Invocations {
-		if invocations != nil {
-			return invocations
+		if invocations == nil {
+			invocations = store.NewInvocationStore(setupWorkflowInvocationCache(app, eventPub, backend))
 		}
+		return invocations
 
-		c := setupWorkflowInvocationCache(ctx, eventPub)
-		return store.NewInvocationStore(c)
 	}
 }
 
@@ -390,29 +423,40 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 	return es
 }
 
-func setupWorkflowInvocationCache(ctx context.Context, invocationEventPub pubsub.Publisher) *fes.SubscribedCache {
-	invokeSub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
+func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
+	sub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
 		LabelMatcher: labels.Or(
 			labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
 			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
 	})
-	wi := func() fes.Entity {
-		return aggregates.NewWorkflowInvocation("")
-	}
-
-	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache(aggregates.TypeWorkflowInvocation), wi, invokeSub)
+	name := aggregates.TypeWorkflowInvocation
+	c := cache.NewSubscribedCache(
+		cache.NewLoadingCache(
+			cache.NewLRUCache(InvocationsCacheSize),
+			backend,
+			aggregates.NewInvocationEntity),
+		aggregates.NewInvocationEntity,
+		sub)
+	app.RegisterCloser("cache-"+name, c)
+	return c
 }
 
-func setupWorkflowCache(ctx context.Context, workflowEventPub pubsub.Publisher) *fes.SubscribedCache {
-	wfSub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
+func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
+	sub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer:       10,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
 	})
-	wb := func() fes.Entity {
-		return aggregates.NewWorkflow("")
-	}
-	return fes.NewSubscribedCache(ctx, fes.NewNamedMapCache(aggregates.TypeWorkflow), wb, wfSub)
+	name := aggregates.TypeWorkflow
+	c := cache.NewSubscribedCache(
+		cache.NewLoadingCache(
+			cache.NewLRUCache(WorkflowsCacheSize),
+			backend,
+			aggregates.NewWorkflowEntity),
+		aggregates.NewWorkflowEntity,
+		sub)
+	app.RegisterCloser("cache-"+name, c)
+	return c
 }
 
 func serveAdminAPI(s *grpc.Server) {

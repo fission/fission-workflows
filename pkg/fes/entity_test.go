@@ -19,7 +19,7 @@ func newMockAggregate(id string, atype string, val int) *MockAggregate {
 	return m
 }
 
-func (ma *MockAggregate) GenericCopy() Entity {
+func (ma *MockAggregate) CopyEntity() Entity {
 	panic("implement me")
 }
 

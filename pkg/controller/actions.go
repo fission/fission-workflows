@@ -54,7 +54,7 @@ type ActionRemoveFromFesCache struct {
 }
 
 func (a *ActionRemoveFromFesCache) Apply() error {
-	a.Cache.Invalidate(&a.Aggregate)
+	a.Cache.Invalidate(a.Aggregate)
 	return nil
 }
 

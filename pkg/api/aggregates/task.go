@@ -5,7 +5,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -35,8 +35,10 @@ func NewTaskInvocationAggregate(id string) *fes.Aggregate {
 }
 
 func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
-
-	eventData, err := fes.UnmarshalEventData(event)
+	if err := ti.ensureNextEvent(event); err != nil {
+		return err
+	}
+	eventData, err := fes.ParseEventData(event)
 	if err != nil {
 		return err
 	}
@@ -44,37 +46,35 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 	switch m := eventData.(type) {
 	case *events.TaskStarted:
 		ti.TaskInvocation = &types.TaskInvocation{
-			Metadata: types.NewObjectMetadata(m.GetSpec().TaskId),
-			Spec:     m.GetSpec(),
+			Metadata: &types.ObjectMetadata{
+				Id:         m.GetSpec().TaskId,
+				CreatedAt:  event.Timestamp,
+				Generation: 1,
+			},
+			Spec: m.GetSpec(),
 			Status: &types.TaskInvocationStatus{
-				Status:    types.TaskInvocationStatus_IN_PROGRESS,
-				UpdatedAt: event.Timestamp,
+				Status: types.TaskInvocationStatus_IN_PROGRESS,
 			},
 		}
 	case *events.TaskSucceeded:
 		ti.Status.Output = m.GetResult().Output
 		ti.Status.Status = types.TaskInvocationStatus_SUCCEEDED
-		ti.Status.UpdatedAt = event.Timestamp
 	case *events.TaskFailed:
-		// TODO validate event data
-		if ti.Status == nil {
-			ti.Status = &types.TaskInvocationStatus{}
-		}
 		ti.Status.Error = m.GetError()
-		ti.Status.UpdatedAt = event.Timestamp
 		ti.Status.Status = types.TaskInvocationStatus_FAILED
 	case *events.TaskSkipped:
+		// TODO ensure that object (spec/status) is present
 		ti.Status.Status = types.TaskInvocationStatus_SKIPPED
-		ti.Status.UpdatedAt = event.Timestamp
 	default:
-		log.WithFields(log.Fields{
-			"aggregate": ti.Aggregate(),
-		}).Warnf("Skipping unimplemented event: %T", eventData)
+		key := ti.Aggregate()
+		return fes.ErrUnsupportedEntityEvent.WithAggregate(&key).WithEvent(event)
 	}
+	ti.Metadata.Generation++
+	ti.Status.UpdatedAt = event.GetTimestamp()
 	return nil
 }
 
-func (ti *TaskInvocation) GenericCopy() fes.Entity {
+func (ti *TaskInvocation) CopyEntity() fes.Entity {
 	n := &TaskInvocation{
 		TaskInvocation: ti.Copy(),
 	}
@@ -84,4 +84,17 @@ func (ti *TaskInvocation) GenericCopy() fes.Entity {
 
 func (ti *TaskInvocation) Copy() *types.TaskInvocation {
 	return proto.Clone(ti.TaskInvocation).(*types.TaskInvocation)
+}
+
+func (ti *TaskInvocation) ensureNextEvent(event *fes.Event) error {
+	if err := fes.ValidateEvent(event); err != nil {
+		return err
+	}
+
+	if event.Aggregate.Type != TypeTaskInvocation {
+		logrus.Info("task check")
+		return fes.ErrUnsupportedEntityEvent.WithEntity(ti).WithEvent(event)
+	}
+	// TODO check sequence of event
+	return nil
 }

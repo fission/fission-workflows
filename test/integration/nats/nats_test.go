@@ -8,6 +8,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
 	fesnats "github.com/fission/fission-workflows/pkg/fes/backend/nats"
+	"github.com/fission/fission-workflows/pkg/fes/testutil"
 	"github.com/fission/fission-workflows/pkg/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -91,7 +92,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNatsBackend_GetNonExistent(t *testing.T) {
-	key := fes.NewAggregate("nonExistentType", "nonExistentId")
+	key := fes.Aggregate{Type: "nonExistentType", Id: "nonExistentId"}
 
 	// check
 	events, err := backend.Get(key)
@@ -100,11 +101,10 @@ func TestNatsBackend_GetNonExistent(t *testing.T) {
 }
 
 func TestNatsBackend_Append(t *testing.T) {
-	key := fes.NewAggregate("someType", "someId")
-	dummyEvent := &fes.DummyEvent{Msg: "dummy"}
-	event, err := fes.NewEvent(key, dummyEvent)
-	assert.NoError(t, err)
-	err = backend.Append(event)
+	key := fes.Aggregate{Type: "someType", Id: "someId"}
+	dummyEvent := &testutil.DummyEvent{Msg: "dummy"}
+	event := testutil.CreateDummyEvent(key, dummyEvent)
+	err := backend.Append(event)
 	assert.NoError(t, err)
 
 	// check
@@ -113,13 +113,13 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.Len(t, events, 1)
 	assert.Equal(t, event.GetType(), events[0].GetType())
 	assert.Equal(t, event.GetTimestamp().GetNanos(), events[0].GetTimestamp().GetNanos())
-	data, err := fes.UnmarshalEventData(events[0])
+	data, err := fes.ParseEventData(events[0])
 	assert.NoError(t, err)
 	assert.Equal(t, dummyEvent, data)
 }
 
 func TestNatsBackend_List(t *testing.T) {
-	subjects, err := backend.List(fes.ContainsMatcher(""))
+	subjects, err := backend.List(func(_ fes.Aggregate) bool { return true })
 	assert.NoError(t, err)
 	assert.NotEmpty(t, subjects)
 }

@@ -13,11 +13,12 @@ type BaseEntity struct {
 	aggregate Aggregate
 	// parent is a pointer to the wrapper of this mixin, to allow for reflection-based aggregation.
 	parent Entity
-
-	version uint
 }
 
 func (am *BaseEntity) Aggregate() Aggregate {
+	if am == nil {
+		return Aggregate{}
+	}
 	return am.aggregate
 }
 
@@ -58,11 +59,4 @@ func NewBaseEntity(thiz Entity, aggregate Aggregate) *BaseEntity {
 		aggregate: aggregate,
 		parent:    thiz,
 	}
-}
-
-func ValidateAggregate(a *Aggregate) error {
-	if a != nil && len(a.Type) != 0 && len(a.Id) != 0 {
-		return nil
-	}
-	return ErrInvalidAggregate.WithAggregate(a)
 }
