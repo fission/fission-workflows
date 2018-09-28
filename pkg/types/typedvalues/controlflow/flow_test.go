@@ -53,6 +53,30 @@ func parseFormatTestCases() []testCase {
 			},
 			expectedType: TypeWorkflow,
 		},
+		{
+			input: FlowTask(&types.TaskSpec{
+				FunctionRef: "someFn",
+				Inputs: map[string]*typedvalues.TypedValue{
+					"foo": typedvalues.MustWrap("bar"),
+				},
+				Requires: map[string]*types.TaskDependencyParameters{
+					"prev": nil,
+				},
+			}),
+			expectedType: TypeFlow,
+		},
+		{
+			input: FlowWorkflow(&types.WorkflowSpec{
+				ApiVersion: types.WorkflowAPIVersion,
+				OutputTask: "fakeFinalTask",
+				Tasks: map[string]*types.TaskSpec{
+					"fakeFinalTask": {
+						FunctionRef: "noop",
+					},
+				},
+			}),
+			expectedType: TypeFlow,
+		},
 	}
 }
 
@@ -68,6 +92,7 @@ func TestValueTester(t *testing.T) {
 			tv, err := typedvalues.Wrap(testCase.input)
 			fmt.Printf("Typed value: %+v\n", tv)
 			assert.NoError(t, err)
+			assert.True(t, IsControlFlow(tv))
 			assert.Equal(t, testCase.expectedType, tv.ValueType())
 			i, err := typedvalues.Unwrap(tv)
 			assert.NoError(t, err)

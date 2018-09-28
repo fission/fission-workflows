@@ -119,12 +119,13 @@ func (h *HTTPMapper) ParseResponse(resp *http.Response) (*typedvalues.TypedValue
 func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.TypedValue, error) {
 	// Determine content-type
 	contentType := h.getRequestContentType(req.Header)
+	defer req.Body.Close()
 
 	var body *typedvalues.TypedValue
 	var err error
 	// TODO support multipart
 	switch contentType.Identifier() {
-	// Special case: application/x-www-form-urlencoded is the only content-type (?) which can also store data in the url
+	// Special case: application/x-www-form-urlencoded is the only content-type (?) which also stores data in the url
 	case "application/x-www-form-urlencoded":
 		req.ParseForm()
 		mp := map[string]interface{}{}
@@ -142,7 +143,6 @@ func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.Ty
 	// Default case parse body using the Parser interface
 	default:
 		body, err = h.parseBody(req.Body, contentType)
-		defer req.Body.Close()
 		if err != nil {
 			return nil, errors.Errorf("failed to parse request: %v", err)
 		}

@@ -18,13 +18,19 @@ var (
 	FlowTypeWorkflow = FlowType(TypeWorkflow)
 	FlowTypeTask     = FlowType(TypeTask)
 	FlowTypeNone     = FlowType("")
-	TypeTask         = proto.MessageName(&types.TaskSpec{})
-	TypeWorkflow     = proto.MessageName(&types.WorkflowSpec{})
 	ErrEmptyFlow     = errors.New("flow is empty")
 )
 
 func IsControlFlow(tv *typedvalues.TypedValue) bool {
-	return tv.ValueType() == TypeTask || tv.ValueType() == TypeWorkflow
+	if tv != nil {
+		vt := tv.ValueType()
+		for _, valueType := range Types {
+			if valueType == vt {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func UnwrapControlFlow(tv *typedvalues.TypedValue) (*Flow, error) {
@@ -139,6 +145,8 @@ func FlowInterface(i interface{}) (*Flow, error) {
 		return FlowWorkflow(t), nil
 	case *types.TaskSpec:
 		return FlowTask(t), nil
+	case *Flow:
+		return t, nil
 	default:
 		return nil, ErrEmptyFlow
 	}
@@ -152,22 +160,13 @@ func ResolveTaskOutput(taskID string, invocation *types.WorkflowInvocation) *typ
 	}
 
 	output := val.Status.Output
-	switch output.ValueType() {
-	case TypeTask:
+	if IsControlFlow(output) {
 		for outputTaskID, outputTask := range invocation.Status.DynamicTasks {
-			if dep, ok := outputTask.Spec.Requires[taskID]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
+			if dep, ok := outputTask.Spec.Requires[taskID]; ok &&
+				dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
 				return ResolveTaskOutput(outputTaskID, invocation)
 			}
 		}
-		return nil
-	case TypeWorkflow:
-		for outputTaskID, outputTask := range invocation.Status.DynamicTasks {
-			if dep, ok := outputTask.Spec.Requires[taskID]; ok && dep.Type == types.TaskDependencyParameters_DYNAMIC_OUTPUT {
-				return ResolveTaskOutput(outputTaskID, invocation)
-			}
-		}
-		return nil
-	default:
-		return output
 	}
+	return output
 }
