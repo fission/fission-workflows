@@ -12,13 +12,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type FlowType string
-
 var (
-	FlowTypeWorkflow = FlowType(TypeWorkflow)
-	FlowTypeTask     = FlowType(TypeTask)
-	FlowTypeNone     = FlowType("")
-	ErrEmptyFlow     = errors.New("flow is empty")
+	ErrEmptyFlow = errors.New("flow is empty")
+	ErrNotAFlow  = errors.New("value is not a flow")
 )
 
 func IsControlFlow(tv *typedvalues.TypedValue) bool {
@@ -140,6 +136,9 @@ func FlowWorkflow(workflow *types.WorkflowSpec) *Flow {
 }
 
 func FlowInterface(i interface{}) (*Flow, error) {
+	if i == nil {
+		return nil, ErrEmptyFlow
+	}
 	switch t := i.(type) {
 	case *types.WorkflowSpec:
 		return FlowWorkflow(t), nil
@@ -148,7 +147,7 @@ func FlowInterface(i interface{}) (*Flow, error) {
 	case *Flow:
 		return t, nil
 	default:
-		return nil, ErrEmptyFlow
+		return nil, ErrNotAFlow
 	}
 }
 

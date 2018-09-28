@@ -29,8 +29,6 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	log.SetLevel(log.DebugLevel)
-
 	if testing.Short() {
 		log.Info("Short test; skipping bundle integration tests.")
 		return
