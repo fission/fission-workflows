@@ -45,6 +45,7 @@ before_script:
 # Static code analysis
 - hack/verify-gofmt.sh
 - hack/verify-govet.sh
+- hack/verify-misc.sh
 - helm lint charts/fission-workflows
 # Build
 - glide install -v
