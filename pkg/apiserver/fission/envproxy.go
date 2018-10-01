@@ -15,7 +15,9 @@ import (
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission/router"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/opentracing/opentracing-go"
@@ -32,8 +34,8 @@ type Proxy struct {
 	fissionIds       syncmap.Map // map[string]bool
 }
 
-// NewFissionProxyServer creates a proxy server to adheres to the Fission Environment specification.
-func NewFissionProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
+// NewEnvironmentProxyServer creates a proxy server to adheres to the Fission Environment specification.
+func NewEnvironmentProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
 	return &Proxy{
 		invocationServer: wfiSrv,
 		workflowServer:   wfSrv,
@@ -54,6 +56,7 @@ func (fp *Proxy) handleHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
 	// Optional: Parse opentracing
 	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(r.Header))
@@ -81,8 +84,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		// Fallback 1 : check if it is in the event store somewhere
 		if fp.hasWorkflow(ctx, fnID) {
-			logrus.WithField("fnID", fnID).
-				Error("Unknown fission function name")
+			logrus.WithField("fnID", fnID).Error("Unknown fission function name")
 			http.Error(w, "Unknown fission function name; not specialized", 400)
 			return
 		}
@@ -102,6 +104,11 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Temporary: in case of query header 'X-Async' being present, make request async
+	if logrus.GetLevel() == logrus.DebugLevel {
+		inputs, err := typedvalues.UnwrapMapTypedValue(wfSpec.Inputs)
+		util.LogIfError(err)
+		logrus.Debugf("Fission proxy request: %v - %v", wfSpec.WorkflowId, inputs)
+	}
 	if len(r.Header.Get("X-Async")) > 0 {
 		invocationID, invokeErr := fp.invocationServer.Invoke(ctx, wfSpec)
 		if invokeErr != nil {
@@ -167,7 +174,7 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Attempt to specialize with the provided function load request
-	wfIDs, err := fp.Specialize(ctx, flr)
+	wfIDs, err := fp.specialize(ctx, flr)
 	if err != nil {
 		logrus.Errorf("failed to specialize: %v", err)
 		if os.IsNotExist(err) {
@@ -184,11 +191,13 @@ func (fp *Proxy) handleSpecialize(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(strings.Join(wfIDs, ";")))
 }
 
-// Specialize creates workflows provided by a Fission Load Request.
+// specialize creates workflows provided by a Fission Load Request.
 //
 // The Fission package can either exist out of a single workflow file, or out of a directory filled with
 // solely workflow definitions.
-func (fp *Proxy) Specialize(ctx context.Context, flr *fission.FunctionLoadRequest) ([]string, error) {
+//
+// In the FunctionLoadRequest this function expects FilePath, and the objectmetadata, with the UID and Name, to be set.
+func (fp *Proxy) specialize(ctx context.Context, flr *fission.FunctionLoadRequest) ([]string, error) {
 	if flr == nil {
 		return nil, errors.New("no function load request provided")
 	}
@@ -283,14 +292,14 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	}
 	wfID := resp.Id
 
-	// EvalCache the id so we don't have to check whether the workflow engine already has it.
+	// Cache the id so we don't have to check whether the workflow engine already has it.
 	fp.fissionIds.Store(fissionID, true)
 
 	return wfID, nil
 }
 
 func (fp *Proxy) hasWorkflow(ctx context.Context, fnID string) bool {
-	wf, err := fp.workflowServer.Get(ctx, &apiserver.WorkflowIdentifier{Id: fnID})
+	wf, err := fp.workflowServer.Get(ctx, &types.ObjectMetadata{Id: fnID})
 	if err != nil {
 		logrus.Errorf("Failed to get workflow: %v; assuming it is non-existent", err)
 	}

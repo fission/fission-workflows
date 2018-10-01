@@ -14,6 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
@@ -512,7 +513,7 @@ func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, invocat
 	wfServer := apiserver.NewWorkflow(workflowAPI, workflows)
 	wfiAPI := api.NewInvocationAPI(es)
 	wfiServer := apiserver.NewInvocation(wfiAPI, invocations)
-	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
+	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 
