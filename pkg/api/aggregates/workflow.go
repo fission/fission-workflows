@@ -49,14 +49,15 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 
 	switch m := eventData.(type) {
 	case *events.WorkflowCreated:
-		// Setup object
+		spec := m.GetSpec()
 		wf.BaseEntity = fes.NewBaseEntity(wf, *event.Aggregate)
 		wf.Workflow = &types.Workflow{
 			Metadata: &types.ObjectMetadata{
 				Id:        wf.Aggregate().Id,
+				Name:      spec.GetName(),
 				CreatedAt: event.GetTimestamp(),
 			},
-			Spec: m.GetSpec(),
+			Spec: spec,
 			Status: &types.WorkflowStatus{
 				Status: types.WorkflowStatus_PENDING,
 			},

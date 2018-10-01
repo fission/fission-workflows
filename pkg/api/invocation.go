@@ -38,6 +38,14 @@ func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec, opts ...CallOpt
 		return "", err
 	}
 
+	// Ensure that te body input is also accessible on the default parameter
+	// TODO remove once default input field is removed
+	if spec.Inputs != nil && spec.Inputs[types.InputMain] == nil {
+		if body, ok := spec.Inputs[types.InputBody]; ok {
+			spec.Inputs[types.InputMain] = body
+		}
+	}
+
 	id := fmt.Sprintf("wi-%s", util.UID())
 
 	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(id), &events.InvocationCreated{
