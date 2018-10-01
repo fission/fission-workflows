@@ -3,6 +3,8 @@ package bundle
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -211,6 +213,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)
 
+	// Test with main input
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
 		Inputs: map[string]*typedvalues.TypedValue{
@@ -223,8 +226,23 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Finished())
 	assert.True(t, wfi.Status.Successful())
 	assert.Equal(t, 4, len(wfi.Status.Tasks))
-
 	output := typedvalues.MustUnwrap(wfi.Status.Output)
+	assert.Equal(t, "alternative: FOO", output)
+
+	// Test with body input
+	wiSpec = &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+		Inputs: map[string]*typedvalues.TypedValue{
+			types.InputBody: typedvalues.MustWrap("foo"),
+		},
+	}
+	wfi, err = wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, 4, len(wfi.Status.Tasks))
+	output = typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, "alternative: FOO", output)
 }
 
@@ -306,7 +324,7 @@ func TestParallelInvocation(t *testing.T) {
 
 	taskSpec := &types.TaskSpec{
 		FunctionRef: builtin.Sleep,
-		Inputs:      types.Input("2s"),
+		Inputs:      types.Input("25ms"),
 	}
 
 	wfSpec.AddTask("p1", taskSpec)
@@ -316,7 +334,7 @@ func TestParallelInvocation(t *testing.T) {
 	wfSpec.AddTask("p5", taskSpec)
 	wfSpec.AddTask("await", &types.TaskSpec{
 		FunctionRef: builtin.Sleep,
-		Inputs:      types.Input("1s"),
+		Inputs:      types.Input("10ms"),
 		Requires:    types.Require("p1", "p2", "p3", "p4", "p5"),
 	})
 	wfSpec.SetOutput("await")
@@ -566,6 +584,69 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue())
 	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue())
 	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetOutput().GetValue())
+}
+
+func TestDeepRecursion(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "mainTask",
+		Tasks: map[string]*types.TaskSpec{
+			"mainTask": { // layer 1
+				FunctionRef: builtin.Noop,
+				Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+					types.InputMain: &types.TaskSpec{ // layer 2
+						FunctionRef: builtin.Noop,
+						Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+							types.InputMain: &types.TaskSpec{ // layer 3
+								FunctionRef: builtin.Noop,
+								Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+									types.InputMain: &types.TaskSpec{ // layer 4
+										FunctionRef: builtin.Noop,
+										Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+											types.InputMain: "foo",
+										}),
+									},
+								}),
+							},
+						}),
+					},
+				}),
+			},
+		},
+	}
+
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+		Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+			types.InputMain: "foo",
+		}),
+	}
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+
+	output := typedvalues.MustUnwrap(wfi.Status.Output)
+	d, _ := json.Marshal(output)
+	fmt.Println(string(d))
+	assert.Equal(t, typedvalues.MustUnwrap(wiSpec.Inputs[types.InputMain]), output)
 }
 
 func TestDeeplyNestedInvocation(t *testing.T) {
