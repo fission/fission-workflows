@@ -22,14 +22,14 @@ func New() *Runtime {
 	mapper := httpconv.DefaultHTTPMapper.Clone()
 	mapper.DefaultHTTPMethod = http.MethodGet
 	return &Runtime{
-		Client: http.DefaultClient,
-		mapper: mapper,
+		Client:   http.DefaultClient,
+		httpconv: mapper,
 	}
 }
 
 type Runtime struct {
-	Client *http.Client
-	mapper *httpconv.HTTPMapper
+	Client   *http.Client
+	httpconv *httpconv.HTTPMapper
 }
 
 // Example: https://us-east1-personal-erwinvaneyk.cloudfunctions.net/helloworld
@@ -63,7 +63,7 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 	req.URL = fnUrl
 
 	// Pass task inputs to HTTP request
-	err = httpconv.FormatRequest(spec.GetInputs(), req)
+	err = r.httpconv.FormatRequest(spec.GetInputs(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 		fmt.Println("--- HTTP Response end ---")
 	}
 
-	output, err := httpconv.ParseResponse(resp)
+	output, err := r.httpconv.ParseResponse(resp)
 	if err != nil {
 		return nil, err
 	}
