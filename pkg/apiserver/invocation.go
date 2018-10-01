@@ -97,6 +97,17 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 	return &WorkflowInvocationList{invocations}, nil
 }
 
+func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.Empty, error) {
+	invocation, err := gi.store.GetInvocation(req.GetInvocationID())
+	if err != nil {
+		return nil, toErrorStatus(err)
+	}
+	if err := gi.api.AddTask(invocation.ID(), req.Task); err != nil {
+		return nil, err
+	}
+	return &empty.Empty{}, nil
+}
+
 func contains(haystack []string, needle string) bool {
 	for i := 0; i < len(haystack); i++ {
 		if haystack[i] == needle {

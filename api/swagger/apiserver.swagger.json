@@ -15,22 +15,6 @@
     "application/json"
   ],
   "paths": {
-    "/halt": {
-      "get": {
-        "operationId": "Halt",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/protobufEmpty"
-            }
-          }
-        },
-        "tags": [
-          "AdminAPI"
-        ]
-      }
-    },
     "/healthz": {
       "get": {
         "operationId": "Status",
@@ -58,6 +42,17 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "workflows",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        ],
         "tags": [
           "WorkflowInvocationAPI"
         ]
@@ -80,7 +75,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationSpec"
+              "$ref": "#/definitions/typesWorkflowInvocationSpec"
             }
           }
         ],
@@ -96,7 +91,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocation"
+              "$ref": "#/definitions/typesWorkflowInvocation"
             }
           }
         },
@@ -125,7 +120,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocation"
+              "$ref": "#/definitions/typesWorkflowInvocation"
             }
           }
         },
@@ -135,7 +130,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationSpec"
+              "$ref": "#/definitions/typesWorkflowInvocationSpec"
             }
           }
         ],
@@ -161,7 +156,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocationSpec"
+              "$ref": "#/definitions/typesWorkflowInvocationSpec"
             }
           }
         ],
@@ -179,7 +174,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/WorkflowInvocation"
+              "$ref": "#/definitions/typesWorkflowInvocation"
             }
           }
         },
@@ -220,9 +215,9 @@
         ]
       }
     },
-    "/resume": {
-      "get": {
-        "operationId": "Resume",
+    "/invocation/{invocationID}/tasks": {
+      "post": {
+        "operationId": "AddTask",
         "responses": {
           "200": {
             "description": "",
@@ -231,8 +226,46 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "invocationID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiserverAddTaskRequest"
+            }
+          }
+        ],
         "tags": [
-          "AdminAPI"
+          "WorkflowInvocationAPI"
+        ]
+      },
+      "put": {
+        "operationId": "AddTask2",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/protobufEmpty"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "invocationID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "WorkflowInvocationAPI"
         ]
       }
     },
@@ -243,7 +276,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/apiserverVersionResp"
+              "$ref": "#/definitions/versionInfo"
             }
           }
         },
@@ -283,7 +316,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowSpec"
+              "$ref": "#/definitions/typesWorkflowSpec"
             }
           }
         ],
@@ -309,7 +342,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/WorkflowSpec"
+              "$ref": "#/definitions/typesWorkflowSpec"
             }
           }
         ],
@@ -325,7 +358,7 @@
           "200": {
             "description": "",
             "schema": {
-              "$ref": "#/definitions/Workflow"
+              "$ref": "#/definitions/typesWorkflow"
             }
           }
         },
@@ -366,68 +399,6 @@
     }
   },
   "definitions": {
-    "Error": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "title": "string code = 1;"
-        }
-      }
-    },
-    "FnRef": {
-      "type": "object",
-      "properties": {
-        "runtime": {
-          "type": "string",
-          "description": "Runtime is the Function Runtime environment (fnenv) that was used to resolve the function."
-        },
-        "ID": {
-          "type": "string",
-          "description": "ID is the runtime-specific identifier of the function."
-        }
-      },
-      "description": "FnRef is an immutable, unique reference to a function on a specific function runtime environment.\n\nThe string representation (via String or Format): runtime://runtimeId"
-    },
-    "ObjectMetadata": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "title": "Common"
-    },
-    "Task": {
-      "type": "object",
-      "properties": {
-        "metadata": {
-          "$ref": "#/definitions/ObjectMetadata"
-        },
-        "spec": {
-          "$ref": "#/definitions/TaskSpec"
-        },
-        "status": {
-          "$ref": "#/definitions/TaskStatus"
-        }
-      },
-      "title": "Task Model"
-    },
-    "TaskDependencyParameters": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/TaskDependencyParametersDependencyType"
-        },
-        "alias": {
-          "type": "string"
-        }
-      }
-    },
     "TaskDependencyParametersDependencyType": {
       "type": "string",
       "enum": [
@@ -437,315 +408,16 @@
       ],
       "default": "DATA"
     },
-    "TaskInvocation": {
+    "apiserverAddTaskRequest": {
       "type": "object",
       "properties": {
-        "metadata": {
-          "$ref": "#/definitions/ObjectMetadata"
-        },
-        "spec": {
-          "$ref": "#/definitions/TaskInvocationSpec"
-        },
-        "status": {
-          "$ref": "#/definitions/TaskInvocationStatus"
-        }
-      },
-      "title": "Task Invocation Model"
-    },
-    "TaskInvocationSpec": {
-      "type": "object",
-      "properties": {
-        "fnRef": {
-          "$ref": "#/definitions/FnRef",
-          "title": "Id of the task to be invoked (no ambiguatity at this point"
-        },
-        "taskId": {
-          "type": "string",
-          "title": "TaskId is the id of the task within the workflow"
-        },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TypedValue"
-          },
-          "title": "Inputs contain all inputs to the task invocation"
-        },
-        "invocationId": {
-          "type": "string"
-        }
-      }
-    },
-    "TaskInvocationStatus": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "$ref": "#/definitions/TaskInvocationStatusStatus"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "output": {
-          "$ref": "#/definitions/TypedValue"
-        },
-        "error": {
-          "$ref": "#/definitions/Error"
-        }
-      }
-    },
-    "TaskInvocationStatusStatus": {
-      "type": "string",
-      "enum": [
-        "UNKNOWN",
-        "SCHEDULED",
-        "IN_PROGRESS",
-        "SUCCEEDED",
-        "FAILED",
-        "ABORTED",
-        "SKIPPED"
-      ],
-      "default": "UNKNOWN"
-    },
-    "TaskSpec": {
-      "type": "object",
-      "properties": {
-        "functionRef": {
-          "type": "string",
-          "title": "Name/identifier of the function"
-        },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TypedValue"
-          }
-        },
-        "requires": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TaskDependencyParameters"
-          },
-          "title": "Dependencies for this task to execute"
-        },
-        "await": {
-          "type": "integer",
-          "format": "int32",
-          "title": "Number of dependencies to wait for"
-        },
-        "output": {
-          "$ref": "#/definitions/TypedValue",
-          "title": "Transform the output, or override the output with a literal"
-        }
-      },
-      "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of TaskSpec"
-    },
-    "TaskStatus": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "$ref": "#/definitions/TaskStatusStatus"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "fnRef": {
-          "$ref": "#/definitions/FnRef"
-        },
-        "error": {
-          "$ref": "#/definitions/Error"
-        }
-      }
-    },
-    "TaskStatusStatus": {
-      "type": "string",
-      "enum": [
-        "STARTED",
-        "READY",
-        "FAILED"
-      ],
-      "default": "STARTED"
-    },
-    "TypedValue": {
-      "type": "object",
-      "properties": {
-        "type": {
+        "invocationID": {
           "type": "string"
         },
-        "value": {
-          "type": "string",
-          "format": "byte"
-        },
-        "labels": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type."
-    },
-    "Workflow": {
-      "type": "object",
-      "properties": {
-        "metadata": {
-          "$ref": "#/definitions/ObjectMetadata"
-        },
-        "spec": {
-          "$ref": "#/definitions/WorkflowSpec"
-        },
-        "status": {
-          "$ref": "#/definitions/WorkflowStatus"
-        }
-      },
-      "title": "Workflow Model"
-    },
-    "WorkflowInvocation": {
-      "type": "object",
-      "properties": {
-        "metadata": {
-          "$ref": "#/definitions/ObjectMetadata"
-        },
-        "spec": {
-          "$ref": "#/definitions/WorkflowInvocationSpec"
-        },
-        "status": {
-          "$ref": "#/definitions/WorkflowInvocationStatus"
-        }
-      },
-      "title": "Workflow Invocation Model"
-    },
-    "WorkflowInvocationSpec": {
-      "type": "object",
-      "properties": {
-        "workflowId": {
-          "type": "string"
-        },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TypedValue"
-          }
-        },
-        "parentId": {
-          "type": "string",
-          "description": "ParentId contains the id of the encapsulating workflow invocation.\n\nThis used within the workflow engine; for user-provided workflow invocations the parentId is ignored."
-        }
-      },
-      "title": "Workflow Invocation Model"
-    },
-    "WorkflowInvocationStatus": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "$ref": "#/definitions/WorkflowInvocationStatusStatus"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "tasks": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TaskInvocation"
-          }
-        },
-        "output": {
-          "$ref": "#/definitions/TypedValue"
-        },
-        "dynamicTasks": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/Task"
-          },
-          "description": "In case the task ID also exists in the workflow spec, the dynamic task will be\nused as an overlay over the static task."
-        },
-        "error": {
-          "$ref": "#/definitions/Error"
+        "task": {
+          "$ref": "#/definitions/typesTask"
         }
       }
-    },
-    "WorkflowInvocationStatusStatus": {
-      "type": "string",
-      "enum": [
-        "UNKNOWN",
-        "SCHEDULED",
-        "IN_PROGRESS",
-        "SUCCEEDED",
-        "FAILED",
-        "ABORTED"
-      ],
-      "default": "UNKNOWN"
-    },
-    "WorkflowSpec": {
-      "type": "object",
-      "properties": {
-        "apiVersion": {
-          "type": "string",
-          "description": "apiVersion describes what version is of the workflow definition.\nBy default the workflow engine will assume the latest version to be used."
-        },
-        "tasks": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TaskSpec"
-          },
-          "description": "Tasks contains the specs of the tasks, with the key being the task id.\n\nNote: Dependency graph is build into the tasks."
-        },
-        "outputTask": {
-          "type": "string",
-          "title": "From which task should the workflow return the output? Future: multiple? Implicit?"
-        },
-        "description": {
-          "type": "string"
-        },
-        "forceId": {
-          "type": "string",
-          "description": "The UID that the workflow should have. Only use this in case you want to force a specific UID."
-        },
-        "name": {
-          "type": "string",
-          "title": "Name is solely for human-readablity"
-        },
-        "internal": {
-          "type": "boolean",
-          "format": "boolean",
-          "description": "Internal indicates whether is a workflow should be visible to a human (default) or not."
-        }
-      },
-      "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow.",
-      "title": "Workflow Definition"
-    },
-    "WorkflowStatus": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "$ref": "#/definitions/WorkflowStatusStatus"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "tasks": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/TaskStatus"
-          },
-          "description": "Tasks contains the status of the tasks, with the key being the task id."
-        },
-        "error": {
-          "$ref": "#/definitions/Error"
-        }
-      }
-    },
-    "WorkflowStatusStatus": {
-      "type": "string",
-      "enum": [
-        "PENDING",
-        "READY",
-        "FAILED",
-        "DELETED"
-      ],
-      "default": "PENDING",
-      "title": "- READY: PARSING = 1; // During validation/parsing"
     },
     "apiserverHealth": {
       "type": "object",
@@ -763,14 +435,6 @@
           "items": {
             "type": "string"
           }
-        }
-      }
-    },
-    "apiserverVersionResp": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string"
         }
       }
     },
@@ -805,6 +469,415 @@
       "type": "object",
       "description": "service Foo {\n      rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);\n    }\n\nThe JSON representation for `Empty` is empty JSON object `{}`.",
       "title": "A generic empty message that you can re-use to avoid defining duplicated\nempty messages in your APIs. A typical example is to use it as the request\nor the response type of an API method. For instance:"
+    },
+    "typesError": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "title": "string code = 1;"
+        }
+      }
+    },
+    "typesFnRef": {
+      "type": "object",
+      "properties": {
+        "runtime": {
+          "type": "string",
+          "description": "Runtime is the Function Runtime environment (fnenv) that was used to resolve the function."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Namespace is the namespace of the fission function."
+        },
+        "ID": {
+          "type": "string",
+          "description": "ID is the runtime-specific identifier of the function."
+        }
+      },
+      "description": "FnRef is an immutable, unique reference to a function on a specific function runtime environment.\n\nThe string representation (via String or Format): runtime://runtimeId"
+    },
+    "typesObjectMetadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "ID is the unique identifier, generated by the workflow engine"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name is an optional human-readable name of the object."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Created at contains the timestamp of when this object was created.\nTypically the updatedAt field can be found in the status of the object."
+        },
+        "generation": {
+          "type": "string",
+          "format": "int64",
+          "description": "Generation is a sequence identifier used and updated by the system to record the number of events or\nchanges applied to the object."
+        }
+      },
+      "description": "ObjectMetadata contains common metadata present for all objects in the workflow engine.\n\nIt closely follows the structure of Kubernetes' ObjectMetadata, leaving out the parameters that do not fit the\nworkflow model, such as namespaces, clusters, finalizers, etc.\nIn the future, if it fits the model, we may move to using Kubernetes' ObjectMetadata directly."
+    },
+    "typesTask": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/typesObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/typesTaskSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/typesTaskStatus"
+        }
+      },
+      "title": "Task Model"
+    },
+    "typesTaskDependencyParameters": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/TaskDependencyParametersDependencyType"
+        },
+        "alias": {
+          "type": "string"
+        }
+      }
+    },
+    "typesTaskInvocation": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/typesObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/typesTaskInvocationSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/typesTaskInvocationStatus"
+        }
+      },
+      "title": "Task Invocation Model"
+    },
+    "typesTaskInvocationSpec": {
+      "type": "object",
+      "properties": {
+        "fnRef": {
+          "$ref": "#/definitions/typesFnRef",
+          "title": "Id of the task to be invoked (no ambiguatity at this point"
+        },
+        "taskId": {
+          "type": "string",
+          "title": "TaskId is the id of the task within the workflow"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTypedValue"
+          },
+          "title": "Inputs contain all inputs to the task invocation"
+        },
+        "invocationId": {
+          "type": "string"
+        }
+      }
+    },
+    "typesTaskInvocationStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/typesTaskInvocationStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "output": {
+          "$ref": "#/definitions/typesTypedValue"
+        },
+        "error": {
+          "$ref": "#/definitions/typesError"
+        }
+      }
+    },
+    "typesTaskInvocationStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "ABORTED",
+        "SKIPPED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "typesTaskSpec": {
+      "type": "object",
+      "properties": {
+        "functionRef": {
+          "type": "string",
+          "title": "Name/identifier of the function"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTypedValue"
+          }
+        },
+        "requires": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTaskDependencyParameters"
+          },
+          "title": "Dependencies for this task to execute"
+        },
+        "await": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Number of dependencies to wait for"
+        },
+        "output": {
+          "$ref": "#/definitions/typesTypedValue",
+          "title": "Transform the output, or override the output with a literal"
+        }
+      },
+      "description": "A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.\n\nA task as a number of inputs and exactly two outputs\nId is specified outside of TaskSpec"
+    },
+    "typesTaskStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/typesTaskStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "fnRef": {
+          "$ref": "#/definitions/typesFnRef"
+        },
+        "error": {
+          "$ref": "#/definitions/typesError"
+        }
+      }
+    },
+    "typesTaskStatusStatus": {
+      "type": "string",
+      "enum": [
+        "STARTED",
+        "READY",
+        "FAILED"
+      ],
+      "default": "STARTED"
+    },
+    "typesTypedValue": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type is an arbitrary string representation of a type. Each type has an associated parser/formatter."
+        },
+        "value": {
+          "type": "string",
+          "format": "byte",
+          "description": "Value holds the actual value in an arbitrary serialized form. A parser should be able to parse this format\nbased on the type."
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Labels hold metadata about the value. It is used for example to store origins of data, past transformations,\nand information needed by serialization processes."
+        }
+      },
+      "description": "TypedValue is used to serialize, deserialize, transfer data values across the workflow engine.\n\nIt consists partly copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type."
+    },
+    "typesWorkflow": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/typesObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/typesWorkflowSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/typesWorkflowStatus"
+        }
+      },
+      "title": "Workflow Model"
+    },
+    "typesWorkflowInvocation": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/typesObjectMetadata"
+        },
+        "spec": {
+          "$ref": "#/definitions/typesWorkflowInvocationSpec"
+        },
+        "status": {
+          "$ref": "#/definitions/typesWorkflowInvocationStatus"
+        }
+      },
+      "title": "Workflow Invocation Model"
+    },
+    "typesWorkflowInvocationSpec": {
+      "type": "object",
+      "properties": {
+        "workflowId": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTypedValue"
+          }
+        },
+        "parentId": {
+          "type": "string",
+          "description": "ParentId contains the id of the encapsulating workflow invocation.\n\nThis used within the workflow engine; for user-provided workflow invocations the parentId is ignored."
+        }
+      },
+      "title": "Workflow Invocation Model"
+    },
+    "typesWorkflowInvocationStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/typesWorkflowInvocationStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTaskInvocation"
+          }
+        },
+        "output": {
+          "$ref": "#/definitions/typesTypedValue"
+        },
+        "dynamicTasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTask"
+          },
+          "description": "In case the task ID also exists in the workflow spec, the dynamic task will be\nused as an overlay over the static task."
+        },
+        "error": {
+          "$ref": "#/definitions/typesError"
+        }
+      }
+    },
+    "typesWorkflowInvocationStatusStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SCHEDULED",
+        "IN_PROGRESS",
+        "SUCCEEDED",
+        "FAILED",
+        "ABORTED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "typesWorkflowSpec": {
+      "type": "object",
+      "properties": {
+        "apiVersion": {
+          "type": "string",
+          "description": "apiVersion describes what version is of the workflow definition.\nBy default the workflow engine will assume the latest version to be used."
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTaskSpec"
+          },
+          "description": "Tasks contains the specs of the tasks, with the key being the task id.\n\nNote: Dependency graph is build into the tasks."
+        },
+        "outputTask": {
+          "type": "string",
+          "title": "From which task should the workflow return the output? Future: multiple? Implicit?"
+        },
+        "description": {
+          "type": "string"
+        },
+        "forceId": {
+          "type": "string",
+          "description": "The UID that the workflow should have. Only use this in case you want to force a specific UID."
+        },
+        "name": {
+          "type": "string",
+          "title": "Name is solely for human-readablity"
+        },
+        "internal": {
+          "type": "boolean",
+          "format": "boolean",
+          "description": "Internal indicates whether is a workflow should be visible to a human (default) or not."
+        }
+      },
+      "description": "The workflowDefinition contains the definition of a workflow.\n\nIdeally the source code (json, yaml) can be converted directly to this message.\nNaming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated\nto the user/system upon the creation of a workflow.",
+      "title": "Workflow Definition"
+    },
+    "typesWorkflowStatus": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/typesWorkflowStatusStatus"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/typesTaskStatus"
+          },
+          "description": "Tasks contains the status of the tasks, with the key being the task id."
+        },
+        "error": {
+          "$ref": "#/definitions/typesError"
+        }
+      }
+    },
+    "typesWorkflowStatusStatus": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "READY",
+        "FAILED",
+        "DELETED"
+      ],
+      "default": "PENDING",
+      "title": "- READY: PARSING = 1; // During validation/parsing"
+    },
+    "versionInfo": {
+      "type": "object",
+      "properties": {
+        "Version": {
+          "type": "string"
+        },
+        "GitDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "BuildDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "GitCommit": {
+          "type": "string"
+        }
+      }
     }
   }
 }

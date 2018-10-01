@@ -71,6 +71,16 @@ service WorkflowInvocationAPI {
         };
     }
 
+    rpc AddTask (AddTaskRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/invocation/{invocationID}/tasks"
+            body: "*"
+            additional_bindings {
+                put: "/invocation/{invocationID}/tasks"
+			}
+        };
+    }
+
     // Cancel a workflow invocation
     //
     // This action is irreverisble. A canceled invocation cannot be resumed or restarted.
@@ -104,6 +114,11 @@ service WorkflowInvocationAPI {
             body: "*"
         };
     }
+}
+
+message AddTaskRequest {
+    string invocationID = 1;
+    fission.workflows.types.Task task = 2;
 }
 
 message InvocationListQuery {

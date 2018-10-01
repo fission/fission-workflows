@@ -196,8 +196,6 @@ font-style: italic;
   <div class="method-summary"></div>
   <h4><a href="#AdminAPI">AdminAPI</a></h4>
   <ul>
-  <li><a href="#halt"><code><span class="http-method">get</span> /halt</code></a></li>
-  <li><a href="#resume"><code><span class="http-method">get</span> /resume</code></a></li>
   <li><a href="#status"><code><span class="http-method">get</span> /healthz</code></a></li>
   <li><a href="#version"><code><span class="http-method">get</span> /version</code></a></li>
   </ul>
@@ -211,6 +209,8 @@ font-style: italic;
   </ul>
   <h4><a href="#WorkflowInvocationAPI">WorkflowInvocationAPI</a></h4>
   <ul>
+  <li><a href="#addTask"><code><span class="http-method">post</span> /invocation/{invocationID}/tasks</code></a></li>
+  <li><a href="#addTask2"><code><span class="http-method">put</span> /invocation/{invocationID}/tasks</code></a></li>
   <li><a href="#cancel"><code><span class="http-method">delete</span> /invocation/{id}</code></a></li>
   <li><a href="#get"><code><span class="http-method">get</span> /invocation/{id}</code></a></li>
   <li><a href="#invoke"><code><span class="http-method">post</span> /invocation</code></a></li>
@@ -221,92 +221,6 @@ font-style: italic;
   </ul>
 
   <h1><a name="AdminAPI">AdminAPI</a></h1>
-  <div class="method"><a name="halt"/>
-    <div class="method-path">
-    <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /halt</code></pre></div>
-    <div class="method-summary"> (<span class="nickname">halt</span>)</div>
-    <div class="method-notes"></div>
-
-
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-
-
-
-
-    <h3 class="field-label">Return type</h3>
-    <div class="return-type">
-      <a href="#protobufEmpty">protobufEmpty</a>
-      
-    </div>
-
-    <!--Todo: process Response Object and its headers, schema, examples -->
-
-    <h3 class="field-label">Example data</h3>
-    <div class="example-data-content-type">Content-Type: application/json</div>
-    <pre class="example"><code>{ }</code></pre>
-
-    <h3 class="field-label">Produces</h3>
-    This API call produces the following media types according to the <span class="header">Accept</span> request header;
-    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-    <h3 class="field-label">Responses</h3>
-    <h4 class="field-label">200</h4>
-    
-        <a href="#protobufEmpty">protobufEmpty</a>
-  </div> <!-- method -->
-  <hr/>
-  <div class="method"><a name="resume"/>
-    <div class="method-path">
-    <a class="up" href="#__Methods">Up</a>
-    <pre class="get"><code class="huge"><span class="http-method">get</span> /resume</code></pre></div>
-    <div class="method-summary"> (<span class="nickname">resume</span>)</div>
-    <div class="method-notes"></div>
-
-
-    <h3 class="field-label">Consumes</h3>
-    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-
-
-
-
-    <h3 class="field-label">Return type</h3>
-    <div class="return-type">
-      <a href="#protobufEmpty">protobufEmpty</a>
-      
-    </div>
-
-    <!--Todo: process Response Object and its headers, schema, examples -->
-
-    <h3 class="field-label">Example data</h3>
-    <div class="example-data-content-type">Content-Type: application/json</div>
-    <pre class="example"><code>{ }</code></pre>
-
-    <h3 class="field-label">Produces</h3>
-    This API call produces the following media types according to the <span class="header">Accept</span> request header;
-    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
-    <ul>
-      <li><code>application/json</code></li>
-    </ul>
-
-    <h3 class="field-label">Responses</h3>
-    <h4 class="field-label">200</h4>
-    
-        <a href="#protobufEmpty">protobufEmpty</a>
-  </div> <!-- method -->
-  <hr/>
   <div class="method"><a name="status"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -372,7 +286,7 @@ font-style: italic;
 
     <h3 class="field-label">Return type</h3>
     <div class="return-type">
-      <a href="#apiserverVersionResp">apiserverVersionResp</a>
+      <a href="#versionInfo">versionInfo</a>
       
     </div>
 
@@ -381,7 +295,10 @@ font-style: italic;
     <h3 class="field-label">Example data</h3>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
-  "version" : "version"
+  "GitCommit" : "GitCommit",
+  "Version" : "Version",
+  "BuildDate" : "2000-01-23T04:56:07.000+00:00",
+  "GitDate" : "2000-01-23T04:56:07.000+00:00"
 }</code></pre>
 
     <h3 class="field-label">Produces</h3>
@@ -394,7 +311,7 @@ font-style: italic;
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">200</h4>
     
-        <a href="#apiserverVersionResp">apiserverVersionResp</a>
+        <a href="#versionInfo">versionInfo</a>
   </div> <!-- method -->
   <hr/>
   <h1><a name="WorkflowAPI">WorkflowAPI</a></h1>
@@ -414,7 +331,7 @@ font-style: italic;
 
     <h3 class="field-label">Request body</h3>
     <div class="field-items">
-      <div class="param">body <a href="#WorkflowSpec">WorkflowSpec</a> (required)</div>
+      <div class="param">body <a href="#typesWorkflowSpec">typesWorkflowSpec</a> (required)</div>
 
       <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
 
@@ -525,7 +442,7 @@ font-style: italic;
 
     <h3 class="field-label">Return type</h3>
     <div class="return-type">
-      <a href="#Workflow">Workflow</a>
+      <a href="#typesWorkflow">typesWorkflow</a>
       
     </div>
 
@@ -535,7 +452,9 @@ font-style: italic;
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "metadata" : {
+    "generation" : "generation",
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
+    "name" : "name",
     "id" : "id"
   },
   "spec" : {
@@ -581,6 +500,7 @@ font-style: italic;
     "tasks" : {
       "key" : {
         "fnRef" : {
+          "namespace" : "namespace",
           "runtime" : "runtime",
           "ID" : "ID"
         },
@@ -606,7 +526,7 @@ font-style: italic;
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">200</h4>
     
-        <a href="#Workflow">Workflow</a>
+        <a href="#typesWorkflow">typesWorkflow</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="list"/>
@@ -670,7 +590,7 @@ font-style: italic;
 
     <h3 class="field-label">Request body</h3>
     <div class="field-items">
-      <div class="param">body <a href="#WorkflowSpec">WorkflowSpec</a> (required)</div>
+      <div class="param">body <a href="#typesWorkflowSpec">typesWorkflowSpec</a> (required)</div>
 
       <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
 
@@ -705,6 +625,111 @@ font-style: italic;
   </div> <!-- method -->
   <hr/>
   <h1><a name="WorkflowInvocationAPI">WorkflowInvocationAPI</a></h1>
+  <div class="method"><a name="addTask"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /invocation/{invocationID}/tasks</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">addTask</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">invocationID (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  </div>
+    </div>  <!-- field-items -->
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Request body</h3>
+    <div class="field-items">
+      <div class="param">body <a href="#apiserverAddTaskRequest">apiserverAddTaskRequest</a> (required)</div>
+
+      <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
+
+    </div>  <!-- field-items -->
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="addTask2"/>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="put"><code class="huge"><span class="http-method">put</span> /invocation/{invocationID}/tasks</code></pre></div>
+    <div class="method-summary"> (<span class="nickname">addTask2</span>)</div>
+    <div class="method-notes"></div>
+
+    <h3 class="field-label">Path parameters</h3>
+    <div class="field-items">
+      <div class="param">invocationID (required)</div>
+
+      <div class="param-desc"><span class="param-type">Path Parameter</span> &mdash;  </div>
+    </div>  <!-- field-items -->
+
+    <h3 class="field-label">Consumes</h3>
+    This API call consumes the following media types via the <span class="heaader">Content-Type</span> request header:
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      <a href="#protobufEmpty">protobufEmpty</a>
+      
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>{ }</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="heaader">Content-Type</span> response header.
+    <ul>
+      <li><code>application/json</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    
+        <a href="#protobufEmpty">protobufEmpty</a>
+  </div> <!-- method -->
+  <hr/>
   <div class="method"><a name="cancel"/>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -783,7 +808,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Return type</h3>
     <div class="return-type">
-      <a href="#WorkflowInvocation">WorkflowInvocation</a>
+      <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
       
     </div>
 
@@ -793,7 +818,9 @@ To lighten the request load, consider using a more specific request.</div>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "metadata" : {
+    "generation" : "generation",
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
+    "name" : "name",
     "id" : "id"
   },
   "spec" : {
@@ -820,7 +847,9 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -851,6 +880,7 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -868,7 +898,9 @@ To lighten the request load, consider using a more specific request.</div>
     "tasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -882,6 +914,7 @@ To lighten the request load, consider using a more specific request.</div>
             }
           },
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -919,7 +952,7 @@ To lighten the request load, consider using a more specific request.</div>
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">200</h4>
     
-        <a href="#WorkflowInvocation">WorkflowInvocation</a>
+        <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="invoke"/>
@@ -938,7 +971,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Request body</h3>
     <div class="field-items">
-      <div class="param">body <a href="#WorkflowInvocationSpec">WorkflowInvocationSpec</a> (required)</div>
+      <div class="param">body <a href="#typesWorkflowInvocationSpec">typesWorkflowInvocationSpec</a> (required)</div>
 
       <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
 
@@ -990,7 +1023,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Request body</h3>
     <div class="field-items">
-      <div class="param">body <a href="#WorkflowInvocationSpec">WorkflowInvocationSpec</a> (required)</div>
+      <div class="param">body <a href="#typesWorkflowInvocationSpec">typesWorkflowInvocationSpec</a> (required)</div>
 
       <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
 
@@ -1001,7 +1034,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Return type</h3>
     <div class="return-type">
-      <a href="#WorkflowInvocation">WorkflowInvocation</a>
+      <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
       
     </div>
 
@@ -1011,7 +1044,9 @@ To lighten the request load, consider using a more specific request.</div>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "metadata" : {
+    "generation" : "generation",
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
+    "name" : "name",
     "id" : "id"
   },
   "spec" : {
@@ -1038,7 +1073,9 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -1069,6 +1106,7 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -1086,7 +1124,9 @@ To lighten the request load, consider using a more specific request.</div>
     "tasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -1100,6 +1140,7 @@ To lighten the request load, consider using a more specific request.</div>
             }
           },
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -1137,7 +1178,7 @@ To lighten the request load, consider using a more specific request.</div>
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">200</h4>
     
-        <a href="#WorkflowInvocation">WorkflowInvocation</a>
+        <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="invokeSync2"/>
@@ -1170,7 +1211,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Return type</h3>
     <div class="return-type">
-      <a href="#WorkflowInvocation">WorkflowInvocation</a>
+      <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
       
     </div>
 
@@ -1180,7 +1221,9 @@ To lighten the request load, consider using a more specific request.</div>
     <div class="example-data-content-type">Content-Type: application/json</div>
     <pre class="example"><code>{
   "metadata" : {
+    "generation" : "generation",
     "createdAt" : "2000-01-23T04:56:07.000+00:00",
+    "name" : "name",
     "id" : "id"
   },
   "spec" : {
@@ -1207,7 +1250,9 @@ To lighten the request load, consider using a more specific request.</div>
     "dynamicTasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -1238,6 +1283,7 @@ To lighten the request load, consider using a more specific request.</div>
         },
         "status" : {
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -1255,7 +1301,9 @@ To lighten the request load, consider using a more specific request.</div>
     "tasks" : {
       "key" : {
         "metadata" : {
+          "generation" : "generation",
           "createdAt" : "2000-01-23T04:56:07.000+00:00",
+          "name" : "name",
           "id" : "id"
         },
         "spec" : {
@@ -1269,6 +1317,7 @@ To lighten the request load, consider using a more specific request.</div>
             }
           },
           "fnRef" : {
+            "namespace" : "namespace",
             "runtime" : "runtime",
             "ID" : "ID"
           },
@@ -1306,7 +1355,7 @@ To lighten the request load, consider using a more specific request.</div>
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">200</h4>
     
-        <a href="#WorkflowInvocation">WorkflowInvocation</a>
+        <a href="#typesWorkflowInvocation">typesWorkflowInvocation</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="list"/>
@@ -1325,6 +1374,12 @@ To lighten the request load, consider using a more specific request.</div>
 
 
 
+    <h3 class="field-label">Query parameters</h3>
+    <div class="field-items">
+      <div class="param">workflows (optional)</div>
+
+      <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash;  </div>
+    </div>  <!-- field-items -->
 
 
     <h3 class="field-label">Return type</h3>
@@ -1370,7 +1425,7 @@ To lighten the request load, consider using a more specific request.</div>
 
     <h3 class="field-label">Request body</h3>
     <div class="field-items">
-      <div class="param">body <a href="#WorkflowInvocationSpec">WorkflowInvocationSpec</a> (required)</div>
+      <div class="param">body <a href="#typesWorkflowInvocationSpec">typesWorkflowInvocationSpec</a> (required)</div>
 
       <div class="param-desc"><span class="param-type">Body Parameter</span> &mdash;  </div>
 
@@ -1410,84 +1465,43 @@ To lighten the request load, consider using a more specific request.</div>
 
   <h3>Table of Contents</h3>
   <ol>
-    <li><a href="#Error"><code>Error</code> - </a></li>
-    <li><a href="#FnRef"><code>FnRef</code> - </a></li>
-    <li><a href="#ObjectMetadata"><code>ObjectMetadata</code> - Common</a></li>
-    <li><a href="#Task"><code>Task</code> - Task Model</a></li>
-    <li><a href="#TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a></li>
     <li><a href="#TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a></li>
-    <li><a href="#TaskInvocation"><code>TaskInvocation</code> - Task Invocation Model</a></li>
-    <li><a href="#TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a></li>
-    <li><a href="#TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a></li>
-    <li><a href="#TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a></li>
-    <li><a href="#TaskSpec"><code>TaskSpec</code> - </a></li>
-    <li><a href="#TaskStatus"><code>TaskStatus</code> - </a></li>
-    <li><a href="#TaskStatusStatus"><code>TaskStatusStatus</code> - </a></li>
-    <li><a href="#TypedValue"><code>TypedValue</code> - </a></li>
-    <li><a href="#Workflow"><code>Workflow</code> - Workflow Model</a></li>
-    <li><a href="#WorkflowInvocation"><code>WorkflowInvocation</code> - Workflow Invocation Model</a></li>
-    <li><a href="#WorkflowInvocationSpec"><code>WorkflowInvocationSpec</code> - Workflow Invocation Model</a></li>
-    <li><a href="#WorkflowInvocationStatus"><code>WorkflowInvocationStatus</code> - </a></li>
-    <li><a href="#WorkflowInvocationStatusStatus"><code>WorkflowInvocationStatusStatus</code> - </a></li>
-    <li><a href="#WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a></li>
-    <li><a href="#WorkflowStatus"><code>WorkflowStatus</code> - </a></li>
-    <li><a href="#WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - <ul>
-<li>READY: PARSING = 1; // During validation/parsing</li>
-</ul>
-</a></li>
+    <li><a href="#apiserverAddTaskRequest"><code>apiserverAddTaskRequest</code> - </a></li>
     <li><a href="#apiserverHealth"><code>apiserverHealth</code> - </a></li>
     <li><a href="#apiserverSearchWorkflowResponse"><code>apiserverSearchWorkflowResponse</code> - </a></li>
-    <li><a href="#apiserverVersionResp"><code>apiserverVersionResp</code> - </a></li>
     <li><a href="#apiserverWorkflowIdentifier"><code>apiserverWorkflowIdentifier</code> - </a></li>
     <li><a href="#apiserverWorkflowInvocationIdentifier"><code>apiserverWorkflowInvocationIdentifier</code> - </a></li>
     <li><a href="#apiserverWorkflowInvocationList"><code>apiserverWorkflowInvocationList</code> - </a></li>
     <li><a href="#protobufEmpty"><code>protobufEmpty</code> - A generic empty message that you can re-use to avoid defining duplicated
 empty messages in your APIs. A typical example is to use it as the request
 or the response type of an API method. For instance:</a></li>
+    <li><a href="#typesError"><code>typesError</code> - </a></li>
+    <li><a href="#typesFnRef"><code>typesFnRef</code> - </a></li>
+    <li><a href="#typesObjectMetadata"><code>typesObjectMetadata</code> - </a></li>
+    <li><a href="#typesTask"><code>typesTask</code> - Task Model</a></li>
+    <li><a href="#typesTaskDependencyParameters"><code>typesTaskDependencyParameters</code> - </a></li>
+    <li><a href="#typesTaskInvocation"><code>typesTaskInvocation</code> - Task Invocation Model</a></li>
+    <li><a href="#typesTaskInvocationSpec"><code>typesTaskInvocationSpec</code> - </a></li>
+    <li><a href="#typesTaskInvocationStatus"><code>typesTaskInvocationStatus</code> - </a></li>
+    <li><a href="#typesTaskInvocationStatusStatus"><code>typesTaskInvocationStatusStatus</code> - </a></li>
+    <li><a href="#typesTaskSpec"><code>typesTaskSpec</code> - </a></li>
+    <li><a href="#typesTaskStatus"><code>typesTaskStatus</code> - </a></li>
+    <li><a href="#typesTaskStatusStatus"><code>typesTaskStatusStatus</code> - </a></li>
+    <li><a href="#typesTypedValue"><code>typesTypedValue</code> - </a></li>
+    <li><a href="#typesWorkflow"><code>typesWorkflow</code> - Workflow Model</a></li>
+    <li><a href="#typesWorkflowInvocation"><code>typesWorkflowInvocation</code> - Workflow Invocation Model</a></li>
+    <li><a href="#typesWorkflowInvocationSpec"><code>typesWorkflowInvocationSpec</code> - Workflow Invocation Model</a></li>
+    <li><a href="#typesWorkflowInvocationStatus"><code>typesWorkflowInvocationStatus</code> - </a></li>
+    <li><a href="#typesWorkflowInvocationStatusStatus"><code>typesWorkflowInvocationStatusStatus</code> - </a></li>
+    <li><a href="#typesWorkflowSpec"><code>typesWorkflowSpec</code> - Workflow Definition</a></li>
+    <li><a href="#typesWorkflowStatus"><code>typesWorkflowStatus</code> - </a></li>
+    <li><a href="#typesWorkflowStatusStatus"><code>typesWorkflowStatusStatus</code> - <ul>
+<li>READY: PARSING = 1; // During validation/parsing</li>
+</ul>
+</a></li>
+    <li><a href="#versionInfo"><code>versionInfo</code> - </a></li>
   </ol>
 
-  <div class="model">
-    <h3><a name="Error"><code>Error</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">message (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="FnRef"><code>FnRef</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>FnRef is an immutable, unique reference to a function on a specific function runtime environment.</p>
-<p>The string representation (via String or Format): runtime://runtimeId</p>
-</div>
-    <div class="field-items">
-      <div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Runtime is the Function Runtime environment (fnenv) that was used to resolve the function. </div>
-<div class="param">ID (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> ID is the runtime-specific identifier of the function. </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="ObjectMetadata"><code>ObjectMetadata</code> - Common</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">createdAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="Task"><code>Task</code> - Task Model</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
-<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskSpec">TaskSpec</a></span>  </div>
-<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatus">TaskStatus</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskDependencyParameters"><code>TaskDependencyParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParametersDependencyType">TaskDependencyParametersDependencyType</a></span>  </div>
-<div class="param">alias (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
   <div class="model">
     <h3><a name="TaskDependencyParametersDependencyType"><code>TaskDependencyParametersDependencyType</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
@@ -1495,165 +1509,12 @@ or the response type of an API method. For instance:</a></li>
           </div>  <!-- field-items -->
   </div>
   <div class="model">
-    <h3><a name="TaskInvocation"><code>TaskInvocation</code> - Task Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <h3><a name="apiserverAddTaskRequest"><code>apiserverAddTaskRequest</code> - </a> <a class="up" href="#__Models">Up</a></h3>
     <div class='model-description'></div>
     <div class="field-items">
-      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
-<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationSpec">TaskInvocationSpec</a></span>  </div>
-<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationStatus">TaskInvocationStatus</a></span>  </div>
+      <div class="param">invocationID (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">task (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTask">typesTask</a></span>  </div>
     </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskInvocationSpec"><code>TaskInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#FnRef">FnRef</a></span>  </div>
-<div class="param">taskId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
-<div class="param">invocationId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskInvocationStatus"><code>TaskInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocationStatusStatus">TaskInvocationStatusStatus</a></span>  </div>
-<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
-<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskInvocationStatusStatus"><code>TaskInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-          </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskSpec"><code>TaskSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
-<p>A task as a number of inputs and exactly two outputs
-Id is specified outside of TaskSpec</p>
-</div>
-    <div class="field-items">
-      <div class="param">functionRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
-<div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParameters">map[String, TaskDependencyParameters]</a></span>  </div>
-<div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskStatus"><code>TaskStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatusStatus">TaskStatusStatus</a></span>  </div>
-<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#FnRef">FnRef</a></span>  </div>
-<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TaskStatusStatus"><code>TaskStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-          </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="TypedValue"><code>TypedValue</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'>Copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.</div>
-    <div class="field-items">
-      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">value (optional)</div><div class="param-desc"><span class="param-type"><a href="#ByteArray">byte[]</a></span>  format: byte</div>
-<div class="param">labels (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">map[String, String]</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="Workflow"><code>Workflow</code> - Workflow Model</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
-<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowSpec">WorkflowSpec</a></span>  </div>
-<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowStatus">WorkflowStatus</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowInvocation"><code>WorkflowInvocation</code> - Workflow Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#ObjectMetadata">ObjectMetadata</a></span>  </div>
-<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowInvocationSpec">WorkflowInvocationSpec</a></span>  </div>
-<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowInvocationStatus">WorkflowInvocationStatus</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowInvocationSpec"><code>WorkflowInvocationSpec</code> - Workflow Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">workflowId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">map[String, TypedValue]</a></span>  </div>
-<div class="param">parentId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>ParentId contains the id of the encapsulating workflow invocation.</p>
-<p>This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.</p>
- </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowInvocationStatus"><code>WorkflowInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowInvocationStatusStatus">WorkflowInvocationStatusStatus</a></span>  </div>
-<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskInvocation">map[String, TaskInvocation]</a></span>  </div>
-<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#TypedValue">TypedValue</a></span>  </div>
-<div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#Task">map[String, Task]</a></span> In case the task ID also exists in the workflow spec, the dynamic task will be
-used as an overlay over the static task. </div>
-<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowInvocationStatusStatus"><code>WorkflowInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-          </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowSpec"><code>WorkflowSpec</code> - Workflow Definition</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'><p>The workflowDefinition contains the definition of a workflow.</p>
-<p>Ideally the source code (json, yaml) can be converted directly to this message.
-Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
-to the user/system upon the creation of a workflow.</p>
-</div>
-    <div class="field-items">
-      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> apiVersion describes what version is of the workflow definition.
-By default the workflow engine will assume the latest version to be used. </div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskSpec">map[String, TaskSpec]</a></span> <p>Tasks contains the specs of the tasks, with the key being the task id.</p>
-<p>Note: Dependency graph is build into the tasks.</p>
- </div>
-<div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">description (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">forceId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> The UID that the workflow should have. Only use this in case you want to force a specific UID. </div>
-<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
-<div class="param">internal (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span> Internal indicates whether is a workflow should be visible to a human (default) or not. format: boolean</div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowStatus"><code>WorkflowStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#WorkflowStatusStatus">WorkflowStatusStatus</a></span>  </div>
-<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
-<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskStatus">map[String, TaskStatus]</a></span> Tasks contains the status of the tasks, with the key being the task id. </div>
-<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#Error">Error</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="WorkflowStatusStatus"><code>WorkflowStatusStatus</code> - <ul>
-<li>READY: PARSING = 1; // During validation/parsing</li>
-</ul>
-</a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-          </div>  <!-- field-items -->
   </div>
   <div class="model">
     <h3><a name="apiserverHealth"><code>apiserverHealth</code> - </a> <a class="up" href="#__Models">Up</a></h3>
@@ -1667,13 +1528,6 @@ By default the workflow engine will assume the latest version to be used. </div>
     <div class='model-description'></div>
     <div class="field-items">
       <div class="param">workflows (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">array[String]</a></span>  </div>
-    </div>  <!-- field-items -->
-  </div>
-  <div class="model">
-    <h3><a name="apiserverVersionResp"><code>apiserverVersionResp</code> - </a> <a class="up" href="#__Models">Up</a></h3>
-    <div class='model-description'></div>
-    <div class="field-items">
-      <div class="param">version (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
     </div>  <!-- field-items -->
   </div>
   <div class="model">
@@ -1708,6 +1562,232 @@ rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);
 </div>
     <div class="field-items">
           </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesError"><code>typesError</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">message (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesFnRef"><code>typesFnRef</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>FnRef is an immutable, unique reference to a function on a specific function runtime environment.</p>
+<p>The string representation (via String or Format): runtime://runtimeId</p>
+</div>
+    <div class="field-items">
+      <div class="param">runtime (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Runtime is the Function Runtime environment (fnenv) that was used to resolve the function. </div>
+<div class="param">namespace (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Namespace is the namespace of the fission function. </div>
+<div class="param">ID (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> ID is the runtime-specific identifier of the function. </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesObjectMetadata"><code>typesObjectMetadata</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>ObjectMetadata contains common metadata present for all objects in the workflow engine.</p>
+<p>It closely follows the structure of Kubernetes' ObjectMetadata, leaving out the parameters that do not fit the
+workflow model, such as namespaces, clusters, finalizers, etc.
+In the future, if it fits the model, we may move to using Kubernetes' ObjectMetadata directly.</p>
+</div>
+    <div class="field-items">
+      <div class="param">id (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Name is an optional human-readable name of the object. </div>
+<div class="param">createdAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span> Created at contains the timestamp of when this object was created.
+Typically the updatedAt field can be found in the status of the object. format: date-time</div>
+<div class="param">generation (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Generation is a sequence identifier used and updated by the system to record the number of events or
+changes applied to the object. format: int64</div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTask"><code>typesTask</code> - Task Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesObjectMetadata">typesObjectMetadata</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskSpec">typesTaskSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskStatus">typesTaskStatus</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskDependencyParameters"><code>typesTaskDependencyParameters</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#TaskDependencyParametersDependencyType">TaskDependencyParametersDependencyType</a></span>  </div>
+<div class="param">alias (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskInvocation"><code>typesTaskInvocation</code> - Task Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesObjectMetadata">typesObjectMetadata</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskInvocationSpec">typesTaskInvocationSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskInvocationStatus">typesTaskInvocationStatus</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskInvocationSpec"><code>typesTaskInvocationSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesFnRef">typesFnRef</a></span>  </div>
+<div class="param">taskId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">map[String, typesTypedValue]</a></span>  </div>
+<div class="param">invocationId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskInvocationStatus"><code>typesTaskInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskInvocationStatusStatus">typesTaskInvocationStatusStatus</a></span>  </div>
+<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">typesTypedValue</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesError">typesError</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskInvocationStatusStatus"><code>typesTaskInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskSpec"><code>typesTaskSpec</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>A task is the primitive unit of a workflow, representing an action that needs to be performed in order to continue.</p>
+<p>A task as a number of inputs and exactly two outputs
+Id is specified outside of TaskSpec</p>
+</div>
+    <div class="field-items">
+      <div class="param">functionRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">map[String, typesTypedValue]</a></span>  </div>
+<div class="param">requires (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskDependencyParameters">map[String, typesTaskDependencyParameters]</a></span>  </div>
+<div class="param">await (optional)</div><div class="param-desc"><span class="param-type"><a href="#integer">Integer</a></span>  format: int32</div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">typesTypedValue</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskStatus"><code>typesTaskStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskStatusStatus">typesTaskStatusStatus</a></span>  </div>
+<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">fnRef (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesFnRef">typesFnRef</a></span>  </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesError">typesError</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTaskStatusStatus"><code>typesTaskStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesTypedValue"><code>typesTypedValue</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>TypedValue is used to serialize, deserialize, transfer data values across the workflow engine.</p>
+<p>It consists partly copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.</p>
+</div>
+    <div class="field-items">
+      <div class="param">type (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> Type is an arbitrary string representation of a type. Each type has an associated parser/formatter. </div>
+<div class="param">value (optional)</div><div class="param-desc"><span class="param-type"><a href="#ByteArray">byte[]</a></span> Value holds the actual value in an arbitrary serialized form. A parser should be able to parse this format
+based on the type. format: byte</div>
+<div class="param">labels (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">map[String, String]</a></span> Labels hold metadata about the value. It is used for example to store origins of data, past transformations,
+and information needed by serialization processes. </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflow"><code>typesWorkflow</code> - Workflow Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesObjectMetadata">typesObjectMetadata</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowSpec">typesWorkflowSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowStatus">typesWorkflowStatus</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowInvocation"><code>typesWorkflowInvocation</code> - Workflow Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">metadata (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesObjectMetadata">typesObjectMetadata</a></span>  </div>
+<div class="param">spec (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowInvocationSpec">typesWorkflowInvocationSpec</a></span>  </div>
+<div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowInvocationStatus">typesWorkflowInvocationStatus</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowInvocationSpec"><code>typesWorkflowInvocationSpec</code> - Workflow Invocation Model</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">workflowId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">inputs (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">map[String, typesTypedValue]</a></span>  </div>
+<div class="param">parentId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> <p>ParentId contains the id of the encapsulating workflow invocation.</p>
+<p>This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.</p>
+ </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowInvocationStatus"><code>typesWorkflowInvocationStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowInvocationStatusStatus">typesWorkflowInvocationStatusStatus</a></span>  </div>
+<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskInvocation">map[String, typesTaskInvocation]</a></span>  </div>
+<div class="param">output (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTypedValue">typesTypedValue</a></span>  </div>
+<div class="param">dynamicTasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTask">map[String, typesTask]</a></span> In case the task ID also exists in the workflow spec, the dynamic task will be
+used as an overlay over the static task. </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesError">typesError</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowInvocationStatusStatus"><code>typesWorkflowInvocationStatusStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowSpec"><code>typesWorkflowSpec</code> - Workflow Definition</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'><p>The workflowDefinition contains the definition of a workflow.</p>
+<p>Ideally the source code (json, yaml) can be converted directly to this message.
+Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
+to the user/system upon the creation of a workflow.</p>
+</div>
+    <div class="field-items">
+      <div class="param">apiVersion (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> apiVersion describes what version is of the workflow definition.
+By default the workflow engine will assume the latest version to be used. </div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskSpec">map[String, typesTaskSpec]</a></span> <p>Tasks contains the specs of the tasks, with the key being the task id.</p>
+<p>Note: Dependency graph is build into the tasks.</p>
+ </div>
+<div class="param">outputTask (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">description (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">forceId (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span> The UID that the workflow should have. Only use this in case you want to force a specific UID. </div>
+<div class="param">name (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">internal (optional)</div><div class="param-desc"><span class="param-type"><a href="#boolean">Boolean</a></span> Internal indicates whether is a workflow should be visible to a human (default) or not. format: boolean</div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowStatus"><code>typesWorkflowStatus</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">status (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesWorkflowStatusStatus">typesWorkflowStatusStatus</a></span>  </div>
+<div class="param">updatedAt (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">tasks (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesTaskStatus">map[String, typesTaskStatus]</a></span> Tasks contains the status of the tasks, with the key being the task id. </div>
+<div class="param">error (optional)</div><div class="param-desc"><span class="param-type"><a href="#typesError">typesError</a></span>  </div>
+    </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="typesWorkflowStatusStatus"><code>typesWorkflowStatusStatus</code> - <ul>
+<li>READY: PARSING = 1; // During validation/parsing</li>
+</ul>
+</a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+          </div>  <!-- field-items -->
+  </div>
+  <div class="model">
+    <h3><a name="versionInfo"><code>versionInfo</code> - </a> <a class="up" href="#__Models">Up</a></h3>
+    <div class='model-description'></div>
+    <div class="field-items">
+      <div class="param">Version (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+<div class="param">GitDate (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">BuildDate (optional)</div><div class="param-desc"><span class="param-type"><a href="#DateTime">Date</a></span>  format: date-time</div>
+<div class="param">GitCommit (optional)</div><div class="param-desc"><span class="param-type"><a href="#string">String</a></span>  </div>
+    </div>  <!-- field-items -->
   </div>
   </body>
 </html>
