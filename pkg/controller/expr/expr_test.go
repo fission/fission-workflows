@@ -5,9 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,66 +83,6 @@ func TestResolveInjectedFunction(t *testing.T) {
 	resolvedString, _ := typedvalues.Unwrap(resolved)
 
 	assert.NotEmpty(t, resolvedString)
-}
-
-func TestScope(t *testing.T) {
-	expected := "hello world"
-	expectedOutput, _ := typedvalues.Wrap(expected)
-
-	actualScope, _ := NewScope(&types.Workflow{
-		Metadata: &types.ObjectMetadata{
-			Id:        "testWorkflow",
-			CreatedAt: ptypes.TimestampNow(),
-		},
-		Status: &types.WorkflowStatus{
-			Status:    types.WorkflowStatus_READY,
-			UpdatedAt: ptypes.TimestampNow(),
-			Tasks: map[string]*types.TaskStatus{
-				"fooTask": {
-					FnRef: &types.FnRef{
-						Runtime: "fission",
-						ID:      "resolvedFissionFunction",
-					},
-				},
-			},
-		},
-		Spec: &types.WorkflowSpec{
-			ApiVersion: "1",
-			OutputTask: "fooTask",
-			Tasks: map[string]*types.TaskSpec{
-				"fooTask": {
-					FunctionRef: "fissionFunction",
-				},
-			},
-		},
-	}, &types.WorkflowInvocation{
-		Metadata: &types.ObjectMetadata{
-			Id:        "testWorkflowInvocation",
-			CreatedAt: ptypes.TimestampNow(),
-		},
-		Spec: &types.WorkflowInvocationSpec{
-			WorkflowId: "testWorkflow",
-		},
-		Status: &types.WorkflowInvocationStatus{
-			Status: types.WorkflowInvocationStatus_IN_PROGRESS,
-			Tasks: map[string]*types.TaskInvocation{
-				"fooTask": {
-					Spec: &types.TaskInvocationSpec{},
-					Status: &types.TaskInvocationStatus{
-						Output: expectedOutput,
-					},
-				},
-			},
-		},
-	})
-
-	exprParser := NewJavascriptExpressionParser()
-
-	resolved, err := exprParser.Resolve(actualScope, "fooTask", mustParseExpr("{$.Tasks.fooTask.Output}"))
-	assert.NoError(t, err)
-
-	resolvedString, _ := typedvalues.Unwrap(resolved)
-	assert.Equal(t, expected, resolvedString)
 }
 
 func mustParseExpr(s string) *typedvalues.TypedValue {

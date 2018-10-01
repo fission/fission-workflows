@@ -11,7 +11,7 @@ import (
 )
 
 func makeTestScope() *Scope {
-	scope, _ := NewScope(&types.Workflow{
+	scope, _ := NewScope(nil, &types.Workflow{
 		Metadata: &types.ObjectMetadata{
 			Id:        "testWorkflow",
 			CreatedAt: ptypes.TimestampNow(),

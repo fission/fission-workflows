@@ -147,7 +147,7 @@ func (cr *Controller) Notify(update *fes.Notification) error {
 		// TODO mark to clean up later instead
 		cr.stateStore.Delete(entity.ID())
 		cr.evalStore.Delete(entity.ID())
-		log.Infof("Removed entity %v from eval state", entity.ID())
+		log.Debugf("Removed entity %v from eval state", entity.ID())
 	case events.EventTaskFailed:
 		fallthrough
 	case events.EventTaskSucceeded:
