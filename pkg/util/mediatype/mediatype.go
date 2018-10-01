@@ -50,6 +50,9 @@ func (m *MediaType) ensureParametersExist() {
 }
 
 func (m *MediaType) Identifier() string {
+	if m == nil {
+		return ""
+	}
 	return m.Type + "/" + m.Subtype
 }
 

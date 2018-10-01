@@ -57,6 +57,9 @@ var DefaultHTTPMapper = &HTTPMapper{
 		return MediaTypeJSON
 	},
 	MediaTypeResolver: func(mt *mediatype.MediaType) ParserFormatter {
+		if mt == nil {
+			return bytesMapper
+		}
 
 		// Choose the mapper based on some hard-coded heuristics
 		switch mt.Identifier() {
@@ -149,8 +152,11 @@ func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.Ty
 	}
 
 	return map[string]*typedvalues.TypedValue{
-		// Map body to "main" input
+		// Map body to "body" input
 		types.InputBody: body,
+
+		// Deprecated: Map body to "main/default" input
+		types.InputMain: body,
 
 		// Map query to "query.x"
 		types.InputQuery: h.parseQuery(req),

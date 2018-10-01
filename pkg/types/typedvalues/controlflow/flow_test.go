@@ -77,6 +77,31 @@ func parseFormatTestCases() []testCase {
 			}),
 			expectedType: TypeFlow,
 		},
+		{
+			input: FlowWorkflow(&types.WorkflowSpec{
+				ApiVersion: types.WorkflowAPIVersion,
+				OutputTask: "mainTask",
+				Tasks: map[string]*types.TaskSpec{
+					"mainTask": { // layer 1
+						FunctionRef: "noop",
+						Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+							types.InputMain: &types.TaskSpec{ // layer 2
+								FunctionRef: "noop",
+								Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+									types.InputMain: &types.TaskSpec{ // layer 3
+										FunctionRef: "noop",
+										Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+											types.InputMain: "{ param('default') }",
+										}),
+									},
+								}),
+							},
+						}),
+					},
+				},
+			}),
+			expectedType: TypeFlow,
+		},
 	}
 }
 

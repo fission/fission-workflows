@@ -45,7 +45,7 @@ func UnwrapTask(tv *typedvalues.TypedValue) (*types.TaskSpec, error) {
 
 	task := flow.GetTask()
 	if task == nil {
-		return nil, typedvalues.ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(typedvalues.ErrIllegalTypeAssertion, "failed to unwrap %s to task", tv.ValueType())
 	}
 	return task, nil
 }
@@ -58,7 +58,7 @@ func UnwrapWorkflow(tv *typedvalues.TypedValue) (*types.WorkflowSpec, error) {
 
 	wf := flow.GetWorkflow()
 	if wf == nil {
-		return nil, typedvalues.ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(typedvalues.ErrIllegalTypeAssertion, "failed to unwrap %s to workflow", tv.ValueType())
 	}
 	return wf, nil
 }

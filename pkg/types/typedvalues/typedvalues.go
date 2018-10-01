@@ -267,11 +267,15 @@ func UnwrapString(tv *TypedValue) (string, error) {
 		return "", err
 	}
 
-	s, ok := i.(string)
-	if !ok {
-		return "", ErrIllegalTypeAssertion
+	if s, ok := i.(string); ok {
+		return s, nil
 	}
-	return s, nil
+
+	if bs, ok := i.([]byte); ok {
+		return string(bs), nil
+	}
+
+	return "", errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to string", tv.ValueType())
 }
 
 func UnwrapProto(tv *TypedValue) (proto.Message, error) {
@@ -290,11 +294,14 @@ func UnwrapBytes(tv *TypedValue) ([]byte, error) {
 		return nil, err
 	}
 
-	s, ok := i.([]byte)
-	if !ok {
-		return nil, ErrIllegalTypeAssertion
+	if d, ok := i.([]byte); ok {
+		return d, nil
 	}
-	return s, nil
+	if s, ok := i.(string); ok {
+		return []byte(s), nil
+	}
+
+	return nil, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to bytes", tv.ValueType())
 }
 
 func UnwrapBool(tv *TypedValue) (bool, error) {
@@ -305,7 +312,7 @@ func UnwrapBool(tv *TypedValue) (bool, error) {
 
 	s, ok := i.(bool)
 	if !ok {
-		return false, ErrIllegalTypeAssertion
+		return false, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to bool", tv.ValueType())
 	}
 	return s, nil
 }
@@ -318,7 +325,7 @@ func UnwrapArray(tv *TypedValue) ([]interface{}, error) {
 
 	s, ok := i.([]interface{})
 	if !ok {
-		return nil, ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to array", tv.ValueType())
 	}
 	return s, nil
 }
@@ -327,7 +334,7 @@ func UnwrapTypedValueArray(tv *TypedValue) ([]*TypedValue, error) {
 	arrayWrapper := &ArrayValue{}
 	err := ptypes.UnmarshalAny(tv.Value, arrayWrapper)
 	if err != nil {
-		return nil, ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to TypedValue-array", tv.ValueType())
 	}
 
 	arrayValue := make([]*TypedValue, len(arrayWrapper.Value))
@@ -341,7 +348,7 @@ func UnwrapTypedValueMap(tv *TypedValue) (map[string]*TypedValue, error) {
 	mapWrapper := &MapValue{}
 	err := ptypes.UnmarshalAny(tv.Value, mapWrapper)
 	if err != nil {
-		return nil, ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to TypedValue-map", tv.ValueType())
 	}
 
 	mapValue := make(map[string]*TypedValue, len(mapWrapper.Value))
@@ -359,6 +366,26 @@ func UnwrapMapTypedValue(tvs map[string]*TypedValue) (map[string]interface{}, er
 	return UnwrapMap(tv)
 }
 
+func WrapMapTypedValue(tvs map[string]interface{}) (map[string]*TypedValue, error) {
+	entries := make(map[string]*TypedValue, len(tvs))
+	for k, v := range tvs {
+		e, err := Wrap(v)
+		if err != nil {
+			return nil, err
+		}
+		entries[k] = e
+	}
+	return entries, nil
+}
+
+func MustWrapMapTypedValue(tvs map[string]interface{}) map[string]*TypedValue {
+	tv, err := WrapMapTypedValue(tvs)
+	if err != nil {
+		panic(err)
+	}
+	return tv
+}
+
 func UnwrapMap(tv *TypedValue) (map[string]interface{}, error) {
 	i, err := Unwrap(tv)
 	if err != nil {
@@ -367,7 +394,7 @@ func UnwrapMap(tv *TypedValue) (map[string]interface{}, error) {
 
 	s, ok := i.(map[string]interface{})
 	if !ok {
-		return nil, ErrIllegalTypeAssertion
+		return nil, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to map", tv.ValueType())
 	}
 	return s, nil
 }
@@ -393,7 +420,7 @@ func UnwrapInt64(tv *TypedValue) (int64, error) {
 	case float64:
 		return int64(t), nil
 	default:
-		return 0, ErrIllegalTypeAssertion
+		return 0, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to int64", tv.ValueType())
 	}
 }
 
@@ -417,22 +444,18 @@ func UnwrapFloat64(tv *TypedValue) (float64, error) {
 	case float64:
 		return float64(t), nil
 	default:
-		return 0, ErrIllegalTypeAssertion
+		return 0, errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to float64", tv.ValueType())
 	}
 }
 
 func UnwrapExpression(tv *TypedValue) (string, error) {
-	i, err := Unwrap(tv)
+	s, err := UnwrapString(tv)
 	if err != nil {
 		return "", err
 	}
 
-	s, ok := i.(string)
-	if !ok {
-		return "", ErrIllegalTypeAssertion
-	}
 	if !IsExpression(s) {
-		return "", ErrIllegalTypeAssertion
+		return "", errors.Wrapf(ErrIllegalTypeAssertion, "failed to unwrap %s to expression", tv.ValueType())
 	}
 	return s, nil
 }

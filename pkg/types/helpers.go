@@ -9,11 +9,13 @@ import (
 // the invocation.
 func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
 	tasks := map[string]*Task{}
-	for _, task := range wf.Tasks() {
-		tasks[task.ID()] = task
+	if wf != nil {
+		for _, task := range wf.Tasks() {
+			tasks[task.ID()] = task
+		}
 	}
 	if wfi != nil {
-		for id := range wfi.Status.DynamicTasks {
+		for id := range wfi.GetStatus().GetDynamicTasks() {
 			task, _ := GetTask(wf, wfi, id)
 			tasks[task.ID()] = task
 		}

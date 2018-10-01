@@ -75,8 +75,10 @@ func (p *BytesMapper) Format(w http.ResponseWriter, body *typedvalues.TypedValue
 			return err
 		}
 		bs = b
+	case typedvalues.TypeNil:
+		// Do nothing
 	default:
-		return typedvalues.ErrUnsupportedType
+		return errors.Wrapf(typedvalues.ErrUnsupportedType, "cannot format %s to bytes", body.ValueType())
 	}
 	_, err := w.Write(bs)
 	if err != nil {
@@ -177,8 +179,10 @@ func (m *TextMapper) Format(w http.ResponseWriter, body *typedvalues.TypedValue)
 		fallthrough
 	case typedvalues.TypeFloat64:
 		output = fmt.Sprintf("%d", i)
+	case typedvalues.TypeNil:
+		// Do nothing
 	default:
-		return typedvalues.ErrUnsupportedType
+		return errors.Wrapf(typedvalues.ErrUnsupportedType, "could not format %s to text", body.ValueType())
 	}
 	_, err = w.Write([]byte(output))
 	if err != nil {

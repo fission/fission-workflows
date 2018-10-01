@@ -1,11 +1,9 @@
 package httpconv
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 	"testing"
@@ -41,8 +39,6 @@ func TestFormatRequest(t *testing.T) {
 
 	err = FormatRequest(source, target)
 	assert.NoError(t, err)
-	bss, _ := httputil.DumpRequest(target, true)
-	fmt.Println(string(bss))
 	// Check body
 	bs, err := ioutil.ReadAll(target.Body)
 	assert.NoError(t, err)
@@ -110,6 +106,39 @@ func TestParseRequestMinimal(t *testing.T) {
 	ibody, err := typedvalues.Unwrap(target[types.InputBody])
 	assert.NoError(t, err)
 	assert.Equal(t, body, ibody)
+
+	// Check method
+	method, err := typedvalues.Unwrap(target[types.InputMethod])
+	assert.NoError(t, err)
+	assert.Equal(t, http.MethodPut, method)
+
+	// Check headers
+	rawHeader, err := typedvalues.Unwrap(target[types.InputHeaders])
+	assert.NoError(t, err)
+	assert.IsType(t, map[string]interface{}{}, rawHeader)
+	headers := rawHeader.(map[string]interface{})
+	assert.Equal(t, nil, headers["nonExistent"])
+
+	// Check query
+	rawQuery, err := typedvalues.Unwrap(target[types.InputQuery])
+	assert.NoError(t, err)
+	assert.IsType(t, map[string]interface{}{}, rawQuery)
+	query := rawQuery.(map[string]interface{})
+	assert.Equal(t, nil, query["nonExistent"])
+}
+
+func TestParseRequestWithoutContentType(t *testing.T) {
+	body := "hello world!"
+	req := createRequest(http.MethodPut, "http://foo.example", map[string]string{},
+		strings.NewReader(body))
+
+	target, err := ParseRequest(req)
+	assert.NoError(t, err)
+
+	// Check body
+	ibody, err := typedvalues.Unwrap(target[types.InputBody])
+	assert.NoError(t, err)
+	assert.Equal(t, body, string(ibody.([]byte)))
 
 	// Check method
 	method, err := typedvalues.Unwrap(target[types.InputMethod])

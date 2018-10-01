@@ -226,7 +226,7 @@ func (m *Workflow) Task(id string) (*Task, bool) {
 // Note: this only retrieves the statically top-level defined tasks
 func (m *Workflow) Tasks() []*Task {
 	var tasks []*Task
-	for id := range m.Spec.Tasks {
+	for id := range m.GetSpec().GetTasks() {
 		task, _ := m.Task(id)
 		tasks = append(tasks, task)
 	}
