@@ -301,7 +301,6 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("output", taskId, "=", output)
 		inputs, err := typedvalues.UnwrapMapTypedValue(task.Spec.Inputs)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)

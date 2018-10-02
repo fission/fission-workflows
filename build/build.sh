@@ -75,7 +75,7 @@ echo "------------------------------"
 # Build client
 CGO_ENABLED=0 GOOS=${goos} GOARCH=${goarch} go build \
   -gcflags=-trimpath=${GOPATH} -asmflags=-trimpath=${GOPATH}\
-  -ldflags '-X "${versionPath}.BuildDate=${date}"'\
+  -ldflags '-X "${versionPath}.buildDate=${date}"'\
   -o ${output_cli}\
   github.com/fission/fission-workflows/cmd/fission-workflows/
 echo "$(pwd)/${output_cli}"
@@ -83,7 +83,7 @@ echo "$(pwd)/${output_cli}"
 # Build bundle
 CGO_ENABLED=0 GOOS=${goos} GOARCH=${goarch} go build\
   -gcflags=-trimpath=${GOPATH} -asmflags=-trimpath=${GOPATH}\
-  -ldflags '-X "${versionPath}.BuildDate=${date}"'\
+  -ldflags '-X "${versionPath}.buildDate=${date}"'\
   -o ${output_bundle}\
   github.com/fission/fission-workflows/cmd/fission-workflows-bundle/
 echo "$(pwd)/${output_bundle}"

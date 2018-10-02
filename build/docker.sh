@@ -14,6 +14,7 @@ NOBUILD=${3:-false}
 bundleImage=${IMAGE_REPO}/fission-workflows-bundle
 pushd ${BUILD_ROOT}/..
 if $NOBUILD ; then
+    echo "Using pre-build binaries..."
     if [ ! -f ./fission-workflows-bundle ]; then
         echo "Executable './fission-workflows-bundle' not found!"
         exit 1;
@@ -24,6 +25,7 @@ if $NOBUILD ; then
         exit 1;
     fi
 fi
+
 echo "Building bundle..."
 docker build --tag="${bundleImage}:${IMAGE_TAG}" -f ${BUILD_ROOT}/Dockerfile \
     --no-cache \

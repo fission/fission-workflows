@@ -277,7 +277,10 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	wfSpec := &types.WorkflowSpec{}
 	err = jsonpb.Unmarshal(bytes.NewReader(raw), wfSpec)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse bytes into WorkflowSpec: %v", err)
+		fmt.Println("--- input ---")
+		fmt.Println(string(raw))
+		fmt.Println("--- end input ---")
+		return "", fmt.Errorf("failed to parse bytes to workflow specification: %v", err)
 	}
 	logrus.WithField("wfSpec", wfSpec).Info("Received valid WorkflowSpec from fetcher.")
 
