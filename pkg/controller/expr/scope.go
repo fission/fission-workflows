@@ -17,10 +17,6 @@ var (
 	ErrMergeTypeMismatch = errors.New("cannot merge incompatible types")
 )
 
-type Merger interface {
-	Merge(i interface{}) error
-}
-
 type DeepCopier interface {
 	DeepCopy() DeepCopier
 }
@@ -30,26 +26,6 @@ type Scope struct {
 	Workflow   *WorkflowScope
 	Invocation *InvocationScope
 	Tasks      Tasks
-}
-
-func (s *Scope) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(*Scope)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	if err := s.Workflow.Merge(other.Workflow); err != nil {
-		return err
-	}
-	if err := s.Invocation.Merge(other.Invocation); err != nil {
-		return err
-	}
-	if err := s.Tasks.Merge(other.Tasks); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *Scope) DeepCopy() DeepCopier {
@@ -97,26 +73,6 @@ type TaskScope struct {
 	Function  string
 }
 
-func (s Tasks) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(Tasks)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	for k, v := range other {
-		existing, ok := s[k]
-		if !ok {
-			s[k] = v
-		}
-		if err := existing.Merge(v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (s Tasks) DeepCopy() DeepCopier {
 	if s == nil {
 		return nil
@@ -141,32 +97,6 @@ func (s *WorkflowScope) DeepCopy() DeepCopier {
 	}
 }
 
-func (s *WorkflowScope) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(*WorkflowScope)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	if other == nil {
-		return nil
-	}
-	if s.UpdatedAt == 0 {
-		s.UpdatedAt = other.UpdatedAt
-	}
-	if len(s.Status) == 0 {
-		s.Status = other.Status
-	}
-	if len(s.Name) == 0 {
-		s.Name = other.Name
-	}
-	if !s.Internal {
-		s.Internal = other.Internal
-	}
-	return nil
-}
-
 func (s *InvocationScope) DeepCopy() DeepCopier {
 	if s == nil {
 		return nil
@@ -177,23 +107,6 @@ func (s *InvocationScope) DeepCopy() DeepCopier {
 	}
 }
 
-func (s *InvocationScope) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(*InvocationScope)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	if err := s.ObjectMetadata.Merge(other.ObjectMetadata); err != nil {
-		return err
-	}
-	if err := mergo.Merge(s.Inputs, other.Inputs); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *ObjectMetadata) DeepCopy() DeepCopier {
 	if s == nil {
 		return nil
@@ -202,23 +115,6 @@ func (s *ObjectMetadata) DeepCopy() DeepCopier {
 		Id:        s.Id,
 		CreatedAt: s.CreatedAt,
 	}
-}
-
-func (s *ObjectMetadata) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(*ObjectMetadata)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	if len(s.Id) == 0 {
-		s.Id = other.Id
-	}
-	if s.CreatedAt == 0 {
-		s.CreatedAt = other.CreatedAt
-	}
-	return nil
 }
 
 func (s *TaskScope) DeepCopy() DeepCopier {
@@ -242,35 +138,6 @@ func (s *TaskScope) DeepCopy() DeepCopier {
 		Output:         DeepCopy(s.Output),
 		Function:       s.Function,
 	}
-}
-
-func (s *TaskScope) Merge(i interface{}) error {
-	if s == nil || i == nil {
-		return nil
-	}
-	other, ok := i.(*TaskScope)
-	if !ok {
-		return ErrMergeTypeMismatch
-	}
-	if len(s.Status) == 0 {
-		other.Status = s.Status
-	}
-	if s.UpdatedAt == 0 {
-		s.UpdatedAt = other.UpdatedAt
-	}
-	if err := mergo.Merge(s.Inputs, other.Inputs); err != nil {
-		return err
-	}
-	if err := mergo.Merge(s.Requires, other.Requires); err != nil {
-		return err
-	}
-	if err := mergo.Merge(s.Output, other.Output); err != nil {
-		return err
-	}
-	if len(s.Function) == 0 {
-		return ErrMergeTypeMismatch
-	}
-	return nil
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
@@ -359,7 +226,7 @@ func DeepCopy(i interface{}) interface{} {
 		return i
 	}
 	switch t := i.(type) {
-	// TODO support any function as primitive
+	// TODO support any function as primitive (use reflection API)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, uintptr,
 		complex64, complex128, string, bool:
 		return t

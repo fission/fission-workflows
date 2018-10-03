@@ -2,7 +2,6 @@ package fission
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -124,7 +123,6 @@ func TestProxy_Specialize(t *testing.T) {
 	err = (&jsonpb.Marshaler{}).Marshal(fd, wf)
 	assert.NoError(t, err)
 	fd.Close()
-	fmt.Println("Stored workflow in ", fd.Name())
 
 	wfIds, err := env.specialize(context.Background(), &fission.FunctionLoadRequest{
 		FilePath: fd.Name(),

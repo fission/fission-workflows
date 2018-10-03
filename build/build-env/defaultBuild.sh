@@ -17,8 +17,7 @@ parse() {
     echo "Completed parsing ${src} -> ${dst}"
 }
 
-echo "test"
-echo "Building with $(fission-workflows version --client)..."
+echo  "Building with $(fission-workflows version --client)..."
 if [[ -f ${SRC_PKG} ]] ; then
     # Package is a single file
     echo "Package is a single file"
