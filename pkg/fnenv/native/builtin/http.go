@@ -63,7 +63,8 @@ func NewFunctionHTTP() *FunctionHTTP {
 	}
 }
 
-func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
+	// Get the actual url
 	targetUrl, err := fn.determineTargetURL(spec.Inputs)
 	if err != nil {
 		return nil, err
@@ -85,12 +86,12 @@ func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 	return result.GetOutput(), nil
 }
 
-func (fn *FunctionHTTP) determineTargetURL(inputs map[string]*types.TypedValue) (string, error) {
+func (fn *FunctionHTTP) determineTargetURL(inputs map[string]*typedvalues.TypedValue) (string, error) {
 	_, tv := getFirstDefinedTypedValue(inputs, HttpInputUrl, types.InputMain)
 	if tv == nil {
 		return "", errors.New("target URL is required for HTTP function")
 	}
-	s, err := typedvalues.FormatString(tv)
+	s, err := typedvalues.UnwrapString(tv)
 	if err != nil {
 		return "", err
 	}

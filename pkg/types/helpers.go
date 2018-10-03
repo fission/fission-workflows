@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -8,11 +9,13 @@ import (
 // the invocation.
 func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
 	tasks := map[string]*Task{}
-	for _, task := range wf.Tasks() {
-		tasks[task.ID()] = task
+	if wf != nil {
+		for _, task := range wf.Tasks() {
+			tasks[task.ID()] = task
+		}
 	}
 	if wfi != nil {
-		for id := range wfi.Status.DynamicTasks {
+		for id := range wfi.GetStatus().GetDynamicTasks() {
 			task, _ := GetTask(wf, wfi, id)
 			tasks[task.ID()] = task
 		}
@@ -167,13 +170,13 @@ func NewTaskInvocation(id string) *TaskInvocation {
 	}
 }
 
-func SingleInput(key string, t *TypedValue) map[string]*TypedValue {
-	return map[string]*TypedValue{
+func SingleInput(key string, t *typedvalues.TypedValue) map[string]*typedvalues.TypedValue {
+	return map[string]*typedvalues.TypedValue{
 		key: t,
 	}
 }
 
-func SingleDefaultInput(t *TypedValue) map[string]*TypedValue {
+func SingleDefaultInput(t *typedvalues.TypedValue) map[string]*typedvalues.TypedValue {
 	return SingleInput(InputMain, t)
 }
 
@@ -212,16 +215,22 @@ type TaskInstance struct {
 }
 
 type NamedTypedValue struct {
-	TypedValue
+	typedvalues.TypedValue
 	name string
 }
 
-type Inputs map[string]*TypedValue
+type Inputs map[string]*typedvalues.TypedValue
 
 func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *TaskInvocationSpec {
 	return &TaskInvocationSpec{
 		FnRef:        &fnRef,
 		TaskId:       taskId,
 		InvocationId: invocationId,
+	}
+}
+
+func Input(val interface{}) map[string]*typedvalues.TypedValue {
+	return map[string]*typedvalues.TypedValue{
+		InputMain: typedvalues.MustWrap(val),
 	}
 }

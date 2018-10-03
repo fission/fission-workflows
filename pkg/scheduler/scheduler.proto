@@ -4,6 +4,7 @@ package fission.workflows.scheduler;
 option go_package = "scheduler";
 
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
+import "github.com/fission/fission-workflows/pkg/types/typedvalues/typedvalues.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/any.proto";
 

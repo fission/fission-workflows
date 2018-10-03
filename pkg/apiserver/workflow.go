@@ -24,16 +24,16 @@ func NewWorkflow(api *api.Workflow, store *store.Workflows) *Workflow {
 	return wf
 }
 
-func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*WorkflowIdentifier, error) {
+func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*types.ObjectMetadata, error) {
 	id, err := ga.api.Create(spec, api.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
 
-	return &WorkflowIdentifier{id}, nil
+	return &types.ObjectMetadata{Id: id}, nil
 }
 
-func (ga *Workflow) Get(ctx context.Context, workflowID *WorkflowIdentifier) (*types.Workflow, error) {
+func (ga *Workflow) Get(ctx context.Context, workflowID *types.ObjectMetadata) (*types.Workflow, error) {
 	wf, err := ga.store.GetWorkflow(workflowID.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
@@ -41,7 +41,7 @@ func (ga *Workflow) Get(ctx context.Context, workflowID *WorkflowIdentifier) (*t
 	return wf, nil
 }
 
-func (ga *Workflow) Delete(ctx context.Context, workflowID *WorkflowIdentifier) (*empty.Empty, error) {
+func (ga *Workflow) Delete(ctx context.Context, workflowID *types.ObjectMetadata) (*empty.Empty, error) {
 	err := ga.api.Delete(workflowID.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
@@ -49,13 +49,13 @@ func (ga *Workflow) Delete(ctx context.Context, workflowID *WorkflowIdentifier) 
 	return &empty.Empty{}, nil
 }
 
-func (ga *Workflow) List(ctx context.Context, req *empty.Empty) (*SearchWorkflowResponse, error) {
+func (ga *Workflow) List(ctx context.Context, req *empty.Empty) (*WorkflowList, error) {
 	var results []string
 	wfs := ga.store.List()
 	for _, result := range wfs {
 		results = append(results, result.Id)
 	}
-	return &SearchWorkflowResponse{results}, nil
+	return &WorkflowList{results}, nil
 }
 
 func (ga *Workflow) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {

@@ -147,7 +147,7 @@ func (cr *Controller) Notify(update *fes.Notification) error {
 		// TODO mark to clean up later instead
 		cr.stateStore.Delete(entity.ID())
 		cr.evalStore.Delete(entity.ID())
-		log.Infof("Removed entity %v from eval state", entity.ID())
+		log.Debugf("Removed entity %v from eval state", entity.ID())
 	case events.EventTaskFailed:
 		fallthrough
 	case events.EventTaskSucceeded:
@@ -170,7 +170,6 @@ func (cr *Controller) Tick(tick uint64) error {
 
 	// Long loop: to check if there are any orphans
 	if tick%50 == 0 {
-		log.Debug("Checking model caches for missing invocations")
 		err = cr.checkModelCaches()
 	}
 

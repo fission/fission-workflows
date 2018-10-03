@@ -78,11 +78,11 @@ func TestResolveInputs(t *testing.T) {
 	tasks := map[string]*types.TaskSpec{
 		task1: {
 			FunctionRef: task1Name,
-			Inputs: map[string]*types.TypedValue{
-				"nested": typedvalues.ParseTask(&types.TaskSpec{
+			Inputs: map[string]*typedvalues.TypedValue{
+				"nested": typedvalues.MustWrap(&types.TaskSpec{
 					FunctionRef: nestedTaskName,
-					Inputs: map[string]*types.TypedValue{
-						"nested2": typedvalues.ParseTask(&types.TaskSpec{
+					Inputs: map[string]*typedvalues.TypedValue{
+						"nested2": typedvalues.MustWrap(&types.TaskSpec{
 							FunctionRef: nestedNestedTaskName,
 						}),
 					},

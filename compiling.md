@@ -19,7 +19,7 @@ environment meets all prerequisite requirements, and checkout the repo from gith
 # Install dependencies
 glide install -v
 
-# Build the artifacts: wfcli, fission-workflows-bundle
+# Build the artifacts: client (fission-workflows) and server (fission-workflows-bundle)
 build/build-linux.sh
 
 # Build the docker images (the NOBUILD parameter indicates that Docker should use the artifacts (wfci, 

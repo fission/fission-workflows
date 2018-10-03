@@ -54,7 +54,7 @@ A complete example of this function can be found in the [switchwhale](../example
 */
 type FunctionSwitch struct{}
 
-func (fn *FunctionSwitch) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionSwitch) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 	switchVal, err := fn.getSwitch(spec.Inputs)
 	if err != nil {
 		return nil, err
@@ -76,22 +76,22 @@ func (fn *FunctionSwitch) Invoke(spec *types.TaskInvocationSpec) (*types.TypedVa
 	return defaultCase, nil
 }
 
-func (fn *FunctionSwitch) getSwitch(inputs map[string]*types.TypedValue) (string, error) {
+func (fn *FunctionSwitch) getSwitch(inputs map[string]*typedvalues.TypedValue) (string, error) {
 	tv, err := ensureInput(inputs, SwitchInputCondition)
 	if err != nil {
 		return "", err
 	}
-	return typedvalues.FormatString(tv)
+	return typedvalues.UnwrapString(tv)
 }
 
-func (fn *FunctionSwitch) getCases(inputs map[string]*types.TypedValue) (map[string]*types.TypedValue,
-	*types.TypedValue, error) {
-	cases := map[string]*types.TypedValue{}
+func (fn *FunctionSwitch) getCases(inputs map[string]*typedvalues.TypedValue) (map[string]*typedvalues.TypedValue,
+	*typedvalues.TypedValue, error) {
+	cases := map[string]*typedvalues.TypedValue{}
 	defaultCase := inputs[SwitchInputDefaultCase]
 
 	switchCases, ok := inputs[SwitchInputCases]
 	if ok {
-		ir, err := typedvalues.FormatArray(switchCases)
+		ir, err := typedvalues.UnwrapArray(switchCases)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -100,7 +100,7 @@ func (fn *FunctionSwitch) getCases(inputs map[string]*types.TypedValue) (map[str
 			if !ok {
 				return nil, nil, errors.New("invalid case provided")
 			}
-			tva, err := typedvalues.Parse(m[SwitchCaseValue])
+			tva, err := typedvalues.Wrap(m[SwitchCaseValue])
 			if err != nil {
 				return nil, nil, err
 			}

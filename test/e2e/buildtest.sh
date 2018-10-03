@@ -13,7 +13,7 @@ DOCKER_REPO=gcr.io/fission-ci
 WORKFLOWS_ENV_IMAGE=${DOCKER_REPO}/workflow-env
 WORKFLOWS_BUILD_ENV_IMAGE=${DOCKER_REPO}/workflow-build-env
 WORKFLOWS_BUNDLE_IMAGE=${DOCKER_REPO}/fission-workflows-bundle
-TAG=test
+TAG=ci-test
 NS=fission
 NS_FUNCTION=fission-function
 NS_BUILDER=fission-builder
@@ -59,6 +59,7 @@ cleanup_fission_workflows ${fissionWorkflowsHelmId} || true
 #
 # Build docker images
 emph "Building images..."
+echo "Repo: ${DOCKER_REPO}, Tag: ${TAG}"
 bash ${ROOT}/build/docker.sh ${DOCKER_REPO} ${TAG}
 
 # Ensure cli is in path

@@ -12,8 +12,8 @@ func TestFunctionNoopPassInput(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
-				NoopInput: typedvalues.MustParse(expected),
+			Inputs: map[string]*typedvalues.TypedValue{
+				NoopInput: typedvalues.MustWrap(expected),
 			},
 		},
 		expected)
@@ -23,7 +23,7 @@ func TestFunctionNoopEmpty(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{},
+			Inputs: map[string]*typedvalues.TypedValue{},
 		},
 		nil)
 }
@@ -32,10 +32,10 @@ func TestFunctionNoopObject(t *testing.T) {
 	internalFunctionTest(t,
 		&FunctionNoop{},
 		&types.TaskInvocationSpec{
-			Inputs: map[string]*types.TypedValue{
-				"foo":           typedvalues.MustParse(true),
-				"bar":           typedvalues.MustParse(false),
-				types.InputMain: typedvalues.MustParse("hello"),
+			Inputs: map[string]*typedvalues.TypedValue{
+				"foo":           typedvalues.MustWrap(true),
+				"bar":           typedvalues.MustWrap(false),
+				types.InputMain: typedvalues.MustWrap("hello"),
 			},
 		},
 		"hello")

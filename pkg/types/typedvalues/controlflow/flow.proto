@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package fission.workflows.types;
+option go_package = "controlflow";
+
+import "github.com/fission/fission-workflows/pkg/types/types.proto";
+
+// Flow is a generic data type to provide a common API to working with dynamic tasks and workflows
+// If a flow contains both a task and a workflow, behavior is non-standard,
+// but should in principle default to the task.
+message Flow {
+    fission.workflows.types.WorkflowSpec workflow = 1;
+    fission.workflows.types.TaskSpec task = 2;
+}

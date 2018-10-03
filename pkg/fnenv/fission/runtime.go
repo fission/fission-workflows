@@ -101,7 +101,6 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}
-	defer resp.Body.Close()
 
 	fnenv.FnActive.WithLabelValues(Name).Dec()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
@@ -125,7 +124,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
-		msg, _ := typedvalues.Format(&output)
+		msg, _ := typedvalues.Unwrap(output)
 		ctxLog.Warnf("[%s] Failed %v: %v", fnRef.ID, resp.StatusCode, msg)
 		return &types.TaskInvocationStatus{
 			Status: types.TaskInvocationStatus_FAILED,
@@ -137,7 +136,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 
 	return &types.TaskInvocationStatus{
 		Status: types.TaskInvocationStatus_SUCCEEDED,
-		Output: &output,
+		Output: output,
 	}, nil
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -19,8 +20,8 @@ func TestParseProto(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -28,8 +29,8 @@ func TestParseProto(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 		},
@@ -38,7 +39,7 @@ func TestParseProto(t *testing.T) {
 	assert.NoError(t, err)
 	parsedWfSpec, err := Parse(bytes.NewReader(msg))
 	assert.NoError(t, err)
-	assert.Equal(t, originalWfSpec, parsedWfSpec)
+	util.AssertProtoEqual(t, originalWfSpec, parsedWfSpec)
 }
 
 func TestParseJson(t *testing.T) {
@@ -48,8 +49,8 @@ func TestParseJson(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -57,8 +58,8 @@ func TestParseJson(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 		},

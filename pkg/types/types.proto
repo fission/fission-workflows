@@ -4,6 +4,7 @@ package fission.workflows.types;
 option go_package = "types";
 
 import "google/protobuf/timestamp.proto";
+import "github.com/fission/fission-workflows/pkg/types/typedvalues/typedvalues.proto";
 
 //
 // Workflow Model
@@ -232,23 +233,6 @@ message ObjectMetadata {
     int64 generation = 4;
 }
 
-// TypedValue is used to serialize, deserialize, transfer data values across the workflow engine.
-//
-// It consists partly copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
-message TypedValue {
-
-    // Type is an arbitrary string representation of a type. Each type has an associated parser/formatter.
-    string type = 1;
-
-    // Value holds the actual value in an arbitrary serialized form. A parser should be able to parse this format
-    // based on the type.
-    bytes value = 2;
-
-    // Labels hold metadata about the value. It is used for example to store origins of data, past transformations,
-    // and information needed by serialization processes.
-    map<string, string> labels = 3;
-}
-
 message Error {
     //    string code = 1;
     string message = 2;
@@ -277,5 +261,3 @@ message TypedValueMap {
 message TypedValueList {
     repeated TypedValue Value = 1;
 }
-
-

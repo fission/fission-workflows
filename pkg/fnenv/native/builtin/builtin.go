@@ -26,20 +26,27 @@ var DefaultBuiltinFunctions = map[string]native.InternalFunction{
 }
 
 // ensureInput verifies that the input for the given key exists and is of one of the provided types.
-func ensureInput(inputs map[string]*types.TypedValue, key string, validTypes ...typedvalues.ValueType) (*types.TypedValue, error) {
+func ensureInput(inputs map[string]*typedvalues.TypedValue, key string, validTypes ...string) (*typedvalues.TypedValue, error) {
 
 	tv, ok := inputs[key]
 	if !ok {
 		return nil, fmt.Errorf("input '%s' is not set", key)
 	}
 
-	if len(validTypes) > 0 {
-		valid := typedvalues.IsType(tv, validTypes...)
-		if !valid {
-			return nil, fmt.Errorf("input '%s' is not a valid type (expected: %v, was: %T)", key, validTypes, tv.Type)
+	if len(validTypes) == 0 {
+		return tv, nil
+	}
+	var found bool
+	for _, validType := range validTypes {
+		if validType == tv.ValueType() {
+			found = true
+			break
 		}
 	}
 
+	if !found {
+		return nil, fmt.Errorf("input '%s' is not a validType type (expected: %v, was: %T)", key, validTypes, tv.ValueType())
+	}
 	return tv, nil
 }
 
@@ -49,7 +56,7 @@ func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types
 		t.Fatal(err)
 	}
 
-	outputtedTask, err := typedvalues.Format(output)
+	outputtedTask, err := typedvalues.Unwrap(output)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,8 +68,8 @@ func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types
 
 // getFirstDefinedTypedValue returns the first input and key of the inputs argument that matches a field in fields.
 // For example, given inputs { a : b, c : d }, getFirstDefinedTypedValue(inputs, z, x, c, a) would return (c, d)
-func getFirstDefinedTypedValue(inputs map[string]*types.TypedValue, fields ...string) (string, *types.TypedValue) {
-	var result *types.TypedValue
+func getFirstDefinedTypedValue(inputs map[string]*typedvalues.TypedValue, fields ...string) (string, *typedvalues.TypedValue) {
+	var result *typedvalues.TypedValue
 	var key string
 	for _, key = range fields {
 		val, ok := inputs[key]

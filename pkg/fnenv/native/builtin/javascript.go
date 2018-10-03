@@ -62,17 +62,17 @@ func NewFunctionJavascript() *FunctionJavascript {
 	}
 }
 
-func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 	exprVal, err := ensureInput(spec.Inputs, JavascriptInputExpr, typedvalues.TypeString)
 	argsVal, _ := spec.Inputs[JavascriptInputArgs]
 	if err != nil {
 		return nil, err
 	}
-	expr, err := typedvalues.FormatString(exprVal)
+	expr, err := typedvalues.UnwrapString(exprVal)
 	if err != nil {
 		return nil, err
 	}
-	args, err := typedvalues.Format(argsVal)
+	args, err := typedvalues.Unwrap(argsVal)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (fn *FunctionJavascript) Invoke(spec *types.TaskInvocationSpec) (*types.Typ
 	logrus.WithField("taskID", spec.TaskId).
 		Infof("[internal://%s] %v => %v", Javascript, expr, result)
 
-	return typedvalues.Parse(result)
+	return typedvalues.Wrap(result)
 }
 
 func (fn *FunctionJavascript) exec(expr string, args interface{}) (interface{}, error) {

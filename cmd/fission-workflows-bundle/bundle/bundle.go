@@ -14,6 +14,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
 	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
@@ -187,8 +188,8 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	// Caches
-	wfiCache := getInvocationStore(app, esPub, eventStore)
-	wfCache := getWorkflowStore(app, esPub, eventStore)
+	invocationStore := getInvocationStore(app, esPub, eventStore)
+	workflowStore := getWorkflowStore(app, esPub, eventStore)
 
 	//
 	// Function Runtimes
@@ -199,7 +200,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 	if opts.InternalRuntime || opts.Fission != nil {
 		log.Infof("Using Task Runtime: Workflow")
-		reflectiveRuntime := workflows.NewRuntime(invocationAPI, wfiCache())
+		reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore)
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
@@ -228,12 +229,12 @@ func Run(ctx context.Context, opts *Options) error {
 		var ctrls []controller.Controller
 		if opts.WorkflowController {
 			log.Info("Using controller: workflow")
-			ctrls = append(ctrls, setupWorkflowController(wfCache(), es, resolvers))
+			ctrls = append(ctrls, setupWorkflowController(workflowStore, es, resolvers))
 		}
 
 		if opts.InvocationController {
 			log.Info("Using controller: invocation")
-			ctrls = append(ctrls, setupInvocationController(wfiCache(), wfCache(), es, runtimes, resolvers))
+			ctrls = append(ctrls, setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers))
 		}
 
 		ctrl := controller.NewMetaController(ctrls...)
@@ -255,7 +256,7 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	if opts.Fission != nil {
 		proxyMux := http.NewServeMux()
-		runFissionEnvironmentProxy(proxyMux, es, wfiCache(), wfCache(), resolvers)
+		runFissionEnvironmentProxy(proxyMux, es, invocationStore, workflowStore, resolvers)
 		fissionProxySrv := &http.Server{Addr: fissionProxyAddress}
 		fissionProxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
 
@@ -286,11 +287,11 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.WorkflowAPI {
-		serveWorkflowAPI(grpcServer, es, resolvers, wfCache())
+		serveWorkflowAPI(grpcServer, es, resolvers, workflowStore)
 	}
 
 	if opts.InvocationAPI {
-		serveInvocationAPI(grpcServer, es, wfiCache())
+		serveInvocationAPI(grpcServer, es, invocationStore)
 	}
 
 	if opts.AdminAPI || opts.WorkflowAPI || opts.InvocationAPI {
@@ -363,25 +364,14 @@ func Run(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func getWorkflowStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Workflows {
-	var workflows *store.Workflows
-	return func() *store.Workflows {
-		if workflows == nil {
-			workflows = store.NewWorkflowsStore(setupWorkflowCache(app, eventPub, backend))
-		}
-		return workflows
-	}
+func getWorkflowStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) *store.Workflows {
+	c := setupWorkflowCache(app, eventPub, backend)
+	return store.NewWorkflowsStore(c)
 }
 
-func getInvocationStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) func() *store.Invocations {
-	var invocations *store.Invocations
-	return func() *store.Invocations {
-		if invocations == nil {
-			invocations = store.NewInvocationStore(setupWorkflowInvocationCache(app, eventPub, backend))
-		}
-		return invocations
-
-	}
+func getInvocationStore(app *App, eventPub pubsub.Publisher, backend fes.Backend) *store.Invocations {
+	c := setupWorkflowInvocationCache(app, eventPub, backend)
+	return store.NewInvocationStore(c)
 }
 
 func setupInternalFunctionRuntime() *native.FunctionEnv {
@@ -523,7 +513,7 @@ func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, invocat
 	wfServer := apiserver.NewWorkflow(workflowAPI, workflows)
 	wfiAPI := api.NewInvocationAPI(es)
 	wfiServer := apiserver.NewInvocation(wfiAPI, invocations)
-	fissionProxyServer := fission.NewFissionProxyServer(wfiServer, wfServer)
+	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(wfiServer, wfServer)
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 

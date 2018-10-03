@@ -11,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/urfave/cli"
 )
@@ -104,7 +105,7 @@ var cmdInvocation = cli.Command{
 				wfID := ctx.Args().Get(0)
 				spec := &types.WorkflowInvocationSpec{
 					WorkflowId: wfID,
-					Inputs:     map[string]*types.TypedValue{},
+					Inputs:     map[string]*typedvalues.TypedValue{},
 				}
 				if ctx.Bool("sync") {
 					resp, err := client.Invocation.InvokeSync(ctx, spec)

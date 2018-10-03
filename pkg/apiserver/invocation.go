@@ -36,13 +36,13 @@ func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocati
 	return &empty.Empty{}, nil
 }
 
-func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*WorkflowInvocationIdentifier, error) {
+func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.ObjectMetadata, error) {
 	eventID, err := gi.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
 
-	return &WorkflowInvocationIdentifier{eventID}, nil
+	return &types.ObjectMetadata{Id: eventID}, nil
 }
 
 func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.WorkflowInvocation, error) {
@@ -53,8 +53,8 @@ func (gi *Invocation) InvokeSync(ctx context.Context, spec *types.WorkflowInvoca
 	return wfi, nil
 }
 
-func (gi *Invocation) Cancel(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*empty.Empty, error) {
-	err := gi.api.Cancel(invocationID.GetId())
+func (gi *Invocation) Cancel(ctx context.Context, objectMetadata *types.ObjectMetadata) (*empty.Empty, error) {
+	err := gi.api.Cancel(objectMetadata.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
@@ -62,8 +62,8 @@ func (gi *Invocation) Cancel(ctx context.Context, invocationID *WorkflowInvocati
 	return &empty.Empty{}, nil
 }
 
-func (gi *Invocation) Get(ctx context.Context, invocationID *WorkflowInvocationIdentifier) (*types.WorkflowInvocation, error) {
-	wi, err := gi.store.GetInvocation(invocationID.GetId())
+func (gi *Invocation) Get(ctx context.Context, objectMetadata *types.ObjectMetadata) (*types.WorkflowInvocation, error) {
+	wi, err := gi.store.GetInvocation(objectMetadata.GetId())
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}

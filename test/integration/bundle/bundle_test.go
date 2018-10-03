@@ -3,6 +3,8 @@ package bundle
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -13,6 +15,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/test/integration"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -94,8 +97,8 @@ func TestWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Tasks.FirstTask.Output}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Tasks.FirstTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask": {},
@@ -103,8 +106,8 @@ func TestWorkflowInvocation(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 		},
@@ -117,13 +120,13 @@ func TestWorkflowInvocation(t *testing.T) {
 
 	// Create invocation
 	expectedOutput := "Hello world!"
-	tv, err := typedvalues.Parse(expectedOutput)
-	etv, err := typedvalues.Parse(strings.ToUpper(expectedOutput))
+	tv, err := typedvalues.Wrap(expectedOutput)
+	etv, err := typedvalues.Wrap(strings.ToUpper(expectedOutput))
 	assert.NoError(t, err)
 
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
-		Inputs: map[string]*types.TypedValue{
+		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMain: tv,
 		},
 	}
@@ -143,7 +146,7 @@ func TestWorkflowInvocation(t *testing.T) {
 	deadline := time.Now().Add(time.Duration(10) * time.Second)
 	tick := time.NewTicker(time.Duration(100) * time.Millisecond)
 	for ti := range tick.C {
-		invoc, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wiId})
+		invoc, err := wi.Get(ctx, &types.ObjectMetadata{Id: wiId})
 		assert.NoError(t, err)
 		if invoc.Status.Finished() || ti.After(deadline) {
 			invocation = invoc
@@ -151,7 +154,7 @@ func TestWorkflowInvocation(t *testing.T) {
 			break
 		}
 	}
-	assert.Equal(t, wiSpec, invocation.Spec)
+	util.AssertProtoEqual(t, wiSpec, invocation.Spec)
 	assert.Equal(t, etv.Value, invocation.Status.Output.Value)
 	assert.True(t, invocation.Status.Successful())
 }
@@ -167,8 +170,8 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"fakeFinalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Tasks.someConditionalTask.Output}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Tasks.someConditionalTask.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"FirstTask":           {},
@@ -177,24 +180,24 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			},
 			"FirstTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Invocation.Inputs.default.toUpperCase()}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Invocation.Inputs.default.toUpperCase()}"),
 				},
 			},
 			"someConditionalTask": {
 				FunctionRef: "if",
-				Inputs: map[string]*types.TypedValue{
-					builtin.IfInputCondition: typedvalues.MustParse("{$.Invocation.Inputs.default == 'FOO'}"),
-					builtin.IfInputThen: typedvalues.ParseTask(&types.TaskSpec{
+				Inputs: map[string]*typedvalues.TypedValue{
+					builtin.IfInputCondition: typedvalues.MustWrap("{$.Invocation.Inputs.default == 'FOO'}"),
+					builtin.IfInputThen: typedvalues.MustWrap(&types.TaskSpec{
 						FunctionRef: "noop",
-						Inputs: map[string]*types.TypedValue{
-							types.InputMain: typedvalues.MustParse("{'consequent: ' + $.Tasks.FirstTask.Output}"),
+						Inputs: map[string]*typedvalues.TypedValue{
+							types.InputMain: typedvalues.MustWrap("{'consequent: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
-					builtin.IfInputElse: typedvalues.ParseTask(&types.TaskSpec{
+					builtin.IfInputElse: typedvalues.MustWrap(&types.TaskSpec{
 						FunctionRef: "noop",
-						Inputs: map[string]*types.TypedValue{
-							types.InputMain: typedvalues.MustParse("{'alternative: ' + $.Tasks.FirstTask.Output}"),
+						Inputs: map[string]*typedvalues.TypedValue{
+							types.InputMain: typedvalues.MustWrap("{'alternative: ' + $.Tasks.FirstTask.Output}"),
 						},
 					}),
 				},
@@ -210,10 +213,11 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.NotNil(t, wfResp)
 	assert.NotEmpty(t, wfResp.Id)
 
+	// Test with main input
 	wiSpec := &types.WorkflowInvocationSpec{
 		WorkflowId: wfResp.Id,
-		Inputs: map[string]*types.TypedValue{
-			types.InputMain: typedvalues.MustParse("foo"),
+		Inputs: map[string]*typedvalues.TypedValue{
+			types.InputMain: typedvalues.MustWrap("foo"),
 		},
 	}
 	wfi, err := wi.InvokeSync(ctx, wiSpec)
@@ -222,8 +226,23 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Finished())
 	assert.True(t, wfi.Status.Successful())
 	assert.Equal(t, 4, len(wfi.Status.Tasks))
+	output := typedvalues.MustUnwrap(wfi.Status.Output)
+	assert.Equal(t, "alternative: FOO", output)
 
-	output := typedvalues.MustFormat(wfi.Status.Output)
+	// Test with body input
+	wiSpec = &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+		Inputs: map[string]*typedvalues.TypedValue{
+			types.InputBody: typedvalues.MustWrap("foo"),
+		},
+	}
+	wfi, err = wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+	assert.Equal(t, 4, len(wfi.Status.Tasks))
+	output = typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, "alternative: FOO", output)
 }
 
@@ -238,20 +257,20 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 		Tasks: map[string]*types.TaskSpec{
 			"nestedTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					builtin.NoopInput: typedvalues.ParseWorkflow(&types.WorkflowSpec{
+				Inputs: map[string]*typedvalues.TypedValue{
+					builtin.NoopInput: typedvalues.MustWrap(&types.WorkflowSpec{
 						OutputTask: "b",
 						Tasks: map[string]*types.TaskSpec{
 							"a": {
 								FunctionRef: "noop",
-								Inputs: map[string]*types.TypedValue{
-									types.InputMain: typedvalues.MustParse("inner1"),
+								Inputs: map[string]*typedvalues.TypedValue{
+									types.InputMain: typedvalues.MustWrap("inner1"),
 								},
 							},
 							"b": {
 								FunctionRef: "noop",
-								Inputs: map[string]*types.TypedValue{
-									types.InputMain: typedvalues.MustParse("{output('a')}"),
+								Inputs: map[string]*typedvalues.TypedValue{
+									types.InputMain: typedvalues.MustWrap("{output('a')}"),
 								},
 								Requires: map[string]*types.TaskDependencyParameters{
 									"a": nil,
@@ -263,8 +282,8 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 			},
 			"finalTask": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("output('nestedTask')"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("output('nestedTask')"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"nestedTask": {},
@@ -288,7 +307,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Successful())
 	assert.Equal(t, 3, len(wfi.Status.Tasks))
 
-	_, err = typedvalues.Format(wfi.Status.Output)
+	_, err = typedvalues.Unwrap(wfi.Status.Output)
 	assert.NoError(t, err)
 }
 
@@ -305,7 +324,7 @@ func TestParallelInvocation(t *testing.T) {
 
 	taskSpec := &types.TaskSpec{
 		FunctionRef: builtin.Sleep,
-		Inputs:      typedvalues.Input("2s"),
+		Inputs:      types.Input("25ms"),
 	}
 
 	wfSpec.AddTask("p1", taskSpec)
@@ -315,7 +334,7 @@ func TestParallelInvocation(t *testing.T) {
 	wfSpec.AddTask("p5", taskSpec)
 	wfSpec.AddTask("await", &types.TaskSpec{
 		FunctionRef: builtin.Sleep,
-		Inputs:      typedvalues.Input("1s"),
+		Inputs:      types.Input("10ms"),
 		Requires:    types.Require("p1", "p2", "p3", "p4", "p5"),
 	})
 	wfSpec.SetOutput("await")
@@ -362,36 +381,36 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 		Tasks: types.Tasks{
 			"longSleep": {
 				FunctionRef: builtin.Sleep,
-				Inputs:      typedvalues.Input("5s"),
+				Inputs:      types.Input("5s"),
 			},
 			"afterSleep": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ '4' }"),
+				Inputs:      types.Input("{ '4' }"),
 				Requires:    types.Require("longSleep"),
 			},
 			"parallel1": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ '1' }"),
+				Inputs:      types.Input("{ '1' }"),
 				Requires:    types.Require("longSleep"),
 			},
 			"parallel2": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ output('parallel1') + '2' }"),
+				Inputs:      types.Input("{ output('parallel1') + '2' }"),
 				Requires:    types.Require("parallel1"),
 			},
 			"parallel3": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ output('parallel2') + '3' }"),
+				Inputs:      types.Input("{ output('parallel2') + '3' }"),
 				Requires:    types.Require("parallel2"),
 			},
 			"merge": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ output('parallel3') + output('afterSleep') }"),
+				Inputs:      types.Input("{ output('parallel3') + output('afterSleep') }"),
 				Requires:    types.Require("parallel3", "afterSleep"),
 			},
 			"final": {
 				FunctionRef: builtin.Noop,
-				Inputs:      typedvalues.Input("{ output('merge') }"),
+				Inputs:      types.Input("{ output('merge') }"),
 				Requires:    types.Require("merge"),
 			},
 		},
@@ -410,7 +429,7 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Successful())
 	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
 
-	output := typedvalues.MustFormat(wfi.Status.Output)
+	output := typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, "1234", output)
 }
 
@@ -424,11 +443,11 @@ func TestWorkflowCancellation(t *testing.T) {
 		Tasks: types.Tasks{
 			"longSleep": {
 				FunctionRef: builtin.Sleep,
-				Inputs:      typedvalues.Input("250ms"),
+				Inputs:      types.Input("250ms"),
 			},
 			"longSleep2": {
 				FunctionRef: builtin.Sleep,
-				Inputs:      typedvalues.Input("5s"),
+				Inputs:      types.Input("5s"),
 				Requires:    types.Require("longSleep"),
 			},
 		},
@@ -458,7 +477,7 @@ func TestWorkflowCancellation(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	wfiID := wfis.Invocations[0]
-	wfi, err := wi.Get(ctx, &apiserver.WorkflowInvocationIdentifier{Id: wfiID})
+	wfi, err := wi.Get(ctx, &types.ObjectMetadata{Id: wfiID})
 	assert.NoError(t, err)
 	assert.False(t, wfi.GetStatus().Successful())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -495,7 +514,7 @@ func TestInvocationFailed(t *testing.T) {
 		Tasks: types.Tasks{
 			"task1": {
 				FunctionRef: builtin.Fail,
-				Inputs:      typedvalues.Input(msg),
+				Inputs:      types.Input(msg),
 			},
 		},
 	}
@@ -522,7 +541,7 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 	cl, wi := setup()
 
 	// Test workflow creation
-	output := typedvalues.MustParse("overrided output")
+	output := typedvalues.MustWrap("overrided output")
 	wfSpec := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "t3",
@@ -534,25 +553,25 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 			},
 			"t2": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("{$.Tasks.t1.Output}"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("{$.Tasks.t1.Output}"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"t1": {},
 				},
 				// Self-referencing output
-				Output: typedvalues.MustParse("{$.Tasks.t2.Output}"),
+				Output: typedvalues.MustWrap("{$.Tasks.t2.Output}"),
 			},
 			"t3": {
 				FunctionRef: "noop",
-				Inputs: map[string]*types.TypedValue{
-					types.InputMain: typedvalues.MustParse("initial output 2"),
+				Inputs: map[string]*typedvalues.TypedValue{
+					types.InputMain: typedvalues.MustWrap("initial output 2"),
 				},
 				Requires: map[string]*types.TaskDependencyParameters{
 					"t2": {},
 				},
 				// Referencing output of another task
-				Output: typedvalues.MustParse("{$.Tasks.t2.Output}"),
+				Output: typedvalues.MustWrap("{$.Tasks.t2.Output}"),
 			},
 		},
 	}
@@ -562,9 +581,72 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 		WorkflowId: wfID.GetId(),
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue()))
-	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue()))
-	assert.Equal(t, string(output.GetValue()), string(wfi.GetStatus().GetOutput().GetValue()))
+	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue())
+	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue())
+	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetOutput().GetValue())
+}
+
+func TestDeepRecursion(t *testing.T) {
+	ctx := context.Background()
+	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cl := apiserver.NewWorkflowAPIClient(conn)
+	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+
+	// Test workflow creation
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "mainTask",
+		Tasks: map[string]*types.TaskSpec{
+			"mainTask": { // layer 1
+				FunctionRef: builtin.Noop,
+				Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+					types.InputMain: &types.TaskSpec{ // layer 2
+						FunctionRef: builtin.Noop,
+						Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+							types.InputMain: &types.TaskSpec{ // layer 3
+								FunctionRef: builtin.Noop,
+								Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+									types.InputMain: &types.TaskSpec{ // layer 4
+										FunctionRef: builtin.Noop,
+										Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+											types.InputMain: "foo",
+										}),
+									},
+								}),
+							},
+						}),
+					},
+				}),
+			},
+		},
+	}
+
+	wfResp, err := cl.Create(ctx, wfSpec)
+	defer cl.Delete(ctx, wfResp)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wfResp)
+	assert.NotEmpty(t, wfResp.Id)
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wfResp.Id,
+		Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+			types.InputMain: "foo",
+		}),
+	}
+	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
+
+	output := typedvalues.MustUnwrap(wfi.Status.Output)
+	d, _ := json.Marshal(output)
+	fmt.Println(string(d))
+	assert.Equal(t, typedvalues.MustUnwrap(wiSpec.Inputs[types.InputMain]), output)
 }
 
 func TestDeeplyNestedInvocation(t *testing.T) {
@@ -584,12 +666,12 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 			"CountUntil": {
 				FunctionRef: builtin.While,
 				Inputs: types.Inputs{
-					builtin.WhileInputExpr:  typedvalues.MustParse("{ !task().Inputs._prev || task().Inputs._prev < 5 }"),
-					builtin.WhileInputLimit: typedvalues.MustParse(10),
-					builtin.WhileInputAction: typedvalues.MustParse(&types.TaskSpec{
+					builtin.WhileInputExpr:  typedvalues.MustWrap("{ !task().Inputs._prev || task().Inputs._prev < 5 }"),
+					builtin.WhileInputLimit: typedvalues.MustWrap(10),
+					builtin.WhileInputAction: typedvalues.MustWrap(&types.TaskSpec{
 						FunctionRef: builtin.Noop,
 						Inputs: types.Inputs{
-							builtin.NoopInput: typedvalues.MustParse("{ (task().Inputs._prev || 0) + 1 }"),
+							builtin.NoopInput: typedvalues.MustWrap("{ (task().Inputs._prev || 0) + 1 }"),
 						},
 					}),
 				},
@@ -612,7 +694,7 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 	assert.True(t, wfi.Status.Finished())
 	assert.True(t, wfi.Status.Successful())
 
-	output := typedvalues.MustFormat(wfi.Status.Output)
+	output := typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, float64(5), output)
 }
 

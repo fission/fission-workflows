@@ -52,7 +52,7 @@ echo "Setting up helm..."
 helm init
 
 printf "Waiting for Helm"
-until helm list >/dev/null 2>&1
+until helm list
 do
   printf "."
   sleep 3

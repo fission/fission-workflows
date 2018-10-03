@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package fission.workflows.types;
+option go_package = "typedvalues";
+
+import "google/protobuf/any.proto";
+
+// TypedValue is used to serialize, deserialize, transfer data values across the workflow engine.
+//
+// It consists partly copy of protobuf's Any, to avoid protobuf requirement of a protobuf-based type.
+message TypedValue {
+
+    // Value holds the actual value in a serialized form.
+    google.protobuf.Any value = 1;
+
+    // Labels hold metadata about the value. It is used for example to store origins of data, past transformations,
+    // and information needed by serialization processes.
+    map<string, string> metadata = 3;
+}
+
+message Expression {
+    string value = 1;
+}
+
+message MapValue {
+    map<string, TypedValue> value = 1;
+}
+
+message ArrayValue {
+    repeated TypedValue value = 1;
+}
+
+message NilValue {}

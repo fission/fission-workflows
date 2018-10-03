@@ -53,9 +53,9 @@ foo:
 // TODO avoid adding function-injected fields to compose
 type FunctionCompose struct{}
 
-func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 
-	var output *types.TypedValue
+	var output *typedvalues.TypedValue
 	switch len(spec.GetInputs()) {
 	case 0:
 		output = nil
@@ -69,19 +69,19 @@ func (fn *FunctionCompose) Invoke(spec *types.TaskInvocationSpec) (*types.TypedV
 	default:
 		results := map[string]interface{}{}
 		for k, v := range spec.GetInputs() {
-			i, err := typedvalues.Format(v)
+			i, err := typedvalues.Unwrap(v)
 			if err != nil {
 				return nil, err
 			}
 			results[k] = i
 		}
-		p, err := typedvalues.Parse(results)
+		p, err := typedvalues.Wrap(results)
 		if err != nil {
 			return nil, err
 		}
 		output = p
 	}
-	logrus.Infof("[internal://%s] %v (Type: %s, Labels: %v)", Compose, typedvalues.MustFormat(output), output.GetType(),
-		output.GetLabels())
+	logrus.Infof("[internal://%s] %v (Type: %s, Labels: %v)", Compose, typedvalues.MustUnwrap(output), output.ValueType(),
+		output.GetMetadata())
 	return output, nil
 }

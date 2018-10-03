@@ -54,7 +54,7 @@ A complete example of this function can be found in the [maybewhale](../examples
 */
 type FunctionIf struct{}
 
-func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
+func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
 
 	// Verify and get condition
 	expr, err := ensureInput(spec.GetInputs(), IfInputCondition)
@@ -66,14 +66,14 @@ func (fn *FunctionIf) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue,
 	consequent := spec.GetInputs()[IfInputThen]
 	alternative := spec.GetInputs()[IfInputElse]
 
-	// Parse condition to a bool
-	i, err := typedvalues.Format(expr)
+	// Wrap condition to a bool
+	i, err := typedvalues.Unwrap(expr)
 	if err != nil {
 		return nil, err
 	}
 	condition, ok := i.(bool)
 	if !ok {
-		return nil, fmt.Errorf("condition '%v' needs to be a 'bool', but was '%v'", i, expr.Type)
+		return nil, fmt.Errorf("condition '%v' needs to be a 'bool', but was '%v'", i, expr.ValueType())
 	}
 
 	// Output consequent or alternative based on condition

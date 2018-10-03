@@ -78,10 +78,12 @@ import:
   - go/otgrpc
 - package: github.com/hashicorp/golang-lru
   version: v0.5.0
-testImport:
 - package: github.com/stretchr/testify
-  version: 1.1.4
-  subpackages:
-  - assert
+  version: v1.2.2
+- package: github.com/imdario/mergo
+  version: v0.3.6
+testImport:
 - package: gopkg.in/ory-am/dockertest.v3
   version: v3.3.1
+- package: github.com/stretchr/testify
+  version: v1.2.2

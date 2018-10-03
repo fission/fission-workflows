@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,29 +28,25 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 			panic("Header 'Foo: Bar' not present")
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		bs, err := json.Marshal(string(data))
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprint(w, string(bs))
+		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+		fmt.Fprint(w, string(data))
 	}))
 	defer ts.Close()
 
 	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
-			types.InputMethod: typedvalues.MustParse(http.MethodPost),
-			HttpInputUrl:      typedvalues.MustParse(ts.URL),
-			types.InputMain:   typedvalues.MustParse(body),
-			types.InputHeaders: typedvalues.MustParse(map[string]interface{}{
+		Inputs: map[string]*typedvalues.TypedValue{
+			types.InputMethod: typedvalues.MustWrap(http.MethodPost),
+			HttpInputUrl:      typedvalues.MustWrap(ts.URL),
+			types.InputMain:   typedvalues.MustWrap(body),
+			types.InputHeaders: typedvalues.MustWrap(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, body, typedvalues.MustFormat(out))
+	assert.Equal(t, body, typedvalues.MustUnwrap(out))
 }
 
 func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
@@ -64,15 +59,15 @@ func TestFunctionHttp_Invoke_Invalid(t *testing.T) {
 	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
-		Inputs: map[string]*types.TypedValue{
-			types.InputMethod: typedvalues.MustParse(http.MethodDelete),
-			HttpInputUrl:      typedvalues.MustParse(ts.URL),
-			types.InputMain:   typedvalues.MustParse(body),
-			types.InputHeaders: typedvalues.MustParse(map[string]interface{}{
+		Inputs: map[string]*typedvalues.TypedValue{
+			types.InputMethod: typedvalues.MustWrap(http.MethodDelete),
+			HttpInputUrl:      typedvalues.MustWrap(ts.URL),
+			types.InputMain:   typedvalues.MustWrap(body),
+			types.InputHeaders: typedvalues.MustWrap(map[string]interface{}{
 				"Foo": "Bar",
 			}),
 		},
 	})
-	assert.Error(t, err)
 	assert.Nil(t, out)
+	assert.Error(t, err, "expected error\n")
 }

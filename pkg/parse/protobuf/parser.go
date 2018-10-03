@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 )
 

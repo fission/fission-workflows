@@ -16,6 +16,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +46,7 @@ func TestRuntime_InvokeWorkflow_InvalidSpec(t *testing.T) {
 
 func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
-	output := typedvalues.MustParse("foo")
+	output := typedvalues.MustWrap("foo")
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
@@ -58,7 +59,7 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 	}()
 	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
-	assert.Equal(t, output, wfi.GetStatus().GetOutput())
+	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	assert.True(t, wfi.GetStatus().Finished())
 	assert.True(t, wfi.GetStatus().Successful())
 }
@@ -68,7 +69,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	pollCache := store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
 	runtime.store = pollCache
 
-	output := typedvalues.MustParse("foo")
+	output := typedvalues.MustWrap("foo")
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
@@ -85,7 +86,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	}()
 	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
-	assert.Equal(t, output, wfi.GetStatus().GetOutput())
+	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	assert.True(t, wfi.GetStatus().Finished())
 	assert.True(t, wfi.GetStatus().Successful())
 }
@@ -134,8 +135,8 @@ func TestRuntime_Invoke(t *testing.T) {
 
 	spec := types.NewTaskInvocationSpec("wi-123", "ti-123", types.NewFnRef("internal", "", "fooFn"))
 	spec.Inputs = types.Inputs{}
-	spec.Inputs[types.InputParent] = typedvalues.MustParse("parentID")
-	output := typedvalues.MustParse("foo")
+	spec.Inputs[types.InputParent] = typedvalues.MustWrap("parentID")
+	output := typedvalues.MustWrap("foo")
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
@@ -149,7 +150,7 @@ func TestRuntime_Invoke(t *testing.T) {
 
 	task, err := runtime.Invoke(spec)
 	assert.NoError(t, err)
-	assert.Equal(t, output, task.GetOutput())
+	util.AssertProtoEqual(t, output, task.GetOutput())
 }
 
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {

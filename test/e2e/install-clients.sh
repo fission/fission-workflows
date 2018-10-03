@@ -5,19 +5,19 @@ set -euo pipefail
 . $(dirname $0)/utils.sh
 
 BIN_DIR=${BIN_DIR:-/tmp/fission-workflow-ci/bin}
-HELM_VERSION=${HELM_VERSION:-2.8.2}
-KUBECTL_VERSION=${KUBECTL_VERSION:-1.9.6}
+HELM_VERSION=${HELM_VERSION:-2.11.0}
 FISSION_VERSION=${FISSION_VERSION:-0.10.0}
 
 # Install kubectl
-if ! kubectl version -c 2>/dev/null | grep ${KUBECTL_VERSION} >/dev/null; then
-   emph "Installing kubectl ${KUBECTL_VERSION} to ${BIN_DIR}/kubectl..."
-   curl -sLO https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl
-   chmod +x ./kubectl
-   mv -f kubectl ${BIN_DIR}/kubectl
-else
-    emph "Kubectl ${KUBECTL_VERSION} already present."
+if ! kubectl version ; then
+    sudo apt-get install -y apt-transport-https
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    sudo touch /etc/apt/sources.list.d/kubernetes.list
+    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+    sudo apt-get update
+    sudo apt-get install -y kubectl
 fi
+emph "Using kubectl $(kubectl version --client --short) already present."
 mkdir -p ${HOME}/.kube
 which kubectl
 

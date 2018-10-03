@@ -13,7 +13,7 @@ const (
 	FailInputMsg = types.InputMain
 )
 
-var defaultErrMsg = typedvalues.MustParse("fail function triggered")
+var defaultErrMsg = typedvalues.MustWrap("fail function triggered")
 
 /*
 FunctionFail is a function that always fails. This can be used to short-circuit workflows in
@@ -41,8 +41,8 @@ A runnable example of this function can be found in the [failwhale](../examples/
 */
 type FunctionFail struct{}
 
-func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValue, error) {
-	var output *types.TypedValue
+func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.TypedValue, error) {
+	var output *typedvalues.TypedValue
 	switch len(spec.GetInputs()) {
 	case 0:
 		output = defaultErrMsg
@@ -58,7 +58,7 @@ func (fn *FunctionFail) Invoke(spec *types.TaskInvocationSpec) (*types.TypedValu
 		"output": output,
 	}).Info("Internal Fail-function invoked.")
 
-	msg, err := typedvalues.Format(output)
+	msg, err := typedvalues.Unwrap(output)
 	if err != nil {
 		return nil, err
 	}

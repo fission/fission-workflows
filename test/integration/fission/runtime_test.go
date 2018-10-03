@@ -106,14 +106,14 @@ func TestFnenvInvoke(t *testing.T) {
 		TaskId:       "fooTask",
 		InvocationId: "fooInvocation",
 		Inputs: types.Inputs{
-			"default": typedvalues.MustParse(body),
-			"headers": typedvalues.MustParse(map[string]interface{}{
+			"default": typedvalues.MustWrap(body),
+			"headers": typedvalues.MustWrap(map[string]interface{}{
 				headerKey: headerVal,
 			}),
 		},
 		FnRef: &fnref,
 	})
-	output := typedvalues.MustFormat(result.Output)
+	output := typedvalues.MustUnwrap(result.Output)
 	assert.NoError(t, err)
 	assert.True(t, result.Finished())
 	assert.NotEmpty(t, output)
