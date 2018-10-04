@@ -13,6 +13,7 @@ DOCKER_REPO=gcr.io/fission-ci
 WORKFLOWS_ENV_IMAGE=${DOCKER_REPO}/workflow-env
 WORKFLOWS_BUILD_ENV_IMAGE=${DOCKER_REPO}/workflow-build-env
 WORKFLOWS_BUNDLE_IMAGE=${DOCKER_REPO}/fission-workflows-bundle
+WORKFLOWS_PROXY_IMAGE=${DOCKER_REPO}/workflows-proxy
 TAG=ci-test
 NS=fission
 NS_FUNCTION=fission-function
@@ -75,12 +76,13 @@ emph "Pushing images to container registry..."
 gcloud docker -- push ${WORKFLOWS_ENV_IMAGE}:${TAG}
 gcloud docker -- push ${WORKFLOWS_BUILD_ENV_IMAGE}:${TAG}
 gcloud docker -- push ${WORKFLOWS_BUNDLE_IMAGE}:${TAG}
+gcloud docker -- push ${WORKFLOWS_PROXY_IMAGE}:${TAG}
 
 #
 # Deploy Fission Workflows
 # TODO use test specific namespace
 emph "Deploying Fission Workflows '${fissionWorkflowsHelmId}' to ns '${NS}'..."
-helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=Always,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},envImage=${WORKFLOWS_ENV_IMAGE},buildEnvImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
+helm_install_fission_workflows ${fissionWorkflowsHelmId} ${NS} "pullPolicy=Always,tag=${TAG},bundleImage=${WORKFLOWS_BUNDLE_IMAGE},fission.env.runtimeImage=${WORKFLOWS_PROXY_IMAGE},fission.env.builderImage=${WORKFLOWS_BUILD_ENV_IMAGE}"
 
 # Wait for Fission Workflows to get ready
 fission-workflows config

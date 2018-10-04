@@ -90,6 +90,29 @@ spec:
     protocol: TCP
 
 ---
+# Legacy: add 'workflows-apiserver' service for Fission controller
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflows-apiserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    svc: {{ .Values.service.name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    svc: {{ .Values.service.name }}
+  ports:
+  - name: http
+    port: {{ .Values.service.ports.http }}
+    targetPort: 8080
+    protocol: TCP
+  - name: grpc
+    port: {{ .Values.service.ports.grpc }}
+    targetPort: 5555
+    protocol: TCP
+---
 #
 # Fission integration
 #

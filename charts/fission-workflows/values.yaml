@@ -27,7 +27,7 @@ eventstore:
 
 # Fission-related configuration
 fission:
-  ns: fission # Remove
+  ns: fission
   controller: http://controller
   executor: http://executor
   env:
