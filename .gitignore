@@ -8,11 +8,14 @@ __pycache__/
 
 revive.toml
 
-fission-workflows-bundle
-fission-workflows-bundle-linux
-fission-workflows-bundle-osx
-fission-workflows-bundle-windows
-fission-workflows
-fission-workflows-osx
-fission-workflows-linux
-fission-workflows-windows
+/fission-workflows-bundle
+/fission-workflows-bundle-linux
+/fission-workflows-bundle-osx
+/fission-workflows-bundle-windows
+/fission-workflows
+/fission-workflows-osx
+/fission-workflows-linux
+/fission-workflows-windows
+/fission-workflows-proxy-windows
+/fission-workflows-proxy-osx
+/fission-workflows-proxy

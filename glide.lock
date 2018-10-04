@@ -1,5 +1,5 @@
-hash: 408c3b4ae68057f47cbae26b714552850e3b4430f389b26e9070ec6865a8893d
-updated: 2018-10-05T20:56:35.002664+02:00
+hash: 27be6fdf438267010eb9ab330509faaba76cad747b6b64b4992746a0be138734
+updated: 2018-10-09T14:08:09.232342+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -146,6 +146,8 @@ imports:
   version: 9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -223,7 +225,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
+  version: a67f783a3814b8729bd2dac5780b5f78f8dbd64d
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/stretchr/objx

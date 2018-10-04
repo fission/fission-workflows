@@ -20,26 +20,31 @@ import (
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission/router"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/hashicorp/golang-lru"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/syncmap"
 )
 
-// Proxy between Fission and ParseWorkflow to ensure that workflowInvocations comply with Fission function interface. This
+const fissionIDsCacheSize = 1E4
+
+// Proxy between Fission and Workflows to ensure that invocations comply with Fission function interface. This
 // ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
-	// TODO change server to client
-	invocationServer apiserver.WorkflowInvocationAPIServer
-	workflowServer   apiserver.WorkflowAPIServer
-	fissionIds       syncmap.Map // map[string]bool
+	invocationServer apiserver.WorkflowInvocationAPIClient
+	workflowServer   apiserver.WorkflowAPIClient
+	fissionIds       *lru.Cache // map[string]bool
 }
 
 // NewEnvironmentProxyServer creates a proxy server to adheres to the Fission Environment specification.
-func NewEnvironmentProxyServer(wfiSrv apiserver.WorkflowInvocationAPIServer, wfSrv apiserver.WorkflowAPIServer) *Proxy {
+func NewEnvironmentProxyServer(wfiSrv apiserver.WorkflowInvocationAPIClient, wfSrv apiserver.WorkflowAPIClient) *Proxy {
+	cache, err := lru.New(fissionIDsCacheSize)
+	if err != nil {
+		panic(err)
+	}
 	return &Proxy{
 		invocationServer: wfiSrv,
 		workflowServer:   wfSrv,
-		fissionIds:       syncmap.Map{},
+		fissionIds:       cache,
 	}
 }
 
@@ -80,7 +85,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the workflow engine contains the workflow associated with the Fission function UID
-	_, ok := fp.fissionIds.Load(fnID)
+	_, ok := fp.fissionIds.Get(fnID)
 	if !ok {
 		// Fallback 1 : check if it is in the event store somewhere
 		if fp.hasWorkflow(ctx, fnID) {
@@ -88,7 +93,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Unknown fission function name; not specialized", 400)
 			return
 		}
-		fp.fissionIds.Store(fnID, true)
+		fp.fissionIds.Add(fnID, true)
 	}
 
 	// Map request to workflow inputs
@@ -144,9 +149,9 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	if !wi.Status.Successful() {
 		logrus.Errorf("Invocation not successful, was '%v': %v", wi.Status.Status.String(), wi.Status.Error.Error())
 	} else if wi.Status.Output == nil {
-		logrus.Infof("Invocation '%v' has no output.", fnID)
+		logrus.Debugf("Invocation '%v' has no output.", fnID)
 	} else {
-		logrus.Infof("Response Content-Type: %v", w.Header().Get("Content-Type"))
+		logrus.Debugf("Response Content-Type: %v", w.Header().Get("Content-Type"))
 	}
 }
 
@@ -293,7 +298,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	wfID := resp.Id
 
 	// Cache the id so we don't have to check whether the workflow engine already has it.
-	fp.fissionIds.Store(fissionID, true)
+	fp.fissionIds.Add(fissionID, true)
 
 	return wfID, nil
 }
