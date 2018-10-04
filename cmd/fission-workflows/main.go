@@ -128,10 +128,10 @@ func commandContext(fn func(c Context) error) func(c *cli.Context) error {
 		switch c.GlobalInt("verbosity") {
 		case 0:
 			logrus.SetLevel(logrus.ErrorLevel)
-		default:
-			fallthrough
 		case 1:
 			logrus.SetLevel(logrus.InfoLevel)
+		default:
+			fallthrough
 		case 2:
 			logrus.SetLevel(logrus.DebugLevel)
 		}
