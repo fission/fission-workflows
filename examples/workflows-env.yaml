@@ -1,6 +1,7 @@
-# Example of the configuration of the workflow engine as a Fission Environment
-
+# Example of the configuration of the workflow engine as a Fission Environment\n\n/
+# Source: fission-workflows/templates/deployment.yaml
 # Workflow Apiserver is an optional component that allows users to query the workflows API through the Fission apiserver.
+
 # Workflow Engine is deployed as just another Fission environment.
 apiVersion: fission.io/v1
 kind: Environment
