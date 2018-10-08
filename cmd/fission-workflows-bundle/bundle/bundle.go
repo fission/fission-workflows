@@ -198,10 +198,9 @@ func Run(ctx context.Context, opts *Options) error {
 	invocationAPI := api.NewInvocationAPI(es)
 	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
-
+	reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore, workflowStore)
 	if opts.InternalRuntime || opts.Fission != nil {
 		log.Infof("Using Task Runtime: Workflow")
-		reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore)
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
@@ -297,7 +296,7 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.InvocationAPI {
-		serveInvocationAPI(grpcServer, es, invocationStore)
+		serveInvocationAPI(grpcServer, es, invocationStore, workflowStore)
 	}
 
 	if opts.AdminAPI || opts.WorkflowAPI || opts.InvocationAPI {
@@ -470,9 +469,9 @@ func serveWorkflowAPI(s *grpc.Server, es fes.Backend, resolvers map[string]fnenv
 	log.Infof("Serving workflow gRPC API at %s.", gRPCAddress)
 }
 
-func serveInvocationAPI(s *grpc.Server, es fes.Backend, store *store.Invocations) {
+func serveInvocationAPI(s *grpc.Server, es fes.Backend, invocations *store.Invocations, workflows *store.Workflows) {
 	invocationAPI := api.NewInvocationAPI(es)
-	invocationServer := apiserver.NewInvocation(invocationAPI, store)
+	invocationServer := apiserver.NewInvocation(invocationAPI, invocations, workflows)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
 	log.Infof("Serving workflow invocation gRPC API at %s.", gRPCAddress)
 }

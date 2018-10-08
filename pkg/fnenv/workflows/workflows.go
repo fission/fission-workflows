@@ -45,15 +45,17 @@ var terminationEvent = []string{
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
 	api          *api.Invocation
-	store        *store.Invocations
+	invocations  *store.Invocations
+	workflows    *store.Workflows
 	timeout      time.Duration
 	pollInterval time.Duration
 }
 
-func NewRuntime(api *api.Invocation, store *store.Invocations) *Runtime {
+func NewRuntime(api *api.Invocation, invocations *store.Invocations, workflows *store.Workflows) *Runtime {
 	return &Runtime{
 		api:          api,
-		store:        store,
+		invocations:  invocations,
+		workflows:    workflows,
 		pollInterval: PollInterval,
 		timeout:      Timeout,
 	}
@@ -83,6 +85,14 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 		return nil, err
 	}
 
+	// Check if the workflow required by the invocation exists
+	if rt.workflows != nil {
+		_, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	timeStart := time.Now()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
@@ -98,7 +108,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 
 	timedCtx, cancelFn := context.WithTimeout(cfg.Ctx, rt.timeout)
 	defer cancelFn()
-	if pub, ok := rt.store.CacheReader.(pubsub.Publisher); ok {
+	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
 		sub := pub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer: 1,
 			LabelMatcher: labels.And(
@@ -141,7 +151,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 // checkForResult checks if the invocation with the specified ID has completed yet.
 // If so it will return the workflow invocation object, otherwise it will return nil.
 func (rt *Runtime) checkForResult(wfiID string) *types.WorkflowInvocation {
-	wi, err := rt.store.GetInvocation(wfiID)
+	wi, err := rt.invocations.GetInvocation(wfiID)
 	if err != nil {
 		logrus.Debugf("Could not find workflow invocation in cache: %v", err)
 	}
