@@ -103,7 +103,6 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	}
 
 	fnenv.FnActive.WithLabelValues(Name).Dec()
-	fnenv.FnActive.WithLabelValues(Name).Inc()
 
 	ctxLog.Infof("Fission function response: %d - %s", resp.StatusCode, resp.Header.Get("Content-Type"))
 	if logrus.GetLevel() == logrus.DebugLevel {

@@ -13,7 +13,7 @@ NOBUILD=${3:-false}
 # Build bundle images
 bundleImage=${IMAGE_REPO}/fission-workflows-bundle
 pushd ${BUILD_ROOT}/..
-if $NOBUILD ; then
+if ${NOBUILD} ; then
     echo "Using pre-build binaries..."
     if [ ! -f ./fission-workflows-bundle ]; then
         echo "Executable './fission-workflows-bundle' not found!"
@@ -33,21 +33,23 @@ docker build --tag="${bundleImage}:${IMAGE_TAG}" -f ${BUILD_ROOT}/Dockerfile \
 popd
 
 # Build bundle-dependent images
-echo "Building Fission runtime env..."
+echo "Building ${IMAGE_REPO}/workflow-env..."
 docker build --tag="${IMAGE_REPO}/workflow-env:${IMAGE_TAG}" ${BUILD_ROOT}/runtime-env/ \
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
-echo "Building Fission build env..."
+echo "Building ${IMAGE_REPO}/workflow-build-env..."
 docker build --tag="${IMAGE_REPO}/workflow-build-env:${IMAGE_TAG}" ${BUILD_ROOT}/build-env/ \
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
-echo "Building fission-workflows..."
+echo "Building ${IMAGE_REPO}/fission-workflows-cli..."
 docker build --tag="${IMAGE_REPO}/fission-workflows-cli:${IMAGE_TAG}" ${BUILD_ROOT}/cli/ \
     --no-cache \
     --build-arg BUNDLE_IMAGE=${bundleImage} \
     --build-arg BUNDLE_TAG=${IMAGE_TAG}
-
-# Remove intermediate images
-# docker rmi $(docker images -f "dangling=true" -q)
+echo "Building ${IMAGE_REPO}/fission workflows-proxy..."
+docker build --tag="${IMAGE_REPO}/workflows-proxy:${IMAGE_TAG}" ${BUILD_ROOT}/proxy/ \
+    --no-cache \
+    --build-arg BUNDLE_IMAGE=${bundleImage} \
+    --build-arg BUNDLE_TAG=${IMAGE_TAG}

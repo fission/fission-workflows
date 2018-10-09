@@ -30,7 +30,7 @@ func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 
 func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
-	runtime.store = store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
+	runtime.invocations = store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
 	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
 
@@ -67,7 +67,7 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	runtime, invocationAPI, _, c := setup()
 	pollCache := store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
-	runtime.store = pollCache
+	runtime.invocations = pollCache
 
 	output := typedvalues.MustWrap("foo")
 	go func() {
@@ -157,7 +157,7 @@ func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
 	c := cache.NewSubscribedCache(testutil.NewCache(), aggregates.NewInvocationEntity, backend.Subscribe())
-	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c))
+	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c), nil)
 	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, c
 }

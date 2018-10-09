@@ -2,46 +2,40 @@
 # Fission Workflows chart configuration
 #
 
-# Bundle image
+# Basic settings
+name: workflows
 bundleImage: fission/fission-workflows-bundle
-
-# Image of the Fission environment for Fission Workflows
-envImage: fission/workflow-env
-
-# Image of the Fission build environment for Fission Workflows
-buildEnvImage: fission/workflow-build-env
-
-tag: 0.5.0
-
+tag: 0.6.0
 pullPolicy: IfNotPresent
-
-# Deploy optional Workflow api-server?
-apiserver: true
-
-# Fission configuration
-fnenv:
-  fission:
-    ns: fission
-    controller: http://controller
-    executor: http://executor
-
-# Message queue config
-nats:
-  authToken: defaultFissionAuthToken
-  cluster: fissionMQTrigger
-  location: nats-streaming
-  port: 4222
-
-# Enable Debug Message?
 debug: false
 
-# Pod deleting grace period in seconds
-gracePeriod: 5
+service:
+  name: workflows
+  type: ClusterIP
+  ports:
+    grpc: 5555
+    http: 80
 
-# Environment specific configuration
-env:
-  name: workflow
+# Event store-related configuration
+eventstore:
+  type: mem # supported: nats, mem
+  nats:
+    authToken: defaultFissionAuthToken
+    cluster: fissionMQTrigger
+    location: nats-streaming
+    port: 4222
 
-# Jaeger-related configuration
+# Fission-related configuration
+fission:
+  ns: fission
+  controller: http://controller
+  executor: http://executor
+  env:
+    name: workflow
+    ns: default
+    runtimeImage: fission/fission-workflows-proxy
+    builderImage: fission/workflow-build-env
+
+# Tracing-related configuration
 jaeger:
   collector: jaeger-collector:14267

@@ -102,6 +102,7 @@ type Options struct {
 	InvocationAPI        bool
 	Metrics              bool
 	Debug                bool
+	FissionProxy         bool
 }
 
 type FissionOptions struct {
@@ -180,7 +181,7 @@ func Run(ctx context.Context, opts *Options) error {
 		esPub = natsBackend
 		eventStore = natsBackend
 	} else {
-		log.Warn("No event store provided; using the development, in-memory event store")
+		log.Info("Using the in-memory event store")
 		memBackend := mem.NewBackend()
 		es = memBackend
 		esPub = memBackend
@@ -197,10 +198,9 @@ func Run(ctx context.Context, opts *Options) error {
 	invocationAPI := api.NewInvocationAPI(es)
 	resolvers := map[string]fnenv.RuntimeResolver{}
 	runtimes := map[string]fnenv.Runtime{}
-
+	reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore, workflowStore)
 	if opts.InternalRuntime || opts.Fission != nil {
 		log.Infof("Using Task Runtime: Workflow")
-		reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore)
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
@@ -254,9 +254,14 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	// Fission integration
 	//
-	if opts.Fission != nil {
+	if opts.FissionProxy {
+		conn, err := grpc.Dial(fmt.Sprintf(":%s", gRPCAddress), grpc.WithInsecure())
+		if err != nil {
+			panic(err)
+		}
+
 		proxyMux := http.NewServeMux()
-		runFissionEnvironmentProxy(proxyMux, es, invocationStore, workflowStore, resolvers)
+		runFissionEnvironmentProxy(proxyMux, conn)
 		fissionProxySrv := &http.Server{Addr: fissionProxyAddress}
 		fissionProxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
 
@@ -291,7 +296,7 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	if opts.InvocationAPI {
-		serveInvocationAPI(grpcServer, es, invocationStore)
+		serveInvocationAPI(grpcServer, es, invocationStore, workflowStore)
 	}
 
 	if opts.AdminAPI || opts.WorkflowAPI || opts.InvocationAPI {
@@ -341,8 +346,8 @@ func Run(ctx context.Context, opts *Options) error {
 		}
 
 		httpApiSrv := &http.Server{Addr: apiGatewayAddress}
-		httpMux.Handle("/", grpcMux)
-		httpApiSrv.Handler = handlers.LoggingHandler(os.Stdout, tracingWrapper(httpMux))
+		httpMux.Handle("/", handlers.LoggingHandler(os.Stdout, tracingWrapper(grpcMux)))
+		httpApiSrv.Handler = httpMux
 		go func() {
 			err := httpApiSrv.ListenAndServe()
 			log.WithField("err", err).Info("HTTP Gateway stopped")
@@ -464,9 +469,9 @@ func serveWorkflowAPI(s *grpc.Server, es fes.Backend, resolvers map[string]fnenv
 	log.Infof("Serving workflow gRPC API at %s.", gRPCAddress)
 }
 
-func serveInvocationAPI(s *grpc.Server, es fes.Backend, store *store.Invocations) {
+func serveInvocationAPI(s *grpc.Server, es fes.Backend, invocations *store.Invocations, workflows *store.Workflows) {
 	invocationAPI := api.NewInvocationAPI(es)
-	invocationServer := apiserver.NewInvocation(invocationAPI, store)
+	invocationServer := apiserver.NewInvocation(invocationAPI, invocations, workflows)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
 	log.Infof("Serving workflow invocation gRPC API at %s.", gRPCAddress)
 }
@@ -505,15 +510,11 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 	}
 }
 
-func runFissionEnvironmentProxy(proxyMux *http.ServeMux, es fes.Backend, invocations *store.Invocations,
-	workflows *store.Workflows, resolvers map[string]fnenv.RuntimeResolver) {
-
-	workflowParser := fnenv.NewMetaResolver(resolvers)
-	workflowAPI := api.NewWorkflowAPI(es, workflowParser)
-	wfServer := apiserver.NewWorkflow(workflowAPI, workflows)
-	wfiAPI := api.NewInvocationAPI(es)
-	wfiServer := apiserver.NewInvocation(wfiAPI, invocations)
-	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(wfiServer, wfServer)
+// TODO: find a shortcut to using a full gRPC client-server approach
+func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) {
+	workflowClient := apiserver.NewWorkflowAPIClient(conn)
+	invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
+	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(invocationClient, workflowClient)
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 

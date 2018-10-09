@@ -37,20 +37,39 @@ annotations:
 (In the near future, this step will be done by Fission automatically.)
 
 Now, to access metrics in the Prometheus dashboard you just need to exposes the prometheus-server in the `monitoring` 
-namespace or access the cluserIP from within the cluster.  
+namespace or access the clusterIP from within the cluster (for example by using [telepresence](https://telepresence
+.io/))
 
 ### Prometheus NATS exporter
 Given that NATS streaming plays an important role in the workflow system, it is also useful to collect the metrics of 
 NATS into prometheus. Although not directly implemented in the NATS deployments, there is the 
 [Prometheus NATS exporter](https://github.com/nats-io/prometheus-nats-exporter) as a separate module to install.
 
-## Grafana
+### Grafana
 A common way to visualize the metrics collected with Prometheus is to use Grafana to create and share graphs and 
 other types of visualizations.
 
 ```bash
-helm install --namespace monitoring --name prometheus stable/grafana
+helm install --namespace monitoring --name grafana stable/grafana
 ```
+
+Follow the instructions provided by the notes of the grafana helm chart to get the login details and exposing the 
+Grafana dashboard locally.
 
 In the future, we will provide a pre-built Grafana dashboard with useful graphs to provide you insight into the 
 system, without needing to build dashboards yourself.
+
+## OpenTracing / Jaeger
+
+Fission Workflows supports distributed tracing using the [OpenTracing](http://opentracing.io/) API. By default it 
+assumes the use of [Jaeger](https://www.jaegertracing.io/). To install a simple development version of Jaeger, which 
+includes all components, use the following template (replace `fission` with the namespace where Fission Workflows is 
+installed):
+
+```bash
+kubectl -n fission create -f https://raw.githubusercontent.com/jaegertracing/jaeger-kubernetes/master/all-in-one/jaeger-all-in-one-template.yml
+```
+
+To view the Jaeger GUI navigate to the `jaeger-query` service. An example of a multi-task workflow execution:
+
+![Jaeger Tracing example](./assets/jaeger-example.png)

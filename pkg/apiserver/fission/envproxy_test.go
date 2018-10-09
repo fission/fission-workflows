@@ -13,81 +13,42 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-type mockInvocationServer struct {
+type mockWorkflowClient struct {
 	mock.Mock
 }
 
-func (m *mockInvocationServer) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.ObjectMetadata, error) {
-	args := m.Called(spec)
-	id := spec.WorkflowId
-	if len(id) == 0 {
-		id = "randomUID"
-	}
+func (m *mockWorkflowClient) Create(ctx context.Context, in *types.WorkflowSpec, opts ...grpc.CallOption) (*types.ObjectMetadata, error) {
+	args := m.Called(in)
 	return &types.ObjectMetadata{Id: args.String(0)}, args.Error(1)
 }
 
-func (m *mockInvocationServer) InvokeSync(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.
-	WorkflowInvocation, error) {
-	args := m.Called(spec)
-	return args.Get(0).(*types.WorkflowInvocation), args.Error(1)
-}
-
-func (m *mockInvocationServer) Cancel(ctx context.Context, id *types.ObjectMetadata) (*empty.Empty, error) {
-	args := m.Called(id)
-	return &empty.Empty{}, args.Error(1)
-}
-
-func (m *mockInvocationServer) List(ctx context.Context, _ *apiserver.InvocationListQuery) (*apiserver.WorkflowInvocationList, error) {
-	args := m.Called()
-	return args.Get(0).(*apiserver.WorkflowInvocationList), args.Error(1)
-}
-
-func (m *mockInvocationServer) Get(ctx context.Context, id *types.ObjectMetadata) (*types.
-	WorkflowInvocation, error) {
-	args := m.Called(id)
-	return args.Get(0).(*types.WorkflowInvocation), args.Error(1)
-}
-
-func (m *mockInvocationServer) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) (*empty.Empty, error) {
-	args := m.Called(spec)
-	return &empty.Empty{}, args.Error(1)
-}
-
-type mockWorkflowServer struct {
-	mock.Mock
-}
-
-func (m *mockWorkflowServer) Create(ctx context.Context, spec *types.WorkflowSpec) (*types.ObjectMetadata, error) {
-	args := m.Called(spec)
-	return &types.ObjectMetadata{Id: args.String(0)}, args.Error(1)
-}
-
-func (m *mockWorkflowServer) List(ctx context.Context, _ *empty.Empty) (*apiserver.WorkflowList, error) {
+func (m *mockWorkflowClient) List(ctx context.Context, _ *empty.Empty, opts ...grpc.CallOption) (*apiserver.WorkflowList, error) {
 	args := m.Called()
 	return args.Get(0).(*apiserver.WorkflowList), args.Error(1)
 }
 
-func (m *mockWorkflowServer) Get(ctx context.Context, id *types.ObjectMetadata) (*types.Workflow, error) {
-	args := m.Called(id)
+func (m *mockWorkflowClient) Get(ctx context.Context, in *types.ObjectMetadata, opts ...grpc.CallOption) (*types.Workflow, error) {
+	args := m.Called(in)
 	return args.Get(0).(*types.Workflow), args.Error(1)
 }
 
-func (m *mockWorkflowServer) Delete(ctx context.Context, id *types.ObjectMetadata) (*empty.Empty, error) {
-	args := m.Called(id)
+func (m *mockWorkflowClient) Delete(ctx context.Context, in *types.ObjectMetadata, opts ...grpc.CallOption) (*empty.Empty, error) {
+	args := m.Called(in)
 	return &empty.Empty{}, args.Error(1)
 }
 
-func (m *mockWorkflowServer) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {
-	args := m.Called(spec)
+func (m *mockWorkflowClient) Validate(ctx context.Context, in *types.WorkflowSpec, opts ...grpc.CallOption) (*empty.Empty, error) {
+	args := m.Called(in)
 	return &empty.Empty{}, args.Error(1)
 }
 
 func TestProxy_Specialize(t *testing.T) {
-	workflowServer := &mockWorkflowServer{}
+	workflowServer := &mockWorkflowClient{}
 	workflowServer.On("Create", mock.Anything).Return("mockID", nil)
 	env := NewEnvironmentProxyServer(nil, workflowServer)
 	wf := &types.WorkflowSpec{

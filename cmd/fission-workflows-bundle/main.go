@@ -49,6 +49,7 @@ func main() {
 			HTTPGateway:          c.Bool("api") || c.Bool("api-http"),
 			Metrics:              c.Bool("metrics"),
 			Debug:                c.Bool("debug"),
+			FissionProxy:         c.Bool("fission-proxy"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -126,6 +127,10 @@ func createCli() *cli.App {
 		},
 
 		// Fission
+		cli.BoolFlag{
+			Name:  "fission-proxy",
+			Usage: "Serve a Fission environment as a proxy",
+		},
 		cli.BoolFlag{
 			Name:  "fission",
 			Usage: "Use Fission as a function environment",

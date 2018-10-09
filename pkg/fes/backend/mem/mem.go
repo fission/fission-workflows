@@ -46,6 +46,10 @@ var (
 	}, []string{"type"})
 )
 
+func init() {
+	prometheus.MustRegister(eventsAppended, cacheKeys, cacheEvents)
+}
+
 // Config contains the user-configurable options of the in-memory backend.
 //
 // To limit the memory consumption of the backend, you can make use of the MaxKeys and
