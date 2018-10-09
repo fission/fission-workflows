@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	"github.com/opentracing/opentracing-go/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,9 +20,9 @@ type EvalStore struct {
 	mp sync.Map
 }
 
-func (e *EvalStore) LoadOrStore(id string, spanCtx opentracing.SpanContext) *EvalState {
-	s, _ := e.mp.LoadOrStore(id, NewEvalState(id, spanCtx))
-	return s.(*EvalState)
+func (e *EvalStore) LoadOrStore(id string, spanCtx opentracing.SpanContext) (*EvalState, bool) {
+	s, ok := e.mp.LoadOrStore(id, NewEvalState(id, spanCtx))
+	return s.(*EvalState), ok
 }
 
 func (e *EvalStore) Load(id string) (*EvalState, bool) {
@@ -90,16 +88,15 @@ func NewEvalState(id string, spanCtx opentracing.SpanContext) *EvalState {
 		log:      EvalLog{},
 		id:       id,
 		evalLock: make(chan struct{}, 1),
-		span:     opentracing.StartSpan("EvalState", opentracing.FollowsFrom(spanCtx)),
+		span:     opentracing.StartSpan("/controller/eval", opentracing.FollowsFrom(spanCtx)),
 	}
-	e.span.SetTag(string(ext.Component), "controller.workflow")
-	e.span.SetTag("workflow.id", id)
+	e.span.SetTag("id", id)
 	e.Free()
 	return e
 }
 
-func (e *EvalState) Span() opentracing.SpanContext {
-	return e.span.Context()
+func (e *EvalState) Span() opentracing.Span {
+	return e.span
 }
 
 func (e *EvalState) IsFinished() bool {
@@ -120,10 +117,6 @@ func (e *EvalState) Finish(success bool, msg ...string) {
 	}
 	e.span.Finish()
 	e.finished = true
-}
-
-func (e *EvalState) Log(fields ...log.Field) {
-	e.span.LogFields(fields...)
 }
 
 func (e *EvalState) Close() error {
@@ -195,6 +188,13 @@ func (e *EvalState) Logs() EvalLog {
 func (e *EvalState) Record(record EvalRecord) {
 	e.dataLock.Lock()
 	e.log.Record(record)
+	var eval interface{}
+	if record.Error != nil {
+		eval = fmt.Sprintf("error: %v", record.Error)
+	} else {
+		eval = fmt.Sprintf("action: %T - %+v", record.Action, record.Action)
+	}
+	e.Span().LogKV("evaluation", eval)
 	e.dataLock.Unlock()
 }
 

@@ -60,10 +60,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	if err := validate.TaskInvocationSpec(spec); err != nil {
 		return nil, err
 	}
+	span, _ := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/fission")
+	defer span.Finish()
 	fnRef := *spec.FnRef
+	span.SetTag("fnref", fnRef.Format())
 
 	// Construct request and add body
 	url := fe.createRouterURL(fnRef)
+	span.SetTag("url", url)
 	req, err := http.NewRequest(defaultHTTPMethod, url, nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
@@ -96,11 +100,14 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		}
 		fmt.Println(string(bs))
 		fmt.Println("--- HTTP Request end ---")
+		span.LogKV("HTTP request", string(bs))
 	}
+	span.LogKV("http", fmt.Sprintf("%s %v", req.Method, req.URL))
 	resp, err := http.DefaultClient.Do(req.WithContext(cfg.Ctx))
 	if err != nil {
 		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
 	}
+	span.LogKV("status code", resp.Status)
 
 	fnenv.FnActive.WithLabelValues(Name).Dec()
 
@@ -113,6 +120,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		}
 		fmt.Println(string(bs))
 		fmt.Println("--- HTTP Response end ---")
+		span.LogKV("HTTP response", string(bs))
 	}
 
 	// Parse output

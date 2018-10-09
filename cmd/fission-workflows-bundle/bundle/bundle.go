@@ -155,14 +155,24 @@ func Run(ctx context.Context, opts *Options) error {
 	var es fes.Backend
 	var esPub pubsub.Publisher
 
+	var otOpts = []grpc_opentracing.Option{
+		grpc_opentracing.SpanDecorator(func(span opentracing.Span, method string, req, resp interface{},
+			grpcError error) {
+			span.SetTag("level", log.GetLevel().String())
+		}),
+	}
+	if opts.Debug {
+		otOpts = append(otOpts, grpc_opentracing.LogPayloads())
+	}
+
 	grpcServer := grpc.NewServer(
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_prometheus.StreamServerInterceptor,
-			grpc_opentracing.OpenTracingStreamServerInterceptor(tracer),
+			grpc_opentracing.OpenTracingStreamServerInterceptor(tracer, otOpts...),
 		)),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_prometheus.UnaryServerInterceptor,
-			grpc_opentracing.OpenTracingServerInterceptor(tracer),
+			grpc_opentracing.OpenTracingServerInterceptor(tracer, otOpts...),
 		)),
 	)
 

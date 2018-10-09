@@ -60,7 +60,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)
 	}
-	span, _ := opentracing.StartSpanFromContext(cfg.Ctx, fmt.Sprintf("fnenv/internal/fn/%s", fnID))
+	span, _ := opentracing.StartSpanFromContext(cfg.Ctx, fmt.Sprintf("/fnenv/internal/%s", fnID))
 	defer span.Finish()
 	fnenv.FnActive.WithLabelValues(Name).Inc()
 	out, err := fn.Invoke(spec)

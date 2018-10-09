@@ -26,6 +26,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,12 +86,29 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 		return nil, err
 	}
 
+	span, ctx := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/workflows")
+	defer span.Finish()
+	span.SetTag("workflow", spec.GetWorkflowId())
+	span.SetTag("parent", spec.GetParentId())
+	span.SetTag("internal", len(spec.GetParentId()) != 0)
+
 	// Check if the workflow required by the invocation exists
 	if rt.workflows != nil {
-		_, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
+		wf, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
 		if err != nil {
 			return nil, err
 		}
+		span.SetTag("workflow.name", wf.GetMetadata().GetName())
+	}
+
+	if logrus.GetLevel() == logrus.DebugLevel {
+		var inputs interface{}
+		var err error
+		inputs, err = typedvalues.UnwrapMapTypedValue(spec.GetInputs())
+		if err != nil {
+			inputs = fmt.Errorf("error: %v", err)
+		}
+		span.LogKV("inputs", inputs)
 	}
 
 	timeStart := time.Now()
@@ -99,14 +117,16 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	defer fnenv.FnActive.WithLabelValues(Name).Dec()
 	defer fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	wfiID, err := rt.api.Invoke(spec, api.WithContext(cfg.Ctx))
+	wfiID, err := rt.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		logrus.WithField("fnenv", Name).Errorf("Failed to invoke workflow: %v", err)
+		span.LogKV("error", fmt.Errorf("failed to invoke workflow: %v", err))
 		return nil, err
 	}
 	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", wfiID)
+	span.SetTag("invocation", wfiID)
 
-	timedCtx, cancelFn := context.WithTimeout(cfg.Ctx, rt.timeout)
+	timedCtx, cancelFn := context.WithTimeout(ctx, rt.timeout)
 	defer cancelFn()
 	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
 		sub := pub.Subscribe(pubsub.SubscriptionOptions{
@@ -138,6 +158,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 			} else {
 				logrus.Errorf("Failed to cancel invocation: %v", err)
 			}
+			span.LogKV("error", err)
 			return nil, err
 		case <-sub.Ch:
 		}

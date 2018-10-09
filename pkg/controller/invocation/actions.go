@@ -86,29 +86,64 @@ func (a *ActionInvokeTask) logger() logrus.FieldLogger {
 	})
 }
 
+func (a *ActionInvokeTask) String() string {
+	return fmt.Sprintf("task/run(%s)", a.Task.GetId())
+}
+
 func (a *ActionInvokeTask) Apply() error {
 	log := a.logger()
-	span := opentracing.StartSpan("pkg/controller/invocation/actions/InvokeTask",
-		opentracing.ChildOf(a.ec.Span()))
+	span := opentracing.StartSpan(fmt.Sprintf("/task/%s", a.Task.GetId()), opentracing.ChildOf(a.ec.Span().Context()))
+	span.SetTag("task", a.Task.GetId())
+	defer span.Finish()
 
 	// Find task
 	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
 	if !ok {
-		return fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
+		err := fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
+		span.LogKV("error", err)
+		return err
+	}
+
+	span.SetTag("fnref", task.GetStatus().GetFnRef())
+	if logrus.GetLevel() == logrus.DebugLevel {
+		var err error
+		var inputs interface{}
+		inputs, err = typedvalues.UnwrapMapTypedValue(task.GetSpec().GetInputs())
+		if err != nil {
+			inputs = fmt.Sprintf("error: %v", err)
+		}
+		span.LogKV("inputs", inputs)
 	}
 
 	// Check if function has been resolved
 	if task.Status.FnRef == nil {
-		return fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
+		err := fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
+		span.LogKV("error", err)
+		return err
 	}
 
 	// Pre-execution: Resolve expression inputs
-	exprEvalStart := time.Now()
-	inputs, err := a.resolveInputs(a.Task.Inputs)
-	exprEvalDuration.Observe(float64(time.Now().Sub(exprEvalStart)))
-	if err != nil {
-		log.Error(err)
-		return err
+	var inputs map[string]*typedvalues.TypedValue
+	if len(a.Task.Inputs) > 0 {
+		var err error
+		exprEvalStart := time.Now()
+		inputs, err = a.resolveInputs(a.Task.Inputs)
+		exprEvalDuration.Observe(float64(time.Now().Sub(exprEvalStart)))
+		if err != nil {
+			log.Error(err)
+			span.LogKV("error", err)
+			return err
+		}
+
+		if logrus.GetLevel() == logrus.DebugLevel {
+			var err error
+			var resolvedInputs interface{}
+			resolvedInputs, err = typedvalues.UnwrapMapTypedValue(inputs)
+			if err != nil {
+				resolvedInputs = fmt.Sprintf("error: %v", err)
+			}
+			span.LogKV("resolved_inputs", resolvedInputs)
+		}
 	}
 
 	// Invoke task
@@ -127,13 +162,28 @@ func (a *ActionInvokeTask) Apply() error {
 			log.Debugf("Using inputs: %v", i)
 		}
 	}
+
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
-	_, err = a.API.Invoke(spec, api.WithContext(ctx), api.PostTransformer(a.postTransformer))
+	updated, err := a.API.Invoke(spec, api.WithContext(ctx), api.PostTransformer(a.postTransformer))
 	if err != nil {
 		log.Errorf("Failed to execute task: %v", err)
+		span.LogKV("error", err)
 		return err
 	}
-	span.Finish()
+	span.SetTag("status", updated.GetStatus().GetStatus().String())
+	if !updated.GetStatus().Successful() {
+		span.LogKV("error", updated.GetStatus().GetError().String())
+	}
+	if logrus.GetLevel() == logrus.DebugLevel {
+		var err error
+		var output interface{}
+		output, err = typedvalues.Unwrap(updated.GetStatus().GetOutput())
+		if err != nil {
+			output = fmt.Sprintf("error: %v", err)
+		}
+		span.LogKV("output", output)
+	}
+
 	return nil
 }
 

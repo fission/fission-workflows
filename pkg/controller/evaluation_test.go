@@ -129,7 +129,7 @@ func TestEvalCache_GetOrCreate(t *testing.T) {
 	assert.False(t, ok)
 	assert.Empty(t, es)
 
-	es = ec.LoadOrStore(id, nil)
+	es, _ = ec.LoadOrStore(id, nil)
 	assert.Equal(t, id, es.ID())
 
 	es, ok = ec.Load(id)
