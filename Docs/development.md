@@ -10,6 +10,26 @@ using [telepresence](https://telepresence.io):
 telepresence --method=vpn-tcp --namespace fission --swap-deployment workflows:workflows --expose 5555 --expose 8080
 ```
 
+### Local OpenTracing
+
+The locally running instance does not have access to the in-cluster Jaeger deployment. To view the invocations, the 
+easiest option is to run a development all-in-one Jaeger deployment locally:  
+
+```bash
+docker run -d --rm --name jaeger \
+  -e COLLECTOR_ZIPKIN_HTTP_PORT=9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.6
+``` 
+
+You can then navigate to `http://localhost:16686` to access the Jaeger UI.
+
 ## Testing
 
 To run local unit and integration tests:

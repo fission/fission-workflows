@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/parse/protobuf"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -62,6 +63,7 @@ func (mp *MetaParser) ParseWith(r io.Reader, parsers ...string) (*types.Workflow
 		}
 		wf, err := p.Parse(r)
 		if err != nil {
+			logrus.WithField("parser", name).Warnf("parser failed: %v", name, err)
 			continue
 		}
 

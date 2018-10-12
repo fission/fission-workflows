@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -97,4 +98,12 @@ func (a *MultiAction) Apply() error {
 		return nil
 	}
 	return err.(error)
+}
+
+func (a *MultiAction) String() string {
+	var results []string
+	for _, action := range a.Actions {
+		results = append(results, fmt.Sprintf("%+v", action))
+	}
+	return fmt.Sprintf("%v", results)
 }

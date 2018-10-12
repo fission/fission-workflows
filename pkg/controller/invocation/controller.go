@@ -138,22 +138,22 @@ func (cr *Controller) Notify(update *fes.Notification) error {
 		return err
 	}
 
+	if es, ok := cr.evalStore.Load(entity.ID()); ok {
+		es.Span().LogKV("event", fmt.Sprintf("%s - %v", update.EventType, update.Labels()))
+	}
 	switch update.EventType {
 	case events.EventInvocationCompleted:
-		fallthrough
+		cr.finishAndDeleteEvalState(entity.ID(), true, "completion reason: "+events.EventInvocationCompleted)
 	case events.EventInvocationCanceled:
-		fallthrough
+		cr.finishAndDeleteEvalState(entity.ID(), false, "completion reason: "+events.EventInvocationCanceled)
 	case events.EventInvocationFailed:
-		// TODO mark to clean up later instead
-		cr.stateStore.Delete(entity.ID())
-		cr.evalStore.Delete(entity.ID())
-		log.Debugf("Removed entity %v from eval state", entity.ID())
+		cr.finishAndDeleteEvalState(entity.ID(), false, "completion reason: "+events.EventInvocationFailed)
 	case events.EventTaskFailed:
 		fallthrough
 	case events.EventTaskSucceeded:
 		fallthrough
 	case events.EventInvocationCreated:
-		es := cr.evalStore.LoadOrStore(entity.ID(), update.SpanCtx)
+		es, _ := cr.evalStore.LoadOrStore(entity.ID(), update.SpanCtx)
 		cr.workQueue.Add(es)
 	default:
 		log.Debugf("Controller ignored event type: %v", update.EventType)
@@ -215,9 +215,10 @@ func (cr *Controller) checkModelCaches() error {
 		}
 
 		if !wi.Status.Finished() {
-			span := opentracing.GlobalTracer().StartSpan("recoverFromModelCache")
+			// TODO grab the span context from the model / events
+			span := opentracing.GlobalTracer().StartSpan("/controller/recoverFromModelCache")
 			controller.EvalRecovered.WithLabelValues(Name, "cache").Inc()
-			es := cr.evalStore.LoadOrStore(wi.ID(), span.Context())
+			es, _ := cr.evalStore.LoadOrStore(wi.ID(), span.Context())
 			cr.workQueue.Add(es)
 			span.Finish()
 		}
@@ -295,7 +296,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 
 	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
 	if wfi.GetStatus().Finished() {
-		cr.evalStore.Delete(wfi.ID())
+		cr.finishAndDeleteEvalState(wfi.ID(), true, "")
 		t, _ := ptypes.Timestamp(wfi.GetMetadata().GetCreatedAt())
 		invocationDuration.Observe(float64(time.Now().Sub(t)))
 	}
@@ -347,6 +348,17 @@ func (cr *Controller) processNextItem(ctx context.Context, pool *gopool.GoPool) 
 	cr.workQueue.Forget(key)
 
 	return true
+}
+
+func (cr *Controller) finishAndDeleteEvalState(evalStateID string, success bool, msg string) {
+	es, ok := cr.evalStore.Load(evalStateID)
+	if !ok {
+		return
+	}
+	es.Finish(success, msg)
+	cr.evalStore.Delete(evalStateID)
+	cr.stateStore.Delete(evalStateID)
+	log.Debugf("Removed entity %v from eval state", evalStateID)
 }
 
 func defaultPolicy(ctr *Controller) controller.Rule {
