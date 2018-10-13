@@ -80,24 +80,24 @@ func TestMain(m *testing.M) {
 }
 
 func TestFnenvResolve(t *testing.T) {
-	resolver := fission.NewResolver(controller)
+	fnenv := fission.New(executor, controller, localhost(routerLocalPort))
 	ref, err := types.ParseFnRef(testFnName)
 	assert.NoError(t, err)
-	resolved, err := resolver.Resolve(ref)
+	resolved, err := fnenv.Resolve(ref)
 	assert.NoError(t, err)
 	assert.Equal(t, testFnName, resolved)
 }
 
 func TestFnenvNotify(t *testing.T) {
 	fnref := types.NewFnRef(fission.Name, testFnNs, testFnName)
-	fnenv := fission.NewFunctionEnv(executor, localhost(routerLocalPort))
+	fnenv := fission.New(executor, controller, localhost(routerLocalPort))
 	err := fnenv.Notify(fnref, time.Now().Add(100*time.Millisecond))
 	assert.NoError(t, err)
 }
 
 func TestFnenvInvoke(t *testing.T) {
 	fnref := types.NewFnRef(fission.Name, testFnNs, testFnName)
-	fnenv := fission.NewFunctionEnv(executor, localhost(routerLocalPort))
+	fnenv := fission.New(executor, controller, localhost(routerLocalPort))
 	body := "stubBodyVal"
 	headerVal := "stub-header-val"
 	headerKey := "stub-header-key"
