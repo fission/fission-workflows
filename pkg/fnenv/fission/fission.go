@@ -11,6 +11,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	controller "github.com/fission/fission/controller/client"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 
@@ -31,8 +32,10 @@ var log = logrus.WithField("component", "fnenv.fission")
 // to invoke Fission functions.
 type FunctionEnv struct {
 	executor         *executor.Client
+	controller       *controller.Client
 	routerURL        string
 	timedExecService *timedExecPool
+	client           *http.Client
 }
 
 const (
@@ -41,11 +44,15 @@ const (
 	provisionDuration = time.Duration(500) - time.Millisecond
 )
 
-func NewFunctionEnv(executor *executor.Client, routerURL string) *FunctionEnv {
+func New(executor *executor.Client, controller *controller.Client, routerURL string) *FunctionEnv {
 	return &FunctionEnv{
 		executor:         executor,
+		controller:       controller,
 		routerURL:        routerURL,
 		timedExecService: newTimedExecPool(),
+		client: &http.Client{
+			Timeout: 5 * time.Minute,
+		},
 	}
 }
 
@@ -66,11 +73,11 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	span.SetTag("fnref", fnRef.Format())
 
 	// Construct request and add body
-	url := fe.createRouterURL(fnRef)
-	span.SetTag("url", url)
-	req, err := http.NewRequest(defaultHTTPMethod, url, nil)
+	fnUrl := fe.createRouterURL(fnRef)
+	span.SetTag("fnUrl", fnUrl)
+	req, err := http.NewRequest(defaultHTTPMethod, fnUrl, nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to create request for '%v': %v", url, err))
+		panic(fmt.Errorf("failed to create request for '%v': %v", fnUrl, err))
 	}
 	// Map task inputs to request
 	err = httpconv.FormatRequest(spec.Inputs, req)
@@ -103,9 +110,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		span.LogKV("HTTP request", string(bs))
 	}
 	span.LogKV("http", fmt.Sprintf("%s %v", req.Method, req.URL))
-	resp, err := http.DefaultClient.Do(req.WithContext(cfg.Ctx))
+	resp, err := fe.client.Do(req.WithContext(cfg.Ctx))
 	if err != nil {
-		return nil, fmt.Errorf("error for reqUrl '%v': %v", url, err)
+		return nil, fmt.Errorf("error for reqUrl '%v': %v", fnUrl, err)
 	}
 	span.LogKV("status code", resp.Status)
 
@@ -163,6 +170,26 @@ func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
 		fe.executor.TapService(reqURL)
 	}, execAt)
 	return nil
+}
+
+func (fe *FunctionEnv) Resolve(ref types.FnRef) (string, error) {
+	// Currently we just use the controller API to check if the function exists.
+	log.Infof("Resolving function: %s", ref.ID)
+	ns := ref.Namespace
+	if len(ns) == 0 {
+		ns = metav1.NamespaceDefault
+	}
+	_, err := fe.controller.FunctionGet(&metav1.ObjectMeta{
+		Name:      ref.ID,
+		Namespace: ns,
+	})
+	if err != nil {
+		return "", err
+	}
+	id := ref.ID
+
+	log.Infof("Resolved fission function %s to %s", ref.ID, id)
+	return id, nil
 }
 
 func (fe *FunctionEnv) getFnURL(fn types.FnRef) (*url.URL, error) {

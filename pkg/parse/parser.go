@@ -63,7 +63,7 @@ func (mp *MetaParser) ParseWith(r io.Reader, parsers ...string) (*types.Workflow
 		}
 		wf, err := p.Parse(r)
 		if err != nil {
-			logrus.WithField("parser", name).Warnf("parser failed: %v", name, err)
+			logrus.WithField("parser", name).Warnf("parser failed: %v", err)
 			continue
 		}
 

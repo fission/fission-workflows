@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -22,7 +23,9 @@ func New() *Runtime {
 	mapper := httpconv.DefaultHTTPMapper.Clone()
 	mapper.DefaultHTTPMethod = http.MethodGet
 	return &Runtime{
-		Client:   http.DefaultClient,
+		Client: &http.Client{
+			Timeout: 5 * time.Minute,
+		},
 		httpconv: mapper,
 	}
 }

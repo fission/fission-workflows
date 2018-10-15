@@ -70,6 +70,7 @@ type Controller struct {
 	evalPolicy    controller.Rule
 	evalStore     *controller.EvalStore
 	workQueue     workqueue.RateLimitingInterface
+	workerPool    *gopool.GoPool
 }
 
 func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.WorkflowScheduler,
@@ -83,6 +84,7 @@ func NewController(invocations *store.Invocations, workflows *store.Workflows, w
 		stateStore:    stateStore,
 		evalStore:     &controller.EvalStore{},
 		workQueue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		workerPool:    gopool.New(maxParallelExecutions),
 	}
 
 	ctr.evalPolicy = defaultPolicy(ctr)
@@ -177,21 +179,29 @@ func (cr *Controller) Tick(tick uint64) error {
 }
 
 func (cr *Controller) checkEvalStore() error {
-	for id, state := range cr.evalStore.List() {
-		if state.IsFinished() {
+	for id, es := range cr.evalStore.List() {
+		// Check if the EvalState is not yet finished
+		if es.IsFinished() {
 			continue
 		}
 
-		last, ok := state.Last()
+		last, ok := es.Last()
 		if !ok {
 			continue
 		}
 
-		reevaluateAt := last.Timestamp.Add(time.Duration(100) * time.Millisecond)
-		if time.Now().UnixNano() > reevaluateAt.UnixNano() {
-			controller.EvalRecovered.WithLabelValues(Name, "evalStore").Inc()
-			log.Infof("Adding missing invocation %v to the queue", id)
-			cr.workQueue.Add(state)
+		// Check if the EvalState is not already in progress
+		select {
+		case <-es.Lock():
+			reevaluateAt := last.Timestamp.Add(time.Duration(100) * time.Millisecond)
+			if time.Now().UnixNano() > reevaluateAt.UnixNano() {
+				controller.EvalRecovered.WithLabelValues(Name, "evalStore").Inc()
+				log.Debugf("Adding missing invocation %v to the queue", id)
+				cr.workQueue.Add(es)
+			}
+			es.Free()
+		default:
+			// EvalState is already in progress
 		}
 	}
 	return nil
@@ -304,6 +314,12 @@ func (cr *Controller) Evaluate(invocationID string) {
 }
 
 func (cr *Controller) Close() error {
+	ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
+	defer cancelFn()
+	err := cr.workerPool.GracefulStop(ctx)
+	if err != nil {
+		log.Debugf("Failed to gracefully stop pool: %v", err)
+	}
 	cr.evalStore.Close()
 	cr.cancelFn()
 	return nil
@@ -319,9 +335,7 @@ func (cr *Controller) createFailAction(invocationID string, err error) controlle
 
 func (cr *Controller) runWorker(ctx context.Context) func() {
 	return func() {
-		pool := gopool.New(maxParallelExecutions)
-
-		for cr.processNextItem(ctx, pool) {
+		for cr.processNextItem(ctx, cr.workerPool) {
 			// continue looping
 		}
 	}
@@ -341,7 +355,10 @@ func (cr *Controller) processNextItem(ctx context.Context, pool *gopool.GoPool) 
 		cr.Evaluate(es.ID())
 	})
 	if err != nil {
-		log.Errorf("failed to submit invocation %v for execution", es.ID())
+		if err == gopool.ErrPoolClosed {
+			return false
+		}
+		log.Errorf("failed to submit invocation %v for execution: %v", es.ID(), err)
 	}
 
 	// No error, reset the ratelimit counters
@@ -358,6 +375,7 @@ func (cr *Controller) finishAndDeleteEvalState(evalStateID string, success bool,
 	es.Finish(success, msg)
 	cr.evalStore.Delete(evalStateID)
 	cr.stateStore.Delete(evalStateID)
+	cr.workQueue.Forget(es)
 	log.Debugf("Removed entity %v from eval state", evalStateID)
 }
 

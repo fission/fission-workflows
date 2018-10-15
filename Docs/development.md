@@ -30,6 +30,18 @@ docker run -d --rm --name jaeger \
 
 You can then navigate to `http://localhost:16686` to access the Jaeger UI.
 
+### Local NATS streaming
+
+To use a local NATS streaming cluster, first start a NATS streaming cluster
+```bash
+docker run --rm -p 4222:4222 -p 8222:8222 nats-streaming -p 4222 -m 8222
+```
+
+Then, run the workflow engine with the following arguments appended to it:
+```
+... --nats --nats-url nats://localhost:4222 --nats-cluster test-cluster
+``` 
+
 ## Testing
 
 To run local unit and integration tests:

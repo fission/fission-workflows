@@ -228,8 +228,9 @@ func Run(ctx context.Context, opts *Options) error {
 			"router":     opts.Fission.RouterAddr,
 			"executor":   opts.Fission.ExecutorAddress,
 		}).Infof("Using Task Runtime: Fission")
-		runtimes["fission"] = setupFissionFunctionRuntime(opts.Fission.ExecutorAddress, opts.Fission.RouterAddr)
-		resolvers["fission"] = setupFissionFunctionResolver(opts.Fission.ControllerAddr)
+		fissionFnenv := setupFissionFunctionRuntime(opts.Fission)
+		runtimes["fission"] = fissionFnenv
+		resolvers["fission"] = fissionFnenv
 	}
 
 	//
@@ -393,14 +394,10 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 	return native.NewFunctionEnv(builtin.DefaultBuiltinFunctions)
 }
 
-func setupFissionFunctionRuntime(executorAddr string, routerAddr string) *fission.FunctionEnv {
-	client := executor.MakeClient(executorAddr)
-	return fission.NewFunctionEnv(client, routerAddr)
-}
-
-func setupFissionFunctionResolver(controllerAddr string) *fission.Resolver {
-	controllerClient := controllerc.MakeClient(controllerAddr)
-	return fission.NewResolver(controllerClient)
+func setupFissionFunctionRuntime(fissionOpts *FissionOptions) *fission.FunctionEnv {
+	executorC := executor.MakeClient(fissionOpts.ExecutorAddress)
+	controllerC := controllerc.MakeClient(fissionOpts.ControllerAddr)
+	return fission.New(executorC, controllerC, fissionOpts.RouterAddr)
 }
 
 func setupNatsEventStoreClient(url string, cluster string, clientID string) *nats.EventStore {
