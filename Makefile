@@ -11,7 +11,7 @@ build fission-workflows fission-workflows-bundle fission-workflows-proxy:
 	# TODO toggle between container and local build, support parameters, seperate cli and bundle
 	build/build.sh
 
-generate: ${PROTO_TARGETS} pkg/version/version.gen.go examples/workflows-env.yaml pkg/api/events/events.gen.go
+generate: ${PROTO_TARGETS} examples/workflows-env.yaml pkg/api/events/events.gen.go
 
 prepush: generate verify test
 

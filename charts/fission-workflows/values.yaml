@@ -33,7 +33,7 @@ fission:
   env:
     name: workflow
     ns: default
-    runtimeImage: fission/fission-workflows-proxy
+    runtimeImage: fission/workflows-proxy
     builderImage: fission/workflow-build-env
 
 # Tracing-related configuration

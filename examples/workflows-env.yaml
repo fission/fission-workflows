@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: workflows
-  namespace: default
+  namespace: fission
   labels:
     chart: "fission-workflows-0.6.0"
 spec:
@@ -62,7 +62,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: workflows
-  namespace: default
+  namespace: fission
   labels:
     svc: workflows
     chart: "fission-workflows-0.6.0"
@@ -86,7 +86,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: workflows-apiserver
-  namespace: default
+  namespace: fission
   labels:
     svc: workflows
     chart: "fission-workflows-0.6.0"
@@ -104,9 +104,7 @@ spec:
     targetPort: 5555
     protocol: TCP
 ---
-#
 # Fission integration
-#
 apiVersion: fission.io/v1
 kind: Environment
 metadata:
@@ -119,13 +117,13 @@ spec:
   TerminationGracePeriod: 5
   allowedFunctionsPerContainer: infinite
   runtime:
-    image: "fission/fission-workflows-proxy:0.6.0"
+    image: "fission/workflows-proxy:0.6.0"
     container:
       command: ["/fission-workflows-proxy"]
       imagePullPolicy: IfNotPresent
       args: [
         "--test",
-        "--target", "workflows.default:5555",
+        "--target", "workflows.fission:5555",
         "--port", "8888",
       ]
   builder:
