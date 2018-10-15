@@ -70,6 +70,7 @@ type Controller struct {
 	evalPolicy    controller.Rule
 	evalStore     *controller.EvalStore
 	workQueue     workqueue.RateLimitingInterface
+	workerPool    *gopool.GoPool
 }
 
 func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.WorkflowScheduler,
@@ -83,6 +84,7 @@ func NewController(invocations *store.Invocations, workflows *store.Workflows, w
 		stateStore:    stateStore,
 		evalStore:     &controller.EvalStore{},
 		workQueue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		workerPool:    gopool.New(maxParallelExecutions),
 	}
 
 	ctr.evalPolicy = defaultPolicy(ctr)
@@ -304,6 +306,9 @@ func (cr *Controller) Evaluate(invocationID string) {
 }
 
 func (cr *Controller) Close() error {
+	ctx, cancelFn := context.WithTimeout(context.Background(), time.Minute)
+	defer cancelFn()
+	cr.workerPool.GracefulStop(ctx)
 	cr.evalStore.Close()
 	cr.cancelFn()
 	return nil
@@ -319,9 +324,7 @@ func (cr *Controller) createFailAction(invocationID string, err error) controlle
 
 func (cr *Controller) runWorker(ctx context.Context) func() {
 	return func() {
-		pool := gopool.New(maxParallelExecutions)
-
-		for cr.processNextItem(ctx, pool) {
+		for cr.processNextItem(ctx, cr.workerPool) {
 			// continue looping
 		}
 	}
@@ -341,7 +344,10 @@ func (cr *Controller) processNextItem(ctx context.Context, pool *gopool.GoPool) 
 		cr.Evaluate(es.ID())
 	})
 	if err != nil {
-		log.Errorf("failed to submit invocation %v for execution", es.ID())
+		if err == gopool.ErrPoolClosed {
+			return false
+		}
+		log.Errorf("failed to submit invocation %v for execution: %v", es.ID(), err)
 	}
 
 	// No error, reset the ratelimit counters
