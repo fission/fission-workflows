@@ -1,10 +1,11 @@
 
 PROTO_TARGETS=$(shell find pkg -type f -name "*.pb.go")
 PROTO_TARGETS+=$(shell find pkg -type f -name "*.pb.gw.go")
-SRC_TARGETS=$(shell find pkg -type f -name "*.go")
+SRC_TARGETS=$(shell find pkg -type f -name "*.go" | grep -v version.gen.go )
 CHART_FILES=$(shell find charts/fission-workflows -type f)
+VERSION=head
 
-.PHONY: build generate prepush verify test
+.PHONY: build generate prepush verify test changelog
 
 build fission-workflows fission-workflows-bundle fission-workflows-proxy:
 	# TODO toggle between container and local build, support parameters, seperate cli and bundle
@@ -28,7 +29,11 @@ clean:
 	rm fission-workflows*
 
 version pkg/version/version.gen.go: pkg/version/version.go ${SRC_TARGETS}
-	hack/codegen-version.sh -o pkg/version/version.gen.go -v head
+	hack/codegen-version.sh -o pkg/version/version.gen.go -v ${VERSION}
+
+changelog:
+	test -n "${GITHUB_TOKEN}" # $$GITHUB_TOKEN
+	github_changelog_generator -t ${GITHUB_TOKEN} --future-release ${VERSION}
 
 examples/workflows-env.yaml: ${CHART_FILES}
 	hack/codegen-helm.sh

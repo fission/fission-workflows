@@ -6,7 +6,7 @@
 
 # Configs
 FISSION_VERSION=${FISSION_VERSION:-0.11.0}
-WORKFLOWS_VERSION=${WORKFLOWS_VERSION:-0.5.0}
+WORKFLOWS_VERSION=${WORKFLOWS_VERSION:-0.6.0}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "Fission Workflows Deploy Script v1.4"

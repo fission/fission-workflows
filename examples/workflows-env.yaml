@@ -1,31 +1,135 @@
-# Example of the configuration of the workflow engine as a Fission Environment\n\n/
+# An Kubernetes example template of a Fission Workflow deployment as an environment in Fission
+---
 # Source: fission-workflows/templates/deployment.yaml
-# Workflow Apiserver is an optional component that allows users to query the workflows API through the Fission apiserver.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflows
+  namespace: default
+  labels:
+    chart: "fission-workflows-0.6.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workflows
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+        prometheus.io/scrape: "true"
+      labels:
+        svc: workflows
+        app: workflows
+    spec:
+      containers:
+      - name: workflows
+        image: "fission/fission-workflows-bundle:0.6.0"
+        command: ["/fission-workflows-bundle"]
+        args: [
+          "--fission",
+          "--internal",
+          "--controller",
+          "--api-http",
+          "--api-workflow-invocation",
+          "--api-workflow",
+          "--api-admin",
+          "--metrics",
+        ]
+        env: # TODO add dedicated NATS cluster (instead of reusing the mqtrigger)
+        - name: FNENV_FISSION_CONTROLLER
+          value: "http://controller.fission"
+        - name: FNENV_FISSION_EXECUTOR
+          value: "http://executor.fission"
+      - name: jaeger-agent
+        image: jaegertracing/jaeger-agent
+        ports:
+        - containerPort: 5775
+          protocol: UDP
+        - containerPort: 6831
+          protocol: UDP
+        - containerPort: 6832
+          protocol: UDP
+        - containerPort: 5778
+          protocol: TCP
+        args: [
+          "--collector.host-port=jaeger-collector:14267"
+        ]
+---
+# Expose workflows as a service
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflows
+  namespace: default
+  labels:
+    svc: workflows
+    chart: "fission-workflows-0.6.0"
+spec:
+  type: ClusterIP
+  selector:
+    svc: workflows
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: grpc
+    port: 5555
+    targetPort: 5555
+    protocol: TCP
 
-# Workflow Engine is deployed as just another Fission environment.
+---
+# Legacy: add 'workflows-apiserver' service for Fission controller
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflows-apiserver
+  namespace: default
+  labels:
+    svc: workflows
+    chart: "fission-workflows-0.6.0"
+spec:
+  type: ClusterIP
+  selector:
+    svc: workflows
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  - name: grpc
+    port: 5555
+    targetPort: 5555
+    protocol: TCP
+---
+#
+# Fission integration
+#
 apiVersion: fission.io/v1
 kind: Environment
 metadata:
-  name: workflows-env
+  name: workflows
   namespace: default
+  labels:
+    chart: "fission-workflows-0.6.0"
 spec:
   version: 2
   TerminationGracePeriod: 5
-  runtime:
-    image: "fission/workflow-env:0.5.0"
-    container:
-      command: ["/fission-workflows-bundle"]
-      env:
-      - name: ES_NATS_URL
-        value: "nats://defaultFissionAuthToken@nats-streaming.fission:4222"
-      - name: ES_NATS_CLUSTER
-        value: "fissionMQTrigger"
-      - name: FNENV_FISSION_CONTROLLER
-        value: "http://controller.fission"
-      - name: FNENV_FISSION_EXECUTOR
-        value: "http://executor.fission"
-  builder:
-    image: "fission/workflow-build-env:0.5.0"
-    command: "defaultBuild"
   allowedFunctionsPerContainer: infinite
-
+  runtime:
+    image: "fission/fission-workflows-proxy:0.6.0"
+    container:
+      command: ["/fission-workflows-proxy"]
+      imagePullPolicy: IfNotPresent
+      args: [
+        "--test",
+        "--target", "workflows.default:5555",
+        "--port", "8888",
+      ]
+  builder:
+    image: "fission/workflow-build-env:0.6.0"
+    command: "defaultBuild"
+    container:
+      imagePullPolicy: IfNotPresent

@@ -1,5 +1,63 @@
 # Change Log
 
+## [0.6.0](https://github.com/fission/fission-workflows/tree/0.6.0) (2018-10-15)
+[Full Changelog](https://github.com/fission/fission-workflows/compare/0.5.0...0.6.0)
+
+**Implemented enhancements:**
+
+- Environment Workflow should be general function environment [\#168](https://github.com/fission/fission-workflows/issues/168)
+- Support 'output'-field [\#48](https://github.com/fission/fission-workflows/issues/48)
+- Implement metric support [\#6](https://github.com/fission/fission-workflows/issues/6)
+
+**Fixed bugs:**
+
+- 0.5.0 appears to break Fission function input [\#172](https://github.com/fission/fission-workflows/issues/172)
+- The namespace of workflow environment can not be configured [\#160](https://github.com/fission/fission-workflows/issues/160)
+- Fix evaluation queue implementation [\#148](https://github.com/fission/fission-workflows/issues/148)
+
+**Closed issues:**
+
+- Data streams and repository access via Fission? [\#202](https://github.com/fission/fission-workflows/issues/202)
+- api docs [\#186](https://github.com/fission/fission-workflows/issues/186)
+- Remove wfcli, move workflow functionality to fission CLI [\#68](https://github.com/fission/fission-workflows/issues/68)
+
+**Merged pull requests:**
+
+- Graceful stopping of controller [\#224](https://github.com/fission/fission-workflows/pull/224) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Improved opentracing support [\#222](https://github.com/fission/fission-workflows/pull/222) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Extract environment proxy [\#221](https://github.com/fission/fission-workflows/pull/221) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Bumped Fission dependency to 0.11.0 [\#220](https://github.com/fission/fission-workflows/pull/220) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Added initial makefile [\#219](https://github.com/fission/fission-workflows/pull/219) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Formalize typedvalues implementation [\#218](https://github.com/fission/fission-workflows/pull/218) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Add AddTask as an endpoint [\#217](https://github.com/fission/fission-workflows/pull/217) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Add LRU and loading caches [\#215](https://github.com/fission/fission-workflows/pull/215) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Bump Fission references to 0.10.0 [\#214](https://github.com/fission/fission-workflows/pull/214) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Minor CLI improvements [\#213](https://github.com/fission/fission-workflows/pull/213) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Force k8s object removal in e2e cleanup [\#212](https://github.com/fission/fission-workflows/pull/212) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Generate event type identifiers [\#211](https://github.com/fission/fission-workflows/pull/211) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Added invocation and workflow stores for typed entity retrieval [\#210](https://github.com/fission/fission-workflows/pull/210) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Constrain memory usage in the in-memory backend [\#209](https://github.com/fission/fission-workflows/pull/209) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Revert "improve mechanism inside invocation rule" [\#208](https://github.com/fission/fission-workflows/pull/208) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- HTTP Runtime [\#207](https://github.com/fission/fission-workflows/pull/207) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- improve mechanism inside invocation rule [\#206](https://github.com/fission/fission-workflows/pull/206) ([xiekeyang](https://github.com/xiekeyang))
+- Remove RuleHasCompleted structure [\#199](https://github.com/fission/fission-workflows/pull/199) ([xiekeyang](https://github.com/xiekeyang))
+- Support output transformations [\#194](https://github.com/fission/fission-workflows/pull/194) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Add support for jsonpb-encoded workflow specs [\#193](https://github.com/fission/fission-workflows/pull/193) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Add workqueue to Invocation Controller [\#192](https://github.com/fission/fission-workflows/pull/192) ([xiekeyang](https://github.com/xiekeyang))
+- Opentracing Support [\#185](https://github.com/fission/fission-workflows/pull/185) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- close response body [\#182](https://github.com/fission/fission-workflows/pull/182) ([xiekeyang](https://github.com/xiekeyang))
+- Fix HTTP handler of health checking [\#181](https://github.com/fission/fission-workflows/pull/181) ([xiekeyang](https://github.com/xiekeyang))
+- Event structuring [\#179](https://github.com/fission/fission-workflows/pull/179) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Propagate HTTP invocation context [\#177](https://github.com/fission/fission-workflows/pull/177) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Parse and Resolve the Namespace of Fission function [\#176](https://github.com/fission/fission-workflows/pull/176) ([xiekeyang](https://github.com/xiekeyang))
+- Added environment as a kubernetes resource definition [\#175](https://github.com/fission/fission-workflows/pull/175) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Update compiling instructions and rename potential conflicting wfcli directory [\#171](https://github.com/fission/fission-workflows/pull/171) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Parallelize task executions [\#170](https://github.com/fission/fission-workflows/pull/170) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Use priority queue instead of queue [\#167](https://github.com/fission/fission-workflows/pull/167) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- Updated Fission dependency to 0.9.1 [\#166](https://github.com/fission/fission-workflows/pull/166) ([erwinvaneyk](https://github.com/erwinvaneyk))
+- add configurable runtime parameters to chart [\#165](https://github.com/fission/fission-workflows/pull/165) ([xiekeyang](https://github.com/xiekeyang))
+- Make CLI compatible with Fission CLI plugin interface [\#158](https://github.com/fission/fission-workflows/pull/158) ([erwinvaneyk](https://github.com/erwinvaneyk))
+
 ## [0.5.0](https://github.com/fission/fission-workflows/tree/0.5.0) (2018-07-11)
 [Full Changelog](https://github.com/fission/fission-workflows/compare/0.4.0...0.5.0)
 
@@ -7,8 +65,13 @@
 
 - Attach invocation context to logs [\#86](https://github.com/fission/fission-workflows/issues/86)
 
+**Closed issues:**
+
+- Change Workflows to talk to router [\#84](https://github.com/fission/fission-workflows/issues/84)
+
 **Merged pull requests:**
 
+- 0.4.0 -\> 0.5.0 [\#164](https://github.com/fission/fission-workflows/pull/164) ([erwinvaneyk](https://github.com/erwinvaneyk))
 - Update commands to setup fission functions [\#163](https://github.com/fission/fission-workflows/pull/163) ([beevelop](https://github.com/beevelop))
 - Update wfcli docs [\#162](https://github.com/fission/fission-workflows/pull/162) ([beevelop](https://github.com/beevelop))
 - add NOBUILD ARG to script [\#161](https://github.com/fission/fission-workflows/pull/161) ([xiekeyang](https://github.com/xiekeyang))
@@ -60,7 +123,6 @@
 - Errors when installing wfcli [\#133](https://github.com/fission/fission-workflows/issues/133)
 - `fission function logs` should show meaningful logs for workflows [\#125](https://github.com/fission/fission-workflows/issues/125)
 - Install instructions are missing wfcli [\#124](https://github.com/fission/fission-workflows/issues/124)
-- Change Workflows to talk to router [\#84](https://github.com/fission/fission-workflows/issues/84)
 - Document functionality of the query parser [\#43](https://github.com/fission/fission-workflows/issues/43)
 - Add /healthz [\#123](https://github.com/fission/fission-workflows/issues/123)
 - Add Fission e2e test  [\#40](https://github.com/fission/fission-workflows/issues/40)
