@@ -38,7 +38,7 @@ while [[ $# -gt 0 ]]; do
       output_cli=$2
       shift
       ;;
-    --output-cli)
+    --output-proxy)
       output_proxy=$2
       shift
       ;;

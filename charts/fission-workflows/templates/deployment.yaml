@@ -113,9 +113,7 @@ spec:
     targetPort: 5555
     protocol: TCP
 ---
-#
 # Fission integration
-#
 apiVersion: fission.io/v1
 kind: Environment
 metadata:
