@@ -1,0 +1,15 @@
+# Respheaderswhale shows how to access headers from the response of a task
+#
+# Usage example: fission fn test --name respheaderswhale
+apiVersion: 1
+output: Whalify
+tasks:
+  GenerateFortune:
+    run: fortune
+
+  Whalify:
+    run: whalesay
+    inputs:
+      body: "{output('GenerateFortune') + ' -- ' + outputHeaders('GenerateFortune').Date}"
+    requires:
+    - GenerateFortune

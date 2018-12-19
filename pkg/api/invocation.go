@@ -100,13 +100,14 @@ func (ia *Invocation) Cancel(invocationID string) error {
 // Complete forces the completion of an invocation. This function - used by the controller - is the only way
 // to ensure that a workflow invocation turns into the COMPLETED state.
 // If the API fails to append the event to the event store, it will return an error.
-func (ia *Invocation) Complete(invocationID string, output *typedvalues.TypedValue) error {
+func (ia *Invocation) Complete(invocationID string, output *typedvalues.TypedValue, outputHeaders *typedvalues.TypedValue) error {
 	if len(invocationID) == 0 {
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
 	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationCompleted{
-		Output: output,
+		Output:        output,
+		OutputHeaders: outputHeaders,
 	})
 	if err != nil {
 		return err

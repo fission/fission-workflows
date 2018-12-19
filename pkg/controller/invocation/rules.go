@@ -139,13 +139,15 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	}
 	if finished {
 		var finalOutput *typedvalues.TypedValue
+		var finalOutputHeaders *typedvalues.TypedValue
 		if len(wf.Spec.OutputTask) != 0 {
 			finalOutput = controlflow.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
+			finalOutputHeaders = controlflow.ResolveTaskOutputHeaders(wf.Spec.OutputTask, wfi)
 		}
 
 		// TODO extract to action
 		if success {
-			err = cc.InvocationAPI.Complete(wfi.ID(), finalOutput)
+			err = cc.InvocationAPI.Complete(wfi.ID(), finalOutput, finalOutputHeaders)
 		} else {
 			err = cc.InvocationAPI.Fail(wfi.ID(), errors.New("not all tasks succeeded"))
 		}

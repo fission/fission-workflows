@@ -114,7 +114,8 @@ func (m *InvocationCreated) GetSpec() *fission_workflows_types1.WorkflowInvocati
 }
 
 type InvocationCompleted struct {
-	Output *fission_workflows_types.TypedValue `protobuf:"bytes,1,opt,name=output" json:"output,omitempty"`
+	Output        *fission_workflows_types.TypedValue `protobuf:"bytes,1,opt,name=output" json:"output,omitempty"`
+	OutputHeaders *fission_workflows_types.TypedValue `protobuf:"bytes,2,opt,name=outputHeaders" json:"outputHeaders,omitempty"`
 }
 
 func (m *InvocationCompleted) Reset()                    { *m = InvocationCompleted{} }
@@ -125,6 +126,13 @@ func (*InvocationCompleted) Descriptor() ([]byte, []int) { return fileDescriptor
 func (m *InvocationCompleted) GetOutput() *fission_workflows_types.TypedValue {
 	if m != nil {
 		return m.Output
+	}
+	return nil
+}
+
+func (m *InvocationCompleted) GetOutputHeaders() *fission_workflows_types.TypedValue {
+	if m != nil {
+		return m.OutputHeaders
 	}
 	return nil
 }

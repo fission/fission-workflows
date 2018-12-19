@@ -136,6 +136,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		return nil, fmt.Errorf("failed to parse output: %v", err)
 	}
 
+	// Parse response headers
+	outHeaders := httpconv.ParseResponseHeaders(resp)
+
 	// Determine status of the task invocation
 	if resp.StatusCode >= 400 {
 		msg, _ := typedvalues.Unwrap(output)
@@ -149,8 +152,9 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	}
 
 	return &types.TaskInvocationStatus{
-		Status: types.TaskInvocationStatus_SUCCEEDED,
-		Output: output,
+		Status:        types.TaskInvocationStatus_SUCCEEDED,
+		Output:        output,
+		OutputHeaders: outHeaders,
 	}, nil
 }
 

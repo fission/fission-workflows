@@ -44,6 +44,7 @@ cleanup() {
     fission fn delete --name whilewhale
     fission fn delete --name httpwhale
     fission fn delete --name scopedwhale
+    fission fn delete --name respheaderswhale
 }
 trap cleanup EXIT
 
@@ -106,3 +107,7 @@ fission fn test --name httpwhale | tee /dev/tty | grep -q "## ## ## ## ##"
 echo "[Test 11]: scopedwhale"
 fission fn create --name scopedwhale --env workflow --src ${WHALES_DIR}/scopedwhale.wf.yaml
 fission fn test --name scopedwhale | tee /dev/tty | grep -q "## ## ## ## ##"
+
+echo "[Test 12]: respheaderswhale"
+fission fn create --name respheaderswhale --env workflow --src ${WHALES_DIR}/respheaderswhale.wf.yaml
+fission fn test --name respheaderswhale | tee /dev/tty | grep -q "GMT"

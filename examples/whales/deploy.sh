@@ -20,3 +20,4 @@ fission fn create --name httpwhale --env workflow --src ./httpwhale.wf.yaml
 fission fn create --name switchwhale --env workflow --src ./switchwhale.wf.yaml
 fission fn create --name whilewhale --env workflow --src ./whilewhale.wf.yaml
 fission fn create --name foreachwhale --env workflow --src ./foreachwhale.wf.yaml
+fission fn create --name respheaderswhale --env workflow --src ./respheaderswhale.wf.yaml

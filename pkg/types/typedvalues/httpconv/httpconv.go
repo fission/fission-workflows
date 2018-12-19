@@ -97,12 +97,16 @@ func ParseResponse(resp *http.Response) (*typedvalues.TypedValue, error) {
 	return DefaultHTTPMapper.ParseResponse(resp)
 }
 
+func ParseResponseHeaders(resp *http.Response) *typedvalues.TypedValue {
+	return DefaultHTTPMapper.ParseResponseHeaders(resp)
+}
+
 func FormatRequest(source map[string]*typedvalues.TypedValue, target *http.Request) error {
 	return DefaultHTTPMapper.FormatRequest(source, target)
 }
 
-func FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
-	DefaultHTTPMapper.FormatResponse(w, output, outputErr)
+func FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputHeaders *typedvalues.TypedValue, outputErr *types.Error) {
+	DefaultHTTPMapper.FormatResponse(w, output, outputHeaders, outputErr)
 }
 
 type HTTPMapper struct {
@@ -116,6 +120,10 @@ func (h *HTTPMapper) ParseResponse(resp *http.Response) (*typedvalues.TypedValue
 	contentType := h.getRequestContentType(resp.Header)
 	defer resp.Body.Close()
 	return DefaultHTTPMapper.parseBody(resp.Body, contentType)
+}
+
+func (h *HTTPMapper) ParseResponseHeaders(resp *http.Response) *typedvalues.TypedValue {
+	return DefaultHTTPMapper.parseRespHeaders(resp)
 }
 
 // ParseRequest maps a HTTP request to a target map of typedvalues.
@@ -162,7 +170,7 @@ func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.Ty
 		types.InputQuery: h.parseQuery(req),
 
 		// Map headers to "headers.x"
-		types.InputHeaders: h.parseHeaders(req),
+		types.InputHeaders: h.parseReqHeaders(req),
 
 		// Map http method to "method"
 		types.InputMethod: h.parseMethod(req),
@@ -170,7 +178,7 @@ func (h *HTTPMapper) ParseRequest(req *http.Request) (map[string]*typedvalues.Ty
 }
 
 // FormatResponse maps an TypedValue to an HTTP response
-func (h *HTTPMapper) FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputErr *types.Error) {
+func (h *HTTPMapper) FormatResponse(w http.ResponseWriter, output *typedvalues.TypedValue, outputHeaders *typedvalues.TypedValue, outputErr *types.Error) {
 	if w == nil {
 		panic("cannot format response to nil")
 	}
@@ -186,11 +194,18 @@ func (h *HTTPMapper) FormatResponse(w http.ResponseWriter, output *typedvalues.T
 		return
 	}
 
+	headers := h.formatHeaders(outputHeaders)
+	for k, v := range headers {
+		if len(v) > 0 {
+			w.Header().Set(k, v[0])
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 	contentType := h.ValueTypeResolver(output)
 	err := h.formatBody(w, output, contentType)
 	if err != nil {
-		h.FormatResponse(w, nil, &types.Error{
+		h.FormatResponse(w, nil, nil, &types.Error{
 			Message: fmt.Sprintf("Failed to format response body: %v", err),
 		})
 	}
@@ -229,7 +244,12 @@ func (h *HTTPMapper) FormatRequest(source map[string]*typedvalues.TypedValue, ta
 	}
 
 	// Map headers input to HTTP headers
-	headers := h.formatHeaders(source)
+	headers := http.Header{}
+	rawHeaders, ok := source[types.InputHeaders]
+	if ok && rawHeaders != nil {
+		headers = h.formatHeaders(rawHeaders)
+	}
+
 	if target.Header == nil {
 		target.Header = headers
 	} else {
@@ -265,8 +285,15 @@ func (h *HTTPMapper) parseMethod(r *http.Request) *typedvalues.TypedValue {
 	return typedvalues.MustWrap(r.Method)
 }
 
-// parseHeaders maps the headers from a request to the "headers" key in the target map
-func (h *HTTPMapper) parseHeaders(r *http.Request) *typedvalues.TypedValue {
+// parseReqHeaders maps the headers from a request to the "headers" key in the target map
+func (h *HTTPMapper) parseReqHeaders(r *http.Request) *typedvalues.TypedValue {
+	// For now we do not support multi-valued headers
+	headers := flattenMultimap(r.Header)
+	return typedvalues.MustWrap(headers)
+}
+
+// parseRespHeaders maps the headers from a response to the "headers" key in the target map
+func (h *HTTPMapper) parseRespHeaders(r *http.Response) *typedvalues.TypedValue {
 	// For now we do not support multi-valued headers
 	headers := flattenMultimap(r.Header)
 	return typedvalues.MustWrap(headers)
@@ -369,15 +396,11 @@ func (h *HTTPMapper) getRequestContentType(headers http.Header) *mediatype.Media
 }
 
 // FUTURE: support multi-headers at some point
-func (h *HTTPMapper) formatHeaders(inputs map[string]*typedvalues.TypedValue) http.Header {
+func (h *HTTPMapper) formatHeaders(inputsHeaders *typedvalues.TypedValue) http.Header {
 	headers := http.Header{}
-	rawHeaders, ok := inputs[types.InputHeaders]
-	if !ok || rawHeaders == nil {
-		return headers
-	}
 
 	// TODO handle partial map
-	i, err := typedvalues.Unwrap(rawHeaders)
+	i, err := typedvalues.Unwrap(inputsHeaders)
 	if err != nil {
 		logrus.Errorf("Failed to format headers: %v", err)
 	}

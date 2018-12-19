@@ -143,7 +143,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get output
-	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.Error)
+	httpconv.FormatResponse(w, wi.Status.Output, wi.Status.OutputHeaders, wi.Status.Error)
 
 	// Logging
 	if !wi.Status.Successful() {
