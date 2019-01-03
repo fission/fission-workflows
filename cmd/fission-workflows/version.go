@@ -25,7 +25,7 @@ var versionPrinter = commandContext(func(ctx Context) error {
 		client := getClient(ctx)
 		resp, err := client.Admin.Version(ctx)
 		if err != nil {
-			fmt.Printf("server: failed to get version (%v)\n", err)
+			fmt.Printf("server: failed to get version: %v\n", err)
 		} else {
 			fmt.Printf("server: %s\n", resp.JSON())
 		}

@@ -18,6 +18,10 @@ var cmdStatus = cli.Command{
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		//if resp.Status != apiserver.StatusOK {
+		//	fmt.Fprintln(os.Stderr, "Status not okay.")
+		//	os.Exit(1)
+		//}
 		fmt.Printf(resp.Status)
 
 		return nil
