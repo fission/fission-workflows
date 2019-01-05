@@ -56,7 +56,7 @@ func callWithJSON(ctx context.Context, method string, url string, in proto.Messa
 			if err != nil {
 				logrus.Errorf("Failed to read debug data: %v", err)
 			}
-			logrus.Debugf("body: '%v'", data)
+			logrus.Debugf("Request body: '%v'", string(data))
 		}
 	}
 	req, err := http.NewRequest(method, url, buf)
@@ -76,29 +76,27 @@ func callWithJSON(ctx context.Context, method string, url string, in proto.Messa
 	if err != nil {
 		return fmt.Errorf("%v: %v", ErrRequestSend, err)
 	}
-	if logrus.GetLevel() == logrus.DebugLevel {
-		logrus.Debugf("<-- %s - %s", resp.Status, url)
-		if resp.Body != nil {
-			data, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				logrus.Errorf("Failed to read debug body: %v", err)
-			}
-			logrus.Debugf("Body: '%v'", string(data))
+	var respBody []byte
+	logrus.Debugf("<-- %s - %s", resp.Status, url)
+	if resp.Body != nil {
+		respBody, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logrus.Errorf("Failed to read debug body: %v", err)
 		}
+		logrus.Debugf("Response body: '%v'", string(respBody))
 	}
+	resp.Body.Close()
+
+	// Handle error responses
 	if resp.StatusCode >= 400 {
-		data, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		return fmt.Errorf("%v (%s): %s", ErrResponseError, resp.Status, strings.TrimSpace(string(data)))
+		return fmt.Errorf("%v (%s): %s", ErrResponseError, resp.Status, strings.TrimSpace(string(respBody)))
 	}
 
 	if out != nil && resp.ContentLength != 0 {
-
-		err = fromJSON(resp.Body, out)
+		err = fromJSON(bytes.NewReader(respBody), out)
 		if err != nil {
 			return fmt.Errorf("%v: %v", ErrDeserialize, err)
 		}
-		resp.Body.Close()
 		if err != nil {
 			logrus.Errorf("Failed to close response body: %v", err)
 		}
