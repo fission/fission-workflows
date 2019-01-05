@@ -87,6 +87,7 @@ func (mp *MetaParser) Parsers() []string {
 	var i int
 	for name := range mp.parsers {
 		ps[i] = name
+		i++
 	}
 	return ps
 }
