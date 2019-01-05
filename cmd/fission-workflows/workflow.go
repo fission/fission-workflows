@@ -7,6 +7,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/parse"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -77,11 +78,11 @@ var cmdWorkflow = cli.Command{
 						if err != nil {
 							panic(err)
 						}
-						updated := wf.Status.UpdatedAt.String()
-						created := wf.Metadata.CreatedAt.String()
+						updated, _ := ptypes.Timestamp(wf.Status.UpdatedAt)
+						created, _ := ptypes.Timestamp(wf.Metadata.CreatedAt)
 
-						rows = append(rows, []string{wfID, wf.Spec.Name, string(wf.Status.Status),
-							created, updated})
+						rows = append(rows, []string{wfID, wf.Spec.Name, wf.Status.Status.String(),
+							created.String(), updated.String()})
 					}
 					table(os.Stdout, []string{"ID", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
 				case 1:
