@@ -289,7 +289,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	// Synchronize the workflow id with the fission id
 	fissionID := string(flr.FunctionMetadata.GetUID())
 	wfSpec.ForceId = fissionID
-	wfSpec.Name = flr.FunctionMetadata.Name
+	wfSpec.Name = flr.FunctionName
 
 	resp, err := fp.workflowServer.Create(ctx, wfSpec)
 	if err != nil {

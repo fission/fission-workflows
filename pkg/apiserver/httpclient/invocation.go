@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fission/fission-workflows/pkg/apiserver"
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 )
 
@@ -53,4 +54,10 @@ func (api *InvocationAPI) Get(ctx context.Context, id string) (*types.WorkflowIn
 
 func (api *InvocationAPI) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) error {
 	return callWithJSON(ctx, http.MethodPost, api.formatURL("/invocation/validate"), spec, nil)
+}
+
+func (api *InvocationAPI) Events(ctx context.Context, id string) ([]*fes.Event, error) {
+	result := &apiserver.InvocationEventsResponse{}
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/invocation/"+id+"/events"), nil, result)
+	return result.Events, err
 }

@@ -5,6 +5,7 @@ option go_package = "apiserver";
 
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
 import "github.com/fission/fission-workflows/pkg/version/version.proto";
+import "github.com/fission/fission-workflows/pkg/fes/fes.proto";
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 
@@ -108,6 +109,12 @@ service WorkflowInvocationAPI {
         };
     }
 
+    rpc Events (fission.workflows.types.ObjectMetadata) returns (InvocationEventsResponse) {
+        option (google.api.http) = {
+            get: "/invocation/{id}/events"
+        };
+    }
+
     rpc Validate (fission.workflows.types.WorkflowInvocationSpec) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/invocation/validate"
@@ -127,6 +134,11 @@ message InvocationListQuery {
 
 message WorkflowInvocationList {
     repeated string invocations = 1;
+}
+
+message InvocationEventsResponse {
+    fission.workflows.types.ObjectMetadata metadata = 1;
+    repeated fission.workflows.eventstore.Event events = 2;
 }
 
 service AdminAPI {

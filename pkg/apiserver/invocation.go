@@ -4,8 +4,9 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
-	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
+	workflowFnenv "github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -18,15 +19,16 @@ type Invocation struct {
 	api         *api.Invocation
 	invocations *store.Invocations
 	workflows   *store.Workflows
-	fnenv       *workflows.Runtime
+	fnenv       *workflowFnenv.Runtime
+	store       fes.Backend
 }
 
-func NewInvocation(api *api.Invocation, invocations *store.Invocations, workflows2 *store.Workflows) WorkflowInvocationAPIServer {
+func NewInvocation(api *api.Invocation, invocations *store.Invocations, workflows *store.Workflows) WorkflowInvocationAPIServer {
 	return &Invocation{
 		api:         api,
 		invocations: invocations,
-		workflows:   workflows2,
-		fnenv:       workflows.NewRuntime(api, invocations, workflows2),
+		workflows:   workflows,
+		fnenv:       workflowFnenv.NewRuntime(api, invocations, workflows),
 	}
 }
 
@@ -117,6 +119,20 @@ func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.
 		return nil, err
 	}
 	return &empty.Empty{}, nil
+}
+
+func (gi *Invocation) Events(ctx context.Context, md *types.ObjectMetadata) (*InvocationEventsResponse, error) {
+	events, err := gi.store.Get(fes.Aggregate{
+		Id:   md.Id,
+		Type: aggregates.TypeWorkflowInvocation,
+	})
+	if err != nil {
+		return nil, toErrorStatus(err)
+	}
+	return &InvocationEventsResponse{
+		Metadata: md,
+		Events:   events,
+	}, nil
 }
 
 func contains(haystack []string, needle string) bool {
