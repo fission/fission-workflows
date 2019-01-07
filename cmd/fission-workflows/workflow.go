@@ -58,6 +58,23 @@ var cmdWorkflow = cli.Command{
 			}),
 		},
 		{
+			Name:  "delete",
+			Usage: "Delete workflow within the workflow engine.",
+			Action: commandContext(func(ctx Context) error {
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows delete [workflow-id...]")
+				}
+				client := getClient(ctx)
+				for _, wfID := range ctx.Args() {
+					if err := client.Workflow.Delete(ctx, wfID); err != nil {
+						logrus.Fatalf("Failed to delete %s: %v", wfID, err)
+					}
+					fmt.Println(wfID)
+				}
+				return nil
+			}),
+		},
+		{
 			Name:  "get",
 			Usage: "get <Workflow-id> <task-id>",
 			Action: commandContext(func(ctx Context) error {
