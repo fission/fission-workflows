@@ -471,14 +471,14 @@ func serveWorkflowAPI(s *grpc.Server, es fes.Backend, resolvers map[string]fnenv
 	store *store.Workflows) {
 	workflowParser := fnenv.NewMetaResolver(resolvers)
 	workflowAPI := api.NewWorkflowAPI(es, workflowParser)
-	workflowServer := apiserver.NewWorkflow(workflowAPI, store)
+	workflowServer := apiserver.NewWorkflow(workflowAPI, store, es)
 	apiserver.RegisterWorkflowAPIServer(s, workflowServer)
 	log.Infof("Serving workflow gRPC API at %s.", gRPCAddress)
 }
 
 func serveInvocationAPI(s *grpc.Server, es fes.Backend, invocations *store.Invocations, workflows *store.Workflows) {
 	invocationAPI := api.NewInvocationAPI(es)
-	invocationServer := apiserver.NewInvocation(invocationAPI, invocations, workflows)
+	invocationServer := apiserver.NewInvocation(invocationAPI, invocations, workflows, es)
 	apiserver.RegisterWorkflowInvocationAPIServer(s, invocationServer)
 	log.Infof("Serving workflow invocation gRPC API at %s.", gRPCAddress)
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/golang/protobuf/proto"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -93,7 +92,6 @@ func (ti *TaskInvocation) ensureNextEvent(event *fes.Event) error {
 	}
 
 	if event.Aggregate.Type != TypeTaskInvocation {
-		logrus.Info("task check")
 		return fes.ErrUnsupportedEntityEvent.WithEntity(ti).WithEvent(event)
 	}
 	// TODO check sequence of event

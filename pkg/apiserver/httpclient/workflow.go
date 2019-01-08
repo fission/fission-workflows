@@ -43,3 +43,9 @@ func (api *WorkflowAPI) Delete(ctx context.Context, id string) error {
 	err := callWithJSON(ctx, http.MethodDelete, api.formatURL("/workflow/"+id), nil, nil)
 	return err
 }
+
+func (api *WorkflowAPI) Events(ctx context.Context, id string) (*apiserver.ObjectEvents, error) {
+	result := &apiserver.ObjectEvents{}
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/workflow/"+id+"/events"), nil, result)
+	return result, err
+}

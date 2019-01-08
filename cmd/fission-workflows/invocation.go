@@ -144,7 +144,7 @@ var cmdInvocation = cli.Command{
 					logrus.Fatalf("Failed to retrieve events for %s: %v", wfiID, err)
 				}
 
-				for _, event := range events {
+				for _, event := range events.GetEvents() {
 					err := (&jsonpb.Marshaler{
 						Indent: "	",
 					}).Marshal(os.Stdout, event)
@@ -168,7 +168,7 @@ var cmdInvocation = cli.Command{
 
 				wfi, err := client.Invocation.Get(ctx, wfiID)
 				if err != nil {
-					logrus.Fatal("Failed to retrieve status for %s: %v", wfiID, err)
+					logrus.Fatalf("Failed to retrieve status for %s: %v", wfiID, err)
 				}
 
 				wf, err := client.Workflow.Get(ctx, wfi.Spec.WorkflowId)

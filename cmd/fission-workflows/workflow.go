@@ -7,6 +7,7 @@ import (
 
 	"github.com/fission/fission-workflows/pkg/parse"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -71,6 +72,33 @@ var cmdWorkflow = cli.Command{
 					}
 					fmt.Println(wfID)
 				}
+				return nil
+			}),
+		},
+		{
+			Name:  "events",
+			Usage: "events <workflow-id>",
+			Action: commandContext(func(ctx Context) error {
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows workflow events <workflow-id>")
+				}
+				client := getClient(ctx)
+				wfiID := ctx.Args().First()
+
+				events, err := client.Workflow.Events(ctx, wfiID)
+				if err != nil {
+					logrus.Fatalf("Failed to retrieve events for %s: %v", wfiID, err)
+				}
+
+				for _, event := range events.GetEvents() {
+					err := (&jsonpb.Marshaler{
+						Indent: "	",
+					}).Marshal(os.Stdout, event)
+					if err != nil {
+						panic(err)
+					}
+				}
+
 				return nil
 			}),
 		},

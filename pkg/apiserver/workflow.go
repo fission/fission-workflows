@@ -2,7 +2,9 @@ package apiserver
 
 import (
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -11,17 +13,17 @@ import (
 
 // Workflow is responsible for all functionality related to managing workflows.
 type Workflow struct {
-	api   *api.Workflow
-	store *store.Workflows
+	api     *api.Workflow
+	store   *store.Workflows
+	backend fes.Backend
 }
 
-func NewWorkflow(api *api.Workflow, store *store.Workflows) *Workflow {
-	wf := &Workflow{
-		api:   api,
-		store: store,
+func NewWorkflow(api *api.Workflow, store *store.Workflows, backend fes.Backend) *Workflow {
+	return &Workflow{
+		api:     api,
+		store:   store,
+		backend: backend,
 	}
-
-	return wf
 }
 
 func (ga *Workflow) Create(ctx context.Context, spec *types.WorkflowSpec) (*types.ObjectMetadata, error) {
@@ -64,4 +66,18 @@ func (ga *Workflow) Validate(ctx context.Context, spec *types.WorkflowSpec) (*em
 		return nil, toErrorStatus(err)
 	}
 	return &empty.Empty{}, nil
+}
+
+func (ga *Workflow) Events(ctx context.Context, md *types.ObjectMetadata) (*ObjectEvents, error) {
+	events, err := ga.backend.Get(fes.Aggregate{
+		Id:   md.Id,
+		Type: aggregates.TypeWorkflow,
+	})
+	if err != nil {
+		return nil, toErrorStatus(err)
+	}
+	return &ObjectEvents{
+		Metadata: md,
+		Events:   events,
+	}, nil
 }

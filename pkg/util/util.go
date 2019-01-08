@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -152,4 +153,13 @@ func ToNumber(val interface{}) (Number, error) {
 		return Number{}, errors.New("not a supported number (int, int8, int16, int32, int64, float32, " +
 			"and float64)")
 	}
+}
+
+func CmpProtoTimestamps(l, r *timestamp.Timestamp) bool {
+	if l.GetSeconds() < r.GetSeconds() {
+		return true
+	} else if l.GetSeconds() > r.GetSeconds() {
+		return false
+	}
+	return l.GetNanos() <= r.GetNanos()
 }

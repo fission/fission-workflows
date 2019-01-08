@@ -43,6 +43,12 @@ service WorkflowAPI {
             body: "*"
         };
     }
+
+    rpc Events (fission.workflows.types.ObjectMetadata) returns (ObjectEvents) {
+        option (google.api.http) = {
+            get: "/workflow/{id}/events"
+        };
+    }
 }
 
 message WorkflowList {
@@ -109,7 +115,7 @@ service WorkflowInvocationAPI {
         };
     }
 
-    rpc Events (fission.workflows.types.ObjectMetadata) returns (InvocationEventsResponse) {
+    rpc Events (fission.workflows.types.ObjectMetadata) returns (ObjectEvents) {
         option (google.api.http) = {
             get: "/invocation/{id}/events"
         };
@@ -136,7 +142,7 @@ message WorkflowInvocationList {
     repeated string invocations = 1;
 }
 
-message InvocationEventsResponse {
+message ObjectEvents {
     fission.workflows.types.ObjectMetadata metadata = 1;
     repeated fission.workflows.eventstore.Event events = 2;
 }
