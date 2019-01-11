@@ -58,8 +58,8 @@ test workflow.  Clone this repository, and from its root directory, run:
 # Add binary environment and create two test functions on your Fission setup:
 #
 fission env create --name binary --image fission/binary-env
-fission function create --name whalesay --env binary --deploy examples/whales/whalesay.sh
-fission function create --name fortune --env binary --deploy examples/whales/fortune.sh
+fission function create --name whalesay --env binary --code examples/whales/whalesay.sh
+fission function create --name fortune --env binary --code examples/whales/fortune.sh
 
 #
 # Create a workflow that uses those two functions. A workflow is just
@@ -71,6 +71,11 @@ fission function create --name fortunewhale --env workflow --src examples/whales
 # Map an HTTP GET to your new workflow function:
 #
 fission route create --method GET --url /fortunewhale --function fortunewhale
+
+#
+# Get the Fission Router URL assuming you are running on minikube
+#
+export FISSION_ROUTER=$(minikube ip):$(kubectl -n fission get svc router -o jsonpath='{...nodePort}')
 
 #
 # Invoke the workflow with an HTTP request:
@@ -93,7 +98,7 @@ It has the following features:
 To install `fission-workflows` either download a version of the binary from the [releases](https://github.com/fission/fission-workflows/releases).
 For example, to download and install version 0.6.0,  assuming that you use OS X:
 ```bash
-curl -o fission-workflows https://github.com/fission/fission-workflows/releases/download/0.3.0/fission-workflows-osx
+curl -o fission-workflows -L https://github.com/fission/fission-workflows/releases/download/0.6.0/fission-workflows-osx
 chmod +x ./fission-workflows
 sudo mv ./fission-workflows /usr/local/bin
 ```
