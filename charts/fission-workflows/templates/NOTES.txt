@@ -7,13 +7,16 @@ curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples
 curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/whalesay.sh > whalesay.sh
 
 fission env create --name binary --image fission/binary-env
-fission fn create --name whalesay --env binary --deploy ./whalesay.sh
-fission fn create --name fortune --env binary --deploy ./fortune.sh
+fission fn create --name whalesay --env binary --code ./whalesay.sh
+fission fn create --name fortune --env binary --code ./fortune.sh
 
 # Setup a workflow using the workflow environment
 curl https://raw.githubusercontent.com/fission/fission-workflows/master/examples/whales/fortunewhale.wf.yaml > fortunewhale.wf.yaml
 
 fission fn create --name fortunewhale --env workflow --src ./fortunewhale.wf.yaml
+
+# get the Fission Router URL assuming your are running on minikube
+export FISSION_ROUTER=$(minikube ip):$(kubectl -n fission get svc router -o jsonpath='{...nodePort}')
 
 # Invoke the workflow just like any other Fission function
 
