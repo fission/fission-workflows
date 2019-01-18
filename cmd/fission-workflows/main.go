@@ -51,6 +51,7 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
+		cmdInvoke,
 		cmdConfig,
 		cmdStatus,
 		cmdParse,
