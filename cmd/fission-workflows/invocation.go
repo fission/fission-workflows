@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -133,6 +134,7 @@ var cmdInvocation = cli.Command{
 			Name:  "events",
 			Usage: "events <invocation-id>",
 			Action: commandContext(func(ctx Context) error {
+				ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), true)
 				if !ctx.Args().Present() {
 					logrus.Fatal("Usage: fission-workflows invocation events <invocation-id>")
 				}

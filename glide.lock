@@ -1,5 +1,5 @@
-hash: c42e34eea0355440fa225d01d3ef2682008e3ba88579666f75897f4a6b933fcc
-updated: 2019-01-07T16:05:37.411968+01:00
+hash: 732742a334c96e37ca64c0ca151ee3d95cff64aaea0abdbef4c29a3f4ee5cb88
+updated: 2019-01-26T01:02:21.481196+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -17,6 +17,8 @@ imports:
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
+- name: github.com/blang/semver
+  version: 2ee87856327ba09384cabd113bc6b5d174e9ec0f
 - name: github.com/codahale/hdrhistogram
   version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/davecgh/go-spew
@@ -389,7 +391,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
-  version: 12444147eb1150aa5c80d2aae532cbc5b7be73d0
+  version: c89978d5f86d7427bef2fc7752732c8c60b1d188
   subpackages:
   - admissionregistration/v1alpha1
   - admissionregistration/v1beta1
@@ -420,7 +422,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apiextensions-apiserver
-  version: f584b16eb23bd2a3fd292a027d698d95db427c5d
+  version: f0729a5940c5414a9b9da2f18ba8d5c4b559ec9a
   subpackages:
   - pkg/apis/apiextensions
   - pkg/apis/apiextensions/v1beta1
@@ -428,7 +430,7 @@ imports:
   - pkg/client/clientset/clientset/scheme
   - pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 - name: k8s.io/apimachinery
-  version: e386b2658ed20923da8cc9250e552f082899a1ee
+  version: d49e237a2683fa6dc43a86c7b1b766e0219fb6e7
   subpackages:
   - pkg/api/errors
   - pkg/api/meta

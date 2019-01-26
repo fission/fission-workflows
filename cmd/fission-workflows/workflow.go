@@ -5,6 +5,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/blang/semver"
 	"github.com/fission/fission-workflows/pkg/parse"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/golang/protobuf/jsonpb"
@@ -79,6 +80,7 @@ var cmdWorkflow = cli.Command{
 			Name:  "events",
 			Usage: "events <workflow-id>",
 			Action: commandContext(func(ctx Context) error {
+				ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), true)
 				if !ctx.Args().Present() {
 					logrus.Fatal("Usage: fission-workflows workflow events <workflow-id>")
 				}

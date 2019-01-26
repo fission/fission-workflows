@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"reflect"
@@ -10,6 +12,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/fatih/color"
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -60,6 +63,10 @@ var cmdInvoke = cli.Command{
 	},
 	Description: "Invoke a workflow",
 	Action: commandContext(func(ctx Context) error {
+		listenToEvents := ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), false)
+		if !listenToEvents {
+			logrus.Warn("Event streaming is not supported < 0.7.0")
+		}
 		if !ctx.Args().Present() {
 			logrus.Fatal("Workflow ID is required.")
 		}
@@ -97,54 +104,27 @@ var cmdInvoke = cli.Command{
 				case <-ctx.Done():
 					return
 				case <-ticker:
-					// Future: support and use offset in invocationEvents API requests
-					invocationEvents, err := client.Invocation.Events(ctx, md.GetId())
-					if err != nil {
-						logrus.Fatal("Failed to fetch events: ", err)
+					pollStatus := !listenToEvents
+					if listenToEvents {
+						pollStatus, err = fetchAndPrintEvents(ctx, client, md.GetId(), offset, w)
+						if err != nil {
+							logrus.Error(err)
+							logrus.Warn("Halting event streaming; falling back to polling status instead")
+							listenToEvents = false
+						}
+						w.Flush()
 					}
 
-					// Traverse all new invocationEvents
-					var finished bool
-					for _, event := range invocationEvents.GetEvents()[offset:] {
-						invocationEvent, err := parseInvocationEvent(event)
-						if err != nil {
-							logrus.Fatal("Failed to parse events: ", err)
-						}
-
-						if e, ok := invocationEvent.data.(events.Event); ok {
-							switch e.Type() {
-							case events.EventInvocationFailed:
-								invocationEvent.subjectType = subjectTypeError
-								finished = true
-							case events.EventInvocationCanceled:
-								invocationEvent.subjectType = subjectTypeError
-								finished = true
-							case events.EventInvocationCompleted:
-								invocationEvent.subjectType = subjectTypeSuccess
-								finished = true
-							case events.EventTaskSucceeded:
-								invocationEvent.subjectType = subjectTypeSuccess
-								invocationEvent.target = event.GetId() // TODO can we get task name
-							}
-						}
-
-						_, err = w.Write([]byte(eventToTabString(invocationEvent)))
-						if err != nil {
-							panic(err)
-						}
-						offset++
-					}
-					w.Flush()
-
-					// If a terminal event was encountered the invocation has completed.
-					if finished {
+					if pollStatus {
 						wi, err := client.Invocation.Get(ctx, md.GetId())
 						if err != nil {
 							logrus.Fatal("Failed to fetch invocation: ", err)
 						}
-						outputChan <- wi
-						close(outputChan)
-						return
+						if wi.GetStatus().Finished() {
+							outputChan <- wi
+							close(outputChan)
+							return
+						}
 					}
 				}
 			}
@@ -174,6 +154,45 @@ var cmdInvoke = cli.Command{
 		}
 		return nil
 	}),
+}
+
+func fetchAndPrintEvents(ctx context.Context, client client, invocationID string, offset int,
+	w io.Writer) (finished bool,
+	err error) {
+	// Future: support and use offset in invocationEvents API requests
+	invocationEvents, err := client.Invocation.Events(ctx, invocationID)
+	if err != nil {
+		return finished, fmt.Errorf("failed to fetch events: %v", err)
+	}
+
+	// Traverse all new invocationEvents
+	for _, event := range invocationEvents.GetEvents()[offset:] {
+		invocationEvent, err := parseInvocationEvent(event)
+		if err != nil {
+			return finished, fmt.Errorf("failed to parse events: %v", err)
+		}
+
+		if e, ok := invocationEvent.data.(events.Event); ok {
+			switch e.Type() {
+			case events.EventInvocationFailed:
+				invocationEvent.subjectType = subjectTypeError
+				finished = true
+			case events.EventInvocationCanceled:
+				invocationEvent.subjectType = subjectTypeError
+				finished = true
+			case events.EventInvocationCompleted:
+				invocationEvent.subjectType = subjectTypeSuccess
+				finished = true
+			case events.EventTaskSucceeded:
+				invocationEvent.subjectType = subjectTypeSuccess
+				invocationEvent.target = event.GetId() // TODO can we get task name
+			}
+		}
+
+		w.Write([]byte(eventToTabString(invocationEvent)))
+		offset++
+	}
+	return finished, nil
 }
 
 type subjectType int
