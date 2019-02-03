@@ -21,3 +21,12 @@ FROM scratch
 COPY --from=builder /go/src/github.com/fission/fission-workflows/fission-workflows-bundle /fission-workflows-bundle
 COPY --from=builder /go/src/github.com/fission/fission-workflows/fission-workflows-proxy /fission-workflows-proxy
 COPY --from=builder /go/src/github.com/fission/fission-workflows/fission-workflows /fission-workflows
+
+# Sensible default: run fission-workflows with in-memory event store and all basic components
+# --api - serves the gRPC and HTTP interface at :5000 and :8080 respectively
+# --internal - enables the internal function runtime
+# --controller - runs the controller and scheduler components
+# --metrics - enables Prometheus and Jaeger metric collection.
+ENTRYPOINT ["/fission-workflows-bundle"]
+
+CMD ["--api", "--internal", "--controller", "--metrics"]
