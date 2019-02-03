@@ -15,10 +15,13 @@ package apiserver
 
 import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type Empty = empty.Empty
 
 func toErrorStatus(err error) error {
 	switch err.(type) {
