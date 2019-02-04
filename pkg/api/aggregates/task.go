@@ -58,6 +58,7 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 		}
 	case *events.TaskSucceeded:
 		ti.Status.Output = m.GetResult().Output
+		ti.Status.OutputHeaders = m.GetResult().OutputHeaders
 		ti.Status.Status = types.TaskInvocationStatus_SUCCEEDED
 	case *events.TaskFailed:
 		ti.Status.Error = m.GetError()

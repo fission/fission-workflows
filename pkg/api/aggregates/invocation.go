@@ -70,6 +70,7 @@ func (wi *WorkflowInvocation) ApplyEvent(event *fes.Event) error {
 	case *events.InvocationCompleted:
 		wi.Status.Status = types.WorkflowInvocationStatus_SUCCEEDED
 		wi.Status.Output = m.GetOutput()
+		wi.Status.OutputHeaders = m.GetOutputHeaders()
 	case *events.InvocationTaskAdded:
 		task := m.GetTask()
 		if wi.Status.DynamicTasks == nil {

@@ -433,8 +433,9 @@ type WorkflowInvocationStatus struct {
 	Output    *fission_workflows_types.TypedValue `protobuf:"bytes,4,opt,name=output" json:"output,omitempty"`
 	// In case the task ID also exists in the workflow spec, the dynamic task will be
 	// used as an overlay over the static task.
-	DynamicTasks map[string]*Task `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Error        *Error           `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
+	DynamicTasks  map[string]*Task                    `protobuf:"bytes,5,rep,name=dynamicTasks" json:"dynamicTasks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Error         *Error                              `protobuf:"bytes,6,opt,name=error" json:"error,omitempty"`
+	OutputHeaders *fission_workflows_types.TypedValue `protobuf:"bytes,7,opt,name=outputHeaders" json:"outputHeaders,omitempty"`
 }
 
 func (m *WorkflowInvocationStatus) Reset()                    { *m = WorkflowInvocationStatus{} }
@@ -466,6 +467,13 @@ func (m *WorkflowInvocationStatus) GetTasks() map[string]*TaskInvocation {
 func (m *WorkflowInvocationStatus) GetOutput() *fission_workflows_types.TypedValue {
 	if m != nil {
 		return m.Output
+	}
+	return nil
+}
+
+func (m *WorkflowInvocationStatus) GetOutputHeaders() *fission_workflows_types.TypedValue {
+	if m != nil {
+		return m.OutputHeaders
 	}
 	return nil
 }
@@ -558,7 +566,8 @@ type TaskSpec struct {
 	// Number of dependencies to wait for
 	Await int32 `protobuf:"varint,4,opt,name=await" json:"await,omitempty"`
 	// Transform the output, or override the output with a literal
-	Output *fission_workflows_types.TypedValue `protobuf:"bytes,5,opt,name=output" json:"output,omitempty"`
+	Output        *fission_workflows_types.TypedValue `protobuf:"bytes,5,opt,name=output" json:"output,omitempty"`
+	OutputHeaders *fission_workflows_types.TypedValue `protobuf:"bytes,6,opt,name=outputHeaders" json:"outputHeaders,omitempty"`
 }
 
 func (m *TaskSpec) Reset()                    { *m = TaskSpec{} }
@@ -597,6 +606,13 @@ func (m *TaskSpec) GetAwait() int32 {
 func (m *TaskSpec) GetOutput() *fission_workflows_types.TypedValue {
 	if m != nil {
 		return m.Output
+	}
+	return nil
+}
+
+func (m *TaskSpec) GetOutputHeaders() *fission_workflows_types.TypedValue {
+	if m != nil {
+		return m.OutputHeaders
 	}
 	return nil
 }
@@ -745,10 +761,11 @@ func (m *TaskInvocationSpec) GetInvocationId() string {
 }
 
 type TaskInvocationStatus struct {
-	Status    TaskInvocationStatus_Status         `protobuf:"varint,1,opt,name=status,enum=fission.workflows.types.TaskInvocationStatus_Status" json:"status,omitempty"`
-	UpdatedAt *google_protobuf.Timestamp          `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
-	Output    *fission_workflows_types.TypedValue `protobuf:"bytes,3,opt,name=output" json:"output,omitempty"`
-	Error     *Error                              `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+	Status        TaskInvocationStatus_Status         `protobuf:"varint,1,opt,name=status,enum=fission.workflows.types.TaskInvocationStatus_Status" json:"status,omitempty"`
+	UpdatedAt     *google_protobuf.Timestamp          `protobuf:"bytes,2,opt,name=updatedAt" json:"updatedAt,omitempty"`
+	Output        *fission_workflows_types.TypedValue `protobuf:"bytes,3,opt,name=output" json:"output,omitempty"`
+	Error         *Error                              `protobuf:"bytes,4,opt,name=error" json:"error,omitempty"`
+	OutputHeaders *fission_workflows_types.TypedValue `protobuf:"bytes,5,opt,name=outputHeaders" json:"outputHeaders,omitempty"`
 }
 
 func (m *TaskInvocationStatus) Reset()                    { *m = TaskInvocationStatus{} }
@@ -773,6 +790,13 @@ func (m *TaskInvocationStatus) GetUpdatedAt() *google_protobuf.Timestamp {
 func (m *TaskInvocationStatus) GetOutput() *fission_workflows_types.TypedValue {
 	if m != nil {
 		return m.Output
+	}
+	return nil
+}
+
+func (m *TaskInvocationStatus) GetOutputHeaders() *fission_workflows_types.TypedValue {
+	if m != nil {
+		return m.OutputHeaders
 	}
 	return nil
 }

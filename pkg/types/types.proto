@@ -105,6 +105,7 @@ message WorkflowInvocationStatus {
     // used as an overlay over the static task.
     map<string, Task> dynamicTasks = 5;
     Error error = 6; // Only set when status == failed
+    TypedValue outputHeaders = 7;
 }
 
 message DependencyConfig {
@@ -143,6 +144,7 @@ message TaskSpec {
 
     // Transform the output, or override the output with a literal
     TypedValue output = 5;
+    TypedValue outputHeaders = 6;
 }
 
 message TaskStatus {
@@ -205,6 +207,7 @@ message TaskInvocationStatus {
     google.protobuf.Timestamp updatedAt = 2;
     TypedValue output = 3;
     Error error = 4; // Only set when status == failed
+    TypedValue outputHeaders = 5;
 }
 
 //

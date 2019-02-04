@@ -60,6 +60,9 @@ func makeTestScope() *Scope {
 					Spec: &types.TaskInvocationSpec{},
 					Status: &types.TaskInvocationStatus{
 						Output: typedvalues.MustWrap("some output"),
+						OutputHeaders: typedvalues.MustWrap(map[string]interface{}{
+							"some-key": "some-value",
+						}),
 					},
 				},
 			},
@@ -173,4 +176,28 @@ func TestTaskFn_Apply_NoArgument(t *testing.T) {
 	i := typedvalues.MustUnwrap(result)
 
 	assert.Equal(t, util.MustConvertStructsToMap(testScope.Tasks["TaskA"]), i)
+}
+
+func TestOutputHeadersFn_Apply_OneArgument(t *testing.T) {
+	parser := NewJavascriptExpressionParser()
+
+	testScope := makeTestScope()
+	result, err := parser.Resolve(testScope, "", mustParseExpr("{ outputHeaders('TaskA') }"))
+	assert.NoError(t, err)
+
+	i := typedvalues.MustUnwrap(result)
+
+	assert.Equal(t, testScope.Tasks["TaskA"].OutputHeaders, i)
+}
+
+func TestOutputHeadersFn_Apply_NoArgument(t *testing.T) {
+	parser := NewJavascriptExpressionParser()
+
+	testScope := makeTestScope()
+	result, err := parser.Resolve(testScope, "TaskA", mustParseExpr("{ outputHeaders() }"))
+	assert.NoError(t, err)
+
+	i := typedvalues.MustUnwrap(result)
+
+	assert.Equal(t, testScope.Tasks["TaskA"].OutputHeaders, i)
 }

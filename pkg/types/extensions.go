@@ -78,10 +78,11 @@ func (m *WorkflowInvocationStatus) ToTaskStatus() *TaskInvocationStatus {
 	}
 
 	return &TaskInvocationStatus{
-		Status:    statusMapping[m.Status],
-		Error:     m.Error,
-		UpdatedAt: m.UpdatedAt,
-		Output:    m.Output,
+		Status:        statusMapping[m.Status],
+		Error:         m.Error,
+		UpdatedAt:     m.UpdatedAt,
+		Output:        m.Output,
+		OutputHeaders: m.OutputHeaders,
 	}
 }
 

@@ -169,3 +169,11 @@ func ResolveTaskOutput(taskID string, invocation *types.WorkflowInvocation) *typ
 	}
 	return output
 }
+
+func ResolveTaskOutputHeaders(taskID string, invocation *types.WorkflowInvocation) *typedvalues.TypedValue {
+	val, ok := invocation.Status.Tasks[taskID]
+	if !ok {
+		return nil
+	}
+	return val.Status.OutputHeaders
+}

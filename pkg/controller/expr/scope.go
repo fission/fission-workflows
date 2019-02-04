@@ -65,12 +65,13 @@ type ObjectMetadata struct {
 // TaskScope holds information about a specific task execution within the current workflow invocation.
 type TaskScope struct {
 	*ObjectMetadata
-	Status    string // TaskInvocation status
-	UpdatedAt int64  // unix timestamp
-	Inputs    map[string]interface{}
-	Requires  map[string]*types.TaskDependencyParameters
-	Output    interface{}
-	Function  string
+	Status        string // TaskInvocation status
+	UpdatedAt     int64  // unix timestamp
+	Inputs        map[string]interface{}
+	Requires      map[string]*types.TaskDependencyParameters
+	Output        interface{}
+	OutputHeaders interface{}
+	Function      string
 }
 
 func (s Tasks) DeepCopy() DeepCopier {
@@ -136,6 +137,7 @@ func (s *TaskScope) DeepCopy() DeepCopier {
 		Inputs:         DeepCopy(s.Inputs).(map[string]interface{}),
 		Requires:       requires,
 		Output:         DeepCopy(s.Output),
+		OutputHeaders:  DeepCopy(s.OutputHeaders),
 		Function:       s.Function,
 	}
 }
@@ -168,6 +170,12 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 		if err != nil {
 			panic(err)
 		}
+
+		h := controlflow.ResolveTaskOutputHeaders(taskId, wfi)
+		outputHeaders, err := typedvalues.Unwrap(h)
+		if err != nil {
+			panic(err)
+		}
 		inputs, err := typedvalues.UnwrapMapTypedValue(task.Spec.Inputs)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)
@@ -179,6 +187,7 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 			Inputs:         inputs,
 			Requires:       task.Spec.Requires,
 			Output:         output,
+			OutputHeaders:  outputHeaders,
 			Function:       task.Spec.FunctionRef,
 		}
 	}

@@ -201,6 +201,18 @@ func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
 			}
 			ti.GetStatus().Output = output
 		}
+		outputHeaders := task.GetSpec().GetOutputHeaders()
+		if outputHeaders != nil {
+			if outputHeaders.ValueType() == typedvalues.TypeExpression {
+				tv, err := a.resolveOutputHeaders(ti, outputHeaders)
+				if err != nil {
+					return err
+				}
+				outputHeaders = tv
+			}
+			ti.GetStatus().OutputHeaders = outputHeaders
+		}
+
 	}
 	return nil
 }
@@ -232,6 +244,35 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 		return nil, err
 	}
 	return resolvedOutput, nil
+}
+
+func (a *ActionInvokeTask) resolveOutputHeaders(ti *types.TaskInvocation, outputHeadersExpr *typedvalues.TypedValue) (*typedvalues.TypedValue, error) {
+	// Inherit scope if invocation has a parent
+	var parentScope *expr.Scope
+	if len(a.Wfi.Spec.ParentId) != 0 {
+		var ok bool
+		parentScope, ok = a.StateStore.Get(a.Wfi.Spec.ParentId)
+		if !ok {
+			a.logger().Warn("Could not find parent scope (%s) of scope (%s)", a.Wfi.Spec.ParentId, a.Wfi.ID())
+		}
+	}
+
+	// Setup the scope for the expressions
+	scope, err := expr.NewScope(parentScope, a.Wf, a.Wfi)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+	}
+	a.StateStore.Set(a.Wfi.ID(), scope)
+
+	// Add the current outputHeaders
+	scope.Tasks[a.Task.Id].OutputHeaders = typedvalues.MustUnwrap(ti.GetStatus().GetOutputHeaders())
+
+	// Resolve the outputHeaders expression
+	resolvedOutputHeaders, err := expr.Resolve(scope, a.Task.Id, outputHeadersExpr)
+	if err != nil {
+		return nil, err
+	}
+	return resolvedOutputHeaders, nil
 }
 
 func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedValue) (map[string]*typedvalues.TypedValue, error) {

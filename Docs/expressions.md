@@ -88,6 +88,7 @@ Task = {
         // ...
     },
     Output: Object,             // The output of the function (if available)
+    OutputHeaders: Object,      // The headers in the response of the function (if available)
     Resolved : {
         Src : String,           // The user provided function reference
         Runtime : String,       // The runtime responsible for executing the function
@@ -121,6 +122,7 @@ name | Usage      | Description
 uid  | `uid()`    | Generates a unique (string) id
 input | `input("taskId", "key")` | Gets the input of a task for the given key. If no key is provided, the default key is used.    
 output | `output("taskId")` | Gets the output of a task. If no argument is provided the output of the current task is returned.
+outputHeaders | `outputHeaders("taskId")` | Gets the headers in the response of a task. If no argument is provided the headers in response of the current task are returned.
 param | `param("key")` | Gets the invocation param for the given key. If no key is provided, the default key is used.
 task | `task("taskId")` | Gets the task for the given taskId. If no argument is provided the current task is returned.
 
@@ -171,4 +173,11 @@ Get the output of the 'example' task and convert it to a string:
 Get a unique id:
 ```javascript
 { uid() }
+```
+
+Get the 'Foo' header from the output headers of a task:
+```javascript
+{ $.Tasks.other.OutputHeaders.Foo }
+// Or the function equivalent:
+{ outputHeaders("other").Foo }
 ```

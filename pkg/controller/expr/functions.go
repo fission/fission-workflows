@@ -11,11 +11,12 @@ import (
 
 // Built-in functions for the expression parser
 var BuiltinFunctions = map[string]Function{
-	"uid":    &UidFn{},
-	"input":  &InputFn{},
-	"output": &OutputFn{},
-	"param":  &ParamFn{},
-	"task":   &TaskFn{},
+	"uid":           &UidFn{},
+	"input":         &InputFn{},
+	"output":        &OutputFn{},
+	"param":         &ParamFn{},
+	"task":          &TaskFn{},
+	"outputHeaders": &OutputHeadersFn{},
 }
 
 // UidFn provides a function to generate a unique (string) id
@@ -82,6 +83,45 @@ func (qf *OutputFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
 		result, err := vm.Eval(lookup)
 		if err != nil {
 			logrus.Warnf("Failed to lookup output: %s", lookup)
+			return otto.UndefinedValue()
+		}
+		return result
+	}
+}
+
+// OutputHeadersFn provides a function to Get headers in the output of a task.
+type OutputHeadersFn struct{}
+
+// Apply gets headers in the output of a task. If no argument is provided the output of the current task is returned.
+func (qf *OutputHeadersFn) Apply(vm *otto.Otto, call otto.FunctionCall) otto.Value {
+	var task, headerKey, lookup string
+	switch len(call.ArgumentList) {
+	case 0:
+		task = varCurrentTask
+		fallthrough
+	case 1:
+		headerKey = ""
+		fallthrough
+	case 2:
+		fallthrough
+	default:
+		// Set task if argument provided
+		if len(call.ArgumentList) > 0 {
+			task = fmt.Sprintf("\"%s\"", call.Argument(0).String())
+		}
+		// Set header key if argument provided
+		if len(call.ArgumentList) > 1 {
+			headerKey = call.Argument(1).String()
+		}
+
+		if len(headerKey) > 0 {
+			lookup = fmt.Sprintf("$.Tasks[%s].OutputHeaders[\"%s\"]", task, headerKey)
+		} else {
+			lookup = fmt.Sprintf("$.Tasks[%s].OutputHeaders", task)
+		}
+		result, err := vm.Eval(lookup)
+		if err != nil {
+			logrus.Warnf("Failed to lookup headers: %s", lookup)
 			return otto.UndefinedValue()
 		}
 		return result

@@ -47,12 +47,15 @@ func TestRuntime_InvokeWorkflow_InvalidSpec(t *testing.T) {
 func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
 	output := typedvalues.MustWrap("foo")
+	outputHeaders := typedvalues.MustWrap(typedvalues.MustWrap(map[string]interface{}{
+		"some-key": "some-value",
+	}))
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
 		entities := cache.List()
 		wfiID := entities[0].Id
-		err := invocationAPI.Complete(wfiID, output)
+		err := invocationAPI.Complete(wfiID, output, outputHeaders)
 		if err != nil {
 			panic(err)
 		}
@@ -60,6 +63,7 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
+	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
 	assert.True(t, wfi.GetStatus().Finished())
 	assert.True(t, wfi.GetStatus().Successful())
 }
@@ -70,12 +74,15 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	runtime.invocations = pollCache
 
 	output := typedvalues.MustWrap("foo")
+	outputHeaders := typedvalues.MustWrap(typedvalues.MustWrap(map[string]interface{}{
+		"some-key": "some-value",
+	}))
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
 		entities := c.List()
 		wfiID := entities[0].Id
-		err := invocationAPI.Complete(wfiID, output)
+		err := invocationAPI.Complete(wfiID, output, outputHeaders)
 		if err != nil {
 			panic(err)
 		}
@@ -87,6 +94,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
+	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
 	assert.True(t, wfi.GetStatus().Finished())
 	assert.True(t, wfi.GetStatus().Successful())
 }
@@ -137,12 +145,15 @@ func TestRuntime_Invoke(t *testing.T) {
 	spec.Inputs = types.Inputs{}
 	spec.Inputs[types.InputParent] = typedvalues.MustWrap("parentID")
 	output := typedvalues.MustWrap("foo")
+	outputHeaders := typedvalues.MustWrap(typedvalues.MustWrap(map[string]interface{}{
+		"some-key": "some-value",
+	}))
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
 		entities := cache.List()
 		wfiID := entities[0].Id
-		err := invocationAPI.Complete(wfiID, output)
+		err := invocationAPI.Complete(wfiID, output, outputHeaders)
 		if err != nil {
 			panic(err)
 		}
@@ -151,6 +162,7 @@ func TestRuntime_Invoke(t *testing.T) {
 	task, err := runtime.Invoke(spec)
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, task.GetOutput())
+	util.AssertProtoEqual(t, outputHeaders, task.GetOutputHeaders())
 }
 
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
