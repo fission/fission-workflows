@@ -36,6 +36,7 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 	fn := NewFunctionHTTP()
 	body := "body"
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
+		Task: &types.Task{},
 		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMethod: typedvalues.MustWrap(http.MethodPost),
 			HttpInputUrl:      typedvalues.MustWrap(ts.URL),

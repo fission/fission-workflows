@@ -55,7 +55,8 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 			},
 		},
 	}
-	cwf := GetTasks(workflow, invocation)
+	invocation.Spec.Workflow = workflow
+	cwf := GetTasks(invocation)
 
 	assert.Equal(t, 4, len(cwf))
 	assert.Equal(t, 2, len(cwf["bar"].Spec.Requires))

@@ -55,7 +55,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 
 	timeStart := time.Now()
 	defer fnenv.FnExecTime.WithLabelValues(Name).Observe(float64(time.Since(timeStart)))
-	fnID := spec.FnRef.ID
+	fnID := spec.GetTask().FnRef().GetID()
 	fn, ok := fe.fns[fnID]
 	if !ok {
 		return nil, fmt.Errorf("could not resolve internal function '%s'", fnID)

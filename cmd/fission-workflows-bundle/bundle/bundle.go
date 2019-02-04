@@ -245,7 +245,7 @@ func Run(ctx context.Context, opts *Options) error {
 
 		if opts.InvocationController {
 			log.Info("Using controller: invocation")
-			ctrls = append(ctrls, setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers))
+			ctrls = append(ctrls, setupInvocationController(invocationStore, es, runtimes, resolvers))
 		}
 
 		ctrl := controller.NewMetaController(ctrls...)
@@ -525,7 +525,7 @@ func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) 
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 
-func setupInvocationController(invocations *store.Invocations, workflows *store.Workflows, es fes.Backend,
+func setupInvocationController(invocations *store.Invocations, es fes.Backend,
 	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
@@ -533,7 +533,7 @@ func setupInvocationController(invocations *store.Invocations, workflows *store.
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
 	s := &scheduler.WorkflowScheduler{}
 	stateStore := expr.NewStore()
-	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore)
+	return wfictr.NewController(invocations, s, taskAPI, invocationAPI, stateStore)
 }
 
 func setupWorkflowController(store *store.Workflows, es fes.Backend,

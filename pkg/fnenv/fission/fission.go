@@ -63,13 +63,13 @@ func New(executor *executor.Client, controller *controller.Client, routerURL str
 // An error is returned only when error occurs outside of the runtime's control.
 func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOption) (*types.TaskInvocationStatus, error) {
 	cfg := fnenv.ParseInvokeOptions(opts)
-	ctxLog := log.WithField("fn", spec.FnRef)
+	fnRef := *spec.GetTask().FnRef()
+	ctxLog := log.WithField("fn", fnRef)
 	if err := validate.TaskInvocationSpec(spec); err != nil {
 		return nil, err
 	}
 	span, _ := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/fission")
 	defer span.Finish()
-	fnRef := *spec.FnRef
 	span.SetTag("fnref", fnRef.Format())
 
 	// Construct request and add body

@@ -31,8 +31,7 @@ func TestController_Lifecycle(t *testing.T) {
 		"mock": mockRuntime,
 	}, es, dynamicAPI)
 
-	ctr := NewController(store.NewInvocationStore(cache), store.NewWorkflowsStore(cache), s, taskAPI, wfiAPI,
-		expr.NewStore())
+	ctr := NewController(store.NewInvocationStore(cache), s, taskAPI, wfiAPI, expr.NewStore())
 
 	err := ctr.Init(context.TODO())
 	assert.NoError(t, err)

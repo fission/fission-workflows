@@ -34,6 +34,7 @@ var (
 	ErrNoWorkflow                   = errors.New("workflow id is required")
 	ErrNoID                         = errors.New("id is required")
 	ErrNoStatus                     = errors.New("status is required")
+	ErrWorkflowNotReady             = errors.New("workflow is not ready")
 )
 
 type Error struct {
@@ -241,7 +242,14 @@ func WorkflowInvocationSpec(spec *types.WorkflowInvocationSpec) error {
 		return errs.getOrNil()
 	}
 
-	if len(spec.WorkflowId) == 0 {
+	if spec.Workflow != nil {
+		wf := spec.GetWorkflow()
+		errs.append(WorkflowSpec(wf.GetSpec()))
+		if !wf.GetStatus().Ready() {
+			errs.append(ErrWorkflowNotReady)
+		}
+		// TODO further validate workflow status
+	} else if len(spec.WorkflowId) == 0 {
 		errs.append(ErrNoWorkflow)
 	}
 
@@ -260,11 +268,11 @@ func TaskInvocationSpec(spec *types.TaskInvocationSpec) error {
 		errs.append(ErrNoWorkflowInvocation)
 	}
 
-	if len(spec.TaskId) == 0 {
+	if len(spec.GetTask().ID()) == 0 {
 		errs.append(ErrNoTaskInvocation)
 	}
 
-	if spec.FnRef == nil {
+	if spec.GetTask().FnRef() == nil {
 		errs.append(ErrNoFnRef)
 	}
 	return errs.getOrNil()

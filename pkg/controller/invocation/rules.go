@@ -19,53 +19,23 @@ import (
 
 type EvalContext interface {
 	controller.EvalContext
-	Workflow() *types.Workflow
 	Invocation() *types.WorkflowInvocation
 }
 
 type WfiEvalContext struct {
 	controller.EvalContext
-	wf  *types.Workflow
 	wfi *types.WorkflowInvocation
 }
 
-func NewEvalContext(state *controller.EvalState, wf *types.Workflow, wfi *types.WorkflowInvocation) WfiEvalContext {
+func NewEvalContext(state *controller.EvalState, wfi *types.WorkflowInvocation) WfiEvalContext {
 	return WfiEvalContext{
 		EvalContext: controller.NewEvalContext(state),
-		wf:          wf,
 		wfi:         wfi,
 	}
 }
 
-func (ec WfiEvalContext) Workflow() *types.Workflow {
-	return ec.wf
-}
-
 func (ec WfiEvalContext) Invocation() *types.WorkflowInvocation {
 	return ec.wfi
-}
-
-type RuleWorkflowIsReady struct {
-	InvocationAPI *api.Invocation
-}
-
-func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Action {
-	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
-	if wf.GetStatus().GetStatus() == types.WorkflowStatus_DELETED {
-		return &ActionFail{
-			API:          wr.InvocationAPI,
-			InvocationID: ec.Invocation().ID(),
-			Err:          errors.New("workflow is deleted"),
-		}
-	}
-
-	// Check if workflow is still in progress.
-	if !wf.GetStatus().Ready() {
-		log.WithField("wf.status", wf.Status.Status).Error("Workflow is not ready yet.")
-		return &controller.ActionSkip{} // TODO backoff action
-	}
-	return nil
 }
 
 type RuleSchedule struct {
@@ -77,13 +47,9 @@ type RuleSchedule struct {
 
 func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
 	wfi := ec.Invocation()
 	// Request a execution plan from the Scheduler
-	schedule, err := sf.Scheduler.Evaluate(&scheduler.ScheduleRequest{
-		Invocation: wfi,
-		Workflow:   wf,
-	})
+	schedule, err := sf.Scheduler.Evaluate(wfi)
 	if err != nil {
 		return nil
 	}
@@ -110,7 +76,6 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
 			actions = append(actions, &ActionInvokeTask{
-				Wf:         wf,
 				ec:         ec.EvalState(),
 				Wfi:        wfi,
 				API:        sf.FunctionAPI,
@@ -130,10 +95,9 @@ type RuleCheckIfCompleted struct {
 
 func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
 	wfi := ec.Invocation()
 	// Check if the workflow invocation is complete
-	tasks := types.GetTasks(wf, wfi)
+	tasks := types.GetTasks(wfi)
 	var err error
 	finished := true
 	success := true
@@ -149,9 +113,10 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 	if finished {
 		var finalOutput *typedvalues.TypedValue
 		var finalOutputHeaders *typedvalues.TypedValue
-		if len(wf.Spec.OutputTask) != 0 {
-			finalOutput = controlflow.ResolveTaskOutput(wf.Spec.OutputTask, wfi)
-			finalOutputHeaders = controlflow.ResolveTaskOutputHeaders(wf.Spec.OutputTask, wfi)
+		outputTask := wfi.Workflow().GetSpec().GetOutputTask()
+		if len(outputTask) != 0 {
+			finalOutput = controlflow.ResolveTaskOutput(outputTask, wfi)
+			finalOutputHeaders = controlflow.ResolveTaskOutputHeaders(outputTask, wfi)
 		}
 
 		// TODO extract to action

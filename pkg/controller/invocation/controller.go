@@ -61,7 +61,6 @@ func init() {
 
 type Controller struct {
 	invocations   *store.Invocations
-	workflows     *store.Workflows
 	taskAPI       *api.Task
 	invocationAPI *api.Invocation
 	stateStore    *expr.Store
@@ -73,11 +72,10 @@ type Controller struct {
 	workerPool    *gopool.GoPool
 }
 
-func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.WorkflowScheduler,
+func NewController(invocations *store.Invocations, workflowScheduler *scheduler.WorkflowScheduler,
 	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
 		invocations:   invocations,
-		workflows:     workflows,
 		scheduler:     workflowScheduler,
 		taskAPI:       taskAPI,
 		invocationAPI: invocationAPI,
@@ -271,20 +269,10 @@ func (cr *Controller) Evaluate(invocationID string) {
 		return
 	}
 
-	// Fetch the workflow relevant to the invocation
-	wf, err := cr.workflows.GetWorkflow(wfi.GetSpec().GetWorkflowId())
-	// TODO move to rule
-	if err != nil && wf == nil {
-		log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
-			invocationID, err)
-		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
-		return
-	}
-
 	// Evaluate invocation
 	record := controller.NewEvalRecord() // TODO implement rulepath + cause
 
-	ec := NewEvalContext(evalState, wf, wfi)
+	ec := NewEvalContext(evalState, wfi)
 
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action
@@ -398,10 +386,6 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 			},
 
 			&RuleCheckIfCompleted{
-				InvocationAPI: ctr.invocationAPI,
-			},
-
-			&RuleWorkflowIsReady{
 				InvocationAPI: ctr.invocationAPI,
 			},
 

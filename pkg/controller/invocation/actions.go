@@ -67,7 +67,6 @@ func (a *ActionFail) Apply() error {
 // ActionInvokeTask invokes a function
 type ActionInvokeTask struct {
 	ec         *controller.EvalState
-	Wf         *types.Workflow
 	Wfi        *types.WorkflowInvocation
 	API        *api.Task
 	Task       *scheduler.InvokeTaskAction
@@ -81,7 +80,7 @@ func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
 func (a *ActionInvokeTask) logger() logrus.FieldLogger {
 	return logrus.WithFields(logrus.Fields{
 		"invocation": a.Wfi.ID(),
-		"workflow":   a.Wf.ID(),
+		"workflow":   a.Wfi.Workflow().ID(),
 		"task":       a.Task.Id,
 	})
 }
@@ -97,7 +96,7 @@ func (a *ActionInvokeTask) Apply() error {
 	defer span.Finish()
 
 	// Find task
-	task, ok := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
+	task, ok := types.GetTask(a.Wfi, a.Task.Id)
 	if !ok {
 		err := fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
 		span.LogKV("error", err)
@@ -148,12 +147,11 @@ func (a *ActionInvokeTask) Apply() error {
 
 	// Invoke task
 	spec := &types.TaskInvocationSpec{
-		FnRef:        task.Status.FnRef,
-		TaskId:       a.Task.Id,
+		Task:         task,
 		InvocationId: a.Wfi.ID(),
 		Inputs:       inputs,
 	}
-	log.Infof("Executing function: %v", spec.GetFnRef().Format())
+	log.Infof("Executing function: %v", spec.GetTask().FnRef())
 	if logrus.GetLevel() == logrus.DebugLevel {
 		i, err := typedvalues.UnwrapMapTypedValue(spec.GetInputs())
 		if err != nil {
@@ -188,7 +186,7 @@ func (a *ActionInvokeTask) Apply() error {
 }
 
 func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
-	task, _ := types.GetTask(a.Wf, a.Wfi, a.Task.Id)
+	task, _ := types.GetTask(a.Wfi, a.Task.Id)
 	if ti.GetStatus().Successful() {
 		output := task.GetSpec().GetOutput()
 		if output != nil {
@@ -229,7 +227,7 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 	}
 
 	// Setup the scope for the expressions
-	scope, err := expr.NewScope(parentScope, a.Wf, a.Wfi)
+	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
 	}
@@ -258,7 +256,7 @@ func (a *ActionInvokeTask) resolveOutputHeaders(ti *types.TaskInvocation, output
 	}
 
 	// Setup the scope for the expressions
-	scope, err := expr.NewScope(parentScope, a.Wf, a.Wfi)
+	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
 	}
@@ -287,7 +285,7 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 	}
 
 	// Setup the scope for the expressions
-	scope, err := expr.NewScope(parentScope, a.Wf, a.Wfi)
+	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
 	}

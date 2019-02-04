@@ -47,7 +47,7 @@ func (ti *TaskInvocation) ApplyEvent(event *fes.Event) error {
 	case *events.TaskStarted:
 		ti.TaskInvocation = &types.TaskInvocation{
 			Metadata: &types.ObjectMetadata{
-				Id:         m.GetSpec().TaskId,
+				Id:         m.GetSpec().GetTask().ID(),
 				CreatedAt:  event.Timestamp,
 				Generation: 1,
 			},

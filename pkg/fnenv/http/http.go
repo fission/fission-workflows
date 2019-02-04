@@ -58,7 +58,7 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 	req := (&http.Request{}).WithContext(cfg.Ctx)
 
 	// Parse URL
-	fnref := spec.FnRef
+	fnref := spec.GetTask().FnRef()
 	fnUrl, err := url.Parse(fnref.Format())
 	if err != nil {
 		return nil, err

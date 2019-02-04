@@ -26,6 +26,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/golang/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
@@ -73,17 +74,27 @@ func (rt *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOp
 	}
 
 	// Note: currently context is not supported in the runtime interface, so we use a background context.
-	wfi, err := rt.InvokeWorkflow(wfSpec, opts...)
+	wfi, err := rt.InvokeWorkflowSync(wfSpec, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return wfi.Status.ToTaskStatus(), nil
 }
 
-func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fnenv.InvokeOption) (*types.WorkflowInvocation, error) {
+func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fnenv.InvokeOption) (string, error) {
 	cfg := fnenv.ParseInvokeOptions(opts)
 	if err := validate.WorkflowInvocationSpec(spec); err != nil {
-		return nil, err
+		return "", err
+	}
+
+	// Retrieve the workflow if it was not included in the invocation itself
+	if spec.Workflow == nil {
+		wf, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
+		if err != nil {
+			return "", err
+		}
+		// TODO ensure that cloning is not necessary
+		spec.Workflow = proto.Clone(wf).(*types.Workflow)
 	}
 
 	span, ctx := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/workflows")
@@ -92,14 +103,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	span.SetTag("parent", spec.GetParentId())
 	span.SetTag("internal", len(spec.GetParentId()) != 0)
 
-	// Check if the workflow required by the invocation exists
-	if rt.workflows != nil {
-		wf, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
-		if err != nil {
-			return nil, err
-		}
-		span.SetTag("workflow.name", wf.GetMetadata().GetName())
-	}
+	span.SetTag("workflow.name", spec.GetWorkflow().GetMetadata().GetName())
 
 	if logrus.GetLevel() == logrus.DebugLevel {
 		var inputs interface{}
@@ -117,15 +121,26 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	defer fnenv.FnActive.WithLabelValues(Name).Dec()
 	defer fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	wfiID, err := rt.api.Invoke(spec, api.WithContext(ctx))
+	// Asynchronously invoke the workflow
+	md, err := rt.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		logrus.WithField("fnenv", Name).Errorf("Failed to invoke workflow: %v", err)
 		span.LogKV("error", fmt.Errorf("failed to invoke workflow: %v", err))
+		return "", err
+	}
+	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", md)
+	span.SetTag("invocation", md)
+	return md, nil
+}
+
+func (rt *Runtime) InvokeWorkflowSync(spec *types.WorkflowInvocationSpec, opts ...fnenv.InvokeOption) (*types.WorkflowInvocation, error) {
+	cfg := fnenv.ParseInvokeOptions(opts)
+	ctx := cfg.Ctx
+	wfiID, err := rt.InvokeWorkflow(spec, opts...)
+	if err != nil {
 		return nil, err
 	}
-	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", wfiID)
-	span.SetTag("invocation", wfiID)
-
+	// Subscribe to a termination event of the invocation.
 	timedCtx, cancelFn := context.WithTimeout(ctx, rt.timeout)
 	defer cancelFn()
 	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
@@ -158,7 +173,9 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 			} else {
 				logrus.Errorf("Failed to cancel invocation: %v", err)
 			}
-			span.LogKV("error", err)
+			if span := opentracing.SpanFromContext(ctx); span != nil {
+				span.LogKV("error", err)
+			}
 			return nil, err
 		case <-sub.Ch:
 		}

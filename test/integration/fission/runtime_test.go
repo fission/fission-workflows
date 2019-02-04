@@ -103,7 +103,12 @@ func TestFnenvInvoke(t *testing.T) {
 	headerKey := "stub-header-key"
 
 	result, err := fnenv.Invoke(&types.TaskInvocationSpec{
-		TaskId:       "fooTask",
+		Task: &types.Task{
+			Metadata: types.NewObjectMetadata("fooTask"),
+			Status: &types.TaskStatus{
+				FnRef: &fnref,
+			},
+		},
 		InvocationId: "fooInvocation",
 		Inputs: types.Inputs{
 			"default": typedvalues.MustWrap(body),
@@ -111,7 +116,6 @@ func TestFnenvInvoke(t *testing.T) {
 				headerKey: headerVal,
 			}),
 		},
-		FnRef: &fnref,
 	})
 	output := typedvalues.MustUnwrap(result.Output)
 	assert.NoError(t, err)

@@ -14,8 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO move events here
-
 // Task contains the API functionality for controlling the lifecycle of individual tasks.
 // This includes starting, stopping and completing tasks.
 type Task struct {
@@ -37,14 +35,15 @@ func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dyn
 // Currently it executes the underlying function synchronously and manage the execution until completion.
 // TODO make asynchronous
 func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*types.TaskInvocation, error) {
-	log := logrus.WithField("fn", spec.FnRef).WithField("wi", spec.InvocationId).WithField("task", spec.TaskId)
 	cfg := parseCallOptions(opts)
 	err := validate.TaskInvocationSpec(spec)
 	if err != nil {
 		return nil, err
 	}
 
-	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	taskID := spec.GetTask().ID() // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	log := logrus.WithField("fn", spec.GetTask().ID()).WithField("wi", spec.InvocationId).
+		WithField("task", taskID)
 	task := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        taskID,
@@ -63,7 +62,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 
 	// TODO propagate context
-	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx))
+	fnResult, err := ap.runtime[spec.GetTask().FnRef().GetRuntime()].Invoke(spec, fnenv.WithContext(cfg.ctx))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
 	}

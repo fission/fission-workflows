@@ -74,7 +74,17 @@ func (fn *FunctionHTTP) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 		return nil, err
 	}
 	clonedSpec := proto.Clone(spec).(*types.TaskInvocationSpec)
-	clonedSpec.FnRef = &fnref
+	t := clonedSpec.GetTask()
+	if t == nil {
+		t = &types.Task{}
+		clonedSpec.Task = t
+	}
+	ts := t.GetStatus()
+	if ts == nil {
+		ts = &types.TaskStatus{}
+		t.Status = ts
+	}
+	ts.FnRef = &fnref
 
 	result, err := fn.runtime.Invoke(clonedSpec)
 	if err != nil {

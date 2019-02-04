@@ -7,31 +7,27 @@ import (
 
 // GetTasks gets all tasks in a workflow. This includes the dynamic tasks added during
 // the invocation.
-func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
+func GetTasks(wfi *WorkflowInvocation) map[string]*Task {
 	tasks := map[string]*Task{}
-	if wf != nil {
-		for _, task := range wf.Tasks() {
-			tasks[task.ID()] = task
-		}
+	for _, task := range wfi.Workflow().Tasks() {
+		tasks[task.ID()] = task
 	}
-	if wfi != nil {
-		for id := range wfi.GetStatus().GetDynamicTasks() {
-			task, _ := GetTask(wf, wfi, id)
-			tasks[task.ID()] = task
-		}
+	for id := range wfi.GetStatus().GetDynamicTasks() {
+		task, _ := GetTask(wfi, id)
+		tasks[task.ID()] = task
 	}
 	return tasks
 }
 
-func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskInstance {
+func GetTaskContainers(wfi *WorkflowInvocation) map[string]*TaskInstance {
 	tasks := map[string]*TaskInstance{}
-	for _, task := range wf.Tasks() {
+	for _, task := range wfi.Workflow().Tasks() {
 		id := task.ID()
 		i, ok := wfi.TaskInvocation(id)
 		if !ok {
 			i = NewTaskInvocation(id)
 		}
-		tasks[task.ID()] = &TaskInstance{
+		tasks[id] = &TaskInstance{
 			Task:       task,
 			Invocation: i,
 		}
@@ -42,7 +38,7 @@ func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskIn
 			if !ok {
 				i = NewTaskInvocation(id)
 			}
-			task, _ := GetTask(wf, wfi, id)
+			task, _ := GetTask(wfi, id)
 			tasks[task.ID()] = &TaskInstance{
 				Task:       task,
 				Invocation: i,
@@ -53,19 +49,19 @@ func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskIn
 }
 
 // GetTask gets the task associated with the id. Both static and dynamic tasks are searched.
-func GetTask(wf *Workflow, wfi *WorkflowInvocation, id string) (*Task, bool) {
+func GetTask(wfi *WorkflowInvocation, id string) (*Task, bool) {
 	task := wfi.Status.DynamicTasks[id]
 	if task != nil {
 		return task, true
 	}
 
-	spec, ok := GetTaskSpec(wf, wfi, id)
+	spec, ok := GetTaskSpec(wfi, id)
 	if !ok {
 		return nil, false
 	}
 
 	// Find TaskStatus
-	status, ok := wf.Status.Tasks[id]
+	status, ok := wfi.Workflow().Status.Tasks[id]
 	if !ok {
 		status = &TaskStatus{
 			UpdatedAt: ptypes.TimestampNow(),
@@ -76,15 +72,16 @@ func GetTask(wf *Workflow, wfi *WorkflowInvocation, id string) (*Task, bool) {
 		Metadata: &ObjectMetadata{
 			Id: id,
 			// TODO createdAt is not true for dynamic tasks
-			CreatedAt: wf.Metadata.CreatedAt,
+			CreatedAt: wfi.Workflow().GetMetadata().GetCreatedAt(),
 		},
 		Spec:   spec,
 		Status: status,
 	}, true
 }
 
-func GetTaskSpec(wf *Workflow, wfi *WorkflowInvocation, id string) (*TaskSpec, bool) {
+func GetTaskSpec(wfi *WorkflowInvocation, id string) (*TaskSpec, bool) {
 	// Find TaskSpec and overlay if needed
+	wf := wfi.Workflow()
 	spec, ok := wf.Spec.Tasks[id]
 	var dtask *Task
 	var dok bool
@@ -221,10 +218,9 @@ type NamedTypedValue struct {
 
 type Inputs map[string]*typedvalues.TypedValue
 
-func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *TaskInvocationSpec {
+func NewTaskInvocationSpec(invocationId string, task *Task) *TaskInvocationSpec {
 	return &TaskInvocationSpec{
-		FnRef:        &fnRef,
-		TaskId:       taskId,
+		Task:         task,
 		InvocationId: invocationId,
 	}
 }

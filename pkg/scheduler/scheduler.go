@@ -35,10 +35,10 @@ func init() {
 type WorkflowScheduler struct {
 }
 
-func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
+func (ws *WorkflowScheduler) Evaluate(wfi *types.WorkflowInvocation) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
-		"invocation": request.Invocation.ID(),
-		"workflow":   request.Workflow.ID(),
+		"invocation": wfi.ID(),
+		"workflow":   wfi.Workflow().ID(),
 	})
 	timeStart := time.Now()
 	defer func() {
@@ -47,13 +47,13 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}()
 
 	schedule := &Schedule{
-		InvocationId: request.Invocation.Metadata.Id,
+		InvocationId: wfi.ID(),
 		CreatedAt:    ptypes.TimestampNow(),
 		Actions:      []*Action{},
 	}
 
 	ctxLog.Debug("Scheduler evaluating...")
-	cwf := types.GetTaskContainers(request.Workflow, request.Invocation)
+	cwf := types.GetTaskContainers(wfi)
 
 	// Fill open tasks
 	openTasks := map[string]*types.TaskInstance{}

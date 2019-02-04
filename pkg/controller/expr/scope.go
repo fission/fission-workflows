@@ -143,9 +143,9 @@ func (s *TaskScope) DeepCopy() DeepCopier {
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
-func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error) {
+func NewScope(base *Scope, wfi *types.WorkflowInvocation) (*Scope, error) {
 	updated := &Scope{}
-	if wf != nil {
+	if wf := wfi.Workflow(); wf != nil {
 		updated.Workflow = formatWorkflow(wf)
 	}
 	if wfi != nil {
@@ -159,7 +159,7 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 		}
 	}
 
-	for taskId, task := range types.GetTasks(wf, wfi) {
+	for taskId, task := range types.GetTasks(wfi) {
 		if updated.Tasks == nil {
 			updated.Tasks = map[string]*TaskScope{}
 		}

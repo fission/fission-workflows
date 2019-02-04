@@ -84,6 +84,8 @@ message WorkflowInvocationSpec {
     // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
     string parentId = 3;
     //int32 depth = 4; // aka size of the stack
+
+    Workflow workflow = 4;
 }
 
 message WorkflowInvocationStatus {
@@ -180,17 +182,15 @@ message TaskInvocation {
 }
 
 message TaskInvocationSpec {
-    // Id of the task to be invoked (no ambiguatity at this point
-    FnRef fnRef = 1;
-
-    // TaskId is the id of the task within the workflow
-    string taskId = 2;
 
     // Inputs contain all inputs to the task invocation
     map<string, TypedValue> inputs = 3;
 
-    //
+    // InvocationID points to the owner of this task
     string invocationId = 4;
+
+    // Task is the task of the invocation
+    Task task = 5;
 }
 
 message TaskInvocationStatus {

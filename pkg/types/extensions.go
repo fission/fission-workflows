@@ -49,6 +49,10 @@ func (m *WorkflowInvocation) ID() string {
 	return m.GetMetadata().GetId()
 }
 
+func (m *WorkflowInvocation) Workflow() *Workflow {
+	return m.GetSpec().GetWorkflow()
+}
+
 func (m *WorkflowInvocation) TaskInvocation(id string) (*TaskInvocation, bool) {
 	ti, ok := m.Status.Tasks[id]
 	return ti, ok
@@ -113,9 +117,13 @@ func (m *TaskInvocation) ID() string {
 
 func (m *TaskInvocationSpec) ToWorkflowSpec() *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
-		WorkflowId: m.FnRef.ID,
+		WorkflowId: m.GetTask().FnRef().GetID(),
 		Inputs:     m.Inputs,
 	}
+}
+
+func (m *TaskInvocationSpec) FnRef() *FnRef {
+	return m.GetTask().FnRef()
 }
 
 //
@@ -141,6 +149,10 @@ func (ti TaskInvocationStatus) Successful() bool {
 
 func (m *Task) ID() string {
 	return m.GetMetadata().GetId()
+}
+
+func (m *Task) FnRef() *FnRef {
+	return m.GetStatus().GetFnRef()
 }
 
 //

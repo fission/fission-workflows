@@ -11,37 +11,7 @@ import (
 )
 
 func makeTestScope() *Scope {
-	scope, _ := NewScope(nil, &types.Workflow{
-		Metadata: &types.ObjectMetadata{
-			Id:        "testWorkflow",
-			CreatedAt: ptypes.TimestampNow(),
-		},
-		Status: &types.WorkflowStatus{
-			Status:    types.WorkflowStatus_READY,
-			UpdatedAt: ptypes.TimestampNow(),
-			Tasks: map[string]*types.TaskStatus{
-				"TaskA": {
-					FnRef: &types.FnRef{
-						Runtime: "fission",
-						ID:      "resolvedFissionFunction",
-					},
-				},
-			},
-		},
-		Spec: &types.WorkflowSpec{
-			ApiVersion: "1",
-			OutputTask: "TaskA",
-			Tasks: map[string]*types.TaskSpec{
-				"TaskA": {
-					FunctionRef: "fissionFunction",
-					Inputs: map[string]*typedvalues.TypedValue{
-						types.InputMain: typedvalues.MustWrap("input-default"),
-						"otherInput":    typedvalues.MustWrap("input-otherInput"),
-					},
-				},
-			},
-		},
-	}, &types.WorkflowInvocation{
+	scope, _ := NewScope(nil, &types.WorkflowInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        "testWorkflowInvocation",
 			CreatedAt: ptypes.TimestampNow(),
@@ -51,6 +21,37 @@ func makeTestScope() *Scope {
 			Inputs: map[string]*typedvalues.TypedValue{
 				types.InputMain: typedvalues.MustWrap("body"),
 				"headers":       typedvalues.MustWrap("http-headers"),
+			},
+			Workflow: &types.Workflow{
+				Metadata: &types.ObjectMetadata{
+					Id:        "testWorkflow",
+					CreatedAt: ptypes.TimestampNow(),
+				},
+				Status: &types.WorkflowStatus{
+					Status:    types.WorkflowStatus_READY,
+					UpdatedAt: ptypes.TimestampNow(),
+					Tasks: map[string]*types.TaskStatus{
+						"TaskA": {
+							FnRef: &types.FnRef{
+								Runtime: "fission",
+								ID:      "resolvedFissionFunction",
+							},
+						},
+					},
+				},
+				Spec: &types.WorkflowSpec{
+					ApiVersion: "1",
+					OutputTask: "TaskA",
+					Tasks: map[string]*types.TaskSpec{
+						"TaskA": {
+							FunctionRef: "fissionFunction",
+							Inputs: map[string]*typedvalues.TypedValue{
+								types.InputMain: typedvalues.MustWrap("input-default"),
+								"otherInput":    typedvalues.MustWrap("input-otherInput"),
+							},
+						},
+					},
+				},
 			},
 		},
 		Status: &types.WorkflowInvocationStatus{

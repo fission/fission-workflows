@@ -52,7 +52,7 @@ func (fn *FunctionNoop) Invoke(spec *types.TaskInvocationSpec) (*typedvalues.Typ
 	}
 	logrus.WithFields(logrus.Fields{
 		"invocation": spec.InvocationId,
-		"task":       spec.TaskId,
+		"task":       spec.GetTask().ID(),
 	}).Infof("[internal://%s] %v", Noop,
 		typedvalues.MustUnwrap(output))
 	return output, nil
