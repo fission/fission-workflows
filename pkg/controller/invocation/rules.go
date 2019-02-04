@@ -46,13 +46,22 @@ func (ec WfiEvalContext) Invocation() *types.WorkflowInvocation {
 }
 
 type RuleWorkflowIsReady struct {
+	InvocationAPI *api.Invocation
 }
 
 func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
 	wf := ec.Workflow()
-	// Check if workflow is in the right state to use.
-	if !wf.Status.Ready() {
+	if wf.GetStatus().GetStatus() == types.WorkflowStatus_DELETED {
+		return &ActionFail{
+			API:          wr.InvocationAPI,
+			InvocationID: ec.Invocation().ID(),
+			Err:          errors.New("workflow is deleted"),
+		}
+	}
+
+	// Check if workflow is still in progress.
+	if !wf.GetStatus().Ready() {
 		log.WithField("wf.status", wf.Status.Status).Error("Workflow is not ready yet.")
 		return &controller.ActionSkip{} // TODO backoff action
 	}

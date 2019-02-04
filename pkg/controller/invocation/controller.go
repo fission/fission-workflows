@@ -401,7 +401,9 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 				InvocationAPI: ctr.invocationAPI,
 			},
 
-			&RuleWorkflowIsReady{},
+			&RuleWorkflowIsReady{
+				InvocationAPI: ctr.invocationAPI,
+			},
 
 			&RuleSchedule{
 				Scheduler:     ctr.scheduler,
