@@ -23,6 +23,7 @@ spec:
       containers:
       - name: workflows
         image: "{{ .Values.bundleImage }}:{{.Values.tag}}"
+        imagePullPolicy: {{ .Values.pullPolicy }}
         command: ["/fission-workflows-bundle"]
         args: [
           {{- if eq .Values.eventstore.type "nats" }}
