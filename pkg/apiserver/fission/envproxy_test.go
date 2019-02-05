@@ -47,6 +47,10 @@ func (m *mockWorkflowClient) Validate(ctx context.Context, in *types.WorkflowSpe
 	return &empty.Empty{}, args.Error(1)
 }
 
+func (m *mockWorkflowClient) Events(ctx context.Context, in *types.ObjectMetadata, opts ...grpc.CallOption) (*apiserver.ObjectEvents, error) {
+	panic("implement me")
+}
+
 func TestProxy_Specialize(t *testing.T) {
 	workflowServer := &mockWorkflowClient{}
 	workflowServer.On("Create", mock.Anything).Return("mockID", nil)

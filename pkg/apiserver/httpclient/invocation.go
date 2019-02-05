@@ -54,3 +54,9 @@ func (api *InvocationAPI) Get(ctx context.Context, id string) (*types.WorkflowIn
 func (api *InvocationAPI) Validate(ctx context.Context, spec *types.WorkflowInvocationSpec) error {
 	return callWithJSON(ctx, http.MethodPost, api.formatURL("/invocation/validate"), spec, nil)
 }
+
+func (api *InvocationAPI) Events(ctx context.Context, id string) (*apiserver.ObjectEvents, error) {
+	result := &apiserver.ObjectEvents{}
+	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/invocation/"+id+"/events"), nil, result)
+	return result, err
+}

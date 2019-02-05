@@ -31,7 +31,7 @@ var cmdParse = cli.Command{
 
 		parserType := ctx.String("type")
 		if parserType != "" && !parse.Supports(parserType) {
-			fmt.Printf("Unknown parser '%s'; will try all parsers.", parserType)
+			log.Fatalf("Unknown parser '%s'", parserType)
 		}
 
 		for _, path := range ctx.Args() {
@@ -40,14 +40,15 @@ var cmdParse = cli.Command{
 
 			f, err := os.Open(fnName)
 			if err != nil {
+				f.Close()
 				panic(err)
 			}
 
 			wfSpec, err := parse.ParseWith(f, parserType)
+			f.Close()
 			if err != nil {
 				panic(err)
 			}
-
 			fmt.Println(toFormattedJSON(wfSpec))
 		}
 		return nil

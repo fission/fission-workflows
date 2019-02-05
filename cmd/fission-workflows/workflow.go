@@ -5,7 +5,12 @@ import (
 	"os"
 	"sort"
 
+	"github.com/blang/semver"
+	"github.com/fission/fission-workflows/pkg/parse"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -14,6 +19,91 @@ var cmdWorkflow = cli.Command{
 	Aliases: []string{"wf", "workflows"},
 	Usage:   "Workflow-related commands",
 	Subcommands: []cli.Command{
+		{
+			Name:  "create",
+			Usage: "Define a workflow within the workflow engine.",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "src",
+					Usage: "Path to the YAML or Protobuf workflow definition file",
+				},
+				cli.StringFlag{
+					Name:  "name",
+					Usage: "Name of the workflow",
+				},
+			},
+			Action: commandContext(func(ctx Context) error {
+				client := getClient(ctx)
+
+				// Fetch and parse the workflow
+				srcPath := ctx.String("src")
+				if len(srcPath) == 0 {
+					logrus.Fatalf("Requires workflow definition file. Use `--src <file>`.")
+				}
+				fd, err := os.Open(srcPath)
+				if err != nil {
+					logrus.Fatalf("Failed to open workflow definition file: %v", err)
+				}
+				spec, err := parse.Parse(fd)
+				if err != nil {
+					logrus.Fatal(err)
+				}
+				spec.Name = ctx.String("name")
+
+				// Create workflow
+				md, err := client.Workflow.Create(ctx, spec)
+				if err != nil {
+					logrus.Fatalf("Failed to create workflow: %v", err)
+				}
+				fmt.Println(md.Id)
+				return nil
+			}),
+		},
+		{
+			Name:  "delete",
+			Usage: "Delete workflow within the workflow engine.",
+			Action: commandContext(func(ctx Context) error {
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows delete [workflow-id...]")
+				}
+				client := getClient(ctx)
+				for _, wfID := range ctx.Args() {
+					if err := client.Workflow.Delete(ctx, wfID); err != nil {
+						logrus.Fatalf("Failed to delete %s: %v", wfID, err)
+					}
+					fmt.Println(wfID)
+				}
+				return nil
+			}),
+		},
+		{
+			Name:  "events",
+			Usage: "events <workflow-id>",
+			Action: commandContext(func(ctx Context) error {
+				ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), true)
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows workflow events <workflow-id>")
+				}
+				client := getClient(ctx)
+				wfiID := ctx.Args().First()
+
+				events, err := client.Workflow.Events(ctx, wfiID)
+				if err != nil {
+					logrus.Fatalf("Failed to retrieve events for %s: %v", wfiID, err)
+				}
+
+				for _, event := range events.GetEvents() {
+					err := (&jsonpb.Marshaler{
+						Indent: "	",
+					}).Marshal(os.Stdout, event)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				return nil
+			}),
+		},
 		{
 			Name:  "get",
 			Usage: "get <Workflow-id> <task-id>",
@@ -35,13 +125,13 @@ var cmdWorkflow = cli.Command{
 						if err != nil {
 							panic(err)
 						}
-						updated := wf.Status.UpdatedAt.String()
-						created := wf.Metadata.CreatedAt.String()
+						updated, _ := ptypes.Timestamp(wf.Status.UpdatedAt)
+						created, _ := ptypes.Timestamp(wf.Metadata.CreatedAt)
 
-						rows = append(rows, []string{wfID, wf.Spec.Name, string(wf.Status.Status),
-							created, updated})
+						rows = append(rows, []string{wfID, wf.Spec.Name, wf.Status.Status.String(),
+							created.String(), updated.String()})
 					}
-					table(os.Stdout, []string{"id", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
+					table(os.Stdout, []string{"ID", "NAME", "STATUS", "CREATED", "UPDATED"}, rows)
 				case 1:
 					// Get Workflow
 					wfID := ctx.Args().Get(0)

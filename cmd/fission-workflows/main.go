@@ -39,9 +39,10 @@ func main() {
 			Usage:  "The path to prepend each of the commands",
 		},
 		cli.IntFlag{
-			Name:  "verbosity",
-			Value: 1,
-			Usage: "CLI verbosity (0 is quiet, 1 is the default, 2 is verbose.)",
+			Name:   "verbosity",
+			Value:  1,
+			Usage:  "CLI verbosity (0 is quiet, 1 is the default, 2 is verbose.)",
+			EnvVar: "FISSION_VERBOSITY",
 		},
 		cli.BoolFlag{
 			Hidden: true,
@@ -50,13 +51,13 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
+		cmdInvoke,
 		cmdConfig,
 		cmdStatus,
 		cmdParse,
 		cmdWorkflow,
 		cmdInvocation,
 		cmdValidate,
-		cmdAdmin,
 		cmdVersion,
 	}
 	app.Action = func(ctx *cli.Context) error {

@@ -82,6 +82,10 @@ import:
   version: v1.2.2
 - package: github.com/imdario/mergo
   version: v0.3.6
+- package: github.com/fatih/color
+  version: v1.7.0
+- package: github.com/blang/semver
+  version: ~3.5.1
 testImport:
 - package: gopkg.in/ory-am/dockertest.v3
   version: v3.3.1

@@ -8,11 +8,14 @@ import (
 	"sort"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -128,19 +131,46 @@ var cmdInvocation = cli.Command{
 			}),
 		},
 		{
+			Name:  "events",
+			Usage: "events <invocation-id>",
+			Action: commandContext(func(ctx Context) error {
+				ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), true)
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows invocation events <invocation-id>")
+				}
+				client := getClient(ctx)
+				wfiID := ctx.Args().First()
+
+				events, err := client.Invocation.Events(ctx, wfiID)
+				if err != nil {
+					logrus.Fatalf("Failed to retrieve events for %s: %v", wfiID, err)
+				}
+
+				for _, event := range events.GetEvents() {
+					err := (&jsonpb.Marshaler{
+						Indent: "	",
+					}).Marshal(os.Stdout, event)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				return nil
+			}),
+		},
+		{
 			Name:  "status",
 			Usage: "status <Workflow-Invocation-id> ",
 			Action: commandContext(func(ctx Context) error {
-				if ctx.NArg() < 1 {
-					fmt.Println("Need workflow invocation id")
-					return nil
+				if !ctx.Args().Present() {
+					logrus.Fatal("Usage: fission-workflows invocation status <invocation-id>")
 				}
 				client := getClient(ctx)
-				wfiID := ctx.Args().Get(0)
+				wfiID := ctx.Args().First()
 
 				wfi, err := client.Invocation.Get(ctx, wfiID)
 				if err != nil {
-					panic(err)
+					logrus.Fatalf("Failed to retrieve status for %s: %v", wfiID, err)
 				}
 
 				wf, err := client.Workflow.Get(ctx, wfi.Spec.WorkflowId)

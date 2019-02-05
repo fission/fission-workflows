@@ -1,13 +1,18 @@
 package apiserver
 
 import (
+	"fmt"
+	"sort"
+
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/store"
+	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
-	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
+	workflowFnenv "github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -18,15 +23,17 @@ type Invocation struct {
 	api         *api.Invocation
 	invocations *store.Invocations
 	workflows   *store.Workflows
-	fnenv       *workflows.Runtime
+	fnenv       *workflowFnenv.Runtime
+	backend     fes.Backend
 }
 
-func NewInvocation(api *api.Invocation, invocations *store.Invocations, workflows2 *store.Workflows) WorkflowInvocationAPIServer {
+func NewInvocation(api *api.Invocation, invocations *store.Invocations, workflows *store.Workflows, backend fes.Backend) WorkflowInvocationAPIServer {
 	return &Invocation{
 		api:         api,
 		invocations: invocations,
-		workflows:   workflows2,
-		fnenv:       workflows.NewRuntime(api, invocations, workflows2),
+		workflows:   workflows,
+		fnenv:       workflowFnenv.NewRuntime(api, invocations, workflows),
+		backend:     backend,
 	}
 }
 
@@ -117,6 +124,47 @@ func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.
 		return nil, err
 	}
 	return &empty.Empty{}, nil
+}
+
+func (gi *Invocation) Events(ctx context.Context, md *types.ObjectMetadata) (*ObjectEvents, error) {
+	events, err := gi.backend.Get(fes.Aggregate{
+		Id:   md.Id,
+		Type: aggregates.TypeWorkflowInvocation,
+	})
+	if err != nil {
+		return nil, toErrorStatus(err)
+	}
+
+	// TODO this should not be this cumbersome
+	wi, err := gi.invocations.GetInvocation(md.Id)
+	if err != nil {
+		return nil, toErrorStatus(err)
+	}
+
+	// Fold task events into invocation events
+	for _, task := range wi.GetStatus().GetTasks() {
+		taskEvents, err := gi.taskEvents(task.ID())
+		if err != nil {
+			return nil, toErrorStatus(fmt.Errorf("failed to fetch task events: %v", err))
+		}
+		events = append(events, taskEvents...)
+	}
+
+	sort.SliceStable(events, func(i, j int) bool {
+		return util.CmpProtoTimestamps(events[i].GetTimestamp(), events[j].GetTimestamp())
+	})
+
+	return &ObjectEvents{
+		Metadata: md,
+		Events:   events,
+	}, nil
+}
+
+func (gi *Invocation) taskEvents(taskRunID string) ([]*fes.Event, error) {
+	return gi.backend.Get(fes.Aggregate{
+		Id:   taskRunID,
+		Type: aggregates.TypeTaskInvocation,
+	})
 }
 
 func contains(haystack []string, needle string) bool {
