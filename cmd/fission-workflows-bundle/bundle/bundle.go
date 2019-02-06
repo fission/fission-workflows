@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
@@ -103,6 +104,7 @@ type Options struct {
 	Metrics              bool
 	Debug                bool
 	FissionProxy         bool
+	CheckFnenvStatus     bool
 }
 
 type FissionOptions struct {
@@ -231,6 +233,35 @@ func Run(ctx context.Context, opts *Options) error {
 		fissionFnenv := setupFissionFunctionRuntime(opts.Fission)
 		runtimes["fission"] = fissionFnenv
 		resolvers["fission"] = fissionFnenv
+	}
+
+	// Pre-flight: check if function runtimes are reachable
+	if opts.CheckFnenvStatus {
+		ctx, cancelFn := context.WithTimeout(context.TODO(), 30*time.Second)
+		wg := &sync.WaitGroup{}
+		wg.Add(len(resolvers) + len(runtimes))
+		for _, resolver := range resolvers {
+			if p, ok := resolver.(fnenv.Pinger); ok {
+				go func() {
+					if err := p.Ping(ctx); err != nil {
+						log.Fatalf("Could not reach function resolver %T: %v", resolver, err)
+					}
+				}()
+			}
+			wg.Done()
+		}
+		for _, runtime := range runtimes {
+			if p, ok := runtime.(fnenv.Pinger); ok {
+				go func() {
+					if err := p.Ping(ctx); err != nil {
+						log.Fatalf("Could not reach function runtime %T: %v", runtime, err)
+					}
+				}()
+			}
+			wg.Done()
+		}
+		wg.Wait()
+		cancelFn()
 	}
 
 	//

@@ -30,21 +30,19 @@ const fissionIDsCacheSize = 1E4
 // Proxy between Fission and Workflows to ensure that invocations comply with Fission function interface. This
 // ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
-	invocationServer apiserver.WorkflowInvocationAPIClient
-	workflowServer   apiserver.WorkflowAPIClient
-	fissionIds       *lru.Cache // map[string]bool
+	client     *apiserver.Client
+	fissionIds *lru.Cache // map[string]bool
 }
 
 // NewEnvironmentProxyServer creates a proxy server to adheres to the Fission Environment specification.
-func NewEnvironmentProxyServer(wfiSrv apiserver.WorkflowInvocationAPIClient, wfSrv apiserver.WorkflowAPIClient) *Proxy {
+func NewEnvironmentProxyServer(client *apiserver.Client) *Proxy {
 	cache, err := lru.New(fissionIDsCacheSize)
 	if err != nil {
 		panic(err)
 	}
 	return &Proxy{
-		invocationServer: wfiSrv,
-		workflowServer:   wfSrv,
-		fissionIds:       cache,
+		client:     client,
+		fissionIds: cache,
 	}
 }
 
@@ -115,7 +113,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		logrus.Debugf("Fission proxy request: %v - %v", wfSpec.WorkflowId, inputs)
 	}
 	if len(r.Header.Get("X-Async")) > 0 {
-		invocationID, invokeErr := fp.invocationServer.Invoke(ctx, wfSpec)
+		invocationID, invokeErr := fp.client.Invocation.Invoke(ctx, wfSpec)
 		if invokeErr != nil {
 			logrus.Errorf("Failed to invoke: %v", invokeErr)
 			http.Error(w, invokeErr.Error(), 500)
@@ -127,7 +125,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Otherwise, the request synchronous like other Fission functions
-	wi, err := fp.invocationServer.InvokeSync(ctx, wfSpec)
+	wi, err := fp.client.Invocation.InvokeSync(ctx, wfSpec)
 	if err != nil {
 		logrus.Errorf("Failed to invoke: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -291,7 +289,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	wfSpec.ForceId = fissionID
 	wfSpec.Name = flr.FunctionName
 
-	resp, err := fp.workflowServer.Create(ctx, wfSpec)
+	resp, err := fp.client.Workflow.Create(ctx, wfSpec)
 	if err != nil {
 		return "", fmt.Errorf("failed to store workflow internally: %v", err)
 	}
@@ -304,7 +302,7 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 }
 
 func (fp *Proxy) hasWorkflow(ctx context.Context, fnID string) bool {
-	wf, err := fp.workflowServer.Get(ctx, &types.ObjectMetadata{Id: fnID})
+	wf, err := fp.client.Workflow.Get(ctx, &types.ObjectMetadata{Id: fnID})
 	if err != nil {
 		logrus.Errorf("Failed to get workflow: %v; assuming it is non-existent", err)
 	}

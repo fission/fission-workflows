@@ -1,0 +1,53 @@
+# Fission integration
+apiVersion: fission.io/v1
+kind: Environment
+metadata:
+  name: {{ .Values.fission.env.name }}
+  namespace: {{ .Values.fission.env.ns }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  version: 2
+  TerminationGracePeriod: 5
+  allowedFunctionsPerContainer: infinite
+  runtime:
+    image: "{{ .Values.fission.env.runtimeImage }}:{{.Values.tag}}"
+    container:
+      command: ["/fission-workflows-proxy"]
+      imagePullPolicy: {{ .Values.pullPolicy }}
+      args: [
+        "--test",
+        "--target", "{{ .Values.service.name }}.{{ .Release.Namespace }}:{{ .Values.service.ports.grpc }}",
+        "--port", "8888",
+        {{- if .Values.debug }}
+        "--verbosity", "2",
+        {{- end }}
+      ]
+  builder:
+    image: "{{ .Values.fission.env.builderImage }}:{{.Values.tag}}"
+    command: "defaultBuild"
+    container:
+      imagePullPolicy: {{ .Values.pullPolicy }}
+---
+# Legacy: add 'workflows-apiserver' service for Fission controller
+apiVersion: v1
+kind: Service
+metadata:
+  name: workflows-apiserver
+  namespace: {{ .Release.Namespace }}
+  labels:
+    svc: {{ .Values.service.name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    svc: {{ .Values.service.name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.ports.http }}
+      targetPort: 8080
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.service.ports.grpc }}
+      targetPort: 5555
+      protocol: TCP

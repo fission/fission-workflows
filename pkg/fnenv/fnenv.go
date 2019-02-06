@@ -92,6 +92,10 @@ type Notifier interface {
 	Notify(fn types.FnRef, expectedAt time.Time) error
 }
 
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
+
 // Resolver resolves a reference to a function to a deterministic, unique function id.
 type Resolver interface {
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function

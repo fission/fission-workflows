@@ -50,6 +50,7 @@ func main() {
 			Metrics:              c.Bool("metrics"),
 			Debug:                c.Bool("debug"),
 			FissionProxy:         c.Bool("fission-proxy"),
+			CheckFnenvStatus:     c.Bool("test"),
 		})
 	}
 	cliApp.Run(os.Args)
@@ -194,6 +195,10 @@ func createCli() *cli.App {
 		cli.BoolFlag{
 			Name:  "api",
 			Usage: "Shortcut for serving all APIs over both gRPC and HTTP",
+		},
+		cli.BoolFlag{
+			Name:  "test",
+			Usage: "Ensure that the proxy can reach the function runtimes (Fission) before serving the workflow engine..",
 		},
 	}
 

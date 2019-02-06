@@ -1,3 +1,4 @@
+// Package fission-workflows-proxy contains the binary responsible for the integration between Fission and Workflows.
 package main
 
 import (
@@ -85,19 +86,17 @@ func main() {
 		logrus.Infof("Established gRPC connection to '%s'", target)
 
 		// Setup proxy
-		// TODO we could also reuse the bundle here
-		workflowClient := apiserver.NewWorkflowAPIClient(conn)
-		invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
-		proxy := fission.NewEnvironmentProxyServer(invocationClient, workflowClient)
+		client := apiserver.NewClient(conn)
+		proxy := fission.NewEnvironmentProxyServer(client)
 
 		// Test proxy
 		if cliCtx.Bool("test") {
-			adminClient := apiserver.NewAdminAPIClient(conn)
 			statusCtx, cancelFn := context.WithTimeout(ctx, 10*time.Second)
-			_, err := adminClient.Status(statusCtx, &empty.Empty{})
+			_, err := client.Admin.Status(statusCtx, &empty.Empty{})
 			if err != nil {
 				logrus.Fatalf("Failed to reach workflows deployment: %v", err)
 			}
+			logrus.Info("Proxy can reach the Workflows deployment.")
 			cancelFn()
 		}
 

@@ -21,51 +21,52 @@ spec:
         app: {{ .Values.name }}
     spec:
       containers:
-      - name: workflows
-        image: "{{ .Values.bundleImage }}:{{.Values.tag}}"
-        imagePullPolicy: {{ .Values.pullPolicy }}
-        command: ["/fission-workflows-bundle"]
-        args: [
+        - name: workflows
+          image: "{{ .Values.bundleImage }}:{{.Values.tag}}"
+          imagePullPolicy: {{ .Values.pullPolicy }}
+          command: ["/fission-workflows-bundle"]
+          args: [
+            "--fission",                  # Enable the fission function runtime.
+            "--internal",                 # Enable the internal function runtime (if, sleep, noop...).
+            "--controller",               # Run the controllers, which process workflows and invocations.
+            "--api-http",                 # Serve the APIs, besides as gRPC services, as HTTP REST services as well.
+            "--api-workflow-invocation",  # Serve the invocation API (invoke, list...).
+            "--api-workflow",             # Serve the workflow API (create, delete, list...).
+            "--api-admin",                # Serve the admin API (status, version).
+            "--metrics",                  # Collect and expose Prometheus metrics.
+            "--test",                     # Ensure at the start that Fission is reachable.
+            {{- if .Values.debug }}
+            "--debug",                    # If set, significantly more debug information is stored and logged.
+            {{- end }}
+            {{- if eq .Values.eventstore.type "nats" }}
+            "--nats",                     # If set, use NATS event store. If not set, in-memory will be used.
+            {{- end }}
+          ]
+          env: # TODO add dedicated NATS cluster (instead of reusing the mqtrigger)
           {{- if eq .Values.eventstore.type "nats" }}
-          "--nats",
-          {{- end }}
-          "--fission",
-          "--internal",
-          "--controller",
-          "--api-http",
-          "--api-workflow-invocation",
-          "--api-workflow",
-          "--api-admin",
-          "--metrics",
-          {{- if .Values.debug }}
-          "--debug",
-          {{- end }}
-        ]
-        env: # TODO add dedicated NATS cluster (instead of reusing the mqtrigger)
-        {{- if eq .Values.eventstore.type "nats" }}
-        - name: ES_NATS_URL
-          value: "nats://{{ .Values.eventstore.nats.authToken }}@{{ .Values.eventstore.nats.location }}.{{ .Values.fission.ns }}:{{ .Values.eventstore.nats.port }}"
-        - name: ES_NATS_CLUSTER
-          value: "{{ .Values.eventstore.nats.cluster }}"
-        {{- end}}
-        - name: FNENV_FISSION_CONTROLLER
-          value: "{{ .Values.fission.controller }}.{{ .Values.fission.ns }}"
-        - name: FNENV_FISSION_EXECUTOR
-          value: "{{ .Values.fission.executor }}.{{ .Values.fission.ns }}"
-      - name: jaeger-agent
-        image: jaegertracing/jaeger-agent
-        ports:
-        - containerPort: 5775
-          protocol: UDP
-        - containerPort: 6831
-          protocol: UDP
-        - containerPort: 6832
-          protocol: UDP
-        - containerPort: 5778
-          protocol: TCP
-        args: [
-          "--collector.host-port={{ .Values.jaeger.collector }}"
-        ]
+          - name: ES_NATS_URL
+            value: "nats://{{ .Values.eventstore.nats.authToken }}@{{ .Values.eventstore.nats.location }}.{{ .Values.fission.ns }}:{{ .Values.eventstore.nats.port }}"
+          - name: ES_NATS_CLUSTER
+            value: "{{ .Values.eventstore.nats.cluster }}"
+          {{- end}}
+          - name: FNENV_FISSION_CONTROLLER
+            value: "{{ .Values.fission.controller }}.{{ .Values.fission.ns }}"
+          - name: FNENV_FISSION_EXECUTOR
+            value: "{{ .Values.fission.executor }}.{{ .Values.fission.ns }}"
+        - name: jaeger-agent
+          image: jaegertracing/jaeger-agent
+          ports:
+            - containerPort: 5775
+              protocol: UDP
+            - containerPort: 6831
+              protocol: UDP
+            - containerPort: 6832
+              protocol: UDP
+            - containerPort: 5778
+              protocol: TCP
+          args: [
+            "--collector.host-port={{ .Values.jaeger.collector }}"
+          ]
 ---
 # Expose workflows as a service
 apiVersion: v1
@@ -81,66 +82,11 @@ spec:
   selector:
     svc: {{ .Values.service.name }}
   ports:
-  - name: http
-    port: {{ .Values.service.ports.http }}
-    targetPort: 8080
-    protocol: TCP
-  - name: grpc
-    port: {{ .Values.service.ports.grpc }}
-    targetPort: 5555
-    protocol: TCP
-
----
-# Legacy: add 'workflows-apiserver' service for Fission controller
-apiVersion: v1
-kind: Service
-metadata:
-  name: workflows-apiserver
-  namespace: {{ .Release.Namespace }}
-  labels:
-    svc: {{ .Values.service.name }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-spec:
-  type: {{ .Values.service.type }}
-  selector:
-    svc: {{ .Values.service.name }}
-  ports:
-  - name: http
-    port: {{ .Values.service.ports.http }}
-    targetPort: 8080
-    protocol: TCP
-  - name: grpc
-    port: {{ .Values.service.ports.grpc }}
-    targetPort: 5555
-    protocol: TCP
----
-# Fission integration
-apiVersion: fission.io/v1
-kind: Environment
-metadata:
-  name: {{ .Values.fission.env.name }}
-  namespace: {{ .Values.fission.env.ns }}
-  labels:
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-spec:
-  version: 2
-  TerminationGracePeriod: 5
-  allowedFunctionsPerContainer: infinite
-  runtime:
-    image: "{{ .Values.fission.env.runtimeImage }}:{{.Values.tag}}"
-    container:
-      command: ["/fission-workflows-proxy"]
-      imagePullPolicy: {{ .Values.pullPolicy }}
-      args: [
-        "--test",
-        "--target", "{{ .Values.service.name }}.{{ .Release.Namespace }}:{{ .Values.service.ports.grpc }}",
-        "--port", "8888",
-        {{- if .Values.debug }}
-        "--verbosity", "2",
-        {{- end }}
-      ]
-  builder:
-    image: "{{ .Values.fission.env.builderImage }}:{{.Values.tag}}"
-    command: "defaultBuild"
-    container:
-      imagePullPolicy: {{ .Values.pullPolicy }}
+    - name: http
+      port: {{ .Values.service.ports.http }}
+      targetPort: 8080
+      protocol: TCP
+    - name: grpc
+      port: {{ .Values.service.ports.grpc }}
+      targetPort: 5555
+      protocol: TCP
