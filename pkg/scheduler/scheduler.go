@@ -91,7 +91,6 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	for _, node := range horizon {
 		taskDef := node.(*graph.TaskInstanceNode)
 		// Fetch input
-		// TODO might be Status.Inputs instead of Spec.Inputs
 		inputs := taskDef.Task.Spec.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
 			Id:     taskDef.Task.ID(),
@@ -104,6 +103,6 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		})
 	}
 
-	ctxLog.WithField("schedule", len(schedule.Actions)).Info("Determined schedule")
+	ctxLog.WithField("schedule", len(schedule.Actions)).Debug("Determined schedule")
 	return schedule, nil
 }
