@@ -307,8 +307,6 @@ func (cr *Controller) Evaluate(invocationID string) {
 	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
 	if wfi.GetStatus().Finished() {
 		cr.finishAndDeleteEvalState(wfi.ID(), true, "")
-		t, _ := ptypes.Timestamp(wfi.GetMetadata().GetCreatedAt())
-		invocationDuration.Observe(float64(time.Now().Sub(t)))
 	}
 	invocationStatus.WithLabelValues(wfi.GetStatus().GetStatus().String()).Inc()
 }
@@ -368,15 +366,23 @@ func (cr *Controller) processNextItem(ctx context.Context, pool *gopool.GoPool) 
 }
 
 func (cr *Controller) finishAndDeleteEvalState(evalStateID string, success bool, msg string) {
+	var start time.Time
 	es, ok := cr.evalStore.Load(evalStateID)
 	if !ok {
 		return
+	}
+	wfi, _ := cr.invocations.GetInvocation(evalStateID)
+	if wfi != nil {
+		start, _ = ptypes.Timestamp(wfi.GetMetadata().GetCreatedAt())
 	}
 	es.Finish(success, msg)
 	cr.evalStore.Delete(evalStateID)
 	cr.stateStore.Delete(evalStateID)
 	cr.workQueue.Forget(es)
 	log.Debugf("Removed entity %v from eval state", evalStateID)
+	if wfi != nil {
+		invocationDuration.Observe(float64(time.Now().Sub(start)))
+	}
 }
 
 func defaultPolicy(ctr *Controller) controller.Rule {
