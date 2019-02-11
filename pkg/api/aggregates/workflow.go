@@ -1,6 +1,8 @@
 package aggregates
 
 import (
+	"fmt"
+
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -67,7 +69,20 @@ func (wf *Workflow) ApplyEvent(event *fes.Event) error {
 		wf.Status.Status = types.WorkflowStatus_FAILED
 	case *events.WorkflowParsed:
 		wf.Status.Status = types.WorkflowStatus_READY
-		wf.Status.Tasks = m.GetTasks()
+		//wf.Status.Tasks = m.GetTasks()
+		for taskID, status := range m.GetTasks() {
+			spec := wf.GetSpec().TaskSpec(taskID)
+			if spec == nil {
+				return fmt.Errorf("%s: unknown task", taskID)
+			}
+			wf.Status.AddTask(taskID, &types.Task{
+				Metadata: &types.ObjectMetadata{
+					Id: taskID,
+				},
+				Spec:   spec,
+				Status: status,
+			})
+		}
 	case *events.WorkflowDeleted:
 		wf.Status.Status = types.WorkflowStatus_DELETED
 	default:

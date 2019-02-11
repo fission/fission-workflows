@@ -10,7 +10,7 @@ import "google/protobuf/any.proto";
 
 service Scheduler {
 
-    rpc evaluate (ScheduleRequest) returns (Schedule) {
+    rpc evaluate (fission.workflows.types.WorkflowInvocation) returns (Schedule) {
     }
 }
 
@@ -19,12 +19,6 @@ message Schedule {
     google.protobuf.Timestamp createdAt = 2;
     repeated Action actions = 3;
     // TODO Future: Expected next evaluation
-}
-
-
-message ScheduleRequest {
-    fission.workflows.types.Workflow workflow = 1;
-    fission.workflows.types.WorkflowInvocation invocation = 2;
 }
 
 // ActionType contains all possible types of actions the scheduler can undertake.

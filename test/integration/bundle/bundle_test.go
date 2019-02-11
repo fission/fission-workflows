@@ -86,6 +86,7 @@ func TestWorkflowCreate(t *testing.T) {
 }
 
 func TestWorkflowInvocation(t *testing.T) {
+	log.SetLevel(log.DebugLevel)
 	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancelFn()
 	client := setup(ctx)
@@ -155,7 +156,12 @@ func TestWorkflowInvocation(t *testing.T) {
 			break
 		}
 	}
+	wiSpec.Workflow = invocation.Workflow()
 	util.AssertProtoEqual(t, wiSpec, invocation.Spec)
+	fmt.Println("---")
+	fmt.Println(etv.Value)
+	fmt.Println(invocation.Status)
+	fmt.Println("---")
 	assert.Equal(t, etv.Value, invocation.Status.Output.Value)
 	assert.True(t, invocation.Status.Successful())
 }

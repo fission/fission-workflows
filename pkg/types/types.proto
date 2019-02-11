@@ -61,7 +61,7 @@ message WorkflowStatus {
     google.protobuf.Timestamp updatedAt = 2;
 
     // Tasks contains the status of the tasks, with the key being the task id.
-    map<string, TaskStatus> tasks = 3; // Key = taskId
+    map<string, Task> tasks = 3; // Key = taskId
     Error error = 4;
 }
 
@@ -74,16 +74,25 @@ message WorkflowInvocation {
     WorkflowInvocationStatus status = 3;
 }
 
-// Workflow Invocation Model
+// WorkflowInvocationSpec contains the complete specification of a workflow invocation.
 message WorkflowInvocationSpec {
+    // WorkflowId contains a reference to the workflow that needs to be executed.
+    //
+    // Deprecated: use workflow.metadata.id instead to reference the workflow.
     string workflowId = 1;
+
+
     map<string, TypedValue> inputs = 2;
 
     // ParentId contains the id of the encapsulating workflow invocation.
     //
     // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
     string parentId = 3;
-    //int32 depth = 4; // aka size of the stack
+
+    // Workflow contains the workflow that should be invoked.
+    //
+    // The workflow here is a snapshot; it should be considered immutable after added to the spec.
+    Workflow workflow = 4;
 }
 
 message WorkflowInvocationStatus {
@@ -179,24 +188,30 @@ message TaskInvocation {
     TaskInvocationStatus status = 3;
 }
 
+// WorkflowInvocationSpec contains the complete specification of a workflow invocation.
 message TaskInvocationSpec {
     // Id of the task to be invoked (no ambiguatity at this point
     FnRef fnRef = 1;
 
     // TaskId is the id of the task within the workflow
+    //
+    // Deprecated: use task.metadata.id instead to reference the workflow.
     string taskId = 2;
 
     // Inputs contain all inputs to the task invocation
     map<string, TypedValue> inputs = 3;
 
-    //
+    // InvocationID contains a reference to the workflow invocation of this task.
     string invocationId = 4;
+
+    // Task contains a snapshot of the task that needs to be run.
+    Task task = 5;
 }
 
 message TaskInvocationStatus {
     enum Status {
         UNKNOWN = 0;
-        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        SCHEDULED = 1; // Arrived at engine, but not yet scheduled
         IN_PROGRESS = 2; // Scheduled
         SUCCEEDED = 3;
         FAILED = 4;

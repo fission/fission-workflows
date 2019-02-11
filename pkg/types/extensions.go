@@ -2,8 +2,6 @@ package types
 
 import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
 )
 
 // Types other than specified in protobuf
@@ -49,16 +47,49 @@ func (m *WorkflowInvocation) ID() string {
 	return m.GetMetadata().GetId()
 }
 
+func (m *WorkflowInvocation) Workflow() *Workflow {
+	return m.GetSpec().GetWorkflow()
+}
+
+// TODO how do we know which tasks are not being run
 func (m *WorkflowInvocation) TaskInvocation(id string) (*TaskInvocation, bool) {
 	ti, ok := m.Status.Tasks[id]
 	return ti, ok
 }
 
-func (m *WorkflowInvocation) TaskInvocations() []*TaskInvocation {
-	var tasks []*TaskInvocation
+func (m *WorkflowInvocation) TaskInvocations() map[string]*TaskInvocation {
+	tasks := map[string]*TaskInvocation{}
 	for id := range m.Status.Tasks {
 		task, _ := m.TaskInvocation(id)
-		tasks = append(tasks, task)
+		tasks[id] = task
+	}
+	return tasks
+}
+
+func (m *WorkflowInvocation) Task(id string) (*Task, bool) {
+	if dtasks := m.GetStatus().GetDynamicTasks(); dtasks != nil {
+		dtask, ok := dtasks[id]
+		if ok {
+			return dtask, true
+		}
+	}
+	return m.Workflow().Task(id)
+}
+
+// Tasks gets all tasks in a workflow. This includes the dynamic tasks added during
+// the invocation.
+func (m *WorkflowInvocation) Tasks() map[string]*Task {
+	tasks := map[string]*Task{}
+	if m == nil {
+		return tasks
+	}
+	if wf := m.Workflow(); wf != nil {
+		for _, task := range m.Workflow().Tasks() {
+			tasks[task.ID()] = task
+		}
+	}
+	for _, task := range m.GetStatus().GetDynamicTasks() {
+		tasks[task.ID()] = task
 	}
 	return tasks
 }
@@ -105,6 +136,10 @@ func (m WorkflowInvocationStatus) Successful() bool {
 
 func (m *TaskInvocation) ID() string {
 	return m.GetMetadata().GetId()
+}
+
+func (m *TaskInvocation) Task() *Task {
+	return m.GetSpec().GetTask()
 }
 
 //
@@ -182,54 +217,90 @@ func (m *TaskSpec) Require(taskID string, opts ...*TaskDependencyParameters) *Ta
 	return m
 }
 
-func (m *TaskSpec) Overlay(overlay *TaskSpec) *TaskSpec {
-	nt := proto.Clone(m).(*TaskSpec)
-	nt.Await = overlay.Await
-	nt.Requires = overlay.Requires
-	return nt
-}
+//
+//func (m *TaskSpec) Overlay(overlay *TaskSpec) *TaskSpec {
+//	nt := proto.Clone(m).(*TaskSpec)
+//	nt.Await = overlay.Await
+//	nt.Requires = overlay.Requires
+//	return nt
+//}
 
 //
 // Workflow
 //
-
 func (m *Workflow) ID() string {
 	return m.GetMetadata().GetId()
 }
 
 // Note: this only retrieves the statically, top-level defined tasks
+// TODO just store entire task in status
 func (m *Workflow) Task(id string) (*Task, bool) {
-	var ok bool
-	spec, ok := m.Spec.Tasks[id]
-	if !ok {
-		return nil, false
-	}
-	var status *TaskStatus
-	if m.Status.Tasks != nil {
-		status, ok = m.Status.Tasks[id]
-	}
-	if !ok {
-		status = &TaskStatus{
-			UpdatedAt: ptypes.TimestampNow(),
+	//var ok bool
+	//spec, ok := m.Spec.Tasks[id]
+	//if !ok {
+	//	return nil, false
+	//}
+	//var task *TaskStatus
+	//if m.Status.Tasks != nil {
+	//	task, ok = m.Status.Tasks[id]
+	//}
+	//if !ok {
+	//	task = &TaskStatus{
+	//		UpdatedAt: ptypes.TimestampNow(),
+	//	}
+	//}
+	//
+	//return &Task{
+	//	Metadata: &ObjectMetadata{
+	//		Id:        id,
+	//		CreatedAt: m.Metadata.CreatedAt,
+	//	},
+	//	Spec:   spec,
+	//	Status: task,
+	//}, true
+
+	// First the status to get the latest task state
+	ts := m.GetStatus().GetTasks()
+	if ts != nil {
+		if task, ok := ts[id]; ok {
+			if len(task.ID()) == 0 {
+				task.Metadata = &ObjectMetadata{
+					Id:        id,
+					CreatedAt: m.Metadata.CreatedAt,
+				}
+			}
+			if task.Spec == nil {
+				task.Spec = m.GetSpec().TaskSpec(id)
+			}
+			return task, ok
 		}
 	}
 
-	return &Task{
-		Metadata: &ObjectMetadata{
-			Id:        id,
-			CreatedAt: m.Metadata.CreatedAt,
-		},
-		Spec:   spec,
-		Status: status,
-	}, true
+	// If not available, try to fetch it from the spec
+	if spec := m.GetSpec().TaskSpec(id); spec != nil {
+		return &Task{
+			Metadata: &ObjectMetadata{
+				Id:        id,
+				CreatedAt: m.Metadata.CreatedAt,
+			},
+			Spec: spec,
+		}, true
+	}
+
+	return nil, false
 }
 
-// Note: this only retrieves the statically top-level defined tasks
-func (m *Workflow) Tasks() []*Task {
-	var tasks []*Task
-	for id := range m.GetSpec().GetTasks() {
+func (m *Workflow) Tasks() map[string]*Task {
+	tasks := map[string]*Task{}
+	for id := range m.GetStatus().GetTasks() {
 		task, _ := m.Task(id)
-		tasks = append(tasks, task)
+		tasks[id] = task
+	}
+	for id := range m.GetSpec().GetTasks() {
+		if _, ok := tasks[id]; !ok {
+			task, _ := m.Task(id)
+			tasks[id] = task
+		}
 	}
 	return tasks
 }
@@ -264,6 +335,14 @@ func (m *WorkflowSpec) AddTask(id string, task *TaskSpec) *WorkflowSpec {
 	return m
 }
 
+func (m *WorkflowSpec) TaskSpec(taskID string) *TaskSpec {
+	tasks := m.GetTasks()
+	if tasks == nil {
+		return nil
+	}
+	return tasks[taskID]
+}
+
 //
 // WorkflowStatus
 //
@@ -276,9 +355,9 @@ func (m *WorkflowStatus) Failed() bool {
 	return m.Status == WorkflowStatus_FAILED
 }
 
-func (m *WorkflowStatus) AddTaskStatus(id string, t *TaskStatus) {
+func (m *WorkflowStatus) AddTask(id string, t *Task) {
 	if m.Tasks == nil {
-		m.Tasks = map[string]*TaskStatus{}
+		m.Tasks = map[string]*Task{}
 	}
 	m.Tasks[id] = t
 }

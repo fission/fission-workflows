@@ -272,19 +272,34 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 
 	// Fetch the workflow relevant to the invocation
-	wf, err := cr.workflows.GetWorkflow(wfi.GetSpec().GetWorkflowId())
-	// TODO move to rule
-	if err != nil && wf == nil {
-		log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
-			invocationID, err)
-		controller.EvalJobs.WithLabelValues(Name, "error").Inc()
-		return
+	fmt.Println("---")
+	fmt.Println(wfi.Workflow())
+	fmt.Println("---")
+	if wfi.Workflow() == nil {
+		wf, err := cr.workflows.GetWorkflow(wfi.GetSpec().GetWorkflowId())
+		// TODO move to rule
+		if err != nil && wf == nil {
+			log.Errorf("controller failed to get workflow '%s' for invocation id '%s': %v", wfi.Spec.WorkflowId,
+				invocationID, err)
+			controller.EvalJobs.WithLabelValues(Name, "error").Inc()
+			return
+		}
+		if !wf.GetStatus().Ready() {
+			log.Errorf("Workflow '%s' is not ready", wfi.Spec.WorkflowId)
+			controller.EvalJobs.WithLabelValues(Name, "error").Inc()
+			go func() { // TODO fix this
+				time.Sleep(100 * time.Millisecond)
+				cr.workQueue.Add(evalState)
+			}()
+			return
+		}
+		wfi.Spec.Workflow = wf
 	}
 
 	// Evaluate invocation
 	record := controller.NewEvalRecord() // TODO implement rulepath + cause
 
-	ec := NewEvalContext(evalState, wf, wfi)
+	ec := NewEvalContext(evalState, wfi)
 
 	action := cr.evalPolicy.Eval(ec)
 	record.Action = action

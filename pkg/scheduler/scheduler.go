@@ -35,10 +35,10 @@ func init() {
 type WorkflowScheduler struct {
 }
 
-func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
+func (ws *WorkflowScheduler) Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
-		"invocation": request.Invocation.ID(),
-		"workflow":   request.Workflow.ID(),
+		"invocation": invocation.ID(),
+		"workflow":   invocation.Workflow().ID(),
 	})
 	timeStart := time.Now()
 	defer func() {
@@ -47,25 +47,39 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 	}()
 
 	schedule := &Schedule{
-		InvocationId: request.Invocation.Metadata.Id,
+		InvocationId: invocation.ID(),
 		CreatedAt:    ptypes.TimestampNow(),
 		Actions:      []*Action{},
 	}
 
 	ctxLog.Debug("Scheduler evaluating...")
-	cwf := types.GetTaskContainers(request.Workflow, request.Invocation)
 
 	// Fill open tasks
-	openTasks := map[string]*types.TaskInstance{}
-	for id, t := range cwf {
-		if t.Invocation == nil || t.Invocation.Status.Status == types.TaskInvocationStatus_UNKNOWN {
-			openTasks[id] = t
-			continue
+	openTasks := map[string]*types.TaskInvocation{}
+	for id, task := range invocation.Tasks() {
+		taskRun, ok := invocation.TaskInvocation(id)
+		if !ok {
+			// TODO extract this to types
+			taskRun = &types.TaskInvocation{
+				Metadata: types.NewObjectMetadata(id),
+				Spec: &types.TaskInvocationSpec{
+					Task:         task,
+					FnRef:        task.GetStatus().GetFnRef(),
+					TaskId:       task.ID(),
+					InvocationId: invocation.ID(),
+					Inputs:       task.GetSpec().GetInputs(),
+				},
+				Status: &types.TaskInvocationStatus{
+					Status: types.TaskInvocationStatus_UNKNOWN,
+				},
+			}
 		}
-		if t.Invocation.Status.Status == types.TaskInvocationStatus_FAILED {
-
-			msg := fmt.Sprintf("Task '%v' failed", t.Invocation.ID())
-			if err := t.Invocation.GetStatus().GetError(); err != nil {
+		switch taskRun.GetStatus().GetStatus() {
+		case types.TaskInvocationStatus_UNKNOWN:
+			openTasks[id] = taskRun
+		case types.TaskInvocationStatus_FAILED:
+			msg := fmt.Sprintf("Task '%v' failed", task.ID())
+			if err := task.GetStatus().GetError(); err != nil {
 				msg = err.Message
 			}
 
@@ -89,11 +103,11 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 
 	// Determine schedule nodes
 	for _, node := range horizon {
-		taskDef := node.(*graph.TaskInstanceNode)
+		taskDef := node.(*graph.TaskInvocationNode)
 		// Fetch input
-		inputs := taskDef.Task.Spec.Inputs
+		inputs := taskDef.Task().Spec.Inputs
 		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:     taskDef.Task.ID(),
+			Id:     taskDef.Task().ID(),
 			Inputs: inputs,
 		})
 

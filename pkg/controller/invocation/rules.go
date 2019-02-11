@@ -19,26 +19,19 @@ import (
 
 type EvalContext interface {
 	controller.EvalContext
-	Workflow() *types.Workflow
 	Invocation() *types.WorkflowInvocation
 }
 
 type WfiEvalContext struct {
 	controller.EvalContext
-	wf  *types.Workflow
 	wfi *types.WorkflowInvocation
 }
 
-func NewEvalContext(state *controller.EvalState, wf *types.Workflow, wfi *types.WorkflowInvocation) WfiEvalContext {
+func NewEvalContext(state *controller.EvalState, wfi *types.WorkflowInvocation) WfiEvalContext {
 	return WfiEvalContext{
 		EvalContext: controller.NewEvalContext(state),
-		wf:          wf,
 		wfi:         wfi,
 	}
-}
-
-func (ec WfiEvalContext) Workflow() *types.Workflow {
-	return ec.wf
 }
 
 func (ec WfiEvalContext) Invocation() *types.WorkflowInvocation {
@@ -51,7 +44,7 @@ type RuleWorkflowIsReady struct {
 
 func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
+	wf := ec.Invocation().Workflow()
 	if wf.GetStatus().GetStatus() == types.WorkflowStatus_DELETED {
 		return &ActionFail{
 			API:          wr.InvocationAPI,
@@ -77,13 +70,14 @@ type RuleSchedule struct {
 
 func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
+	wf := ec.Invocation().Workflow()
 	wfi := ec.Invocation()
 	// Request a execution plan from the Scheduler
-	schedule, err := sf.Scheduler.Evaluate(&scheduler.ScheduleRequest{
-		Invocation: wfi,
-		Workflow:   wf,
-	})
+	// TODO remove once invocation is guaranteed to have workflow
+	if wfi.Spec.Workflow == nil {
+		wfi.Spec.Workflow = wf
+	}
+	schedule, err := sf.Scheduler.Evaluate(wfi)
 	if err != nil {
 		return nil
 	}
@@ -110,7 +104,6 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				log.Errorf("Failed to unpack Scheduler action: %v", err)
 			}
 			actions = append(actions, &ActionInvokeTask{
-				Wf:         wf,
 				ec:         ec.EvalState(),
 				Wfi:        wfi,
 				API:        sf.FunctionAPI,
@@ -130,14 +123,13 @@ type RuleCheckIfCompleted struct {
 
 func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {
 	ec := EnsureInvocationContext(cec)
-	wf := ec.Workflow()
+	wf := ec.Invocation().Workflow()
 	wfi := ec.Invocation()
 	// Check if the workflow invocation is complete
-	tasks := types.GetTasks(wf, wfi)
 	var err error
 	finished := true
 	success := true
-	for id := range tasks {
+	for id := range wfi.Tasks() {
 		t, ok := wfi.Status.Tasks[id]
 		if !ok || !t.Status.Finished() {
 			finished = false
