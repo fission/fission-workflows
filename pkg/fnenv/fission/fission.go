@@ -1,6 +1,7 @@
 package fission
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -11,6 +12,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/fission/fission-workflows/pkg/util/backoff"
 	controller "github.com/fission/fission/controller/client"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
@@ -41,7 +43,7 @@ type FunctionEnv struct {
 const (
 	defaultHTTPMethod = http.MethodPost
 	defaultProtocol   = "http"
-	provisionDuration = time.Duration(500) - time.Millisecond
+	provisionDuration = time.Duration(500) * time.Millisecond
 )
 
 func New(executor *executor.Client, controller *controller.Client, routerURL string) *FunctionEnv {
@@ -110,9 +112,27 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		span.LogKV("HTTP request", string(bs))
 	}
 	span.LogKV("http", fmt.Sprintf("%s %v", req.Method, req.URL))
-	resp, err := fe.client.Do(req.WithContext(cfg.Ctx))
-	if err != nil {
-		return nil, fmt.Errorf("error for reqUrl '%v': %v", fnUrl, err)
+	var resp *http.Response
+
+	maxAttempts := 12 // About 6 min
+	ctx, cancelFn := context.WithCancel(cfg.Ctx)
+	for attempt := range (&backoff.Instance{
+		MaxRetries:         maxAttempts,
+		BaseRetryDuration:  100 * time.Millisecond,
+		BackoffPolicy:      backoff.ExponentialBackoff,
+		MaxBackoffDuration: 10 * time.Second,
+	}).C(ctx) {
+		resp, err = fe.client.Do(req.WithContext(cfg.Ctx))
+		if err == nil {
+			break
+		}
+		log.Debug("Failed to execute Fission function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
+	}
+	cancelFn()
+
+	// Check if max try attempts was exceeded
+	if resp == nil {
+		return nil, fmt.Errorf("error executing fission function at %s after %d attempts: %v", fnUrl, maxAttempts, err)
 	}
 	span.LogKV("status code", resp.Status)
 
@@ -170,7 +190,7 @@ func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
 
 	// Tap the Fission function at the right time
 	fe.timedExecService.Submit(func() {
-		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqURL)
+		log.WithField("fn", fn).Infof("Prewarming Fission function: %v", reqURL)
 		fe.executor.TapService(reqURL)
 	}, execAt)
 	return nil
