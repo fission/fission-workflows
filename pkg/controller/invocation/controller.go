@@ -65,7 +65,7 @@ type Controller struct {
 	taskAPI       *api.Task
 	invocationAPI *api.Invocation
 	stateStore    *expr.Store
-	scheduler     *scheduler.WorkflowScheduler
+	scheduler     *scheduler.InvocationScheduler
 	cancelFn      context.CancelFunc
 	evalPolicy    controller.Rule
 	evalStore     *controller.EvalStore
@@ -73,7 +73,7 @@ type Controller struct {
 	workerPool    *gopool.GoPool
 }
 
-func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.WorkflowScheduler,
+func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.InvocationScheduler,
 	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store) *Controller {
 	ctr := &Controller{
 		invocations:   invocations,
@@ -272,9 +272,6 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 
 	// Fetch the workflow relevant to the invocation
-	fmt.Println("---")
-	fmt.Println(wfi.Workflow())
-	fmt.Println("---")
 	if wfi.Workflow() == nil {
 		wf, err := cr.workflows.GetWorkflow(wfi.GetSpec().GetWorkflowId())
 		// TODO move to rule

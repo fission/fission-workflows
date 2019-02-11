@@ -81,22 +81,23 @@ func (a *ActionInvokeTask) logger() logrus.FieldLogger {
 	return logrus.WithFields(logrus.Fields{
 		"invocation": a.Wfi.ID(),
 		"workflow":   a.Wfi.Workflow().ID(),
-		"task":       a.Task.Id,
+		"task":       a.Task.TaskID,
 	})
 }
 
 func (a *ActionInvokeTask) String() string {
-	return fmt.Sprintf("task/run(%s)", a.Task.GetId())
+	return fmt.Sprintf("task/run(%s)", a.Task.TaskID)
 }
 
 func (a *ActionInvokeTask) Apply() error {
+	taskID := a.Task.TaskID
 	log := a.logger()
-	span := opentracing.StartSpan(fmt.Sprintf("/task/%s", a.Task.GetId()), opentracing.ChildOf(a.ec.Span().Context()))
-	span.SetTag("task", a.Task.GetId())
+	span := opentracing.StartSpan(fmt.Sprintf("/task/%s", taskID), opentracing.ChildOf(a.ec.Span().Context()))
+	span.SetTag("task", taskID)
 	defer span.Finish()
 
 	// Find task
-	task, ok := a.Wfi.Task(a.Task.Id)
+	task, ok := a.Wfi.Task(taskID)
 	if !ok {
 		err := fmt.Errorf("task '%v' could not be found", a.Wfi.ID())
 		span.LogKV("error", err)
@@ -123,10 +124,10 @@ func (a *ActionInvokeTask) Apply() error {
 
 	// Pre-execution: Resolve expression inputs
 	var inputs map[string]*typedvalues.TypedValue
-	if len(a.Task.Inputs) > 0 {
+	if len(task.GetSpec().GetInputs()) > 0 {
 		var err error
 		exprEvalStart := time.Now()
-		inputs, err = a.resolveInputs(a.Task.Inputs)
+		inputs, err = a.resolveInputs(task.GetSpec().GetInputs())
 		exprEvalDuration.Observe(float64(time.Now().Sub(exprEvalStart)))
 		if err != nil {
 			log.Error(err)
@@ -148,7 +149,7 @@ func (a *ActionInvokeTask) Apply() error {
 	// Invoke task
 	spec := &types.TaskInvocationSpec{
 		FnRef:        task.Status.FnRef,
-		TaskId:       a.Task.Id,
+		TaskId:       a.Task.TaskID,
 		InvocationId: a.Wfi.ID(),
 		Inputs:       inputs,
 	}
@@ -187,7 +188,7 @@ func (a *ActionInvokeTask) Apply() error {
 }
 
 func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
-	task, _ := a.Wfi.Task(a.Task.Id)
+	task, _ := a.Wfi.Task(a.Task.TaskID)
 	if ti.GetStatus().Successful() {
 		output := task.GetSpec().GetOutput()
 		if output != nil {
@@ -230,15 +231,15 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.TaskID)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Add the current output
-	scope.Tasks[a.Task.Id].Output = typedvalues.MustUnwrap(ti.GetStatus().GetOutput())
+	scope.Tasks[a.Task.TaskID].Output = typedvalues.MustUnwrap(ti.GetStatus().GetOutput())
 
 	// Resolve the output expression
-	resolvedOutput, err := expr.Resolve(scope, a.Task.Id, outputExpr)
+	resolvedOutput, err := expr.Resolve(scope, a.Task.TaskID, outputExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -259,15 +260,15 @@ func (a *ActionInvokeTask) resolveOutputHeaders(ti *types.TaskInvocation, output
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.TaskID)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Add the current outputHeaders
-	scope.Tasks[a.Task.Id].OutputHeaders = typedvalues.MustUnwrap(ti.GetStatus().GetOutputHeaders())
+	scope.Tasks[a.Task.TaskID].OutputHeaders = typedvalues.MustUnwrap(ti.GetStatus().GetOutputHeaders())
 
 	// Resolve the outputHeaders expression
-	resolvedOutputHeaders, err := expr.Resolve(scope, a.Task.Id, outputHeadersExpr)
+	resolvedOutputHeaders, err := expr.Resolve(scope, a.Task.TaskID, outputHeadersExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -285,17 +286,19 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 		}
 	}
 
+	taskID := a.Task.TaskID
+
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.Id)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", taskID)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Resolve each of the inputs (based on priority)
 	resolvedInputs := map[string]*typedvalues.TypedValue{}
 	for _, input := range typedvalues.Prioritize(inputs) {
-		resolvedInput, err := expr.Resolve(scope, a.Task.Id, input.Val)
+		resolvedInput, err := expr.Resolve(scope, taskID, input.Val)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve input field %v: %v", input.Key, err)
 		}
@@ -310,7 +313,7 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 		}
 
 		// Update the scope with the resolved type
-		scope.Tasks[a.Task.Id].Inputs[input.Key] = typedvalues.MustUnwrap(resolvedInput)
+		scope.Tasks[taskID].Inputs[input.Key] = typedvalues.MustUnwrap(resolvedInput)
 	}
 	return resolvedInputs, nil
 }

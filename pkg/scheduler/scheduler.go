@@ -1,11 +1,9 @@
 package scheduler
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/graph"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -28,14 +26,25 @@ var (
 	})
 )
 
+type Policy interface {
+	Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error)
+}
+
 func init() {
 	prometheus.MustRegister(metricEvalCount, metricEvalTime)
 }
 
-type WorkflowScheduler struct {
+type InvocationScheduler struct {
+	policy Policy
 }
 
-func (ws *WorkflowScheduler) Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error) {
+func NewInvocationScheduler(policy Policy) *InvocationScheduler {
+	return &InvocationScheduler{
+		policy: policy,
+	}
+}
+
+func (ws *InvocationScheduler) Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
 		"invocation": invocation.ID(),
 		"workflow":   invocation.Workflow().ID(),
@@ -46,77 +55,50 @@ func (ws *WorkflowScheduler) Evaluate(invocation *types.WorkflowInvocation) (*Sc
 		metricEvalCount.Inc()
 	}()
 
-	schedule := &Schedule{
-		InvocationId: invocation.ID(),
-		CreatedAt:    ptypes.TimestampNow(),
-		Actions:      []*Action{},
+	schedule, err := ws.policy.Evaluate(invocation)
+	if err != nil {
+		return nil, err
 	}
 
-	ctxLog.Debug("Scheduler evaluating...")
-
-	// Fill open tasks
-	openTasks := map[string]*types.TaskInvocation{}
-	for id, task := range invocation.Tasks() {
-		taskRun, ok := invocation.TaskInvocation(id)
-		if !ok {
-			// TODO extract this to types
-			taskRun = &types.TaskInvocation{
-				Metadata: types.NewObjectMetadata(id),
-				Spec: &types.TaskInvocationSpec{
-					Task:         task,
-					FnRef:        task.GetStatus().GetFnRef(),
-					TaskId:       task.ID(),
-					InvocationId: invocation.ID(),
-					Inputs:       task.GetSpec().GetInputs(),
-				},
-				Status: &types.TaskInvocationStatus{
-					Status: types.TaskInvocationStatus_UNKNOWN,
-				},
-			}
-		}
-		switch taskRun.GetStatus().GetStatus() {
-		case types.TaskInvocationStatus_UNKNOWN:
-			openTasks[id] = taskRun
-		case types.TaskInvocationStatus_FAILED:
-			msg := fmt.Sprintf("Task '%v' failed", task.ID())
-			if err := task.GetStatus().GetError(); err != nil {
-				msg = err.Message
-			}
-
-			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
-				Reason: msg,
-			})
-
-			abortAction := &Action{
-				Type:    ActionType_ABORT,
-				Payload: AbortActionAny,
-			}
-			schedule.Actions = append(schedule.Actions, abortAction)
-		}
-	}
-	if len(schedule.Actions) > 0 {
-		return schedule, nil
-	}
-
-	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
-	horizon := graph.Roots(depGraph)
-
-	// Determine schedule nodes
-	for _, node := range horizon {
-		taskDef := node.(*graph.TaskInvocationNode)
-		// Fetch input
-		inputs := taskDef.Task().Spec.Inputs
-		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:     taskDef.Task().ID(),
-			Inputs: inputs,
-		})
-
-		schedule.Actions = append(schedule.Actions, &Action{
-			Type:    ActionType_INVOKE_TASK,
-			Payload: invokeTaskAction,
-		})
-	}
-
-	ctxLog.WithField("schedule", len(schedule.Actions)).Debug("Determined schedule")
+	ctxLog.Debugf("Determined schedule: %v", schedule)
 	return schedule, nil
+}
+
+func (m *Schedule) Add(action *Action) {
+	m.Actions = append(m.Actions, action)
+}
+
+func newActionInvoke(task *types.Task) *Action {
+	invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
+		TaskID: task.ID(),
+	})
+
+	return &Action{
+		Type:    ActionType_INVOKE_TASK,
+		Payload: invokeTaskAction,
+	}
+}
+
+func newActionAbort(msg string) *Action {
+	AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
+		Reason: msg,
+	})
+
+	return &Action{
+		Type:    ActionType_ABORT,
+		Payload: AbortActionAny,
+	}
+}
+
+func newActionPrepare(taskID string, expectedAt time.Time) *Action {
+	ts, _ := ptypes.TimestampProto(expectedAt)
+	AbortActionAny, _ := ptypes.MarshalAny(&PrepareTaskAction{
+		TaskID:     taskID,
+		ExpectedAt: ts,
+	})
+
+	return &Action{
+		Type:    ActionType_PREPARE_TASK,
+		Payload: AbortActionAny,
+	}
 }

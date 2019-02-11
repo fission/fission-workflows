@@ -62,7 +62,7 @@ func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Actio
 }
 
 type RuleSchedule struct {
-	Scheduler     *scheduler.WorkflowScheduler
+	Scheduler     *scheduler.InvocationScheduler
 	InvocationAPI *api.Invocation
 	FunctionAPI   *api.Task
 	StateStore    *expr.Store

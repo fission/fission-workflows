@@ -36,10 +36,15 @@ func main() {
 	cliApp := createCli()
 	cliApp.Action = func(c *cli.Context) error {
 		setupLogging(c)
+		policy, err := bundle.ParseSchedulerConfig(c)
+		if err != nil {
+			logrus.Fatal("Error while initializing workflows: ", err)
+		}
 
 		return bundle.Run(ctx, &bundle.Options{
 			Nats:                 parseNatsOptions(c),
 			Fission:              parseFissionOptions(c),
+			Scheduler:            policy,
 			InternalRuntime:      c.Bool("internal"),
 			InvocationController: c.Bool("controller") || c.Bool("invocation-controller"),
 			WorkflowController:   c.Bool("controller") || c.Bool("workflow-controller"),
@@ -194,6 +199,18 @@ func createCli() *cli.App {
 		cli.BoolFlag{
 			Name:  "api",
 			Usage: "Shortcut for serving all APIs over both gRPC and HTTP",
+		},
+
+		// Scheduler
+		cli.StringFlag{
+			Name:  bundle.FlagSchedulerPolicy,
+			Usage: "Policy to use for the scheduler (prewarm-all, prewarm-horizon, horizon)",
+			Value: "horizon",
+		},
+		cli.DurationFlag{
+			Name:  bundle.FlagSchedulerColdStartDuration,
+			Usage: "The static cold start duration to assume when using prewarm schedulers",
+			Value: 1 * time.Second,
 		},
 	}
 

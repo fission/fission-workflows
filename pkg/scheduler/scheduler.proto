@@ -18,7 +18,6 @@ message Schedule {
     string invocationId = 1;
     google.protobuf.Timestamp createdAt = 2;
     repeated Action actions = 3;
-    // TODO Future: Expected next evaluation
 }
 
 // ActionType contains all possible types of actions the scheduler can undertake.
@@ -33,8 +32,8 @@ enum ActionType {
     // Abort cancels the invocation, leading to an ABORTED status.
     ABORT = 1;
 
-    // Notify a task
-    NOTIFY_TASK = 2;
+    // Prepare a task
+    PREPARE_TASK = 2;
 }
 
 // Action is the generic container of an action (signalled by ActionType) and
@@ -50,12 +49,12 @@ message AbortAction {
 
 message InvokeTaskAction {
     // Id of the task in the workflow
-    string id = 1;
-    map<string, fission.workflows.types.TypedValue> inputs = 2;
+    string taskID = 1;
+//    map<string, fission.workflows.types.TypedValue> inputs = 2;
     // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
 }
 
-message NotifyTaskAction {
-    string id = 1;
+message PrepareTaskAction {
+    string taskID = 1;
     google.protobuf.Timestamp expectedAt = 2;
 }

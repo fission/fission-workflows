@@ -92,6 +92,7 @@ func (app *App) Close() error {
 
 type Options struct {
 	Nats                 *nats.Config
+	Scheduler            scheduler.Policy
 	Fission              *FissionOptions
 	InternalRuntime      bool
 	InvocationController bool
@@ -234,6 +235,11 @@ func Run(ctx context.Context, opts *Options) error {
 	}
 
 	//
+	// Scheduler
+	//
+	scheduler := RunScheduler(opts.Scheduler)
+
+	//
 	// Controllers
 	//
 	if opts.InvocationController || opts.WorkflowController {
@@ -245,7 +251,8 @@ func Run(ctx context.Context, opts *Options) error {
 
 		if opts.InvocationController {
 			log.Info("Using controller: invocation")
-			ctrls = append(ctrls, setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers))
+			ctrls = append(ctrls,
+				setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers, scheduler))
 		}
 
 		ctrl := controller.NewMetaController(ctrls...)
@@ -526,12 +533,13 @@ func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) 
 }
 
 func setupInvocationController(invocations *store.Invocations, workflows *store.Workflows, es fes.Backend,
-	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
+	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver,
+	s *scheduler.InvocationScheduler) *wfictr.Controller {
+
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
 	dynamicAPI := api.NewDynamicApi(workflowAPI, invocationAPI)
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
-	s := &scheduler.WorkflowScheduler{}
 	stateStore := expr.NewStore()
 	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore)
 }

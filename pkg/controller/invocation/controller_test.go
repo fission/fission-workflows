@@ -17,7 +17,7 @@ import (
 
 func TestController_Lifecycle(t *testing.T) {
 	cache := testutil.NewCache()
-	s := &scheduler.WorkflowScheduler{}
+	s := scheduler.NewInvocationScheduler(scheduler.DefaultPolicy)
 	es := mem.NewBackend()
 	mockRuntime := mock.NewRuntime()
 	mockResolver := fnenv.NewMetaResolver(map[string]fnenv.RuntimeResolver{
