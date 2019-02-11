@@ -158,7 +158,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	}, nil
 }
 
-// Notify signals the Fission runtime that a function request is expected at a specific time.
+// Prepare signals the Fission runtime that a function request is expected at a specific time.
 func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
 	reqURL, err := fe.getFnURL(fn)
 	if err != nil {
