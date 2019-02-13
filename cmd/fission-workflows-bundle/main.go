@@ -42,7 +42,7 @@ func main() {
 		}
 
 		return bundle.Run(ctx, &bundle.Options{
-			Nats:                 parseNatsOptions(c),
+			NATS:                 parseNatsOptions(c),
 			Fission:              parseFissionOptions(c),
 			Scheduler:            policy,
 			InternalRuntime:      c.Bool("internal"),
@@ -91,9 +91,10 @@ func parseNatsOptions(c *cli.Context) *nats.Config {
 	}
 
 	return &nats.Config{
-		URL:     c.String("nats-url"),
-		Cluster: c.String("nats-cluster"),
-		Client:  client,
+		URL:           c.String("nats-url"),
+		Cluster:       c.String("nats-cluster"),
+		Client:        client,
+		AutoReconnect: true,
 	}
 }
 

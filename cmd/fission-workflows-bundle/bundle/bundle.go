@@ -91,7 +91,7 @@ func (app *App) Close() error {
 }
 
 type Options struct {
-	Nats                 *nats.Config
+	NATS                 *nats.Config
 	Scheduler            scheduler.Policy
 	Fission              *FissionOptions
 	InternalRuntime      bool
@@ -181,13 +181,14 @@ func Run(ctx context.Context, opts *Options) error {
 	// Event Store
 	//
 	var eventStore fes.Backend
-	if opts.Nats != nil {
+	if opts.NATS != nil {
 		log.WithFields(log.Fields{
-			"url":     "!redacted!",
-			"cluster": opts.Nats.Cluster,
-			"client":  opts.Nats.Client,
+			"url":           "<redacted>", // Typically includes the password
+			"cluster":       opts.NATS.Cluster,
+			"client":        opts.NATS.Client,
+			"autoReconnect": opts.NATS.AutoReconnect,
 		}).Infof("Using event store: NATS")
-		natsBackend := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
+		natsBackend := setupNatsEventStoreClient(opts.NATS.URL, opts.NATS.Cluster, opts.NATS.Client)
 		es = natsBackend
 		esPub = natsBackend
 		eventStore = natsBackend
@@ -407,16 +408,12 @@ func setupFissionFunctionRuntime(fissionOpts *FissionOptions) *fission.FunctionE
 	return fission.New(executorC, controllerC, fissionOpts.RouterAddr)
 }
 
-func setupNatsEventStoreClient(url string, cluster string, clientID string) *nats.EventStore {
-	if clientID == "" {
-		clientID = util.UID()
+func setupNatsEventStoreClient(config nats.Config) *nats.EventStore {
+	if config.Client == "" {
+		config.Client = util.UID()
 	}
 
-	es, err := nats.Connect(nats.Config{
-		Cluster: cluster,
-		URL:     url,
-		Client:  clientID,
-	})
+	es, err := nats.Connect(config)
 	if err != nil {
 		panic(err)
 	}

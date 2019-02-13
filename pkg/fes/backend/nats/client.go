@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -53,24 +54,74 @@ func init() {
 // EventStore is a NATS-based implementation of the EventStore interface.
 type EventStore struct {
 	pubsub.Publisher
-	conn   *WildcardConn
-	sub    map[fes.Aggregate]stan.Subscription
-	Config Config
+	conn            *WildcardConn
+	subs            map[fes.Aggregate]stan.Subscription
+	Config          Config
+	closeFn         func()
+	initConnChecker sync.Once
 }
 
 type Config struct {
-	Cluster string
-	Client  string
-	URL     string // e.g. nats://localhost:9300
+	Cluster       string
+	Client        string
+	URL           string // e.g. nats://localhost:9300
+	AutoReconnect bool
 }
 
 func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 	return &EventStore{
 		Publisher: pubsub.NewPublisher(),
 		conn:      conn,
-		sub:       map[fes.Aggregate]stan.Subscription{},
+		subs:      map[fes.Aggregate]stan.Subscription{},
 		Config:    cfg,
 	}
+}
+
+func (es *EventStore) RunConnectionChecker() {
+	es.initConnChecker.Do(func() {
+		controlC := make(chan struct{})
+		go func() {
+			select {
+			case <-controlC:
+				return
+			case <-time.After(10 * time.Second):
+				if es.conn.NatsConn().Status() == nats.CLOSED {
+					if err := es.reconnect(); err != nil {
+						logrus.Error("Failed to reconnect to NATS: %v", err)
+					} else {
+						logrus.Error("Reconnected to NATS: %v", err)
+					}
+				}
+			}
+		}()
+		es.closeFn = func() {
+			select {
+			case controlC <- struct{}{}:
+			default:
+			}
+		}
+	})
+}
+
+func (es *EventStore) reconnect() error {
+	err := es.conn.Close()
+	if err != nil {
+		return err
+	}
+	nes, err := Connect(es.Config)
+	if err != nil {
+		return err
+	}
+	es.conn = nes.conn
+
+	// Re-watch all the keys that we were watching in the c
+	for key := range es.subs {
+		err = es.Watch(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Connect to a NATS cluster using the config.
@@ -95,7 +146,13 @@ func Connect(cfg Config) (*EventStore, error) {
 		WithField("client", cfg.Client).
 		Info("connected to NATS")
 
-	return NewEventStore(wconn, cfg), nil
+	es := NewEventStore(wconn, cfg)
+
+	if cfg.AutoReconnect {
+		es.RunConnectionChecker()
+	}
+
+	return es, nil
 }
 
 // Watch a aggregate type for new events. The events are emitted over the publisher interface.
@@ -139,11 +196,14 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 	}
 
 	logrus.Infof("Backend client watches:' %s'", subject)
-	es.sub[aggregate] = sub
+	es.subs[aggregate] = sub
 	return nil
 }
 
 func (es *EventStore) Close() error {
+	if es.closeFn != nil {
+		es.closeFn()
+	}
 	err := es.conn.Close()
 	if err != nil {
 		return err

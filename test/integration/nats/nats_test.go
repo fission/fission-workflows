@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 
 		Repository:   "nats-streaming",
-		Tag:          "0.8.0-beta",
+		Tag:          "0.12.0",
 		Cmd:          []string{"-cid", clusterId, "-p", fmt.Sprintf("%d", 4222)},
 		ExposedPorts: []string{"4222"},
 	})
