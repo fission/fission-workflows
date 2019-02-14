@@ -1,0 +1,6 @@
+apiVersion: 1
+output: Hello
+tasks:
+  Hello:
+    run: non-existent-fn
+    inputs: "{$.Invocation.Inputs.default}"
