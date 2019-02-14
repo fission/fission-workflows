@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	defaultClient  = "fes"
-	defaultCluster = "fes-cluster"
+	defaultClient           = "fes"
+	defaultCluster          = "fes-cluster"
+	connectionCheckInterval = 10 * time.Second
 )
 
 var (
@@ -79,17 +80,21 @@ func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 
 func (es *EventStore) RunConnectionChecker() {
 	es.initConnChecker.Do(func() {
+		logrus.Infof("Running connection reconnector. Checking every %v", connectionCheckInterval)
 		controlC := make(chan struct{})
 		go func() {
-			select {
-			case <-controlC:
-				return
-			case <-time.After(10 * time.Second):
-				if es.conn.NatsConn().Status() == nats.CLOSED {
-					if err := es.reconnect(); err != nil {
-						logrus.Error("Failed to reconnect to NATS: %v", err)
-					} else {
-						logrus.Error("Reconnected to NATS: %v", err)
+			for {
+				select {
+				case <-controlC:
+					return
+				case <-time.After(connectionCheckInterval):
+					logrus.Info("Connection status:", es.conn.NatsConn().Status())
+					if es.conn.NatsConn().Status() == nats.CLOSED {
+						if err := es.reconnect(); err != nil {
+							logrus.Errorf("Failed to reconnect to NATS: %v", err)
+						} else {
+							logrus.Infof("Reconnected to NATS: %v", err)
+						}
 					}
 				}
 			}

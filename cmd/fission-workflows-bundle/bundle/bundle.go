@@ -188,7 +188,7 @@ func Run(ctx context.Context, opts *Options) error {
 			"client":        opts.NATS.Client,
 			"autoReconnect": opts.NATS.AutoReconnect,
 		}).Infof("Using event store: NATS")
-		natsBackend := setupNatsEventStoreClient(opts.NATS.URL, opts.NATS.Cluster, opts.NATS.Client)
+		natsBackend := setupNatsEventStoreClient(*opts.NATS)
 		es = natsBackend
 		esPub = natsBackend
 		eventStore = natsBackend

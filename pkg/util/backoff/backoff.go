@@ -2,7 +2,6 @@ package backoff
 
 import (
 	"context"
-	"log"
 	"time"
 )
 
@@ -46,7 +45,6 @@ func (i *Instance) C(ctx context.Context) <-chan int {
 			case c <- attempt:
 				// ok
 				wait := i.BackoffPolicy(attempt, i.BaseRetryDuration)
-				log.Printf("sleep for %v\n", wait)
 				time.Sleep(wait)
 			}
 		}

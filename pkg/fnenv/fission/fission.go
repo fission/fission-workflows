@@ -126,7 +126,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		if err == nil {
 			break
 		}
-		log.Debug("Failed to execute Fission function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
+		log.Debugf("Failed to execute Fission function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
 	}
 	cancelFn()
 
