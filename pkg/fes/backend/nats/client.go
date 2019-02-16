@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	defaultClient           = "fes"
-	defaultCluster          = "fes-cluster"
-	connectionCheckInterval = 10 * time.Second
+	defaultClient     = "fes"
+	defaultCluster    = "fes-cluster"
+	reconnectInterval = 10 * time.Second
 )
 
 var (
@@ -80,14 +80,14 @@ func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 
 func (es *EventStore) RunConnectionChecker() {
 	es.initConnChecker.Do(func() {
-		logrus.Infof("Running connection reconnector. Checking every %v", connectionCheckInterval)
+		logrus.Infof("Running connection re-connector. Checking every %v", reconnectInterval)
 		controlC := make(chan struct{})
 		go func() {
 			for {
 				select {
 				case <-controlC:
 					return
-				case <-time.After(connectionCheckInterval):
+				case <-time.After(reconnectInterval):
 					logrus.Info("Connection status:", es.conn.NatsConn().Status())
 					if es.conn.NatsConn().Status() == nats.CLOSED {
 						if err := es.reconnect(); err != nil {
@@ -109,15 +109,21 @@ func (es *EventStore) RunConnectionChecker() {
 }
 
 func (es *EventStore) reconnect() error {
-	err := es.conn.Close()
+	cfg := es.Config
+	cfg.AutoReconnect = false
+	nes, err := Connect(cfg)
 	if err != nil {
+		fmt.Println("connection fail", cfg.URL, cfg.Cluster, cfg.Client)
 		return err
 	}
-	nes, err := Connect(es.Config)
-	if err != nil {
-		return err
-	}
+	oldConn := es.conn
 	es.conn = nes.conn
+	// close the old connection
+	if oldConn.NatsConn().Status() != nats.CLOSED {
+		if err = oldConn.Close(); err != nil {
+			logrus.Errorf("Failed to close old NATS connection: %v", err)
+		}
+	}
 
 	// Re-watch all the keys that we were watching in the c
 	for key := range es.subs {
@@ -140,8 +146,24 @@ func Connect(cfg Config) (*EventStore, error) {
 	if cfg.Cluster == "" {
 		cfg.Cluster = defaultCluster
 	}
-	url := stan.NatsURL(cfg.URL)
-	conn, err := stan.Connect(cfg.Cluster, cfg.Client, url)
+	ns, err := nats.Connect(cfg.URL,
+		nats.MaxReconnects(-1), // Never stop trying to reconnect
+		nats.ReconnectWait(reconnectInterval),
+		nats.DisconnectHandler(func(conn *nats.Conn) {
+			logrus.Infof("Lost connection to NATS cluster; attempting to reconnect every %v (%v)",
+				reconnectInterval, cfg)
+		}),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			logrus.Info("Connection to NATS cluster was closed: ", cfg)
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			logrus.Info("Reconnected to NATS cluster: ", cfg)
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := stan.Connect(cfg.Cluster, cfg.Client, stan.NatsConn(ns))
 	if err != nil {
 		return nil, err
 	}
@@ -152,10 +174,10 @@ func Connect(cfg Config) (*EventStore, error) {
 		Info("connected to NATS")
 
 	es := NewEventStore(wconn, cfg)
-
-	if cfg.AutoReconnect {
-		es.RunConnectionChecker()
-	}
+	//
+	//if cfg.AutoReconnect {
+	//	es.RunConnectionChecker()
+	//}
 
 	return es, nil
 }
@@ -232,16 +254,16 @@ func (es *EventStore) Append(event *fes.Event) error {
 		return err
 	}
 
+	err = es.conn.Publish(subject, data)
+	if err != nil {
+		return err
+	}
+
 	logrus.WithFields(logrus.Fields{
 		"aggregate":    event.Aggregate.Format(),
 		"parent":       event.Parent.Format(),
 		"nats.subject": subject,
 	}).Infof("Event added: %v", event.Type)
-
-	err = es.conn.Publish(subject, data)
-	if err != nil {
-		return err
-	}
 	eventsAppended.WithLabelValues(event.Type).Inc()
 	eventsAppended.WithLabelValues("control").Inc()
 	return nil
