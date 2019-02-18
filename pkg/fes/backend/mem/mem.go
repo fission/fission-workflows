@@ -11,9 +11,12 @@ import (
 	"math"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fes/backend"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -23,13 +26,6 @@ var (
 	ErrEventLimitExceeded = &fes.EventStoreErr{
 		S: "event limit exceeded",
 	}
-
-	eventsAppended = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "fes",
-		Subsystem: "mem",
-		Name:      "events_appended_total",
-		Help:      "Count of appended events (excluding any internal events).",
-	}, []string{"eventType"})
 
 	cacheKeys = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "fes",
@@ -47,7 +43,7 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(eventsAppended, cacheKeys, cacheEvents)
+	prometheus.MustRegister(cacheKeys, cacheEvents)
 }
 
 // Config contains the user-configurable options of the in-memory backend.
@@ -148,8 +144,10 @@ func (b *Backend) Append(event *fes.Event) error {
 		atomic.AddInt32(b.entries, 1)
 		cacheKeys.WithLabelValues(key.Type).Inc()
 	}
-
-	eventsAppended.WithLabelValues(event.Type).Inc()
+	// Record the time it took for the event to be propagated from publisher to subscriber.
+	ts, _ := ptypes.Timestamp(event.Timestamp)
+	backend.EventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
+	backend.EventsAppended.WithLabelValues(event.Type).Inc()
 	return err
 }
 

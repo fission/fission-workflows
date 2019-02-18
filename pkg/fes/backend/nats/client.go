@@ -1,13 +1,13 @@
 package nats
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fes/backend"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -24,32 +24,16 @@ const (
 )
 
 var (
-	ErrInvalidAggregate = errors.New("invalid aggregate")
-
 	subsActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "fes",
 		Subsystem: "nats",
 		Name:      "subs_active",
 		Help:      "Number of active subscriptions to NATS subjects.",
 	}, []string{"subType"})
-
-	eventsAppended = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "fes",
-		Subsystem: "nats",
-		Name:      "events_appended_total",
-		Help:      "Count of appended events (including any internal events).",
-	}, []string{"eventType"})
-
-	eventDelay = prometheus.NewSummary(prometheus.SummaryOpts{
-		Namespace: "fes",
-		Subsystem: "nats",
-		Name:      "event_propagation_delay",
-		Help:      "Delay between event publish and receive by the subscribers.",
-	})
 )
 
 func init() {
-	prometheus.MustRegister(subsActive, eventsAppended, eventDelay)
+	prometheus.MustRegister(subsActive)
 }
 
 // EventStore is a NATS-based implementation of the EventStore interface.
@@ -215,7 +199,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 
 		// Record the time it took for the event to be propagated from publisher to subscriber.
 		ts, _ := ptypes.Timestamp(event.Timestamp)
-		eventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
+		backend.EventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
 
 	}, stan.DeliverAllAvailable())
 	if err != nil {
@@ -264,8 +248,8 @@ func (es *EventStore) Append(event *fes.Event) error {
 		"parent":       event.Parent.Format(),
 		"nats.subject": subject,
 	}).Infof("Event added: %v", event.Type)
-	eventsAppended.WithLabelValues(event.Type).Inc()
-	eventsAppended.WithLabelValues("control").Inc()
+	backend.EventsAppended.WithLabelValues(event.Type).Inc()
+	backend.EventsAppended.WithLabelValues("control").Inc()
 	return nil
 }
 
