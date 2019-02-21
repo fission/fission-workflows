@@ -86,10 +86,11 @@ type Controller struct {
 	evalStore     *controller.EvalStore
 	workQueue     workqueue.RateLimitingInterface
 	workerPool    *gopool.GoPool
+	executor      controller.Executor
 }
 
 func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.InvocationScheduler,
-	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store) *Controller {
+	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store, executor controller.Executor) *Controller {
 	ctr := &Controller{
 		invocations:   invocations,
 		workflows:     workflows,
@@ -100,6 +101,7 @@ func NewController(invocations *store.Invocations, workflows *store.Workflows, w
 		evalStore:     &controller.EvalStore{},
 		workQueue:     workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 		workerPool:    gopool.New(maxParallelExecutions),
+		executor:      executor,
 	}
 
 	ctr.evalPolicy = defaultPolicy(ctr)
@@ -321,17 +323,21 @@ func (cr *Controller) Evaluate(invocationID string) {
 	}
 
 	// Execute action
-	err = action.Apply()
+	err = cr.executor.Accept(action)
 	if err != nil {
-		log.Errorf("Action '%T' failed: %v", action, err)
-		record.Error = err
+		// Task queue is full
+		log.Errorf("Failed to submit task: %v", err)
+		return
 	}
 	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
 
 	// Record this evaluation
 	evalState.Record(record)
 
-	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
+	// Record statistics
+	controller.EvalDuration.
+		WithLabelValues(Name, fmt.Sprintf("%T", action)).
+		Observe(float64(time.Now().Sub(start)))
 	if wfi.GetStatus().Finished() {
 		cr.finishAndDeleteEvalState(wfi.ID(), true, "")
 	}

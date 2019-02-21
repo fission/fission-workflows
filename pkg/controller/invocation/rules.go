@@ -110,6 +110,8 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				Task:       invokeAction,
 				StateStore: sf.StateStore,
 			})
+		case scheduler.ActionType_PREPARE_TASK:
+
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)
 		}

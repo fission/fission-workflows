@@ -52,12 +52,14 @@ import (
 )
 
 const (
-	gRPCAddress             = ":5555"
-	apiGatewayAddress       = ":8080"
-	fissionProxyAddress     = ":8888"
-	jaegerTracerServiceName = "fission.workflows"
-	WorkflowsCacheSize      = 10000
-	InvocationsCacheSize    = 1000000
+	gRPCAddress              = ":5555"
+	apiGatewayAddress        = ":8080"
+	fissionProxyAddress      = ":8888"
+	jaegerTracerServiceName  = "fission.workflows"
+	WorkflowsCacheSize       = 10000
+	InvocationsCacheSize     = 100000
+	executorMaxParallelism   = 1000
+	executorMaxTaskQueueSize = 100000
 )
 
 type App struct {
@@ -538,7 +540,9 @@ func setupInvocationController(invocations *store.Invocations, workflows *store.
 	dynamicAPI := api.NewDynamicApi(workflowAPI, invocationAPI)
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
 	stateStore := expr.NewStore()
-	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore)
+	localExec := controller.NewLocalExecutor(executorMaxParallelism, executorMaxTaskQueueSize)
+	localExec.Start()
+	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore, localExec)
 }
 
 func setupWorkflowController(store *store.Workflows, es fes.Backend,
