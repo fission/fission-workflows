@@ -2,6 +2,8 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
@@ -14,12 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO move events here
-
 // Task contains the API functionality for controlling the lifecycle of individual tasks.
 // This includes starting, stopping and completing tasks.
 type Task struct {
-	runtime    map[string]fnenv.Runtime // TODO support AsyncRuntime
+	runtime    map[string]fnenv.Runtime
 	es         fes.Backend
 	dynamicAPI *Dynamic
 }
@@ -62,7 +62,6 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		return nil, err
 	}
 
-	// TODO propagate context
 	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
@@ -134,4 +133,19 @@ func (ap *Task) Fail(invocationID string, taskID string, errMsg string) error {
 	}
 	event.Parent = aggregates.NewWorkflowInvocationAggregate(invocationID)
 	return ap.es.Append(event)
+}
+
+func (ap *Task) Prepare(spec *types.TaskInvocationSpec, expectedAt time.Time, opts ...CallOption) error {
+	runtime, ok := ap.runtime[spec.GetFnRef().GetRuntime()]
+	if !ok {
+		return fmt.Errorf("could not find runtime for %s", spec.GetFnRef().Format())
+	}
+
+	// check if the runtime supports prewarming
+	preparer, ok := runtime.(fnenv.Preparer)
+	if !ok {
+		return fmt.Errorf("runtime does not support prewarming")
+	}
+
+	return preparer.Prepare(*spec.FnRef, expectedAt)
 }

@@ -99,6 +99,18 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 				TaskID:     action.TaskID,
 				StateStore: sf.StateStore,
 			})
+		case *scheduler.PrepareTaskAction:
+			task, ok := wfi.Task(action.TaskID)
+			if !ok {
+				continue
+			}
+			fnref := task.GetStatus().GetFnRef()
+			taskSpec := types.NewTaskInvocationSpec(wfi.ID(), task.ID(), *fnref)
+			actions = append(actions, &actionPrepareTask{
+				taskSpec:   taskSpec,
+				expectedAt: action.GetExpectedAtTime(),
+				api:        sf.FunctionAPI,
+			})
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)
 		}

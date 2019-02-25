@@ -316,3 +316,13 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 	}
 	return resolvedInputs, nil
 }
+
+type actionPrepareTask struct {
+	taskSpec   *types.TaskInvocationSpec
+	expectedAt time.Time
+	api        *api.Task
+}
+
+func (a *actionPrepareTask) Apply() error {
+	return a.api.Prepare(a.taskSpec, a.expectedAt)
+}

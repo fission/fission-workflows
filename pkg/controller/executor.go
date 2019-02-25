@@ -117,7 +117,7 @@ func (w *worker) Run() {
 		tasksActive.Inc()
 		err := task.Apply()
 		if err != nil {
-			logrus.Errorf("Task failed: %v", err)
+			logrus.Errorf("Task %T failed: %v", task, err)
 		}
 		tasksActive.Dec()
 		tasksProcessed.Inc()

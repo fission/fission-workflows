@@ -33,25 +33,22 @@ var log = logrus.WithField("component", "fnenv.fission")
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
 type FunctionEnv struct {
-	executor         *executor.Client
-	controller       *controller.Client
-	routerURL        string
-	timedExecService *timedExecPool
-	client           *http.Client
+	executor   *executor.Client
+	controller *controller.Client
+	routerURL  string
+	client     *http.Client
 }
 
 const (
 	defaultHTTPMethod = http.MethodPost
 	defaultProtocol   = "http"
-	provisionDuration = time.Duration(500) * time.Millisecond
 )
 
 func New(executor *executor.Client, controller *controller.Client, routerURL string) *FunctionEnv {
 	return &FunctionEnv{
-		executor:         executor,
-		controller:       controller,
-		routerURL:        routerURL,
-		timedExecService: newTimedExecPool(),
+		executor:   executor,
+		controller: controller,
+		routerURL:  routerURL,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -179,20 +176,16 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 }
 
 // Prepare signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
+// For now this function will tap immediately regardless of the expected execution time.
+func (fe *FunctionEnv) Prepare(fn types.FnRef, expectedAt time.Time) error {
 	reqURL, err := fe.getFnURL(fn)
 	if err != nil {
 		return err
 	}
 
-	// For this now assume a standard cold start delay; use profiling to provide a better estimate.
-	execAt := expectedAt.Add(-provisionDuration)
-
 	// Tap the Fission function at the right time
-	fe.timedExecService.Submit(func() {
-		log.WithField("fn", fn).Infof("Prewarming Fission function: %v", reqURL)
-		fe.executor.TapService(reqURL)
-	}, execAt)
+	log.WithField("fn", fn).Infof("Prewarming Fission function: %v", reqURL)
+	fe.executor.TapService(reqURL)
 	return nil
 }
 

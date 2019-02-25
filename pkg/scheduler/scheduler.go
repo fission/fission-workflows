@@ -108,3 +108,11 @@ func (m *Schedule) Actions() (actions []interface{}) {
 	}
 	return actions
 }
+
+func (m *PrepareTaskAction) GetExpectedAtTime() time.Time {
+	ts, err := ptypes.Timestamp(m.ExpectedAt)
+	if err != nil {
+		panic(err)
+	}
+	return ts
+}
