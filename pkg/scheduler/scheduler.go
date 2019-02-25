@@ -64,41 +64,47 @@ func (ws *InvocationScheduler) Evaluate(invocation *types.WorkflowInvocation) (*
 	return schedule, nil
 }
 
-func (m *Schedule) Add(action *Action) {
-	m.Actions = append(m.Actions, action)
-}
-
-func newActionInvoke(task *types.Task) *Action {
-	invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-		TaskID: task.ID(),
-	})
-
-	return &Action{
-		Type:    ActionType_INVOKE_TASK,
-		Payload: invokeTaskAction,
+func newRunTaskAction(taskID string) *RunTaskAction {
+	return &RunTaskAction{
+		TaskID: taskID,
 	}
 }
 
-func newActionAbort(msg string) *Action {
-	AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
+func newAbortAction(msg string) *AbortAction {
+	return &AbortAction{
 		Reason: msg,
-	})
-
-	return &Action{
-		Type:    ActionType_ABORT,
-		Payload: AbortActionAny,
 	}
 }
 
-func newActionPrepare(taskID string, expectedAt time.Time) *Action {
+func newPrepareTaskAction(taskID string, expectedAt time.Time) *PrepareTaskAction {
 	ts, _ := ptypes.TimestampProto(expectedAt)
-	AbortActionAny, _ := ptypes.MarshalAny(&PrepareTaskAction{
+	return &PrepareTaskAction{
 		TaskID:     taskID,
 		ExpectedAt: ts,
-	})
-
-	return &Action{
-		Type:    ActionType_PREPARE_TASK,
-		Payload: AbortActionAny,
 	}
+}
+
+func (m *Schedule) AddRunTask(action *RunTaskAction) {
+	m.RunTasks = append(m.RunTasks, action)
+}
+
+func (m *Schedule) AddPrepareTask(action *PrepareTaskAction) {
+	m.PrepareTasks = append(m.PrepareTasks, action)
+}
+
+func (m *Schedule) Actions() (actions []interface{}) {
+	if m.Abort != nil {
+		actions = append(actions, m.Abort)
+	}
+	if len(m.PrepareTasks) > 0 {
+		for _, t := range m.PrepareTasks {
+			actions = append(actions, t)
+		}
+	}
+	if len(m.RunTasks) > 0 {
+		for _, t := range m.RunTasks {
+			actions = append(actions, t)
+		}
+	}
+	return actions
 }

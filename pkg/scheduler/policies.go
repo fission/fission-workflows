@@ -32,7 +32,7 @@ func (p *HorizonPolicy) Evaluate(invocation *types.WorkflowInvocation) (*Schedul
 			if err := failedTask.GetStatus().GetError(); err != nil {
 				msg = err.Message
 			}
-			schedule.Add(newActionAbort(msg))
+			schedule.Abort = newAbortAction(msg)
 		}
 		return schedule, nil
 	}
@@ -42,7 +42,7 @@ func (p *HorizonPolicy) Evaluate(invocation *types.WorkflowInvocation) (*Schedul
 	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
 	horizon := graph.Roots(depGraph)
 	for _, node := range horizon {
-		schedule.Add(newActionInvoke(node.(*graph.TaskInvocationNode).Task()))
+		schedule.AddRunTask(newRunTaskAction(node.(*graph.TaskInvocationNode).Task().ID()))
 	}
 	return schedule, nil
 }
@@ -74,7 +74,7 @@ func (p *PrewarmAllPolicy) Evaluate(invocation *types.WorkflowInvocation) (*Sche
 			if err := failedTask.GetStatus().GetError(); err != nil {
 				msg = err.Message
 			}
-			schedule.Add(newActionAbort(msg))
+			schedule.Abort = newAbortAction(msg)
 		}
 		return schedule, nil
 	}
@@ -84,14 +84,14 @@ func (p *PrewarmAllPolicy) Evaluate(invocation *types.WorkflowInvocation) (*Sche
 	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
 	horizon := graph.Roots(depGraph)
 	for _, node := range horizon {
-		schedule.Add(newActionInvoke(node.(*graph.TaskInvocationNode).Task()))
+		schedule.AddRunTask(newRunTaskAction(node.(*graph.TaskInvocationNode).Task().ID()))
 	}
 
 	// Prewarm all other tasks
 	expectedAt := time.Now().Add(p.coldStartDuration)
 	for taskID, task := range invocation.Tasks() {
 		if _, ok := openTasks[taskID]; !ok {
-			schedule.Add(newActionPrepare(task.ID(), expectedAt))
+			schedule.AddPrepareTask(newPrepareTaskAction(task.ID(), expectedAt))
 		}
 	}
 	return schedule, nil
@@ -124,7 +124,7 @@ func (p *PrewarmHorizonPolicy) Evaluate(invocation *types.WorkflowInvocation) (*
 			if err := failedTask.GetStatus().GetError(); err != nil {
 				msg = err.Message
 			}
-			schedule.Add(newActionAbort(msg))
+			schedule.Abort = newAbortAction(msg)
 		}
 		return schedule, nil
 	}
@@ -135,7 +135,7 @@ func (p *PrewarmHorizonPolicy) Evaluate(invocation *types.WorkflowInvocation) (*
 	horizon := graph.Roots(depGraph)
 	for _, node := range horizon {
 		taskRun := node.(*graph.TaskInvocationNode)
-		schedule.Add(newActionInvoke(taskRun.Task()))
+		schedule.AddRunTask(newRunTaskAction(taskRun.TaskInvocation.ID()))
 		delete(openTasks, taskRun.GetMetadata().GetId())
 	}
 
@@ -146,7 +146,7 @@ func (p *PrewarmHorizonPolicy) Evaluate(invocation *types.WorkflowInvocation) (*
 	prewarmHorizon := graph.Roots(prewarmDepGraph)
 	for _, node := range prewarmHorizon {
 		taskRun := node.(*graph.TaskInvocationNode)
-		schedule.Add(newActionPrepare(taskRun.Task().ID(), expectedAt))
+		schedule.AddPrepareTask(newPrepareTaskAction(taskRun.Task().ID(), expectedAt))
 	}
 
 	return schedule, nil

@@ -8,7 +8,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/api"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
-	"github.com/fission/fission-workflows/pkg/scheduler"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
@@ -69,7 +68,7 @@ type ActionInvokeTask struct {
 	ec         *controller.EvalState
 	Wfi        *types.WorkflowInvocation
 	API        *api.Task
-	Task       *scheduler.InvokeTaskAction
+	TaskID     string
 	StateStore *expr.Store
 }
 
@@ -81,16 +80,16 @@ func (a *ActionInvokeTask) logger() logrus.FieldLogger {
 	return logrus.WithFields(logrus.Fields{
 		"invocation": a.Wfi.ID(),
 		"workflow":   a.Wfi.Workflow().ID(),
-		"task":       a.Task.TaskID,
+		"task":       a.TaskID,
 	})
 }
 
 func (a *ActionInvokeTask) String() string {
-	return fmt.Sprintf("task/run(%s)", a.Task.TaskID)
+	return fmt.Sprintf("task/run(%s)", a.TaskID)
 }
 
 func (a *ActionInvokeTask) Apply() error {
-	taskID := a.Task.TaskID
+	taskID := a.TaskID
 	log := a.logger()
 	span := opentracing.StartSpan(fmt.Sprintf("/task/%s", taskID), opentracing.ChildOf(a.ec.Span().Context()))
 	span.SetTag("task", taskID)
@@ -149,7 +148,7 @@ func (a *ActionInvokeTask) Apply() error {
 	// Invoke task
 	spec := &types.TaskInvocationSpec{
 		FnRef:        task.Status.FnRef,
-		TaskId:       a.Task.TaskID,
+		TaskId:       a.TaskID,
 		InvocationId: a.Wfi.ID(),
 		Inputs:       inputs,
 	}
@@ -188,7 +187,7 @@ func (a *ActionInvokeTask) Apply() error {
 }
 
 func (a *ActionInvokeTask) postTransformer(ti *types.TaskInvocation) error {
-	task, _ := a.Wfi.Task(a.Task.TaskID)
+	task, _ := a.Wfi.Task(a.TaskID)
 	if ti.GetStatus().Successful() {
 		output := task.GetSpec().GetOutput()
 		if output != nil {
@@ -231,15 +230,15 @@ func (a *ActionInvokeTask) resolveOutput(ti *types.TaskInvocation, outputExpr *t
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.TaskID)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.TaskID)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Add the current output
-	scope.Tasks[a.Task.TaskID].Output = typedvalues.MustUnwrap(ti.GetStatus().GetOutput())
+	scope.Tasks[a.TaskID].Output = typedvalues.MustUnwrap(ti.GetStatus().GetOutput())
 
 	// Resolve the output expression
-	resolvedOutput, err := expr.Resolve(scope, a.Task.TaskID, outputExpr)
+	resolvedOutput, err := expr.Resolve(scope, a.TaskID, outputExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -260,15 +259,15 @@ func (a *ActionInvokeTask) resolveOutputHeaders(ti *types.TaskInvocation, output
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.Task.TaskID)
+		return nil, errors.Wrapf(err, "failed to create scope for task '%v'", a.TaskID)
 	}
 	a.StateStore.Set(a.Wfi.ID(), scope)
 
 	// Add the current outputHeaders
-	scope.Tasks[a.Task.TaskID].OutputHeaders = typedvalues.MustUnwrap(ti.GetStatus().GetOutputHeaders())
+	scope.Tasks[a.TaskID].OutputHeaders = typedvalues.MustUnwrap(ti.GetStatus().GetOutputHeaders())
 
 	// Resolve the outputHeaders expression
-	resolvedOutputHeaders, err := expr.Resolve(scope, a.Task.TaskID, outputHeadersExpr)
+	resolvedOutputHeaders, err := expr.Resolve(scope, a.TaskID, outputHeadersExpr)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +285,7 @@ func (a *ActionInvokeTask) resolveInputs(inputs map[string]*typedvalues.TypedVal
 		}
 	}
 
-	taskID := a.Task.TaskID
+	taskID := a.TaskID
 
 	// Setup the scope for the expressions
 	scope, err := expr.NewScope(parentScope, a.Wfi)

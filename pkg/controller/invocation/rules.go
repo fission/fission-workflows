@@ -10,7 +10,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/controlflow"
-	"github.com/golang/protobuf/ptypes"
 )
 
 //
@@ -84,34 +83,22 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 
 	// Execute the actions as specified in the execution plan
 	var actions []controller.Action
-	for _, a := range schedule.Actions {
-		switch a.Type {
-		case scheduler.ActionType_ABORT:
-			invokeAction := &scheduler.AbortAction{}
-			err := ptypes.UnmarshalAny(a.Payload, invokeAction)
-			if err != nil {
-				log.Errorf("Failed to unpack Scheduler action: %v", err)
-			}
+	for _, a := range schedule.Actions() {
+		switch action := a.(type) {
+		case *scheduler.AbortAction:
 			return &ActionFail{
 				API:          sf.InvocationAPI,
 				InvocationID: wfi.ID(),
-				Err:          errors.New(invokeAction.Reason),
+				Err:          errors.New(action.Reason),
 			}
-		case scheduler.ActionType_INVOKE_TASK:
-			invokeAction := &scheduler.InvokeTaskAction{}
-			err := ptypes.UnmarshalAny(a.Payload, invokeAction)
-			if err != nil {
-				log.Errorf("Failed to unpack Scheduler action: %v", err)
-			}
+		case *scheduler.RunTaskAction:
 			actions = append(actions, &ActionInvokeTask{
 				ec:         ec.EvalState(),
 				Wfi:        wfi,
 				API:        sf.FunctionAPI,
-				Task:       invokeAction,
+				TaskID:     action.TaskID,
 				StateStore: sf.StateStore,
 			})
-		case scheduler.ActionType_PREPARE_TASK:
-
 		default:
 			log.Warnf("Unknown Scheduler action: '%v'", a)
 		}
