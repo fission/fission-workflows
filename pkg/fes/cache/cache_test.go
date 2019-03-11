@@ -11,13 +11,13 @@ import (
 func setupLoadingCache() (*LoadingCache, *testutil.Cache, *testutil.Backend) {
 	backingCache := testutil.NewCache()
 	backend := testutil.NewBackend()
-	cache := NewLoadingCache(backingCache, backend, testutil.NewStringAppendEntity)
+	cache := NewLoadingCache(backingCache, backend, testutil.Projector)
 	return cache, backingCache, backend
 }
 
 func TestLoadingCache_GetAggregateStoreAndCache(t *testing.T) {
 	cache, _, eventStore := setupLoadingCache()
-	key := fes.Aggregate{Type: "dummyEntity", Id: "1"}
+	key := fes.Aggregate{Type: testutil.MockEntityType, Id: "1"}
 	target := "abcdef"
 	events := testutil.ToDummyEvents(key, target)
 	for _, event := range events {
@@ -28,7 +28,7 @@ func TestLoadingCache_GetAggregateStoreAndCache(t *testing.T) {
 	// First fetch: load from event store
 	e, err := cache.GetAggregate(key)
 	assert.NoError(t, err)
-	storedEntity, ok := e.(*testutil.Entity)
+	storedEntity, ok := e.(*testutil.MockEntity)
 	assert.True(t, ok)
 	assert.Equal(t, target, storedEntity.S)
 
@@ -36,16 +36,16 @@ func TestLoadingCache_GetAggregateStoreAndCache(t *testing.T) {
 	eventStore.Reset()
 	e, err = cache.GetAggregate(key)
 	assert.NoError(t, err)
-	cachedEntity, ok := e.(*testutil.Entity)
+	cachedEntity, ok := e.(*testutil.MockEntity)
 	assert.True(t, ok)
 	assert.Equal(t, target, cachedEntity.S)
 }
 
 func TestLRUCache(t *testing.T) {
 	cache := NewLRUCache(2)
-	e1 := testutil.NewStringAppendEntity(fes.Aggregate{Type: "test", Id: "1"})
-	e2 := testutil.NewStringAppendEntity(fes.Aggregate{Type: "test", Id: "2"})
-	e3 := testutil.NewStringAppendEntity(fes.Aggregate{Type: "test", Id: "3"})
+	e1, _ := testutil.Projector.NewProjection(fes.Aggregate{Type: "test", Id: "1"})
+	e2, _ := testutil.Projector.NewProjection(fes.Aggregate{Type: "test", Id: "2"})
+	e3, _ := testutil.Projector.NewProjection(fes.Aggregate{Type: "test", Id: "3"})
 	err := cache.Put(e1)
 	assert.NoError(t, err)
 	err = cache.Put(e2)
@@ -54,10 +54,10 @@ func TestLRUCache(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, len(cache.List()), 2)
-	_, err = cache.GetAggregate(e1.Aggregate())
+	_, err = cache.GetAggregate(fes.GetAggregate(e1))
 	assert.True(t, fes.ErrEntityNotFound.Is(err))
-	c2, err := cache.GetAggregate(e2.Aggregate())
+	c2, err := cache.GetAggregate(fes.GetAggregate(e2))
 	assert.EqualValues(t, e2, c2)
-	c3, err := cache.GetAggregate(e3.Aggregate())
+	c3, err := cache.GetAggregate(fes.GetAggregate(e3))
 	assert.EqualValues(t, e3, c3)
 }

@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -132,7 +131,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 		sub := pub.Subscribe(pubsub.SubscriptionOptions{
 			Buffer: 1,
 			LabelMatcher: labels.And(
-				labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
+				labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
 				labels.In(fes.PubSubLabelAggregateID, wfiID),
 				labels.In(fes.PubSubLabelEventType, terminationEvent...)),
 		})

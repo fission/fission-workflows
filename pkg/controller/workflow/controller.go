@@ -136,7 +136,7 @@ func (c *Controller) Notify(notification *fes.Notification) error {
 	}
 	spanCtx, err := fes.ExtractTracingFromEvent(notification.Event)
 	if err != nil {
-		logrus.Warn("Failed to extract opentracing metadata from event %v", notification.Event.Id)
+		logrus.Warnf("Failed to extract opentracing metadata from event %v", notification.Event.Id)
 	}
 	c.evalCache.LoadOrStore(workflow.ID(), spanCtx)
 	c.submitEval(workflow.ID())

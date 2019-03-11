@@ -2,7 +2,7 @@ package apiserver
 
 import (
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -69,10 +69,7 @@ func (ga *Workflow) Validate(ctx context.Context, spec *types.WorkflowSpec) (*em
 }
 
 func (ga *Workflow) Events(ctx context.Context, md *types.ObjectMetadata) (*ObjectEvents, error) {
-	events, err := ga.backend.Get(fes.Aggregate{
-		Id:   md.Id,
-		Type: aggregates.TypeWorkflow,
-	})
+	events, err := ga.backend.Get(projectors.NewWorkflowAggregate(md.Id))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}

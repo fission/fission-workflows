@@ -29,6 +29,11 @@ type Notification struct {
 
 	// Event is the event that triggered the notification.
 	Event *Event
+
+	// Aggregate contains the aggregate of this notification.
+	//
+	// It is guaranteed that the event, and old and updated snapshots match this aggregate.
+	Aggregate Aggregate
 }
 
 func NewNotification(old Entity, new Entity, event *Event) *Notification {
@@ -38,11 +43,13 @@ func NewNotification(old Entity, new Entity, event *Event) *Notification {
 	if new == nil {
 		panic("new snapshot cannot be nil")
 	}
-	if new.Aggregate() == *event.Aggregate {
+	n := GetAggregate(new)
+	if n != *event.Aggregate && n != *event.Parent {
 		panic("aggregate of event does not match aggregate of new entity snapshot")
 	}
 	if old != nil {
-		if old.Aggregate() == new.Aggregate() {
+		o := GetAggregate(old)
+		if o != *event.Aggregate && o != *event.Parent {
 			panic("aggregate of old entity snapshot does not match aggregate of the new entity snapshot")
 		}
 	}
@@ -65,9 +72,4 @@ func (n *Notification) Labels() labels.Labels {
 // Necessary to conform with the pubsub.Msg interface.
 func (n *Notification) CreatedAt() time.Time {
 	return n.Event.CreatedAt()
-}
-
-// Aggregate provides the aggregate for this notification. This is guaranteed to match for the included event/snapshots.
-func (n *Notification) Aggregate() Aggregate {
-	return n.Updated.Aggregate()
 }

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
@@ -29,6 +29,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
@@ -416,11 +417,11 @@ func setupNatsEventStoreClient(config nats.Config) *nats.EventStore {
 		panic(err)
 	}
 
-	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation})
+	err = es.Watch(fes.Aggregate{Type: types.TypeInvocation})
 	if err != nil {
 		panic(err)
 	}
-	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflow})
+	err = es.Watch(fes.Aggregate{Type: types.TypeWorkflow})
 	if err != nil {
 		panic(err)
 	}
@@ -431,16 +432,17 @@ func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher,
 	sub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer: 50,
 		LabelMatcher: labels.Or(
-			labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
-			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
+			labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
+			labels.In("parent.type", types.TypeInvocation)),
 	})
-	name := aggregates.TypeWorkflowInvocation
+	name := types.TypeInvocation
+	projector := projectors.NewWorkflowInvocation()
 	c := cache.NewSubscribedCache(
 		cache.NewLoadingCache(
 			cache.NewLRUCache(InvocationsCacheSize),
 			backend,
-			aggregates.NewInvocationEntity),
-		aggregates.NewInvocationEntity,
+			projector),
+		projector,
 		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
@@ -449,15 +451,17 @@ func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher,
 func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
 	sub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
 		Buffer:       10,
-		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
+		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow),
 	})
-	name := aggregates.TypeWorkflow
+	name := types.TypeWorkflow
+	projector := projectors.NewWorkflow()
 	c := cache.NewSubscribedCache(
 		cache.NewLoadingCache(
 			cache.NewLRUCache(WorkflowsCacheSize),
 			backend,
-			aggregates.NewWorkflowEntity),
-		aggregates.NewWorkflowEntity,
+			projector,
+		),
+		projector,
 		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
@@ -515,7 +519,7 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Registered Workflow Invocation API HTTP Endpoint")
+		log.Info("Registered Workflow WorkflowInvocation API HTTP Endpoint")
 	}
 }
 

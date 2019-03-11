@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
@@ -87,7 +87,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 			panic(err)
 		}
 		time.Sleep(50 * time.Millisecond)
-		entity, err := c.GetAggregate(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: wfiID})
+		entity, err := c.GetAggregate(projectors.NewInvocationAggregate(wfiID))
 		assert.NoError(t, err)
 		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity) // A bit hacky..
 	}()
@@ -168,7 +168,7 @@ func TestRuntime_Invoke(t *testing.T) {
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
-	c := cache.NewSubscribedCache(testutil.NewCache(), aggregates.NewInvocationEntity, backend.Subscribe())
+	c := cache.NewSubscribedCache(testutil.NewCache(), projectors.NewWorkflowInvocation(), backend.Subscribe())
 	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c), nil)
 	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, c

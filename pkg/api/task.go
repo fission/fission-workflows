@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -53,11 +53,11 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		Spec: spec,
 	}
 
-	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
-	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskStarted{
+	aggregate := projectors.NewInvocationAggregate(spec.InvocationId)
+	event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskStarted{
 		Spec: spec,
 	})
-	event.Parent = aggregate
+	event.Parent = &aggregate
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +98,13 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
-		event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskSucceeded{
+		event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskSucceeded{
 			Result: fnResult,
 		})
 		if err != nil {
 			return nil, err
 		}
-		event.Parent = aggregate
+		event.Parent = &aggregate
 		err = ap.es.Append(event)
 	} else {
 		err = ap.Fail(spec.InvocationId, taskID, fnResult.Error.GetMessage())
@@ -125,13 +125,14 @@ func (ap *Task) Fail(invocationID string, taskID string, errMsg string) error {
 		return validate.NewError("taskID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskFailed{
+	event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskFailed{
 		Error: &types.Error{Message: errMsg},
 	})
 	if err != nil {
 		return err
 	}
-	event.Parent = aggregates.NewWorkflowInvocationAggregate(invocationID)
+	aggregate := projectors.NewInvocationAggregate(invocationID)
+	event.Parent = &aggregate
 	return ap.es.Append(event)
 }
 

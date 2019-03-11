@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -9,40 +10,62 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Entity is a stub implementation of a fes.Entity,
+const (
+	MockEntityType = "mock_entity"
+)
+
+// MockEntity is a stub implementation of a fes.Entity,
 // which simply appends all contents of the DummyEvents it receives.
-type Entity struct {
-	*fes.BaseEntity
-	S string
+type MockEntity struct {
+	S  string
+	Id string
 }
 
-func (e *Entity) ApplyEvent(event *fes.Event) error {
-	msg, err := fes.ParseEventData(event)
-	if err != nil {
-		return err
-	}
-
-	dummyEvent, ok := msg.(*DummyEvent)
-	if !ok {
-		return fmt.Errorf("entity expects DummyEvent, but received %T", msg)
-	}
-
-	e.S += dummyEvent.Msg
-	logrus.Infof("Applied event to entity: %v", e.S)
-
-	return nil
+func (e *MockEntity) Type() string {
+	return MockEntityType
 }
 
-func (e *Entity) CopyEntity() fes.Entity {
-	return &Entity{
-		S: e.S,
-	}
+func (e *MockEntity) ID() string {
+	return e.Id
 }
 
-func NewStringAppendEntity(key fes.Aggregate) fes.Entity {
-	e := &Entity{}
-	e.BaseEntity = fes.NewBaseEntity(e, key)
-	return e
+func (e *MockEntity) Clone() *MockEntity {
+	cloned := &MockEntity{}
+	bs, _ := json.Marshal(e)
+	_ = json.Unmarshal(bs, cloned)
+	return cloned
+}
+
+var Projector = &EntityProjector{}
+
+type EntityProjector struct {
+}
+
+func (e *EntityProjector) NewProjection(aggregate fes.Aggregate) (fes.Entity, error) {
+	return &MockEntity{
+		Id: aggregate.Id,
+	}, nil
+}
+
+func (e *EntityProjector) Project(entity fes.Entity, events ...*fes.Event) (updated fes.Entity, err error) {
+	old := entity.(*MockEntity)
+	newEntity := old.Clone()
+	for _, event := range events {
+		msg, err := fes.ParseEventData(event)
+		if err != nil {
+			return nil, err
+		}
+
+		dummyEvent, ok := msg.(*DummyEvent)
+		if !ok {
+			return nil, fmt.Errorf("entity expects DummyEvent, but received %T", msg)
+		}
+
+		newEntity.S += dummyEvent.Msg
+		logrus.Infof("Applied event to entity: %v", newEntity.S)
+
+	}
+	return newEntity, nil
 }
 
 func CreateDummyEvent(key fes.Aggregate, payload *DummyEvent) *fes.Event {
@@ -126,25 +149,6 @@ func NewCache() *Cache {
 	return c
 }
 
-func (rc *Cache) Get(entity fes.Entity) error {
-	if err := fes.ValidateEntity(entity); err != nil {
-		return err
-	}
-
-	ref := entity.Aggregate()
-	cached, err := rc.GetAggregate(ref)
-	if err != nil {
-		return err
-	}
-	if cached == nil {
-		return fes.ErrEntityNotFound.WithEntity(entity)
-	}
-
-	e := entity.UpdateState(cached)
-
-	return e
-}
-
 func (rc *Cache) GetAggregate(aggregate fes.Aggregate) (fes.Entity, error) {
 	if err := fes.ValidateAggregate(&aggregate); err != nil {
 		return nil, err
@@ -154,12 +158,12 @@ func (rc *Cache) GetAggregate(aggregate fes.Aggregate) (fes.Entity, error) {
 	defer rc.lock.RUnlock()
 	aType, ok := rc.contents[aggregate.Type]
 	if !ok {
-		return nil, nil
+		return nil, fes.ErrEntityNotFound
 	}
 
 	cached, ok := aType[aggregate.Id]
 	if !ok {
-		return nil, nil
+		return nil, fes.ErrEntityNotFound
 	}
 
 	return cached, nil
@@ -169,7 +173,7 @@ func (rc *Cache) Put(entity fes.Entity) error {
 	if err := fes.ValidateEntity(entity); err != nil {
 		return err
 	}
-	ref := entity.Aggregate()
+	ref := fes.GetAggregate(entity)
 
 	rc.lock.Lock()
 	defer rc.lock.Unlock()
@@ -196,7 +200,7 @@ func (rc *Cache) List() []fes.Aggregate {
 	var results []fes.Aggregate
 	for atype := range rc.contents {
 		for _, entity := range rc.contents[atype] {
-			results = append(results, entity.Aggregate())
+			results = append(results, fes.GetAggregate(entity))
 		}
 	}
 	return results

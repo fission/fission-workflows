@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -174,7 +173,7 @@ func (cr *Controller) Notify(update *fes.Notification) error {
 	case events.EventInvocationCreated:
 		spanCtx, err := fes.ExtractTracingFromEvent(update.Event)
 		if err != nil {
-			logrus.Warn("Failed to extract opentracing metadata from event %v", update.Event.Id)
+			logrus.Warnf("Failed to extract opentracing metadata from event %v", update.Event.Id)
 		}
 		es, _ := cr.evalStore.LoadOrStore(entity.ID(), spanCtx)
 		cr.workQueue.Add(es)
@@ -228,20 +227,18 @@ func (cr *Controller) checkEvalStore() error {
 	return nil
 }
 
-// checkCaches iterates over the current caches submitting evaluation for invocation when needed
+// checkModelCaches iterates over the current caches submitting evaluation for invocation when needed
 func (cr *Controller) checkModelCaches() error {
 	// Short control loop
-	entities := cr.invocations.List()
-	for _, entity := range entities {
+	for _, aggregate := range cr.invocations.List() {
 		// Ignore those that are in the evalStore; those will get picked up by checkEvalStore.
-		if _, ok := cr.evalStore.Load(entity.Id); ok {
+		if _, ok := cr.evalStore.Load(aggregate.Id); ok {
 			continue
 		}
 
-		wi := aggregates.NewWorkflowInvocation(entity.Id)
-		err := cr.invocations.Get(wi)
+		wi, err := cr.invocations.GetInvocation(aggregate.Id)
 		if err != nil {
-			log.Errorf("Failed to read '%v' from cache: %v.", wi.Aggregate(), err)
+			log.Errorf("Failed to read '%v' from cache: %v.", aggregate, err)
 			continue
 		}
 

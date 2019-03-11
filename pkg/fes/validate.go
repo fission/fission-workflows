@@ -21,7 +21,7 @@ func ValidateAggregate(aggregate *Aggregate) error {
 // ValidateEvent validates the event struct.
 //
 // Note:
-// - It does not parse or check the event data, except that it checks that it is not nil
+// - It does not parse or check the event data
 // - It does not check the event ID, since events that have not been persisted do not have an ID assigned yet.
 func ValidateEvent(event *Event) error {
 	if event == nil {
@@ -41,9 +41,6 @@ func ValidateEvent(event *Event) error {
 	if event.Timestamp == nil {
 		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event has no timestamp"))
 	}
-	if event.Data == nil {
-		return ErrInvalidEvent.WithEvent(event).WithError(errors.New("event has no data"))
-	}
 	return nil
 }
 
@@ -51,7 +48,7 @@ func ValidateEntity(entity Entity) error {
 	if entity == nil {
 		return ErrInvalidEntity.WithEntity(entity).WithError(errors.New("entity is nil"))
 	}
-	key := entity.Aggregate()
+	key := GetAggregate(entity)
 	err := ValidateAggregate(&key)
 	if err != nil {
 		return ErrInvalidEntity.WithEntity(entity).WithError(err)

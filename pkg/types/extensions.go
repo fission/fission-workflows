@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/golang/protobuf/proto"
 )
 
 // Types other than specified in protobuf
@@ -15,6 +16,10 @@ const (
 
 	typedValueShortMaxLen = 32
 	WorkflowAPIVersion    = "v1"
+
+	TypeWorkflow   = "workflow"
+	TypeInvocation = "invocation"
+	TypeTaskRun    = "taskrun"
 )
 
 // InvocationEvent
@@ -45,6 +50,14 @@ func (m *Error) Error() string {
 
 func (m *WorkflowInvocation) ID() string {
 	return m.GetMetadata().GetId()
+}
+
+func (m *WorkflowInvocation) Copy() *WorkflowInvocation {
+	return proto.Clone(m).(*WorkflowInvocation)
+}
+
+func (m *WorkflowInvocation) Type() string {
+	return TypeInvocation
 }
 
 func (m *WorkflowInvocation) Workflow() *Workflow {
@@ -136,6 +149,14 @@ func (m WorkflowInvocationStatus) Successful() bool {
 
 func (m *TaskInvocation) ID() string {
 	return m.GetMetadata().GetId()
+}
+
+func (m *TaskInvocation) Copy() *TaskInvocation {
+	return proto.Clone(m).(*TaskInvocation)
+}
+
+func (m *TaskInvocation) Type() string {
+	return TypeTaskRun
 }
 
 func (m *TaskInvocation) Task() *Task {
@@ -230,6 +251,14 @@ func (m *TaskSpec) Require(taskID string, opts ...*TaskDependencyParameters) *Ta
 //
 func (m *Workflow) ID() string {
 	return m.GetMetadata().GetId()
+}
+
+func (m *Workflow) Copy() *Workflow {
+	return proto.Clone(m).(*Workflow)
+}
+
+func (m *Workflow) Type() string {
+	return TypeWorkflow
 }
 
 // Note: this only retrieves the statically, top-level defined tasks

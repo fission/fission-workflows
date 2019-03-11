@@ -2,33 +2,14 @@ package fes
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
-	log "github.com/sirupsen/logrus"
 )
-
-// Project is a convenience function to apply events to an entity.
-func Project(entity Entity, events ...*Event) error {
-	if entity == nil {
-		log.WithField("entity", entity).Warn("Empty entity")
-		return nil
-	}
-	for _, event := range events {
-		if event == nil {
-			log.WithField("entity", entity).Warn("Empty event received")
-			return nil
-		}
-		err := entity.ApplyEvent(event)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // NewEvent returns a new event with the provided payload for the provided aggregate or an error if the input data
 // was invalid.
@@ -87,4 +68,18 @@ func ExtractTracingFromEvent(event *Event) (opentracing.SpanContext, error) {
 		return nil, err
 	}
 	return ctx, nil
+}
+
+func GetAggregate(v Entity) Aggregate {
+	var t string
+	if ct, ok := v.(CustomType); ok {
+		t = ct.Type()
+	} else {
+		t = fmt.Sprintf("%T", v)
+	}
+
+	return Aggregate{
+		Id:   v.ID(),
+		Type: t,
+	}
 }

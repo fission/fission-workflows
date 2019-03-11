@@ -6,21 +6,20 @@ import (
 
 // Entity is a entity that can be updated
 type Entity interface {
-	// Entity-specific
-	ApplyEvent(event *Event) error
-
 	// Aggregate provides type information about the entity, such as the aggregate id and the aggregate type.
 	//
 	// This is implemented by BaseEntity
-	Aggregate() Aggregate
+	ID() string
+}
 
-	// UpdateState mutates the current entity to the provided entityFactory state
-	//
-	// This is implemented by BaseEntity, can be overridden for performance approach
-	UpdateState(targetState Entity) error
+type CustomType interface {
+	Type() string
+}
 
-	// Copy copies the actual wrapped object. This is useful to get a snapshot of the state.
-	CopyEntity() Entity
+// Projector projects events onto an entity
+type Projector interface {
+	Project(entity Entity, events ...*Event) (updated Entity, err error)
+	NewProjection(key Aggregate) (Entity, error)
 }
 
 type EventAppender interface {
@@ -36,13 +35,8 @@ type Backend interface {
 	List(matcher AggregateMatcher) ([]Aggregate, error)
 }
 
-// Projector projects events onto an entity
-type Projector interface {
-	Project(target Entity, events ...*Event) error
-}
-
 type CacheReader interface {
-	Get(entity Entity) error
+	//Get(entity Entity) error
 	List() []Aggregate
 
 	// GetAggregate retrieves an entity by its (aggregate) key, guaranteeing that either the entity or error is non-nil.
@@ -87,8 +81,8 @@ func (err EventStoreErr) WithAggregate(aggregate *Aggregate) EventStoreErr {
 }
 
 func (err EventStoreErr) WithEntity(entity Entity) EventStoreErr {
-	key := entity.Aggregate()
-	err.K = &key
+	aggregate := GetAggregate(entity)
+	err.K = &aggregate
 	return err
 }
 

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -45,7 +45,7 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec, opts ...CallOption) (st
 		id = fmt.Sprintf("wf-%s", util.UID())
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(id), &events.WorkflowCreated{
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(id), &events.WorkflowCreated{
 		Spec: workflow,
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func (wa *Workflow) Delete(workflowID string) error {
 		return validate.NewError("workflowID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflowID), &events.WorkflowDeleted{})
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(workflowID), &events.WorkflowDeleted{})
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (wa *Workflow) Parse(workflow *types.Workflow) (map[string]*types.TaskStatu
 		}
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflow.ID()), &events.WorkflowParsed{
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(workflow.ID()), &events.WorkflowParsed{
 		Tasks: taskStatuses,
 	})
 	if err != nil {
