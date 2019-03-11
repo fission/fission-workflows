@@ -84,15 +84,15 @@ func (p *PrewarmAllPolicy) Evaluate(invocation *types.WorkflowInvocation) (*Sche
 	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
 	horizon := graph.Roots(depGraph)
 	for _, node := range horizon {
-		schedule.AddRunTask(newRunTaskAction(node.(*graph.TaskInvocationNode).Task().ID()))
+		taskRun := node.(*graph.TaskInvocationNode)
+		schedule.AddRunTask(newRunTaskAction(taskRun.TaskInvocation.ID()))
+		delete(openTasks, taskRun.GetMetadata().GetId())
 	}
 
 	// Prewarm all other tasks
 	expectedAt := time.Now().Add(p.coldStartDuration)
-	for taskID, task := range invocation.Tasks() {
-		if _, ok := openTasks[taskID]; !ok {
-			schedule.AddPrepareTask(newPrepareTaskAction(task.ID(), expectedAt))
-		}
+	for _, task := range openTasks {
+		schedule.AddPrepareTask(newPrepareTaskAction(task.ID(), expectedAt))
 	}
 	return schedule, nil
 }

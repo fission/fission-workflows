@@ -33,11 +33,11 @@ func NewEvalContext(state *controller.EvalState, wf *types.Workflow) WfEvalConte
 
 type RuleSkipIfReady struct{}
 
-func (r *RuleSkipIfReady) Eval(cec controller.EvalContext) controller.Action {
+func (r *RuleSkipIfReady) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureWorkflowContext(cec)
 	wf := ec.Workflow()
 	if wf.Status != nil && wf.Status.Ready() {
-		return &controller.ActionSkip{}
+		return []controller.Action{&controller.ActionSkip{}}
 	}
 	return nil
 }
@@ -46,14 +46,14 @@ type RuleEnsureParsed struct {
 	WfAPI *api.Workflow
 }
 
-func (r *RuleEnsureParsed) Eval(cec controller.EvalContext) controller.Action {
+func (r *RuleEnsureParsed) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureWorkflowContext(cec)
 	wf := ec.Workflow()
 	if wf.Status == nil || !wf.Status.Ready() {
-		return &ActionParseWorkflow{
+		return []controller.Action{&ActionParseWorkflow{
 			WfAPI: r.WfAPI,
 			Wf:    wf,
-		}
+		}}
 	}
 	return nil
 }
@@ -70,14 +70,14 @@ type RuleRemoveIfDeleted struct {
 	evalCache *controller.EvalStore
 }
 
-func (r *RuleRemoveIfDeleted) Eval(cec controller.EvalContext) controller.Action {
+func (r *RuleRemoveIfDeleted) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureWorkflowContext(cec)
 	wf := ec.Workflow()
 	if wf.Status.Status == types.WorkflowStatus_DELETED {
-		return &controller.ActionRemoveFromEvalCache{
+		return []controller.Action{&controller.ActionRemoveFromEvalCache{
 			EvalCache: r.evalCache,
 			ID:        wf.ID(),
-		}
+		}}
 	}
 	return nil
 }

@@ -86,11 +86,11 @@ type Controller struct {
 	evalStore     *controller.EvalStore
 	workQueue     workqueue.RateLimitingInterface
 	workerPool    *gopool.GoPool
-	executor      controller.Executor
+	executor      *controller.LocalExecutor
 }
 
 func NewController(invocations *store.Invocations, workflows *store.Workflows, workflowScheduler *scheduler.InvocationScheduler,
-	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store, executor controller.Executor) *Controller {
+	taskAPI *api.Task, invocationAPI *api.Invocation, stateStore *expr.Store, executor *controller.LocalExecutor) *Controller {
 	ctr := &Controller{
 		invocations:   invocations,
 		workflows:     workflows,
@@ -265,12 +265,17 @@ func (cr *Controller) Evaluate(invocationID string) {
 	case <-evalState.Lock():
 		defer evalState.Free()
 	default:
-		// TODO provide option to wait for a lock
 		log.Debugf("Failed to obtain access to invocation %s", invocationID)
 		controller.EvalJobs.WithLabelValues(Name, "duplicate").Inc()
 		return
 	}
 	log.Debugf("Evaluating invocation %s", invocationID)
+
+	// Check if there are no tasks left to be executed
+	if taskCount := cr.executor.GetGroupTasks(invocationID); taskCount > 0 {
+		log.Debugf("ignoring %v - there are still %d tasks left to be executed", invocationID, taskCount)
+		return
+	}
 
 	// Fetch the workflow invocation for the provided invocation id
 	wfi, err := cr.invocations.GetInvocation(invocationID)
@@ -315,19 +320,19 @@ func (cr *Controller) Evaluate(invocationID string) {
 
 	ec := NewEvalContext(evalState, wfi)
 
-	action := cr.evalPolicy.Eval(ec)
-	record.Action = action
-	if action == nil {
+	actions := cr.evalPolicy.Eval(ec)
+	//record.Action = action
+	if actions == nil {
 		controller.EvalJobs.WithLabelValues(Name, "noop").Inc()
 		return
 	}
 
 	// Execute action
-	err = cr.executor.Accept(action)
-	if err != nil {
-		// Task queue is full
-		log.Errorf("Failed to submit task: %v", err)
-		return
+	for _, action := range actions {
+		cr.executor.Submit(&controller.DefaultTask{
+			GroupID: wfi.ID(),
+			Apply:   action.Apply,
+		})
 	}
 	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
 
@@ -336,7 +341,7 @@ func (cr *Controller) Evaluate(invocationID string) {
 
 	// Record statistics
 	controller.EvalDuration.
-		WithLabelValues(Name, fmt.Sprintf("%T", action)).
+		WithLabelValues(Name, fmt.Sprintf("%T", actions)).
 		Observe(float64(time.Now().Sub(start)))
 	if wfi.GetStatus().Finished() {
 		cr.finishAndDeleteEvalState(wfi.ID(), true, "")
@@ -435,7 +440,6 @@ func defaultPolicy(ctr *Controller) controller.Rule {
 				},
 				MaxErrorCount: 0,
 			},
-
 			&RuleCheckIfCompleted{
 				InvocationAPI: ctr.invocationAPI,
 			},

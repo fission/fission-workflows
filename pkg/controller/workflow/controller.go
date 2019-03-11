@@ -172,26 +172,27 @@ func (c *Controller) Evaluate(workflowID string) {
 
 	ec := NewEvalContext(evalState, wf)
 
-	action := c.evalPolicy.Eval(ec)
-	if action == nil {
+	actions := c.evalPolicy.Eval(ec)
+	if actions == nil {
 		controller.EvalJobs.WithLabelValues(Name, "noop").Inc()
 		return
 	}
 
-	record.Action = action
-
 	// Execute action
-	err = action.Apply()
-	if err != nil {
-		log.Errorf("Action '%T' failed: %v", action, err)
-		record.Error = err
+	for _, action := range actions {
+		err = action.Apply()
+		if err != nil {
+			log.Errorf("Action '%T' failed: %v", action, err)
+			record.Error = err
+			break
+		}
 	}
 	controller.EvalJobs.WithLabelValues(Name, "action").Inc()
 
 	// Record this evaluation
 	evalState.Record(record)
 
-	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", action)).Observe(float64(time.Now().Sub(start)))
+	controller.EvalDuration.WithLabelValues(Name, fmt.Sprintf("%T", actions)).Observe(float64(time.Now().Sub(start)))
 	if wf.GetStatus().Ready() { // TODO only once
 		t, _ := ptypes.Timestamp(wf.GetMetadata().GetCreatedAt())
 		workflowProcessDuration.Observe(float64(time.Now().Sub(t)))

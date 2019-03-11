@@ -1,9 +1,6 @@
 package controller
 
 import (
-	"fmt"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
@@ -21,8 +18,8 @@ func (a *ActionWait) Apply() error {
 	panic("not implemented")
 }
 
-func (a *ActionWait) Eval(rule EvalContext) Action {
-	return a
+func (a *ActionWait) Eval(rule EvalContext) []Action {
+	return []Action{a}
 }
 
 type ActionSkip struct{}
@@ -31,8 +28,8 @@ func (a *ActionSkip) Apply() error {
 	return nil
 }
 
-func (a *ActionSkip) Eval(rule EvalContext) Action {
-	return a
+func (a *ActionSkip) Eval(rule EvalContext) []Action {
+	return []Action{a}
 }
 
 type ActionRemoveFromEvalCache struct {
@@ -45,8 +42,8 @@ func (a *ActionRemoveFromEvalCache) Apply() error {
 	return nil
 }
 
-func (a *ActionRemoveFromEvalCache) Eval(rule EvalContext) Action {
-	return a
+func (a *ActionRemoveFromEvalCache) Eval(rule EvalContext) []Action {
+	return []Action{a}
 }
 
 type ActionRemoveFromFesCache struct {
@@ -59,8 +56,8 @@ func (a *ActionRemoveFromFesCache) Apply() error {
 	return nil
 }
 
-func (a *ActionRemoveFromFesCache) Eval(rule EvalContext) Action {
-	return a
+func (a *ActionRemoveFromFesCache) Eval(rule EvalContext) []Action {
+	return []Action{a}
 }
 
 type ActionError struct {
@@ -71,39 +68,6 @@ func (a *ActionError) Apply() error {
 	return a.Err
 }
 
-func (a *ActionError) Eval(rule EvalContext) Action {
-	return a
-}
-
-type MultiAction struct {
-	Actions []Action
-}
-
-func (a *MultiAction) Apply() error {
-	var wg sync.WaitGroup
-	var multiErr atomic.Value
-	wg.Add(len(a.Actions))
-	for _, action := range a.Actions {
-		go func(action Action) {
-			err := action.Apply()
-			if err != nil {
-				multiErr.Store(err)
-			}
-			wg.Done()
-		}(action)
-	}
-	wg.Wait()
-	err := multiErr.Load()
-	if err == nil {
-		return nil
-	}
-	return err.(error)
-}
-
-func (a *MultiAction) String() string {
-	var results []string
-	for _, action := range a.Actions {
-		results = append(results, fmt.Sprintf("%+v", action))
-	}
-	return fmt.Sprintf("%v", results)
+func (a *ActionError) Eval(rule EvalContext) []Action {
+	return []Action{a}
 }

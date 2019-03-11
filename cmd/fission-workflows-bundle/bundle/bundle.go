@@ -33,8 +33,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/fission/fission-workflows/pkg/version"
-	controllerc "github.com/fission/fission/controller/client"
-	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -214,13 +212,13 @@ func Run(ctx context.Context, opts *Options) error {
 	runtimes := map[string]fnenv.Runtime{}
 	reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore, workflowStore)
 	if opts.InternalRuntime || opts.Fission != nil {
-		log.Infof("Using Task Runtime: Workflow")
+		log.Infof("Using DefaultTask Runtime: Workflow")
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
 	}
 	if opts.InternalRuntime {
-		log.Infof("Using Task Runtime: Internal")
+		log.Infof("Using DefaultTask Runtime: Internal")
 		internalRuntime := setupInternalFunctionRuntime()
 		runtimes["internal"] = internalRuntime
 		resolvers["internal"] = internalRuntime
@@ -231,7 +229,7 @@ func Run(ctx context.Context, opts *Options) error {
 			"controller": opts.Fission.ControllerAddr,
 			"router":     opts.Fission.RouterAddr,
 			"executor":   opts.Fission.ExecutorAddress,
-		}).Infof("Using Task Runtime: Fission")
+		}).Infof("Using DefaultTask Runtime: Fission")
 		fissionFnenv := setupFissionFunctionRuntime(opts.Fission)
 		runtimes["fission"] = fissionFnenv
 		resolvers["fission"] = fissionFnenv
@@ -405,9 +403,7 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 }
 
 func setupFissionFunctionRuntime(fissionOpts *FissionOptions) *fission.FunctionEnv {
-	executorC := executor.MakeClient(fissionOpts.ExecutorAddress)
-	controllerC := controllerc.MakeClient(fissionOpts.ControllerAddr)
-	return fission.New(executorC, controllerC, fissionOpts.RouterAddr)
+	return fission.New(fissionOpts.ExecutorAddress, fissionOpts.ControllerAddr, fissionOpts.RouterAddr)
 }
 
 func setupNatsEventStoreClient(config nats.Config) *nats.EventStore {

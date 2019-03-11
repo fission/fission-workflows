@@ -65,7 +65,7 @@ type Action interface {
 }
 
 type Rule interface {
-	Eval(cec EvalContext) Action
+	Eval(cec EvalContext) []Action
 }
 
 type EvalContext interface {

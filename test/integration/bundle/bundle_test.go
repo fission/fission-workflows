@@ -4,6 +4,7 @@ package bundle
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -31,6 +32,7 @@ const (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
 	if testing.Short() {
 		log.Info("Short test; skipping bundle integration tests.")
 		return

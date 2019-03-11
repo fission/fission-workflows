@@ -1,6 +1,7 @@
 package fission
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
@@ -33,10 +35,11 @@ var log = logrus.WithField("component", "fnenv.fission")
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
 type FunctionEnv struct {
-	executor   *executor.Client
-	controller *controller.Client
-	routerURL  string
-	client     *http.Client
+	executor    *executor.Client
+	executorURL string
+	controller  *controller.Client
+	routerURL   string
+	client      *http.Client
 }
 
 const (
@@ -44,11 +47,13 @@ const (
 	defaultProtocol   = "http"
 )
 
-func New(executor *executor.Client, controller *controller.Client, routerURL string) *FunctionEnv {
+func New(executorURL, serverURL, routerURL string) *FunctionEnv {
+
 	return &FunctionEnv{
-		executor:   executor,
-		controller: controller,
-		routerURL:  routerURL,
+		executor:    executor.MakeClient(executorURL),
+		controller:  controller.MakeClient(serverURL),
+		routerURL:   routerURL,
+		executorURL: executorURL,
 		client: &http.Client{
 			Timeout: 5 * time.Minute,
 		},
@@ -185,8 +190,7 @@ func (fe *FunctionEnv) Prepare(fn types.FnRef, expectedAt time.Time) error {
 
 	// Tap the Fission function at the right time
 	log.WithField("fn", fn).Infof("Prewarming Fission function: %v", reqURL)
-	fe.executor.TapService(reqURL)
-	return nil
+	return fe.tapService(reqURL.String())
 }
 
 func (fe *FunctionEnv) Resolve(ref types.FnRef) (string, error) {
@@ -244,4 +248,18 @@ func (fe *FunctionEnv) createRouterURL(fn types.FnRef) string {
 		ns = strings.Trim(fn.Namespace, "/") + "/"
 	}
 	return fmt.Sprintf("%s/fission-function/%s%s", baseUrl, ns, id)
+}
+
+func (fe *FunctionEnv) tapService(serviceUrlStr string) error {
+	executorUrl := fe.executorURL + "/v2/tapService"
+
+	resp, err := http.Post(executorUrl, "application/octet-stream", bytes.NewReader([]byte(serviceUrlStr)))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fission.MakeErrorFromHTTP(resp)
+	}
+	return nil
 }

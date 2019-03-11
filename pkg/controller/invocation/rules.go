@@ -41,21 +41,21 @@ type RuleWorkflowIsReady struct {
 	InvocationAPI *api.Invocation
 }
 
-func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) controller.Action {
+func (wr *RuleWorkflowIsReady) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureInvocationContext(cec)
 	wf := ec.Invocation().Workflow()
 	if wf.GetStatus().GetStatus() == types.WorkflowStatus_DELETED {
-		return &ActionFail{
+		return []controller.Action{&ActionFail{
 			API:          wr.InvocationAPI,
 			InvocationID: ec.Invocation().ID(),
 			Err:          errors.New("workflow is deleted"),
-		}
+		}}
 	}
 
 	// Check if workflow is still in progress.
 	if !wf.GetStatus().Ready() {
 		log.WithField("wf.status", wf.Status.Status).Error("Workflow is not ready yet.")
-		return &controller.ActionSkip{} // TODO backoff action
+		return []controller.Action{&controller.ActionSkip{}} // TODO backoff action
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ type RuleSchedule struct {
 	StateStore    *expr.Store
 }
 
-func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
+func (sf *RuleSchedule) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureInvocationContext(cec)
 	wf := ec.Invocation().Workflow()
 	wfi := ec.Invocation()
@@ -86,11 +86,11 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 	for _, a := range schedule.Actions() {
 		switch action := a.(type) {
 		case *scheduler.AbortAction:
-			return &ActionFail{
+			return []controller.Action{&ActionFail{
 				API:          sf.InvocationAPI,
 				InvocationID: wfi.ID(),
 				Err:          errors.New(action.Reason),
-			}
+			}}
 		case *scheduler.RunTaskAction:
 			actions = append(actions, &ActionInvokeTask{
 				ec:         ec.EvalState(),
@@ -115,14 +115,14 @@ func (sf *RuleSchedule) Eval(cec controller.EvalContext) controller.Action {
 			log.Warnf("Unknown Scheduler action: '%v'", a)
 		}
 	}
-	return &controller.MultiAction{Actions: actions}
+	return actions
 }
 
 type RuleCheckIfCompleted struct {
 	InvocationAPI *api.Invocation
 }
 
-func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Action {
+func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureInvocationContext(cec)
 	wf := ec.Invocation().Workflow()
 	wfi := ec.Invocation()
@@ -154,9 +154,9 @@ func (cc *RuleCheckIfCompleted) Eval(cec controller.EvalContext) controller.Acti
 			err = cc.InvocationAPI.Fail(wfi.ID(), errors.New("not all tasks succeeded"))
 		}
 		if err != nil {
-			return &controller.ActionError{
+			return []controller.Action{&controller.ActionError{
 				Err: err,
-			}
+			}}
 		}
 	}
 	return nil

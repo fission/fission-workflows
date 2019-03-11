@@ -3,6 +3,7 @@ package fission
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,8 +14,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/fission"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	controllerclient "github.com/fission/fission/controller/client"
-	executorclient "github.com/fission/fission/executor/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,13 +25,14 @@ const (
 	controllerLocalPort = 9033
 )
 
-var executor = executorclient.MakeClient(localhost(executorLocalPort))
-var controller = controllerclient.MakeClient(localhost(controllerLocalPort))
+var executor = localhost(executorLocalPort)
+var controller = localhost(controllerLocalPort)
 var testFnName = "fission-runtime-test"
 var testFnNs = "fission-function"
 
 // Currently we assume that fission is present (along with the CLI) and kubectl.
 func TestMain(m *testing.M) {
+	flag.Parse()
 	var status int
 	if testing.Short() {
 		log.Info("Short test; skipping Fission integration tests")
@@ -91,7 +91,7 @@ func TestFnenvResolve(t *testing.T) {
 func TestFnenvNotify(t *testing.T) {
 	fnref := types.NewFnRef(fission.Name, testFnNs, testFnName)
 	fnenv := fission.New(executor, controller, localhost(routerLocalPort))
-	err := fnenv.Notify(fnref, time.Now().Add(100*time.Millisecond))
+	err := fnenv.Prepare(fnref, time.Now().Add(100*time.Millisecond))
 	assert.NoError(t, err)
 }
 

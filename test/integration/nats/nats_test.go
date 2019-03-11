@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -23,6 +24,7 @@ var (
 // This test will start and stop a NATS streaming cluster by itself.
 
 func TestMain(m *testing.M) {
+	flag.Parse()
 	if testing.Short() {
 		log.Info("Short test; skipping NATS integration tests.")
 		return

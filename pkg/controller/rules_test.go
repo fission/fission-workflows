@@ -11,7 +11,7 @@ type MockRule struct {
 	count *int
 }
 
-func (r *MockRule) Eval(cec EvalContext) Action {
+func (r *MockRule) Eval(cec EvalContext) []Action {
 	*r.count++
 	return nil
 }

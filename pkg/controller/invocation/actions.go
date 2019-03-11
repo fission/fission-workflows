@@ -26,10 +26,10 @@ type ActonAbort struct {
 	InvocationID string
 }
 
-func (a *ActonAbort) Eval(cec controller.EvalContext) controller.Action {
+func (a *ActonAbort) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureInvocationContext(cec)
 	a.InvocationID = ec.Invocation().ID()
-	return a
+	return []controller.Action{a}
 }
 
 func (a *ActonAbort) Apply() error {
@@ -44,7 +44,7 @@ type ActionFail struct {
 	Err          error
 }
 
-func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
+func (a *ActionFail) Eval(cec controller.EvalContext) []controller.Action {
 	ec := EnsureInvocationContext(cec)
 	a.InvocationID = ec.Invocation().ID()
 	if a.Err == nil {
@@ -55,7 +55,7 @@ func (a *ActionFail) Eval(cec controller.EvalContext) controller.Action {
 	if a.Err == nil {
 		a.Err = errors.New("unknown error has occurred")
 	}
-	return a
+	return []controller.Action{a}
 }
 
 func (a *ActionFail) Apply() error {
@@ -72,7 +72,7 @@ type ActionInvokeTask struct {
 	StateStore *expr.Store
 }
 
-func (a *ActionInvokeTask) Eval(cec controller.EvalContext) controller.Action {
+func (a *ActionInvokeTask) Eval(cec controller.EvalContext) []controller.Action {
 	panic("not implemented")
 }
 
@@ -116,7 +116,7 @@ func (a *ActionInvokeTask) Apply() error {
 
 	// Check if function has been resolved
 	if task.Status.FnRef == nil {
-		err := fmt.Errorf("no resolved Task could be found for FunctionRef '%v'", task.Spec.FunctionRef)
+		err := fmt.Errorf("no resolved DefaultTask could be found for FunctionRef '%v'", task.Spec.FunctionRef)
 		span.LogKV("error", err)
 		return err
 	}

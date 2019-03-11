@@ -1,17 +1,14 @@
 package controller
 
 import (
-	"errors"
 	"sync"
 
+	"github.com/fission/fission-workflows/pkg/util/workqueue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/util/workqueue"
 )
 
 var (
-	ErrTaskQueueOverflow = errors.New("task queue full")
-
 	tasksProcessed = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: "workflows",
 		Subsystem: "executor",
@@ -30,14 +27,28 @@ type LocalExecutor struct {
 	// Config
 	//
 	maxParallelism int
-	maxQueueSize   int
 
 	//
 	// State
 	//
-	queue     workqueue.Interface
-	workers   []*worker
-	activeSet *sync.Map
+	queue    workqueue.Interface
+	workers  []*worker
+	groups   map[interface{}]int
+	groupsMu *sync.RWMutex
+}
+
+type DefaultTask struct {
+	// TaskID is used to ensure that there is only one instance of this task
+	TaskID interface{}
+
+	// GroupID is used to group together tasks.
+	GroupID interface{}
+
+	Apply func() error
+}
+
+func (t *DefaultTask) ID() interface{} {
+	return t.TaskID
 }
 
 func NewLocalExecutor(maxParallelism, maxQueueSize int) *LocalExecutor {
@@ -47,11 +58,13 @@ func NewLocalExecutor(maxParallelism, maxQueueSize int) *LocalExecutor {
 	if maxQueueSize <= 0 {
 		panic("LocalExecutor: queue size should be larger than 0")
 	}
+	wq := workqueue.New()
+	wq.MaxSize = maxQueueSize
 	return &LocalExecutor{
 		maxParallelism: maxParallelism,
-		maxQueueSize:   maxQueueSize,
-		queue:          workqueue.New(),
-		activeSet:      &sync.Map{},
+		queue:          wq,
+		groups:         make(map[interface{}]int),
+		groupsMu:       &sync.RWMutex{},
 	}
 }
 
@@ -62,8 +75,9 @@ func (ex *LocalExecutor) Start() {
 	// Add workers based on max parallelism
 	for i := 0; i < ex.maxParallelism; i++ {
 		worker := &worker{
-			queue:     ex.queue,
-			activeSet: ex.activeSet,
+			queue:    ex.queue,
+			groups:   ex.groups,
+			groupsMu: ex.groupsMu,
 		}
 		ex.workers = append(ex.workers, worker)
 		go worker.Run()
@@ -75,52 +89,56 @@ func (ex *LocalExecutor) Close() error {
 	return nil
 }
 
-// TODO Check behaviour that we can update the task in the
-func (ex *LocalExecutor) Accept(t Task) error {
-	// ignore if it is in the active set
-	if _, ok := ex.activeSet.Load(t); ok {
-		return nil
-	}
+func (ex *LocalExecutor) GetGroupTasks(groupID interface{}) int {
+	ex.groupsMu.RLock()
+	count := ex.groups[groupID]
+	ex.groupsMu.RUnlock()
+	return count
+}
 
-	// Check if we do not exceed the max task queue size
-	if ex.queue.Len() >= ex.maxQueueSize {
-		return ErrTaskQueueOverflow
-	}
-
+func (ex *LocalExecutor) Submit(t *DefaultTask) bool {
 	// Add to the queue
-	ex.queue.Add(t)
-	return nil
-}
+	accepted := ex.queue.Add(t)
+	if !accepted {
+		return false
+	}
 
-type Executor interface {
-	Accept(t Task) error
-}
-
-type Task interface {
-	Apply() error // TODO change to Run at some point
-	// TODO add priority
+	// Increment the group
+	if t.GroupID != nil {
+		ex.groupsMu.Lock()
+		ex.groups[t.GroupID]++
+		ex.groupsMu.Unlock()
+	}
+	return true
 }
 
 type worker struct {
-	queue     workqueue.Interface
-	activeSet *sync.Map
+	queue    workqueue.Interface
+	groups   map[interface{}]int
+	groupsMu *sync.RWMutex
 }
 
 func (w *worker) Run() {
 	for {
 		item, shutdown := w.queue.Get()
 		if shutdown {
-			break
+			return
 		}
-		w.activeSet.Store(item, true)
-		task := item.(Task)
+		task := item.(*DefaultTask)
 		tasksActive.Inc()
+
 		err := task.Apply()
 		if err != nil {
 			logrus.Errorf("Task %T failed: %v", task, err)
 		}
 		tasksActive.Dec()
 		tasksProcessed.Inc()
-		w.activeSet.Delete(item)
+		w.queue.Done(task)
+
+		if task.GroupID != nil {
+			w.groupsMu.Lock()
+			w.groups[task.GroupID]--
+			w.groupsMu.Unlock()
+		}
 	}
 }

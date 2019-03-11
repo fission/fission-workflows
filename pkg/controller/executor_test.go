@@ -13,14 +13,22 @@ func TestLocalExecutor(t *testing.T) {
 	t2 := &testTask{1}
 	t3 := &testTask{2}
 	t4 := &testTask{3}
-	err := executor.Accept(t1)
-	assert.NoError(t, err)
-	err = executor.Accept(t2)
-	assert.NoError(t, err)
-	err = executor.Accept(t3)
-	assert.NoError(t, err)
-	err = executor.Accept(t4)
-	assert.Error(t, err, ErrTaskQueueOverflow.Error())
+	accepted := executor.Submit(&DefaultTask{
+		Apply: t1.Apply,
+	})
+	assert.True(t, accepted)
+	accepted = executor.Submit(&DefaultTask{
+		Apply: t2.Apply,
+	})
+	assert.True(t, accepted)
+	accepted = executor.Submit(&DefaultTask{
+		Apply: t3.Apply,
+	})
+	assert.True(t, accepted)
+	accepted = executor.Submit(&DefaultTask{
+		Apply: t4.Apply,
+	})
+	assert.False(t, accepted)
 	assert.Equal(t, 3, executor.queue.Len())
 	executor.Start()
 	defer executor.Close()

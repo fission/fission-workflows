@@ -26,7 +26,7 @@ type RuleTimedOut struct {
 	Timeout      time.Duration
 }
 
-func (tf *RuleTimedOut) Eval(ec EvalContext) Action {
+func (tf *RuleTimedOut) Eval(ec EvalContext) []Action {
 	status := ec.EvalState()
 	initialStatus, ok := status.First()
 	if !ok {
@@ -46,7 +46,7 @@ type RuleExceededErrorCount struct {
 	MaxErrorCount int
 }
 
-func (el *RuleExceededErrorCount) Eval(ec EvalContext) Action {
+func (el *RuleExceededErrorCount) Eval(ec EvalContext) []Action {
 	var errorCount int
 	state := ec.EvalState()
 	for i := state.Len() - 1; i >= 0; i-- {
@@ -71,7 +71,7 @@ type RuleEvalUntilAction struct {
 	Rules []Rule
 }
 
-func (cf *RuleEvalUntilAction) Eval(ec EvalContext) Action {
+func (cf *RuleEvalUntilAction) Eval(ec EvalContext) []Action {
 	for _, i := range cf.Rules {
 		if i == nil {
 			continue
@@ -84,7 +84,7 @@ func (cf *RuleEvalUntilAction) Eval(ec EvalContext) Action {
 	return nil
 }
 
-func evalIfNotNil(rule Rule, ec EvalContext) Action {
+func evalIfNotNil(rule Rule, ec EvalContext) []Action {
 	if rule == nil {
 		return nil
 	}
