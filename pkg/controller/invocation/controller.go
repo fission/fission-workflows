@@ -149,18 +149,18 @@ func (cr *Controller) Init(sctx context.Context) error {
 
 func (cr *Controller) Notify(update *fes.Notification) error {
 	log.WithFields(logrus.Fields{
-		"notification": update.EventType,
+		"notification": update.Event,
 		"labels":       update.Labels(),
-	}).Debugf("Controller event: %v", update.EventType)
+	}).Debugf("Controller event: %v", update.Event)
 	entity, err := store.ParseNotificationToInvocation(update)
 	if err != nil {
 		return err
 	}
 
 	if es, ok := cr.evalStore.Load(entity.ID()); ok {
-		es.Span().LogKV("event", fmt.Sprintf("%s - %v", update.EventType, update.Labels()))
+		es.Span().LogKV("event", fmt.Sprintf("%s - %v", update.Event, update.Labels()))
 	}
-	switch update.EventType {
+	switch update.Event.Type {
 	case events.EventInvocationCompleted:
 		cr.finishAndDeleteEvalState(entity.ID(), true, "completion reason: "+events.EventInvocationCompleted)
 	case events.EventInvocationCanceled:
@@ -172,10 +172,14 @@ func (cr *Controller) Notify(update *fes.Notification) error {
 	case events.EventTaskSucceeded:
 		fallthrough
 	case events.EventInvocationCreated:
-		es, _ := cr.evalStore.LoadOrStore(entity.ID(), update.SpanCtx)
+		spanCtx, err := fes.ExtractTracingFromEvent(update.Event)
+		if err != nil {
+			logrus.Warn("Failed to extract opentracing metadata from event %v", update.Event.Id)
+		}
+		es, _ := cr.evalStore.LoadOrStore(entity.ID(), spanCtx)
 		cr.workQueue.Add(es)
 	default:
-		log.Debugf("Controller ignored event type: %v", update.EventType)
+		log.Debugf("Controller ignored event type: %v", update.Event)
 	}
 	return nil
 }

@@ -141,7 +141,7 @@ func (mc *MetaController) Notify(msg *fes.Notification) error {
 	// Future: Might need smarter event router, to avoid bothering controllers with notifications that don't concern them
 	var err error
 	for _, ctrl := range mc.ctrls {
-		metaLog.WithField("msg", msg.EventType).Debugf("Routing msg to %v", ctrl)
+		metaLog.WithField("msg", msg.Event.Type).Debugf("Routing msg to %v", ctrl)
 		err = ctrl.Notify(msg)
 	}
 	return err

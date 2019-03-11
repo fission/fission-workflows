@@ -1,9 +1,9 @@
 package fes
 
 import (
-	"github.com/fission/fission-workflows/pkg/util/pubsub"
-	"github.com/opentracing/opentracing-go"
-	"github.com/sirupsen/logrus"
+	"time"
+
+	"github.com/fission/fission-workflows/pkg/util/labels"
 )
 
 const (
@@ -14,26 +14,60 @@ const (
 	DefaultNotificationBuffer = 64
 )
 
+// Notification is the message send to subscribers of the event store.
+//
+// It is an annotated fes.Event; it includes snapshots of the affected entity before (if applicable)
+// and after the application of the event.
 type Notification struct {
-	*pubsub.EmptyMsg
-	Payload   Entity
-	EventType string
-	SpanCtx   opentracing.SpanContext
+	// Old contains the snapshot of the entity before applying the event.
+	//
+	// This can be nil, if the event caused the creation of the entity.
+	Old Entity
+
+	// Updated is the snapshot of entity after applying the event
+	Updated Entity
+
+	// Event is the event that triggered the notification.
+	Event *Event
 }
 
-func NewNotification(entity Entity, event *Event) *Notification {
-	var spanCtx opentracing.SpanContext
-	if event.Metadata != nil {
-		sctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(event.Metadata))
-		if err != nil && err != opentracing.ErrSpanContextNotFound {
-			logrus.Warnf("failed to extract opentracing tracer from event: %v", err)
+func NewNotification(old Entity, new Entity, event *Event) *Notification {
+	if event == nil {
+		panic("event cannot be nil")
+	}
+	if new == nil {
+		panic("new snapshot cannot be nil")
+	}
+	if new.Aggregate() == *event.Aggregate {
+		panic("aggregate of event does not match aggregate of new entity snapshot")
+	}
+	if old != nil {
+		if old.Aggregate() == new.Aggregate() {
+			panic("aggregate of old entity snapshot does not match aggregate of the new entity snapshot")
 		}
-		spanCtx = sctx
 	}
 	return &Notification{
-		EmptyMsg:  pubsub.NewEmptyMsg(event.Labels(), event.CreatedAt()),
-		Payload:   entity,
-		EventType: event.Type,
-		SpanCtx:   spanCtx,
+		Old:     old,
+		Updated: new,
+		Event:   event,
 	}
+}
+
+// Labels returns the labels of the event part of the notification.
+//
+// Necessary to conform with the pubsub.Msg interface.
+func (n *Notification) Labels() labels.Labels {
+	return n.Event.Labels()
+}
+
+// CreatedAt returns the timestamp of the event within the notification.
+//
+// Necessary to conform with the pubsub.Msg interface.
+func (n *Notification) CreatedAt() time.Time {
+	return n.Event.CreatedAt()
+}
+
+// Aggregate provides the aggregate for this notification. This is guaranteed to match for the included event/snapshots.
+func (n *Notification) Aggregate() Aggregate {
+	return n.Updated.Aggregate()
 }

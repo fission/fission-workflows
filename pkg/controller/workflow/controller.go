@@ -129,12 +129,16 @@ func (c *Controller) Tick(tick uint64) error {
 	return nil
 }
 
-func (c *Controller) Notify(update *fes.Notification) error {
-	workflow, err := store.ParseNotificationToWorkflow(update)
+func (c *Controller) Notify(notification *fes.Notification) error {
+	workflow, err := store.ParseNotificationToWorkflow(notification)
 	if err != nil {
 		return err
 	}
-	c.evalCache.LoadOrStore(workflow.ID(), update.SpanCtx)
+	spanCtx, err := fes.ExtractTracingFromEvent(notification.Event)
+	if err != nil {
+		logrus.Warn("Failed to extract opentracing metadata from event %v", notification.Event.Id)
+	}
+	c.evalCache.LoadOrStore(workflow.ID(), spanCtx)
 	c.submitEval(workflow.ID())
 	return nil
 }

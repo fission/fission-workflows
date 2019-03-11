@@ -145,23 +145,23 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 	}
 
 	// Attempt to fetch the entity from the cache.
-	entity, err := uc.getOrCreateAggregateForEvent(event)
+	old, err := uc.getOrCreateAggregateForEvent(event)
 	if err != nil {
 		return err
 	}
 
 	// Clone the entity to avoid race conflicts with subscribers of the cache.
 	// TODO maybe safer and more readable to replace implementation by a immutable projection?
-	entityCopy := entity.CopyEntity()
+	updated := old.CopyEntity()
 
 	// Apply the event on to the new copy of the entity
-	err = fes.Project(entityCopy, event)
+	err = fes.Project(updated, event)
 	if err != nil {
 		return err
 	}
 
 	// Replace the old entity in the cache with the new (copied) entity
-	err = uc.Put(entityCopy)
+	err = uc.Put(updated)
 	if err != nil {
 		return err
 	}
@@ -171,12 +171,12 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 	ets, _ := ptypes.Timestamp(event.Timestamp)
 	if ets.After(uc.createdAt) {
 		// Publish the event (along with the updated entity) to subscribers
-		n := fes.NewNotification(entityCopy, event)
+		n := fes.NewNotification(old, updated, event)
 		logrus.WithFields(logrus.Fields{
-			"event.id":          event.Id,
-			"aggregate.id":      event.Aggregate.Id,
-			"aggregate.type":    event.Aggregate.Type,
-			"notification.type": n.EventType,
+			"event.id":       event.Id,
+			"aggregate.id":   event.Aggregate.Id,
+			"aggregate.type": event.Aggregate.Type,
+			"event.type":     event.Type,
 		}).Debug("SubscribedCache: publishing notification of event.")
 		return uc.Publisher.Publish(n)
 	}

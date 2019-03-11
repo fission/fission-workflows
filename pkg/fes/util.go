@@ -7,6 +7,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/opentracing/opentracing-go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -75,4 +76,15 @@ func ParseEventData(event *Event) (proto.Message, error) {
 		return nil, ErrCorruptedEventPayload.WithEvent(event).WithError(err)
 	}
 	return d.Message, nil
+}
+
+func ExtractTracingFromEvent(event *Event) (opentracing.SpanContext, error) {
+	if event.GetMetadata() == nil {
+		return nil, errors.New("event does not have metadata")
+	}
+	ctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(event.Metadata))
+	if err != nil && err != opentracing.ErrSpanContextNotFound {
+		return nil, err
+	}
+	return ctx, nil
 }

@@ -348,11 +348,11 @@ func (m *WorkflowSpec) TaskSpec(taskID string) *TaskSpec {
 //
 
 func (m *WorkflowStatus) Ready() bool {
-	return m.Status == WorkflowStatus_READY
+	return m.GetStatus() == WorkflowStatus_READY
 }
 
 func (m *WorkflowStatus) Failed() bool {
-	return m.Status == WorkflowStatus_FAILED
+	return m.GetStatus() == WorkflowStatus_FAILED
 }
 
 func (m *WorkflowStatus) AddTask(id string, t *Task) {

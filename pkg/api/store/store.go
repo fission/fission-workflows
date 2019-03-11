@@ -164,7 +164,7 @@ func (sub *InvocationSubscription) Close() error {
 }
 
 func ParseNotificationToWorkflow(update *fes.Notification) (*types.Workflow, error) {
-	entity, ok := update.Payload.(*aggregates.Workflow)
+	entity, ok := update.Updated.(*aggregates.Workflow)
 	if !ok {
 		return nil, errors.New("received message does not include workflow invocation as payload")
 	}
@@ -172,7 +172,7 @@ func ParseNotificationToWorkflow(update *fes.Notification) (*types.Workflow, err
 }
 
 func ParseNotificationToInvocation(update *fes.Notification) (*types.WorkflowInvocation, error) {
-	entity, ok := update.Payload.(*aggregates.WorkflowInvocation)
+	entity, ok := update.Updated.(*aggregates.WorkflowInvocation)
 	if !ok {
 		return nil, errors.New("received message does not include workflow invocation as payload")
 	}
