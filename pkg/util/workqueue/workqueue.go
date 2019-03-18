@@ -17,7 +17,6 @@ limitations under the License.
 package workqueue
 
 import (
-	"fmt"
 	"math"
 	"sync"
 )
@@ -31,14 +30,22 @@ type Interface interface {
 	ShuttingDown() bool
 }
 
-// New constructs a new work queue (see the package comment).
-func New() *Type {
+func NewNamed(maxSize int, _ string) *Type {
+	return NewSized(maxSize)
+}
+
+func NewSized(maxSize int) *Type {
 	return &Type{
 		dirty:      set{},
 		processing: set{},
 		cond:       sync.NewCond(&sync.Mutex{}),
-		MaxSize:    math.MaxInt32,
+		MaxSize:    maxSize,
 	}
+}
+
+// New constructs a new work queue (see the package comment).
+func New() *Type {
+	return NewSized(math.MaxInt32)
 }
 
 // Type is a work queue (see the package comment).
@@ -94,7 +101,6 @@ func (q *Type) Add(item interface{}) (accepted bool) {
 		return true
 	}
 
-	fmt.Println(len(q.queue), q.MaxSize)
 	if len(q.queue) >= q.MaxSize {
 		return false
 	}
