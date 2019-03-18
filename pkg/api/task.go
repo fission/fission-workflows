@@ -35,7 +35,6 @@ func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dyn
 
 // Invoke starts the execution of a task, changing the state of the task into RUNNING.
 // Currently it executes the underlying function synchronously and manage the execution until completion.
-// TODO make asynchronous
 func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*types.TaskInvocation, error) {
 	log := logrus.WithField("fn", spec.FnRef).WithField("wi", spec.InvocationId).WithField("task", spec.TaskId)
 	cfg := parseCallOptions(opts)
@@ -44,7 +43,16 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		return nil, err
 	}
 
-	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	// Ensure that the task run has a task in its spec.
+	// This is not part of the default validation, because it is (for now) in most cases fine to pass just the
+	// invocationID, whereas here the task run really needs the task.
+	if spec.GetTask() == nil {
+		return nil, errors.New("task-run does not contain the task to be run")
+	}
+
+	// The assumption that we make for now every task has only one task invocation.
+	// Therefore we use the same (task) ID for the task run.
+	taskID := spec.TaskId
 	task := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        taskID,
@@ -62,7 +70,8 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		return nil, err
 	}
 
-	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx))
+	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx),
+		fnenv.AwaitWorklow(cfg.awaitWorkflow))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
 	}

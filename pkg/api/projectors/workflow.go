@@ -58,7 +58,7 @@ func (w *Workflow) project(wf *types.Workflow, event *fes.Event) error {
 		}
 		wf.Spec = spec
 		wf.Status = &types.WorkflowStatus{
-			Status: types.WorkflowStatus_PENDING,
+			Status: types.WorkflowStatus_QUEUED,
 		}
 	case *events.WorkflowParsingFailed:
 		wf.Status.Error = m.GetError()

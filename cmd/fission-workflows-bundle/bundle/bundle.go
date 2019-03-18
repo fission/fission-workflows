@@ -16,9 +16,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/apiserver"
 	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/executor"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
-	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
-	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
@@ -51,14 +50,16 @@ import (
 )
 
 const (
-	gRPCAddress              = ":5555"
-	apiGatewayAddress        = ":8080"
-	fissionProxyAddress      = ":8888"
-	jaegerTracerServiceName  = "fission.workflows"
-	WorkflowsCacheSize       = 10000
-	InvocationsCacheSize     = 100000
-	executorMaxParallelism   = 1000
-	executorMaxTaskQueueSize = 100000
+	gRPCAddress                 = ":5555"
+	apiGatewayAddress           = ":8080"
+	fissionProxyAddress         = ":8888"
+	jaegerTracerServiceName     = "fission.workflows"
+	WorkflowsCacheSize          = 10000
+	InvocationsCacheSize        = 100000
+	executorMaxParallelism      = 1000
+	executorMaxTaskQueueSize    = 100000
+	workflowStorePollInterval   = time.Minute
+	invocationStorePollInterval = 10 * time.Second
 )
 
 type App struct {
@@ -213,13 +214,13 @@ func Run(ctx context.Context, opts *Options) error {
 	runtimes := map[string]fnenv.Runtime{}
 	reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore, workflowStore)
 	if opts.InternalRuntime || opts.Fission != nil {
-		log.Infof("Using DefaultTask Runtime: Workflow")
+		log.Infof("Using function runtime: Workflow")
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
 	}
 	if opts.InternalRuntime {
-		log.Infof("Using DefaultTask Runtime: Internal")
+		log.Infof("Using function runtime: Internal")
 		internalRuntime := setupInternalFunctionRuntime()
 		runtimes["internal"] = internalRuntime
 		resolvers["internal"] = internalRuntime
@@ -230,7 +231,7 @@ func Run(ctx context.Context, opts *Options) error {
 			"controller": opts.Fission.ControllerAddr,
 			"router":     opts.Fission.RouterAddr,
 			"executor":   opts.Fission.ExecutorAddress,
-		}).Infof("Using DefaultTask Runtime: Fission")
+		}).Infof("Using function runtime: Fission")
 		fissionFnenv := setupFissionFunctionRuntime(opts.Fission)
 		runtimes["fission"] = fissionFnenv
 		resolvers["fission"] = fissionFnenv
@@ -239,36 +240,34 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	// Scheduler
 	//
-	scheduler := RunScheduler(opts.Scheduler)
+	sched := RunScheduler(opts.Scheduler)
 
 	//
 	// Controllers
 	//
-	if opts.InvocationController || opts.WorkflowController {
-		var ctrls []controller.Controller
-		if opts.WorkflowController {
-			log.Info("Using controller: workflow")
-			ctrls = append(ctrls, setupWorkflowController(workflowStore, es, resolvers))
-		}
-
-		if opts.InvocationController {
-			log.Info("Using controller: invocation")
-			ctrls = append(ctrls,
-				setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers, scheduler))
-		}
-
-		ctrl := controller.NewMetaController(ctrls...)
-		go ctrl.Run(ctx)
+	if opts.WorkflowController {
+		log.Info("Running workflow controller")
+		workflowCtrl := setupWorkflowController(workflowStore, es, resolvers)
+		go workflowCtrl.Run()
 		defer func() {
-			err := ctrl.Close()
-			if err != nil {
-				log.Errorf("Failed to stop controllers: %v", err)
+			if err := workflowCtrl.Close(); err != nil {
+				log.Errorf("Failed to stop workflow controller: %v", err)
 			} else {
-				log.Info("Stopped controllers")
+				log.Info("Stopped workflow controller")
 			}
 		}()
-	} else {
-		log.Info("No controllers specified to run.")
+	}
+	if opts.InvocationController {
+		log.Info("Running invocation controller")
+		invocationCtrl := setupInvocationController(invocationStore, es, runtimes, resolvers, sched)
+		go invocationCtrl.Run()
+		defer func() {
+			if err := invocationCtrl.Close(); err != nil {
+				log.Errorf("Failed to stop invocation controller: %v", err)
+			} else {
+				log.Info("Stopped invocation controller")
+			}
+		}()
 	}
 
 	//
@@ -531,24 +530,24 @@ func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) 
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 
-func setupInvocationController(invocations *store.Invocations, workflows *store.Workflows, es fes.Backend,
+func setupInvocationController(invocations *store.Invocations, es fes.Backend,
 	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver,
-	s *scheduler.InvocationScheduler) *wfictr.Controller {
+	s *scheduler.InvocationScheduler) *controller.InvocationMetaController {
 
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
 	dynamicAPI := api.NewDynamicApi(workflowAPI, invocationAPI)
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
 	stateStore := expr.NewStore()
-	localExec := controller.NewLocalExecutor(executorMaxParallelism, executorMaxTaskQueueSize)
-	localExec.Start()
-	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore, localExec)
+	localExec := executor.NewLocalExecutor(executorMaxParallelism, executorMaxTaskQueueSize)
+	return controller.NewInvocationMetaController(localExec, invocations, invocationAPI, taskAPI, s, stateStore, invocationStorePollInterval)
 }
 
 func setupWorkflowController(store *store.Workflows, es fes.Backend,
-	fnResolvers map[string]fnenv.RuntimeResolver) *wfctr.Controller {
-	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
-	return wfctr.NewController(store, workflowAPI)
+	fnResolvers map[string]fnenv.RuntimeResolver) *controller.WorkflowMetaController {
+	wfAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
+	exec := executor.NewLocalExecutor(10, 1000)
+	return controller.NewWorkflowMetaController(wfAPI, store, exec, workflowStorePollInterval)
 }
 
 func setupMetricsEndpoint(apiMux *http.ServeMux) {

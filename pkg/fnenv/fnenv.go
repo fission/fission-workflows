@@ -103,14 +103,14 @@ type Resolver interface {
 // RuntimeResolver is the runtime environment component that resolves a reference to a function to a deterministic,
 // runtime-specific function UID.
 type RuntimeResolver interface {
-
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function within the scope
 	// of a runtime.
 	Resolve(ref types.FnRef) (string, error)
 }
 
 type InvokeConfig struct {
-	Ctx context.Context
+	Ctx           context.Context
+	AwaitWorkflow time.Duration
 }
 
 type InvokeOption func(config *InvokeConfig)
@@ -125,6 +125,12 @@ func ParseInvokeOptions(opts []InvokeOption) *InvokeConfig {
 		opt(cfg)
 	}
 	return cfg
+}
+
+func AwaitWorklow(timeout time.Duration) InvokeOption {
+	return func(config *InvokeConfig) {
+		config.AwaitWorkflow = timeout
+	}
 }
 
 func WithContext(ctx context.Context) InvokeOption {

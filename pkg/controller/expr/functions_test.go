@@ -1,7 +1,6 @@
 package expr
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/fission/fission-workflows/pkg/types"
@@ -79,8 +78,6 @@ func TestOutputFn_Apply_OneArgument(t *testing.T) {
 	assert.NoError(t, err)
 
 	i := typedvalues.MustUnwrap(result)
-	fmt.Println(testScope)
-
 	assert.Equal(t, testScope.Tasks["TaskA"].Output, i)
 }
 

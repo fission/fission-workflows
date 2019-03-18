@@ -59,11 +59,11 @@ func ParseEventData(event *Event) (proto.Message, error) {
 	return d.Message, nil
 }
 
-func ExtractTracingFromEvent(event *Event) (opentracing.SpanContext, error) {
-	if event.GetMetadata() == nil {
+func ExtractTracingFromEventMetadata(metadata map[string]string) (opentracing.SpanContext, error) {
+	if metadata == nil {
 		return nil, errors.New("event does not have metadata")
 	}
-	ctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(event.Metadata))
+	ctx, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(metadata))
 	if err != nil && err != opentracing.ErrSpanContextNotFound {
 		return nil, err
 	}

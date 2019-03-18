@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,9 +57,6 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 	}
 	invocation.Spec.Workflow = workflow
 	cwf := invocation.Tasks()
-	for k := range cwf {
-		fmt.Println(k)
-	}
 
 	assert.Equal(t, 4, len(cwf))
 	assert.Equal(t, 2, len(cwf["bar"].Spec.Requires))

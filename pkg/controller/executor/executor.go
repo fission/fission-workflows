@@ -1,25 +1,13 @@
-package controller
+package executor
 
 import (
+	"fmt"
+	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/util/workqueue"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
-)
-
-var (
-	tasksProcessed = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "workflows",
-		Subsystem: "executor",
-		Name:      "tasks_processed",
-	})
-
-	tasksActive = prometheus.NewGauge(prometheus.GaugeOpts{
-		Namespace: "workflows",
-		Subsystem: "executor",
-		Name:      "tasks_active",
-	})
+	log "github.com/sirupsen/logrus"
 )
 
 type LocalExecutor struct {
@@ -31,23 +19,25 @@ type LocalExecutor struct {
 	//
 	// State
 	//
-	queue    workqueue.Interface
+	queue    workqueue.DelayingInterface
 	workers  []*worker
 	groups   map[interface{}]int
 	groupsMu *sync.RWMutex
 }
 
-type DefaultTask struct {
+// Task is the unit of execution that the executor will execute.
+type Task struct {
 	// TaskID is used to ensure that there is only one instance of this task
 	TaskID interface{}
 
 	// GroupID is used to group together tasks.
 	GroupID interface{}
 
+	// Apply is the work that the task comprises.
 	Apply func() error
 }
 
-func (t *DefaultTask) ID() interface{} {
+func (t *Task) ID() interface{} {
 	return t.TaskID
 }
 
@@ -58,11 +48,9 @@ func NewLocalExecutor(maxParallelism, maxQueueSize int) *LocalExecutor {
 	if maxQueueSize <= 0 {
 		panic("LocalExecutor: queue size should be larger than 0")
 	}
-	wq := workqueue.New()
-	wq.MaxSize = maxQueueSize
 	return &LocalExecutor{
 		maxParallelism: maxParallelism,
-		queue:          wq,
+		queue:          workqueue.NewDelayingQueue(maxQueueSize),
 		groups:         make(map[interface{}]int),
 		groupsMu:       &sync.RWMutex{},
 	}
@@ -96,11 +84,18 @@ func (ex *LocalExecutor) GetGroupTasks(groupID interface{}) int {
 	return count
 }
 
-func (ex *LocalExecutor) Submit(t *DefaultTask) bool {
+func (ex *LocalExecutor) SubmitAfter(t *Task, after time.Duration) bool {
 	// Add to the queue
-	accepted := ex.queue.Add(t)
-	if !accepted {
-		return false
+	if after <= 0 {
+		accepted := ex.queue.TryAddAfter(t, after)
+		if !accepted {
+			return false
+		}
+	} else {
+		accepted := ex.queue.Add(t)
+		if !accepted {
+			return false
+		}
 	}
 
 	// Increment the group
@@ -110,6 +105,10 @@ func (ex *LocalExecutor) Submit(t *DefaultTask) bool {
 		ex.groupsMu.Unlock()
 	}
 	return true
+}
+
+func (ex *LocalExecutor) Submit(t *Task) bool {
+	return ex.SubmitAfter(t, 0)
 }
 
 type worker struct {
@@ -124,21 +123,28 @@ func (w *worker) Run() {
 		if shutdown {
 			return
 		}
-		task := item.(*DefaultTask)
-		tasksActive.Inc()
+		task := item.(*Task)
 
-		err := task.Apply()
-		if err != nil {
-			logrus.Errorf("Task %T failed: %v", task, err)
-		}
-		tasksActive.Dec()
-		tasksProcessed.Inc()
+		w.executeTask(task)
+
 		w.queue.Done(task)
-
 		if task.GroupID != nil {
 			w.groupsMu.Lock()
 			w.groups[task.GroupID]--
 			w.groupsMu.Unlock()
 		}
+	}
+}
+
+func (w *worker) executeTask(task *Task) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Errorf("Task %s/%s crashed: %v", task.GroupID, task.TaskID, r)
+			fmt.Println(string(debug.Stack()))
+		}
+	}()
+	err := task.Apply()
+	if err != nil {
+		log.Errorf("Task %s/%s failed: %v", task.GroupID, task.TaskID, err)
 	}
 }

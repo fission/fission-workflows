@@ -15,16 +15,19 @@ import (
 	"github.com/fission/fission-workflows/pkg/fes/testutil"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
-	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	workflowID = "123"
 )
 
 func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
 	runtime.timeout = 10 * time.Millisecond
 
-	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.Equal(t, api.ErrInvocationCanceled, err.Error())
 }
 
@@ -34,14 +37,14 @@ func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
 
-	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.EqualError(t, err, context.DeadlineExceeded.Error())
 }
 
 func TestRuntime_InvokeWorkflow_InvalidSpec(t *testing.T) {
 	runtime, _, _, _ := setup()
 	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(""))
-	assert.IsType(t, validate.Error{}, err)
+	assert.IsType(t, errors.New(""), err)
 }
 
 func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
@@ -60,7 +63,7 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
@@ -89,9 +92,9 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		entity, err := c.GetAggregate(projectors.NewInvocationAggregate(wfiID))
 		assert.NoError(t, err)
-		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity) // A bit hacky..
+		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity)
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
@@ -112,7 +115,7 @@ func TestRuntime_InvokeWorkflow_Fail(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.NoError(t, err)
 	assert.Equal(t, wfiErr.Error(), wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -131,7 +134,7 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("123"))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
 	assert.NoError(t, err)
 	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -141,9 +144,17 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 func TestRuntime_Invoke(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
 
-	spec := types.NewTaskInvocationSpec("wi-123", "ti-123", types.NewFnRef("internal", "", "fooFn"))
-	spec.Inputs = types.Inputs{}
-	spec.Inputs[types.InputParent] = typedvalues.MustWrap("parentID")
+	fnref := types.NewFnRef("workflows", "", workflowID)
+	spec := types.NewTaskInvocationSpec("wi-123", &types.Task{
+		Metadata: types.NewObjectMetadata("ti-123"),
+		Spec:     &types.TaskSpec{},
+		Status: &types.TaskStatus{
+			FnRef: &fnref,
+		},
+	})
+	spec.Inputs = types.Inputs{
+		types.InputParent: typedvalues.MustWrap("parentID"),
+	}
 	output := typedvalues.MustWrap("foo")
 	outputHeaders := typedvalues.MustWrap(typedvalues.MustWrap(map[string]interface{}{
 		"some-key": "some-value",
@@ -168,8 +179,21 @@ func TestRuntime_Invoke(t *testing.T) {
 func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	backend := mem.NewBackend()
 	invocationAPI := api.NewInvocationAPI(backend)
+	workflowsCache := testutil.NewCache()
+	err := workflowsCache.Put(&types.Workflow{
+		Metadata: &types.ObjectMetadata{
+			Id: workflowID,
+		},
+		Status: &types.WorkflowStatus{
+			Status: types.WorkflowStatus_READY,
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	workflows := store.NewWorkflowsStore(workflowsCache)
 	c := cache.NewSubscribedCache(testutil.NewCache(), projectors.NewWorkflowInvocation(), backend.Subscribe())
-	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c), nil)
+	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c), workflows)
 	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, c
 }

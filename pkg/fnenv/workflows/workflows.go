@@ -25,22 +25,16 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
 const (
-	Timeout      = time.Duration(10) * time.Minute
-	PollInterval = time.Duration(100) * time.Millisecond
-	Name         = "workflows"
+	DefaultMaxRuntime = time.Duration(10) * time.Minute
+	PollInterval      = time.Duration(100) * time.Millisecond
+	Name              = "workflows"
 )
-
-// TODO to fsm
-var terminationEvent = []string{
-	events.EventInvocationCompleted,
-	events.EventInvocationCanceled,
-	events.EventInvocationFailed,
-}
 
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
 type Runtime struct {
@@ -57,7 +51,7 @@ func NewRuntime(api *api.Invocation, invocations *store.Invocations, workflows *
 		invocations:  invocations,
 		workflows:    workflows,
 		pollInterval: PollInterval,
-		timeout:      Timeout,
+		timeout:      DefaultMaxRuntime,
 	}
 }
 
@@ -84,6 +78,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	if err := validate.WorkflowInvocationSpec(spec); err != nil {
 		return nil, err
 	}
+	ctx := cfg.Ctx
 
 	span, ctx := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/workflows")
 	defer span.Finish()
@@ -92,14 +87,26 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	span.SetTag("internal", len(spec.GetParentId()) != 0)
 
 	// Check if the workflow required by the invocation exists
-	if rt.workflows != nil {
-		wf, err := rt.workflows.GetWorkflow(spec.GetWorkflowId())
+	if spec.Workflow == nil {
+		awaitWorkflowCtx, cancel := context.WithTimeout(ctx, cfg.AwaitWorkflow)
+		wf, err := rt.awaitReadyWorkflow(awaitWorkflowCtx, spec.GetWorkflowId())
+		cancel()
 		if err != nil {
+			span.LogKV("error", err)
 			return nil, err
 		}
-		span.SetTag("workflow.name", wf.GetMetadata().GetName())
+		spec.Workflow = wf
+	} else {
+		if !spec.Workflow.GetStatus().Ready() {
+			err := errors.New("provided workflow is not ready")
+			span.LogKV("error", err)
+			return nil, err
+		}
 	}
 
+	span.SetTag("workflow.name", spec.GetWorkflow().GetMetadata().GetName())
+
+	// If debugging mode is enabled, add all inputs to the trace.
 	if logrus.GetLevel() == logrus.DebugLevel {
 		var inputs interface{}
 		var err error
@@ -116,61 +123,42 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	defer fnenv.FnActive.WithLabelValues(Name).Dec()
 	defer fnenv.FnCount.WithLabelValues(Name).Inc()
 
-	wfiID, err := rt.api.Invoke(spec, api.WithContext(ctx))
+	invocationID, err := rt.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
 		logrus.WithField("fnenv", Name).Errorf("Failed to invoke workflow: %v", err)
 		span.LogKV("error", fmt.Errorf("failed to invoke workflow: %v", err))
 		return nil, err
 	}
-	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", wfiID)
-	span.SetTag("invocation", wfiID)
+	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", invocationID)
+	span.SetTag("invocation", invocationID)
 
-	timedCtx, cancelFn := context.WithTimeout(ctx, rt.timeout)
-	defer cancelFn()
-	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
-		sub := pub.Subscribe(pubsub.SubscriptionOptions{
-			Buffer: 1,
-			LabelMatcher: labels.And(
-				labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
-				labels.In(fes.PubSubLabelAggregateID, wfiID),
-				labels.In(fes.PubSubLabelEventType, terminationEvent...)),
-		})
-		defer pub.Unsubscribe(sub)
-
-		// Check the cache once to ensure that we did not miss the complete event
-		if result := rt.checkForResult(wfiID); result != nil {
-			return result, nil
+	// If no deadline was set by the user, use the default deadline.
+	var maxRuntime time.Duration
+	if spec.Deadline == nil {
+		if rt.timeout > 0 {
+			maxRuntime = rt.timeout
+		} else {
+			maxRuntime = DefaultMaxRuntime
 		}
-
-		// Block until either we received an completion event or the context completed
-		select {
-		case <-timedCtx.Done():
-			// Check once before cancelling, whether cancelling is needed.
-			if result := rt.checkForResult(wfiID); result != nil {
-				return result, nil
-			}
-
-			// Cancel the invocation
-			err := rt.api.Cancel(wfiID)
-			if err == nil {
-				err = errors.New(api.ErrInvocationCanceled)
-			} else {
-				logrus.Errorf("Failed to cancel invocation: %v", err)
-			}
-			span.LogKV("error", err)
-			return nil, err
-		case <-sub.Ch:
-		}
-		return rt.checkForResult(wfiID), timedCtx.Err()
+		ts, _ := ptypes.TimestampProto(time.Now().Add(maxRuntime))
+		spec.Deadline = ts
+		rt.timeout = maxRuntime
 	}
 
-	// Fallback to polling the cache if the cache does not support pubsub.
-	return rt.pollUntilResult(timedCtx, wfiID)
+	// Subscribe and poll for the result
+	awaitInvocationCtx, cancel := context.WithTimeout(ctx, maxRuntime)
+	invocation, err := rt.awaitInvocationResult(awaitInvocationCtx, invocationID)
+	cancel()
+	if err != nil {
+		span.LogKV("error", err)
+		return nil, err
+	}
+	return invocation, nil
 }
 
-// checkForResult checks if the invocation with the specified ID has completed yet.
+// checkForInvocationResult checks if the invocation with the specified ID has completed yet.
 // If so it will return the workflow invocation object, otherwise it will return nil.
-func (rt *Runtime) checkForResult(wfiID string) *types.WorkflowInvocation {
+func (rt *Runtime) checkForInvocationResult(wfiID string) *types.WorkflowInvocation {
 	wi, err := rt.invocations.GetInvocation(wfiID)
 	if err != nil {
 		logrus.Debugf("Could not find workflow invocation in cache: %v", err)
@@ -181,12 +169,106 @@ func (rt *Runtime) checkForResult(wfiID string) *types.WorkflowInvocation {
 	return nil
 }
 
-// pollUntilResult continuously (or until the context is canceled) polls whether the workflow invocation with the
+func (rt *Runtime) checkForReadyWorkflow(workflowID string) (*types.Workflow, error) {
+	wf, err := rt.workflows.GetWorkflow(workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find workflow %v for new invocation", workflowID)
+	}
+	if !wf.GetStatus().Ready() {
+		return nil, fmt.Errorf("cannot invoke non-ready workflow %v (status: %v)", workflowID,
+			wf.GetStatus().GetStatus().String())
+	}
+	return wf, nil
+}
+
+func (rt *Runtime) awaitReadyWorkflow(ctx context.Context, workflowID string) (wf *types.Workflow, err error) {
+	if wf, err = rt.checkForReadyWorkflow(workflowID); err == nil && wf != nil {
+		return wf, nil
+	}
+
+	// await the parsing of the workflow
+	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
+		sub := pub.Subscribe(pubsub.SubscriptionOptions{
+			Buffer: 1,
+			LabelMatcher: labels.And(
+				labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow),
+				labels.In(fes.PubSubLabelAggregateID, workflowID),
+				labels.In(fes.PubSubLabelEventType,
+					append(events.WorkflowTerminalEvents, events.EventWorkflowParsed)...)),
+		})
+		defer pub.Unsubscribe(sub)
+
+		// Check the cache once to ensure that we did not miss the terminal event while subscribing
+		if wf, err = rt.checkForReadyWorkflow(workflowID); err == nil {
+			return wf, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			// Check once before cancelling, whether cancelling is needed.
+			if result, err := rt.checkForReadyWorkflow(workflowID); result != nil {
+				return result, nil
+			} else {
+				return nil, err
+			}
+		case <-sub.Ch:
+			return rt.checkForReadyWorkflow(workflowID)
+		}
+	}
+	return rt.pollUntilWorkflowResult(ctx, workflowID)
+}
+
+func (rt *Runtime) awaitInvocationResult(ctx context.Context, invocationID string) (invocation *types.WorkflowInvocation, err error) {
+	if pub, ok := rt.invocations.CacheReader.(pubsub.Publisher); ok {
+		sub := pub.Subscribe(pubsub.SubscriptionOptions{
+			Buffer: 1,
+			LabelMatcher: labels.And(
+				labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
+				labels.In(fes.PubSubLabelAggregateID, invocationID),
+				labels.In(fes.PubSubLabelEventType, events.InvocationTerminalEvents...)),
+		})
+		defer pub.Unsubscribe(sub)
+		logrus.Debugf("Listening for termination event for invocation %s", invocationID)
+
+		// Check the cache once to ensure that we did not miss the terminal event while subscribing
+		if result := rt.checkForInvocationResult(invocationID); result != nil {
+			return result, nil
+		}
+
+		// Block until either we received an completion event or the context completed
+		select {
+		case <-ctx.Done():
+			// Check once before cancelling, whether cancelling is needed.
+			if result := rt.checkForInvocationResult(invocationID); result != nil {
+				return result, nil
+			}
+
+			// Cancel the invocation
+			err := rt.api.Cancel(invocationID)
+			if err == nil {
+				err = errors.New(api.ErrInvocationCanceled)
+			} else {
+				logrus.Errorf("Failed to cancel invocation: %v", err)
+			}
+			//span.LogKV("error", err)
+			return nil, err
+		case <-sub.Ch:
+			logrus.Debugf("Received terminal event for invocation %s", invocationID)
+			return rt.checkForInvocationResult(invocationID), nil
+		}
+	}
+
+	// Fallback to polling the cache if the cache does not support pubsub.
+	logrus.Debug("Workflows store does not support pubsub, falling back to polling.")
+	return rt.pollUntilInvocationResult(ctx, invocationID)
+}
+
+// pollUntilInvocationResult continuously (or until the context is canceled) polls whether the workflow invocation with the
 // specified ID has finished. It either returns the invocation object (if completed) or an error in case of timeouts or
 // context cancellation.
-func (rt *Runtime) pollUntilResult(ctx context.Context, wfiID string) (*types.WorkflowInvocation, error) {
+func (rt *Runtime) pollUntilInvocationResult(ctx context.Context, wfiID string) (*types.WorkflowInvocation, error) {
 	for {
-		if result := rt.checkForResult(wfiID); result != nil {
+		if result := rt.checkForInvocationResult(wfiID); result != nil {
 			return result, nil
 		}
 
@@ -194,7 +276,26 @@ func (rt *Runtime) pollUntilResult(ctx context.Context, wfiID string) (*types.Wo
 		case <-ctx.Done():
 			err := rt.api.Cancel(wfiID)
 			if err != nil {
-				logrus.Errorf("Failed to cancel workflow invocation: %v", err)
+				return nil, err
+			}
+			return nil, ctx.Err()
+		default:
+			time.Sleep(rt.pollInterval)
+		}
+	}
+}
+
+func (rt *Runtime) pollUntilWorkflowResult(ctx context.Context, workflowID string) (*types.Workflow, error) {
+	for {
+		if wf, err := rt.checkForReadyWorkflow(workflowID); err == nil {
+			return wf, nil
+		}
+
+		select {
+		case <-ctx.Done():
+			err := rt.api.Cancel(workflowID)
+			if err != nil {
+				return nil, err
 			}
 			return nil, ctx.Err()
 		default:

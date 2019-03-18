@@ -118,13 +118,13 @@ func (i *WorkflowInvocation) ensureNextEvent(event *fes.Event) error {
 	return nil
 }
 
-func (i *WorkflowInvocation) applyTaskEvent(wi *types.WorkflowInvocation, event *fes.Event) error {
-	wiAggregate := fes.GetAggregate(wi)
+func (i *WorkflowInvocation) applyTaskEvent(invocation *types.WorkflowInvocation, event *fes.Event) error {
+	wiAggregate := fes.GetAggregate(invocation)
 	if wiAggregate != *event.Parent {
 		return fmt.Errorf("event does not belong to invocation: (expected: %v, value: %v)", wiAggregate, *event.Parent)
 	}
 	taskID := event.Aggregate.Id
-	task, ok := wi.Status.Tasks[taskID]
+	task, ok := invocation.Status.Tasks[taskID]
 	if !ok {
 		entity, _ := i.taskRunProjector.NewProjection(*event.Aggregate)
 		task, _ = entity.(*types.TaskInvocation)
@@ -136,10 +136,10 @@ func (i *WorkflowInvocation) applyTaskEvent(wi *types.WorkflowInvocation, event 
 		return err
 	}
 
-	if wi.Status.Tasks == nil {
-		wi.Status.Tasks = map[string]*types.TaskInvocation{}
+	if invocation.Status.Tasks == nil {
+		invocation.Status.Tasks = map[string]*types.TaskInvocation{}
 	}
-	wi.Status.Tasks[taskID] = task
+	invocation.Status.Tasks[taskID] = task
 	return nil
 }
 

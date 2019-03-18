@@ -1,4 +1,4 @@
-package controller
+package executor
 
 import (
 	"testing"
@@ -13,19 +13,19 @@ func TestLocalExecutor(t *testing.T) {
 	t2 := &testTask{1}
 	t3 := &testTask{2}
 	t4 := &testTask{3}
-	accepted := executor.Submit(&DefaultTask{
+	accepted := executor.Submit(&Task{
 		Apply: t1.Apply,
 	})
 	assert.True(t, accepted)
-	accepted = executor.Submit(&DefaultTask{
+	accepted = executor.Submit(&Task{
 		Apply: t2.Apply,
 	})
 	assert.True(t, accepted)
-	accepted = executor.Submit(&DefaultTask{
+	accepted = executor.Submit(&Task{
 		Apply: t3.Apply,
 	})
 	assert.True(t, accepted)
-	accepted = executor.Submit(&DefaultTask{
+	accepted = executor.Submit(&Task{
 		Apply: t4.Apply,
 	})
 	assert.False(t, accepted)

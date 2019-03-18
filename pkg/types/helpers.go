@@ -5,105 +5,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
-// GetTasks gets all tasks in a workflow. This includes the dynamic tasks added during
-// the invocation.
-//func GetTasks(wf *Workflow, wfi *WorkflowInvocation) map[string]*Task {
-//	tasks := map[string]*Task{}
-//	if wf != nil {
-//		for _, task := range wf.Tasks() {
-//			tasks[task.ID()] = task
-//		}
-//	}
-//	if wfi != nil {
-//		for id := range wfi.GetStatus().GetDynamicTasks() {
-//			task, _ := GetTask(wf, wfi, id)
-//			tasks[task.ID()] = task
-//		}
-//	}
-//	return tasks
-//}
-
-//func GetTaskContainers(wf *Workflow, wfi *WorkflowInvocation) map[string]*TaskInvocation {
-//	tasks := map[string]*TaskInstance{}
-//	for _, task := range wf.Tasks() {
-//		id := task.ID()
-//		i, ok := wfi.TaskInvocation(id)
-//		if !ok {
-//			i = NewTaskInvocation(id)
-//		}
-//		tasks[task.ID()] = &TaskInstance{
-//			Task:       task,
-//			Invocation: i,
-//		}
-//	}
-//	if wfi != nil {
-//		for id := range wfi.Status.DynamicTasks {
-//			i, ok := wfi.TaskInvocation(id)
-//			if !ok {
-//				i = NewTaskInvocation(id)
-//			}
-//			task, _ := GetTask(wf, wfi, id)
-//			tasks[task.ID()] = &TaskInstance{
-//				Task:       task,
-//				Invocation: i,
-//			}
-//		}
-//	}
-//	return tasks
-//}
-
-// GetTask gets the task associated with the id. Both static and dynamic tasks are searched.
-//func GetTask(wf *Workflow, wfi *WorkflowInvocation, id string) (*Task, bool) {
-//	task := wfi.Status.DynamicTasks[id]
-//	if task != nil {
-//		return task, true
-//	}
-//
-//	spec, ok := GetTaskSpec(wf, wfi, id)
-//	if !ok {
-//		return nil, false
-//	}
-//
-//	// Find TaskStatus
-//	status, ok := wf.Status.Tasks[id]
-//	if !ok {
-//		status = &TaskStatus{
-//			UpdatedAt: ptypes.TimestampNow(),
-//		}
-//	}
-//
-//	return &Task{
-//		Metadata: &ObjectMetadata{
-//			Id: id,
-//			// TODO createdAt is not true for dynamic tasks
-//			CreatedAt: wf.Metadata.CreatedAt,
-//		},
-//		Spec:   spec,
-//		Status: status,
-//	}, true
-//}
-
-//func GetTaskSpec(wf *Workflow, wfi *WorkflowInvocation, id string) (*TaskSpec, bool) {
-//	// Find TaskSpec and overlay if needed
-//	spec, ok := wf.Spec.Tasks[id]
-//	var dtask *Task
-//	var dok bool
-//	if wfi != nil {
-//		dtask, dok = wfi.Status.DynamicTasks[id]
-//	}
-//	if !ok && !dok {
-//		return nil, false
-//	}
-//	if dok {
-//		//if ok {
-//		//spec = spec.Overlay(dtask.Spec)
-//		//} else {
-//		spec = dtask.Spec
-//		//}
-//	}
-//	return spec, true
-//}
-
 func NewWorkflow(id string) *Workflow {
 	return &Workflow{
 		Metadata: &ObjectMetadata{
@@ -208,11 +109,12 @@ type NamedTypedValue struct {
 
 type Inputs map[string]*typedvalues.TypedValue
 
-func NewTaskInvocationSpec(invocationId string, taskId string, fnRef FnRef) *TaskInvocationSpec {
+func NewTaskInvocationSpec(invocationId string, task *Task) *TaskInvocationSpec {
 	return &TaskInvocationSpec{
-		FnRef:        &fnRef,
-		TaskId:       taskId,
 		InvocationId: invocationId,
+		Task:         task,
+		FnRef:        task.GetStatus().GetFnRef(),
+		TaskId:       task.ID(),
 	}
 }
 

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 )
@@ -10,6 +11,7 @@ import (
 type CallConfig struct {
 	ctx             context.Context
 	postTransformer func(i interface{}) error
+	awaitWorkflow   time.Duration
 }
 
 type CallOption func(op *CallConfig)
@@ -42,4 +44,10 @@ func parseCallOptions(opts []CallOption) *CallConfig {
 		opt(cfg)
 	}
 	return cfg
+}
+
+func AwaitWorklow(timeout time.Duration) CallOption {
+	return func(config *CallConfig) {
+		config.awaitWorkflow = timeout
+	}
 }

@@ -25,7 +25,7 @@ func TestScopeExpr(t *testing.T) {
 					CreatedAt: ptypes.TimestampNow(),
 				},
 				Status: &types.WorkflowStatus{
-					Status:    types.WorkflowStatus_PENDING,
+					Status:    types.WorkflowStatus_QUEUED,
 					UpdatedAt: ptypes.TimestampNow(),
 					Tasks: map[string]*types.Task{
 						"fooTask": {
@@ -83,7 +83,7 @@ func TestScopeOverride(t *testing.T) {
 					CreatedAt: ptypes.TimestampNow(),
 				},
 				Status: &types.WorkflowStatus{
-					Status:    types.WorkflowStatus_PENDING,
+					Status:    types.WorkflowStatus_QUEUED,
 					UpdatedAt: ptypes.TimestampNow(),
 					Tasks: map[string]*types.Task{
 						"fooTask": {
