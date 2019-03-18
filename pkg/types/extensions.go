@@ -130,6 +130,7 @@ func (m *WorkflowInvocationStatus) ToTaskStatus() *TaskInvocationStatus {
 	}
 }
 
+// Finished returns true if the invocation is in a terminal state.
 func (m WorkflowInvocationStatus) Finished() bool {
 	for _, event := range invocationFinalStates {
 		if event == m.GetStatus() {

@@ -54,9 +54,10 @@ func NewNotification(old Entity, new Entity, event *Event) *Notification {
 		}
 	}
 	return &Notification{
-		Old:     old,
-		Updated: new,
-		Event:   event,
+		Old:       old,
+		Updated:   new,
+		Event:     event,
+		Aggregate: n,
 	}
 }
 

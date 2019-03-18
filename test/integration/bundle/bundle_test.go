@@ -524,8 +524,6 @@ func TestInvocationFailed(t *testing.T) {
 	assert.True(t, wfi.Status.Finished())
 	assert.False(t, wfi.Status.Successful())
 	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
-	// assert.Equal(t, msg, wfi.GetStatus().GetError().GetMessage())
-	// TODO generate consistent error report!
 }
 
 func TestInvocationWithForcedOutputs(t *testing.T) {

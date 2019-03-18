@@ -97,7 +97,6 @@ func (es *EventStore) reconnect() error {
 	cfg.AutoReconnect = false
 	nes, err := Connect(cfg)
 	if err != nil {
-		fmt.Println("connection fail", cfg.URL, cfg.Cluster, cfg.Client)
 		return err
 	}
 	oldConn := es.conn

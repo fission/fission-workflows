@@ -48,12 +48,11 @@ func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocati
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.ObjectMetadata, error) {
 	// TODO go through same runtime as InvokeSync
 	// Check if the workflow required by the invocation exists
-	if gi.workflows != nil {
-		_, err := gi.workflows.GetWorkflow(spec.GetWorkflowId())
-		if err != nil {
-			return nil, err
-		}
+	wf, err := gi.workflows.GetWorkflow(spec.GetWorkflowId())
+	if err != nil {
+		return nil, err
 	}
+	spec.Workflow = wf
 
 	eventID, err := gi.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
