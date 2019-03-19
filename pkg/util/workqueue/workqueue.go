@@ -17,8 +17,11 @@ limitations under the License.
 package workqueue
 
 import (
-	"math"
 	"sync"
+)
+
+const (
+	DefaultMaxSize = 10000
 )
 
 type Interface interface {
@@ -31,61 +34,46 @@ type Interface interface {
 }
 
 func NewNamed(maxSize int, _ string) *Type {
-	return NewSized(maxSize)
+	return NewWorkQueue(maxSize, false)
 }
 
-func NewSized(maxSize int) *Type {
+func NewWorkQueue(maxSize int, replace bool) *Type {
 	return &Type{
-		dirty:      set{},
-		processing: set{},
-		cond:       sync.NewCond(&sync.Mutex{}),
 		MaxSize:    maxSize,
+		Replace:    replace,
+		dirty:      make(map[interface{}]interface{}),
+		processing: make(map[interface{}]interface{}),
+		cond:       sync.NewCond(&sync.Mutex{}),
 	}
 }
 
 // New constructs a new work queue (see the package comment).
 func New() *Type {
-	return NewSized(math.MaxInt32)
+	return NewWorkQueue(DefaultMaxSize, false)
 }
 
 // Type is a work queue (see the package comment).
 type Type struct {
 	MaxSize int
+	Replace bool
 
 	// queue defines the order in which we will work on items. Every
 	// element of queue should be in the dirty set and not in the
 	// processing set.
-	queue []t
+	queue []interface{}
 
 	// dirty defines all of the items that need to be processed.
-	dirty set
+	dirty map[interface{}]interface{}
 
 	// Things that are currently being processed are in the processing set.
 	// These things may be simultaneously in the dirty set. When we finish
 	// processing something and remove it from this set, we'll check if
 	// it's in the dirty set, and if so, add it to the queue.
-	processing set
+	processing map[interface{}]interface{}
 
 	cond *sync.Cond
 
 	shuttingDown bool
-}
-
-type empty struct{}
-type t interface{}
-type set map[t]empty
-
-func (s set) has(item t) bool {
-	_, exists := s[item]
-	return exists
-}
-
-func (s set) insert(item t) {
-	s[item] = empty{}
-}
-
-func (s set) delete(item t) {
-	delete(s, item)
 }
 
 // Add marks item as needing processing.
@@ -97,7 +85,10 @@ func (q *Type) Add(item interface{}) (accepted bool) {
 	}
 
 	key := getKey(item)
-	if q.dirty.has(key) {
+	if _, ok := q.dirty[key]; ok {
+		if q.Replace {
+			q.dirty[key] = item
+		}
 		return true
 	}
 
@@ -105,12 +96,12 @@ func (q *Type) Add(item interface{}) (accepted bool) {
 		return false
 	}
 
-	q.dirty.insert(key)
-	if q.processing.has(key) {
+	q.dirty[key] = item
+	if _, ok := q.processing[key]; ok {
 		return true
 	}
 
-	q.queue = append(q.queue, item)
+	q.queue = append(q.queue, key)
 	q.cond.Signal()
 	return true
 }
@@ -138,10 +129,11 @@ func (q *Type) Get() (item interface{}, shutdown bool) {
 		return nil, true
 	}
 
-	item, q.queue = q.queue[0], q.queue[1:]
-	key := getKey(item)
-	q.processing.insert(key)
-	q.dirty.delete(key)
+	var key interface{}
+	key, q.queue = q.queue[0], q.queue[1:]
+	item = q.dirty[key]
+	q.processing[key] = item
+	delete(q.dirty, key)
 
 	return item, false
 }
@@ -154,9 +146,9 @@ func (q *Type) Done(item interface{}) {
 	defer q.cond.L.Unlock()
 
 	key := getKey(item)
-	q.processing.delete(key)
-	if q.dirty.has(key) {
-		q.queue = append(q.queue, item)
+	delete(q.processing, key)
+	if _, ok := q.dirty[key]; ok {
+		q.queue = append(q.queue, key)
 		q.cond.Signal()
 	}
 }

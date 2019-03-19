@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
+	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/controller/ctrl"
 	"github.com/fission/fission-workflows/pkg/controller/executor"
@@ -63,6 +64,13 @@ func (c *InvocationController) Eval(ctx context.Context, processValue *ctrl.Even
 	if !ok {
 		return ctrl.Err{Err: fmt.Errorf("entity expected %T, but was %T",
 			&types.WorkflowInvocation{}, processValue.Updated)}
+	}
+
+	// The reason that we skip this event is that it is quickly followed by the TaskSucceeded event, which causes a
+	// duplicate execution due to a race condition between the evaluation of the TaskAdded and the processing of the
+	// TaskSucceeded event. In the future we should eliminate this special case by improving the task status tracking.
+	if processValue.Event.GetType() == events.EventInvocationTaskAdded {
+		return ctrl.Done{}
 	}
 
 	// Ensure that it is the correct invocation

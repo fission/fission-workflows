@@ -106,7 +106,7 @@ func NewSystem(factory ControllerFactory) *System {
 		factory:   factory,
 		ctrlsMu:   &sync.RWMutex{},
 		ctrls:     make(map[string]Controller),
-		evalQueue: workqueue.New(),
+		evalQueue: workqueue.NewWorkQueue(workqueue.DefaultMaxSize, true),
 		runOnce:   &sync.Once{},
 		logger:    log.StandardLogger(),
 	}

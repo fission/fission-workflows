@@ -18,7 +18,6 @@ package workqueue
 
 import (
 	"container/heap"
-	"math"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -40,7 +39,7 @@ func NewDelayingQueue(maxSize int) DelayingInterface {
 }
 
 func NewNamedDelayingQueue(name string) DelayingInterface {
-	return newDelayingQueue(math.MaxInt32, clock.RealClock{}, name)
+	return newDelayingQueue(DefaultMaxSize, clock.RealClock{}, name)
 }
 
 func newDelayingQueue(maxSize int, clock clock.Clock, name string) DelayingInterface {
@@ -79,7 +78,7 @@ type delayingType struct {
 
 // waitFor holds the data to add and the time it should be added
 type waitFor struct {
-	data    t
+	data    interface{}
 	readyAt time.Time
 	// index in the priority queue (heap)
 	index int
@@ -190,7 +189,7 @@ func (q *delayingType) waitingLoop() {
 	waitingForQueue := &waitForPriorityQueue{}
 	heap.Init(waitingForQueue)
 
-	waitingEntryByData := map[t]*waitFor{}
+	waitingEntryByData := map[interface{}]*waitFor{}
 
 	for {
 		if q.Interface.ShuttingDown() {
@@ -253,7 +252,7 @@ func (q *delayingType) waitingLoop() {
 }
 
 // insert adds the entry to the priority queue, or updates the readyAt if it already exists in the queue
-func insert(q *waitForPriorityQueue, knownEntries map[t]*waitFor, entry *waitFor) {
+func insert(q *waitForPriorityQueue, knownEntries map[interface{}]*waitFor, entry *waitFor) {
 	// if the entry already exists, update the time only if it would cause the item to be queued sooner
 	existing, exists := knownEntries[entry.data]
 	if exists {
