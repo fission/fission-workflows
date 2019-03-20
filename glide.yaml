@@ -86,6 +86,8 @@ import:
   version: v1.7.0
 - package: github.com/blang/semver
   version: ~3.5.1
+- package: go.uber.org/atomic
+  version: v1.3.2
 testImport:
 - package: gopkg.in/ory-am/dockertest.v3
   version: v3.3.1
