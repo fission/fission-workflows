@@ -14,7 +14,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
-	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
 	"github.com/fission/fission-workflows/pkg/controller"
 	"github.com/fission/fission-workflows/pkg/controller/executor"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
@@ -52,7 +51,6 @@ import (
 const (
 	gRPCAddress                  = ":5555"
 	apiGatewayAddress            = ":8080"
-	fissionProxyAddress          = ":8888"
 	jaegerTracerServiceName      = "fission.workflows"
 	WorkflowsCacheSize           = 10000
 	InvocationsCacheSize         = 100000
@@ -98,6 +96,7 @@ type Options struct {
 	NATS                 *nats.Config
 	Scheduler            scheduler.Policy
 	Fission              *FissionOptions
+	FissionProxy         *FissionProxyConfig
 	InternalRuntime      bool
 	InvocationController bool
 	WorkflowController   bool
@@ -107,7 +106,6 @@ type Options struct {
 	InvocationAPI        bool
 	Metrics              bool
 	Debug                bool
-	FissionProxy         bool
 }
 
 type FissionOptions struct {
@@ -126,6 +124,7 @@ func Run(ctx context.Context, opts *Options) error {
 		Options: opts,
 		closers: map[string]io.Closer{},
 	}
+	ps := Processes{}
 
 	// See https://github.com/jaegertracing/jaeger-client-go for the env vars to set; defaults to local Jaeger
 	// instance with default ports.
@@ -242,7 +241,7 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	// Scheduler
 	//
-	sched := RunScheduler(opts.Scheduler)
+	sched := SetupScheduler(opts.Scheduler)
 
 	//
 	// Controllers
@@ -275,35 +274,7 @@ func Run(ctx context.Context, opts *Options) error {
 	//
 	// Fission integration
 	//
-	if opts.FissionProxy {
-		conn, err := grpc.Dial(fmt.Sprintf(":%s", gRPCAddress), grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-
-		proxyMux := http.NewServeMux()
-		runFissionEnvironmentProxy(proxyMux, conn)
-		fissionProxySrv := &http.Server{Addr: fissionProxyAddress}
-		fissionProxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
-
-		if opts.Metrics {
-			setupMetricsEndpoint(proxyMux)
-		}
-
-		go func() {
-			err := fissionProxySrv.ListenAndServe()
-			log.WithField("err", err).Info("Fission Proxy server stopped")
-		}()
-		defer func() {
-			err := fissionProxySrv.Shutdown(ctx)
-			if err != nil {
-				log.Errorf("Failed to stop Fission Proxy server: %v", err)
-			} else {
-				log.Info("Stopped Fission Proxy server")
-			}
-		}()
-		log.Info("Serving HTTP Fission Proxy at: ", fissionProxySrv.Addr)
-	}
+	ps.Register(opts.FissionProxy)
 
 	//
 	// gRPC API
@@ -381,10 +352,11 @@ func Run(ctx context.Context, opts *Options) error {
 		log.Info("Serving HTTP API gateway at: ", httpApiSrv.Addr)
 	}
 
+	logIfErr(ps.Start())
 	log.Info("Setup completed.")
-
 	<-ctx.Done()
 	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	logIfErr(ps.Close())
 	util.LogIfError(app.Close())
 	time.Sleep(5 * time.Second) // Hack: wait a bit to ensure all goroutines are shutdown.
 	return nil
@@ -524,11 +496,6 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 	}
 }
 
-func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) {
-	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(apiserver.NewClient(conn))
-	fissionProxyServer.RegisterServer(proxyMux)
-}
-
 func setupInvocationController(invocations *store.Invocations, es fes.Backend,
 	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver,
 	s *scheduler.InvocationScheduler) *controller.InvocationMetaController {
@@ -577,4 +544,53 @@ func tracingWrapper(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func logIfErr(err error) {
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+type Process interface {
+	io.Closer
+	Run() error
+}
+
+type Processes []Process
+
+func (p Processes) Close() error {
+	for _, proc := range p {
+		if err := proc.Close(); err != nil {
+			log.Errorf("Failed to close process: %v", err)
+		}
+	}
+	return nil
+}
+
+func (p Processes) Start() error {
+	errC := make(chan error, len(p))
+	for _, proc := range p {
+		go func(proc Process) {
+			if err := proc.Run(); err != nil {
+				log.Errorf("Failed to close process %T: %v", proc, err)
+				errC <- err
+			} else {
+				log.Debugf("Started process %T", proc)
+			}
+		}(proc)
+	}
+	select {
+	case err := <-errC:
+		close(errC)
+		return err
+	default:
+		return nil
+	}
+}
+
+func (p *Processes) Register(process Process) {
+	if process != nil {
+		*p = append(*p, process)
+	}
 }

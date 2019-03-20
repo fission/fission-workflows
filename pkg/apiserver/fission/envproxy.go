@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
@@ -30,19 +31,24 @@ const fissionIDsCacheSize = 1E4
 // Proxy between Fission and Workflows to ensure that invocations comply with Fission function interface. This
 // ensures that workflows can be executed exactly like Fission functions are executed.
 type Proxy struct {
-	client     *apiserver.Client
-	fissionIds *lru.Cache // map[string]bool
+	client         *apiserver.Client
+	fissionIds     *lru.Cache // map[string]bool
+	defaultTimeout time.Duration
 }
 
 // NewEnvironmentProxyServer creates a proxy server to adheres to the Fission Environment specification.
-func NewEnvironmentProxyServer(client *apiserver.Client) *Proxy {
+func NewEnvironmentProxyServer(client *apiserver.Client, defaultTimeout time.Duration) *Proxy {
 	cache, err := lru.New(fissionIDsCacheSize)
 	if err != nil {
 		panic(err)
 	}
+	if defaultTimeout <= 0 {
+		panic("default timeout for the Fission Proxy must be larger than 0")
+	}
 	return &Proxy{
-		client:     client,
-		fissionIds: cache,
+		client:         client,
+		fissionIds:     cache,
+		defaultTimeout: defaultTimeout,
 	}
 }
 
@@ -101,10 +107,10 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to parse inputs", 400)
 		return
 	}
-	wfSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: fnID,
-		Inputs:     inputs,
-	}
+	deadline := fp.determineDeadline(r)
+
+	wfSpec := types.NewWorkflowInvocationSpec(fnID, deadline)
+	wfSpec.Inputs = inputs
 
 	// Temporary: in case of query header 'X-Async' being present, make request async
 	if logrus.GetLevel() == logrus.DebugLevel {
@@ -307,4 +313,15 @@ func (fp *Proxy) hasWorkflow(ctx context.Context, fnID string) bool {
 		logrus.Errorf("Failed to get workflow: %v; assuming it is non-existent", err)
 	}
 	return wf != nil
+}
+
+func (fp *Proxy) determineDeadline(r *http.Request) time.Time {
+	// Try to parse the X-Fission-Function-Timeout
+	deadlineString := r.Header.Get(fmt.Sprintf("X-%s-Timeout", router.HEADERS_FISSION_FUNCTION_PREFIX))
+	if duration, err := time.ParseDuration(deadlineString); err == nil {
+		return time.Now().Add(duration)
+	}
+
+	// Final fallback, use the default set in the proxy
+	return time.Now().Add(fp.defaultTimeout)
 }

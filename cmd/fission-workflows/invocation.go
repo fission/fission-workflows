@@ -12,7 +12,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/apiserver/httpclient"
 	"github.com/fission/fission-workflows/pkg/parse/yaml"
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
@@ -85,47 +84,6 @@ var cmdInvocation = cli.Command{
 				err := client.Invocation.Cancel(ctx, wfiID)
 				if err != nil {
 					panic(err)
-				}
-				return nil
-			}),
-		},
-		{
-			// TODO support input
-			Name:  "invoke",
-			Usage: "invoke <workflow-id>",
-			Flags: []cli.Flag{
-				cli.StringSliceFlag{
-					Name:  "input, i",
-					Usage: "Not supported!",
-				},
-				cli.BoolFlag{
-					Name:  "sync, s",
-					Usage: "Invoke synchronously",
-				},
-			},
-			Action: commandContext(func(ctx Context) error {
-				client := getClient(ctx)
-				wfID := ctx.Args().Get(0)
-				spec := &types.WorkflowInvocationSpec{
-					WorkflowId: wfID,
-					Inputs:     map[string]*typedvalues.TypedValue{},
-				}
-				if ctx.Bool("sync") {
-					resp, err := client.Invocation.InvokeSync(ctx, spec)
-					if err != nil {
-						panic(err)
-					}
-					bs, err := yaml.Marshal(resp)
-					if err != nil {
-						panic(err)
-					}
-					fmt.Println(string(bs))
-				} else {
-					resp, err := client.Invocation.Invoke(ctx, spec)
-					if err != nil {
-						panic(err)
-					}
-					fmt.Println(resp.Id)
 				}
 				return nil
 			}),

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
@@ -64,7 +65,7 @@ func TestProxy_Specialize(t *testing.T) {
 	}, nil)
 	env := NewEnvironmentProxyServer(&apiserver.Client{
 		Workflow: workflowServer,
-	})
+	}, time.Second)
 	wf := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",

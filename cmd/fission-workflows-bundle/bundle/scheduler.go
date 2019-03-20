@@ -34,7 +34,7 @@ func ParseSchedulerConfig(c *cli.Context) (scheduler.Policy, error) {
 	return policy(c.Duration(FlagSchedulerColdStartDuration)), nil
 }
 
-func RunScheduler(policy scheduler.Policy) *scheduler.InvocationScheduler {
+func SetupScheduler(policy scheduler.Policy) *scheduler.InvocationScheduler {
 	if policy == nil {
 		panic("scheduler policy expected")
 	}
