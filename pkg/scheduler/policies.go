@@ -167,16 +167,9 @@ func getOpenTasks(invocation *types.WorkflowInvocation) map[string]*types.TaskIn
 	for id, task := range invocation.Tasks() {
 		taskRun, ok := invocation.TaskInvocation(id)
 		if !ok {
-			// TODO extract this to types package
 			taskRun = &types.TaskInvocation{
 				Metadata: types.NewObjectMetadata(id),
-				Spec: &types.TaskInvocationSpec{
-					Task:         task,
-					FnRef:        task.GetStatus().GetFnRef(),
-					TaskId:       task.ID(),
-					InvocationId: invocation.ID(),
-					Inputs:       task.GetSpec().GetInputs(),
-				},
+				Spec:     types.NewTaskInvocationSpec(invocation, task, time.Now()),
 				Status: &types.TaskInvocationStatus{
 					Status: types.TaskInvocationStatus_UNKNOWN,
 				},

@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -68,5 +69,11 @@ func TestParseJson(t *testing.T) {
 	assert.NoError(t, err)
 	parsedWfSpec, err := Parse(strings.NewReader(msg))
 	assert.NoError(t, err)
-	assert.Equal(t, originalWfSpec, parsedWfSpec)
+	if !proto.Equal(originalWfSpec, parsedWfSpec) {
+		assert.Fail(t, "not equal")
+		fmt.Println(originalWfSpec)
+		fmt.Println(parsedWfSpec)
+		fmt.Println(parsedWfSpec.XXX_NoUnkeyedLiteral)
+		fmt.Println(string(parsedWfSpec.XXX_unrecognized))
+	}
 }

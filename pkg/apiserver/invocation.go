@@ -111,7 +111,7 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 
 		invocations = append(invocations, aggregate.Id)
 	}
-	return &WorkflowInvocationList{invocations}, nil
+	return &WorkflowInvocationList{Invocations: invocations}, nil
 }
 
 func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.Empty, error) {

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/golang/protobuf/ptypes"
 )
@@ -63,14 +65,6 @@ func NewObjectMetadata(id string) *ObjectMetadata {
 	}
 }
 
-func NewTaskInvocation(id string) *TaskInvocation {
-	return &TaskInvocation{
-		Metadata: NewObjectMetadata(id),
-		Spec:     &TaskInvocationSpec{},
-		Status:   &TaskInvocationStatus{},
-	}
-}
-
 func SingleInput(key string, t *typedvalues.TypedValue) map[string]*typedvalues.TypedValue {
 	return map[string]*typedvalues.TypedValue{
 		key: t,
@@ -109,12 +103,30 @@ type NamedTypedValue struct {
 
 type Inputs map[string]*typedvalues.TypedValue
 
-func NewTaskInvocationSpec(invocationId string, task *Task) *TaskInvocationSpec {
+func NewTaskInvocationSpec(invocation *WorkflowInvocation, task *Task, startAt time.Time) *TaskInvocationSpec {
+	// Decide on the deadline of the task invocation.
+	// If there is no timeout specified for the task, use the deadline of the overall workflow invocation.
+	// If there is a timeout specified for the task, calculate the deadline using the startAt + timout time, but do not
+	// exceed the invocation deadline.
+	deadline := invocation.GetSpec().GetDeadline()
+	if task.GetSpec().GetTimeout() != nil {
+		deadlineTime, err := ptypes.Timestamp(deadline)
+		maxRuntime, err := ptypes.Duration(task.GetSpec().GetTimeout())
+		if err == nil {
+			taskMaxRuntime := startAt.Add(maxRuntime)
+			if taskMaxRuntime.Before(deadlineTime) {
+				deadline, _ = ptypes.TimestampProto(taskMaxRuntime)
+			}
+		}
+	}
+
 	return &TaskInvocationSpec{
-		InvocationId: invocationId,
+		InvocationId: invocation.ID(),
 		Task:         task,
 		FnRef:        task.GetStatus().GetFnRef(),
 		TaskId:       task.ID(),
+		Deadline:     deadline,
+		Inputs:       task.GetSpec().GetInputs(),
 	}
 }
 

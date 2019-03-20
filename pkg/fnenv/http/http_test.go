@@ -29,7 +29,7 @@ func TestRuntime_ResolveValid(t *testing.T) {
 
 func TestRuntime_ResolveInvalid(t *testing.T) {
 	runtime := New()
-	for input, expected := range map[types.FnRef]error{
+	for input, expected := range map[*types.FnRef]error{
 		{Runtime: "", Namespace: "", ID: ""}:          types.ErrFnRefNoID,
 		{Runtime: "http", Namespace: "", ID: ""}:      types.ErrFnRefNoID,
 		{Runtime: "nohttp", Namespace: "", ID: "foo"}: ErrUnsupportedScheme,
@@ -37,7 +37,7 @@ func TestRuntime_ResolveInvalid(t *testing.T) {
 	} {
 		fnref := input.Format()
 		t.Run(fnref, func(t *testing.T) {
-			_, err := runtime.Resolve(input)
+			_, err := runtime.Resolve(*input)
 			assert.EqualError(t, err, expected.Error())
 		})
 	}

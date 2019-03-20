@@ -70,7 +70,7 @@ func TestWorkflowCreate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, wf)
 	assert.NotEmpty(t, wf.ID())
-	assert.Equal(t, wf.Spec, spec)
+	util.AssertProtoEqual(t, wf.Spec, spec)
 	assert.Equal(t, wf.Status.Status, types.WorkflowStatus_READY)
 
 	// Test workflow list

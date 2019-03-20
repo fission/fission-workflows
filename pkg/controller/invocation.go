@@ -24,7 +24,8 @@ import (
 )
 
 const (
-	DefaultMaxRuntime = 10 * time.Minute
+	DefaultMaxRuntime       = 10 * time.Minute
+	awaitWorkflowMaxRuntime = 10 * time.Second
 )
 
 // InvocationController is the controller for ensuring the processing of a single workflow invocation.
@@ -199,7 +200,7 @@ func (c *InvocationController) Eval(ctx context.Context, processValue *ctrl.Even
 				if !ok || task == nil {
 					return fmt.Errorf("no task in workflow with ID: %s", action.TaskID)
 				}
-				taskRunSpec := types.NewTaskInvocationSpec(invocation.ID(), task)
+				taskRunSpec := types.NewTaskInvocationSpec(invocation, task, time.Now())
 				return c.taskAPI.Prepare(taskRunSpec, action.GetExpectedAtTime())
 			},
 		})
@@ -257,7 +258,7 @@ func (c *InvocationController) execTask(invocation *types.WorkflowInvocation, ta
 		return err
 	}
 
-	// Pre-execution: Resolve expression inputs
+	// Resolve expression inputs
 	var inputs map[string]*typedvalues.TypedValue
 	if len(task.GetSpec().GetInputs()) > 0 {
 		var err error
@@ -279,8 +280,8 @@ func (c *InvocationController) execTask(invocation *types.WorkflowInvocation, ta
 		}
 	}
 
-	// Invoke task
-	taskRunSpec := types.NewTaskInvocationSpec(invocation.ID(), task)
+	// Create the task run
+	taskRunSpec := types.NewTaskInvocationSpec(invocation, task, time.Now())
 	taskRunSpec.Inputs = inputs
 	if log.Level == logrus.DebugLevel {
 		i, err := typedvalues.UnwrapMapTypedValue(taskRunSpec.GetInputs())
@@ -290,8 +291,19 @@ func (c *InvocationController) execTask(invocation *types.WorkflowInvocation, ta
 			log.Debugf("Using inputs: %v", i)
 		}
 	}
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-	updated, err := c.taskAPI.Invoke(taskRunSpec, api.WithContext(ctx), api.AwaitWorklow(10*time.Second),
+
+	// Create the context with the deadline specified in the task run spec.
+	ctx := context.Background()
+	deadline, err := ptypes.Timestamp(taskRunSpec.Deadline)
+	if err == nil {
+		var cancel func()
+		ctx, cancel = context.WithDeadline(ctx, deadline)
+		defer cancel()
+	}
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	// Invoke the task
+	updated, err := c.taskAPI.Invoke(taskRunSpec, api.WithContext(ctx), api.AwaitWorklow(awaitWorkflowMaxRuntime),
 		api.PostTransformer(func(ti *types.TaskInvocation) error {
 			return c.transformTaskRunOutputs(invocation, ti)
 		}))
@@ -300,6 +312,7 @@ func (c *InvocationController) execTask(invocation *types.WorkflowInvocation, ta
 		return err
 	}
 
+	// Post-execution debugging
 	span.SetTag("status", updated.GetStatus().GetStatus().String())
 	if !updated.GetStatus().Successful() {
 		span.LogKV("error", updated.GetStatus().GetError().String())

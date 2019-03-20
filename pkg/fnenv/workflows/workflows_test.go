@@ -16,6 +16,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/util"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -144,14 +145,20 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 func TestRuntime_Invoke(t *testing.T) {
 	runtime, invocationAPI, _, cache := setup()
 
+	deadline, _ := ptypes.TimestampProto(time.Now().Add(10 * time.Second))
 	fnref := types.NewFnRef("workflows", "", workflowID)
-	spec := types.NewTaskInvocationSpec("wi-123", &types.Task{
+	spec := types.NewTaskInvocationSpec(&types.WorkflowInvocation{
+		Metadata: types.NewObjectMetadata("wi-123"),
+		Spec: &types.WorkflowInvocationSpec{
+			Deadline: deadline,
+		},
+	}, &types.Task{
 		Metadata: types.NewObjectMetadata("ti-123"),
 		Spec:     &types.TaskSpec{},
 		Status: &types.TaskStatus{
 			FnRef: &fnref,
 		},
-	})
+	}, time.Now())
 	spec.Inputs = types.Inputs{
 		types.InputParent: typedvalues.MustWrap("parentID"),
 	}

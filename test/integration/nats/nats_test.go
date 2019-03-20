@@ -117,7 +117,7 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.Equal(t, event.GetTimestamp().GetNanos(), events[0].GetTimestamp().GetNanos())
 	data, err := fes.ParseEventData(events[0])
 	assert.NoError(t, err)
-	assert.Equal(t, dummyEvent, data)
+	util.AssertProtoEqual(t, dummyEvent, data)
 }
 
 func TestNatsBackend_List(t *testing.T) {

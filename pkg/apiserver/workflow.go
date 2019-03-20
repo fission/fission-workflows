@@ -104,7 +104,7 @@ func (ga *Workflow) List(ctx context.Context, req *empty.Empty) (*WorkflowList, 
 	for _, result := range wfs {
 		results = append(results, result.Id)
 	}
-	return &WorkflowList{results}, nil
+	return &WorkflowList{Workflows: results}, nil
 }
 
 func (ga *Workflow) Validate(ctx context.Context, spec *types.WorkflowSpec) (*empty.Empty, error) {

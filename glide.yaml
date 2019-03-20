@@ -36,7 +36,7 @@ import:
   - graph/topo
   - graph/simple
 - package: github.com/golang/protobuf
-  version: ^v1.1.0
+  version: v1.3.1
 - package: google.golang.org/grpc
   version: ~1.10.0
 - package: github.com/grpc-ecosystem/go-grpc-prometheus

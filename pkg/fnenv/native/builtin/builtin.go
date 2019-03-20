@@ -8,6 +8,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
+	"github.com/gogo/protobuf/proto"
 )
 
 var DefaultBuiltinFunctions = map[string]native.InternalFunction{
@@ -61,8 +63,10 @@ func internalFunctionTest(t *testing.T, fn native.InternalFunction, input *types
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(outputtedTask, expected) {
-		t.Errorf("Output '%v' does not match expected output '%v'", outputtedTask, expected)
+	if _, ok := outputtedTask.(proto.Message); ok {
+		util.AssertProtoEqual(t, outputtedTask.(proto.Message), expected.(proto.Message))
+	} else if !reflect.DeepEqual(outputtedTask, expected) {
+		t.Errorf("Output '%v' (%T) does not match expected output '%v' (%T)", outputtedTask, outputtedTask, expected, expected)
 	}
 }
 
