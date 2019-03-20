@@ -165,17 +165,6 @@ func (m *TaskInvocation) Task() *Task {
 }
 
 //
-// TaskInvocationSpec
-//
-
-func (m *TaskInvocationSpec) ToWorkflowSpec() *WorkflowInvocationSpec {
-	return &WorkflowInvocationSpec{
-		WorkflowId: m.FnRef.ID,
-		Inputs:     m.Inputs,
-	}
-}
-
-//
 // TaskInvocationStatus
 //
 

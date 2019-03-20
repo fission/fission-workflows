@@ -21,35 +21,37 @@ import (
 )
 
 const (
-	workflowID = "123"
+	workflowID     = "123"
+	defaultTimeout = 5 * time.Second
 )
+
+func defaultDeadline() time.Time {
+	return time.Now().Add(defaultTimeout)
+}
 
 func TestRuntime_InvokeWorkflow_SubTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
-	runtime.timeout = 10 * time.Millisecond
-
-	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	spec := types.NewWorkflowInvocationSpec(workflowID, time.Now().Add(10*time.Millisecond))
+	_, err := runtime.InvokeWorkflow(spec)
 	assert.Equal(t, api.ErrInvocationCanceled, err.Error())
 }
 
 func TestRuntime_InvokeWorkflow_PollTimeout(t *testing.T) {
 	runtime, _, _, _ := setup()
 	runtime.invocations = store.NewInvocationStore(testutil.NewCache()) // ensure that cache does not support pubsub
-	runtime.timeout = 10 * time.Millisecond
 	runtime.pollInterval = 10 * time.Millisecond
-
-	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID, defaultDeadline()))
 	assert.EqualError(t, err, context.DeadlineExceeded.Error())
 }
 
 func TestRuntime_InvokeWorkflow_InvalidSpec(t *testing.T) {
 	runtime, _, _, _ := setup()
-	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(""))
+	_, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec("", defaultDeadline()))
 	assert.IsType(t, errors.New(""), err)
 }
 
 func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
-	runtime, invocationAPI, _, cache := setup()
+	runtime, invocationAPI, _, cc := setup()
 	output := typedvalues.MustWrap("foo")
 	outputHeaders := typedvalues.MustWrap(typedvalues.MustWrap(map[string]interface{}{
 		"some-key": "some-value",
@@ -57,14 +59,14 @@ func TestRuntime_InvokeWorkflow_SubSuccess(t *testing.T) {
 	go func() {
 		// Simulate workflow invocation
 		time.Sleep(50 * time.Millisecond)
-		entities := cache.List()
+		entities := cc.List()
 		wfiID := entities[0].Id
 		err := invocationAPI.Complete(wfiID, output, outputHeaders)
 		if err != nil {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID, defaultDeadline()))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
@@ -95,7 +97,7 @@ func TestRuntime_InvokeWorkflow_PollSuccess(t *testing.T) {
 		assert.NoError(t, err)
 		pollCache.CacheReader.(fes.CacheReaderWriter).Put(entity)
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID, defaultDeadline()))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output, wfi.GetStatus().GetOutput())
 	util.AssertProtoEqual(t, outputHeaders, wfi.GetStatus().GetOutputHeaders())
@@ -116,7 +118,7 @@ func TestRuntime_InvokeWorkflow_Fail(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID, defaultDeadline()))
 	assert.NoError(t, err)
 	assert.Equal(t, wfiErr.Error(), wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -135,7 +137,7 @@ func TestRuntime_InvokeWorkflow_Cancel(t *testing.T) {
 			panic(err)
 		}
 	}()
-	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID))
+	wfi, err := runtime.InvokeWorkflow(types.NewWorkflowInvocationSpec(workflowID, defaultDeadline()))
 	assert.NoError(t, err)
 	assert.Equal(t, api.ErrInvocationCanceled, wfi.GetStatus().GetError().Error())
 	assert.True(t, wfi.GetStatus().Finished())
@@ -201,6 +203,5 @@ func setup() (*Runtime, *api.Invocation, *mem.Backend, fes.CacheReaderWriter) {
 	workflows := store.NewWorkflowsStore(workflowsCache)
 	c := cache.NewSubscribedCache(testutil.NewCache(), projectors.NewWorkflowInvocation(), backend.Subscribe())
 	runtime := NewRuntime(invocationAPI, store.NewInvocationStore(c), workflows)
-	runtime.timeout = 5 * time.Second
 	return runtime, invocationAPI, backend, c
 }

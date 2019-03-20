@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/golang/protobuf/ptypes"
 )
 
@@ -24,17 +25,18 @@ func NewWorkflowStatus() *WorkflowStatus {
 	}
 }
 
-func NewWorkflowInvocation(wfID string, invocationID string) *WorkflowInvocation {
+func NewWorkflowInvocation(wfID string, invocationID string, deadline time.Time) *WorkflowInvocation {
 	return &WorkflowInvocation{
 		Metadata: NewObjectMetadata(invocationID),
-		Spec:     NewWorkflowInvocationSpec(wfID),
+		Spec:     NewWorkflowInvocationSpec(wfID, deadline),
 		Status:   &WorkflowInvocationStatus{},
 	}
 }
 
-func NewWorkflowInvocationSpec(wfID string) *WorkflowInvocationSpec {
+func NewWorkflowInvocationSpec(wfID string, deadline time.Time) *WorkflowInvocationSpec {
 	return &WorkflowInvocationSpec{
 		WorkflowId: wfID,
+		Deadline:   util.MustTimestampProto(deadline),
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/fission/fission-workflows/pkg/types/validate"
 	"github.com/fission/fission-workflows/pkg/util/backoff"
 	controller "github.com/fission/fission/controller/client"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 
@@ -54,9 +55,7 @@ func New(executorURL, serverURL, routerURL string) *FunctionEnv {
 		controller:  controller.MakeClient(serverURL),
 		routerURL:   routerURL,
 		executorURL: executorURL,
-		client: &http.Client{
-			Timeout: 5 * time.Minute,
-		},
+		client:      &http.Client{},
 	}
 }
 
@@ -116,8 +115,13 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	span.LogKV("http", fmt.Sprintf("%s %v", req.Method, req.URL))
 	var resp *http.Response
 
+	// Setup  context
+	deadline, err := ptypes.Timestamp(spec.Deadline)
+	if err != nil {
+		return nil, err
+	}
 	maxAttempts := 12 // About 6 min
-	ctx, cancelFn := context.WithCancel(cfg.Ctx)
+	ctx, cancel := context.WithDeadline(cfg.Ctx, deadline)
 	for attempt := range (&backoff.Instance{
 		MaxRetries:         maxAttempts,
 		BaseRetryDuration:  100 * time.Millisecond,
@@ -130,7 +134,7 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		}
 		log.Debugf("Failed to execute Fission function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
 	}
-	cancelFn()
+	cancel()
 
 	// Check if max try attempts was exceeded
 	if resp == nil {

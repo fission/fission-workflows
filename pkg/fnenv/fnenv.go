@@ -127,7 +127,7 @@ func ParseInvokeOptions(opts []InvokeOption) *InvokeConfig {
 	return cfg
 }
 
-func AwaitWorklow(timeout time.Duration) InvokeOption {
+func AwaitWorkflow(timeout time.Duration) InvokeOption {
 	return func(config *InvokeConfig) {
 		config.AwaitWorkflow = timeout
 	}

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
+	"github.com/fission/fission-workflows/pkg/util/backoff"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,9 +26,7 @@ func New() *Runtime {
 	mapper := httpconv.DefaultHTTPMapper.Clone()
 	mapper.DefaultHTTPMethod = http.MethodGet
 	return &Runtime{
-		Client: &http.Client{
-			Timeout: 5 * time.Minute,
-		},
+		Client:   &http.Client{},
 		httpconv: mapper,
 	}
 }
@@ -81,10 +82,33 @@ func (r *Runtime) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.InvokeOpt
 		fmt.Println(string(bs))
 		fmt.Println("--- HTTP Request end ---")
 	}
-	resp, err := r.Client.Do(req)
+
+	var resp *http.Response
+	deadline, err := ptypes.Timestamp(spec.Deadline)
 	if err != nil {
 		return nil, err
 	}
+	maxAttempts := 12 // About 6 min
+	ctx, cancel := context.WithDeadline(cfg.Ctx, deadline)
+	for attempt := range (&backoff.Instance{
+		MaxRetries:         maxAttempts,
+		BaseRetryDuration:  100 * time.Millisecond,
+		BackoffPolicy:      backoff.ExponentialBackoff,
+		MaxBackoffDuration: 10 * time.Second,
+	}).C(ctx) {
+		resp, err = r.Client.Do(req.WithContext(ctx))
+		if err == nil {
+			break
+		}
+		logrus.Debugf("Failed to execute HTTP function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
+	}
+	cancel()
+
+	// Check if max try attempts was exceeded
+	if resp == nil {
+		return nil, fmt.Errorf("error executing HTTP function at %s after %d attempts: %v", fnUrl, maxAttempts, err)
+	}
+
 	logrus.Infof("HTTP response: %d - %s", resp.StatusCode, resp.Header.Get("Content-Type"))
 	if logrus.GetLevel() == logrus.DebugLevel {
 		fmt.Println("--- HTTP Response ---")

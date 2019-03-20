@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,6 +37,7 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 
 	fn := NewFunctionHTTP()
 	body := "body"
+	deadline, _ := ptypes.TimestampProto(time.Now().Add(10 * time.Second))
 	out, err := fn.Invoke(&types.TaskInvocationSpec{
 		Inputs: map[string]*typedvalues.TypedValue{
 			types.InputMethod: typedvalues.MustWrap(http.MethodPost),
@@ -44,6 +47,7 @@ func TestFunctionHttp_Invoke(t *testing.T) {
 				"Foo": "Bar",
 			}),
 		},
+		Deadline: deadline,
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, body, typedvalues.MustUnwrap(out))

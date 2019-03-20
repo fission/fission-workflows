@@ -31,9 +31,8 @@ import (
 )
 
 const (
-	DefaultMaxRuntime = time.Duration(10) * time.Minute
-	PollInterval      = time.Duration(100) * time.Millisecond
-	Name              = "workflows"
+	PollInterval = time.Duration(100) * time.Millisecond
+	Name         = "workflows"
 )
 
 // Runtime provides an abstraction of the workflow engine itself to use as a Task runtime environment.
@@ -41,7 +40,6 @@ type Runtime struct {
 	api          *api.Invocation
 	invocations  *store.Invocations
 	workflows    *store.Workflows
-	timeout      time.Duration
 	pollInterval time.Duration
 }
 
@@ -51,7 +49,6 @@ func NewRuntime(api *api.Invocation, invocations *store.Invocations, workflows *
 		invocations:  invocations,
 		workflows:    workflows,
 		pollInterval: PollInterval,
-		timeout:      DefaultMaxRuntime,
 	}
 }
 
@@ -80,7 +77,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	}
 	ctx := cfg.Ctx
 
-	span, ctx := opentracing.StartSpanFromContext(cfg.Ctx, "/fnenv/workflows")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "/fnenv/workflows")
 	defer span.Finish()
 	span.SetTag("workflow", spec.GetWorkflowId())
 	span.SetTag("parent", spec.GetParentId())
@@ -132,21 +129,12 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 	logrus.WithField("fnenv", Name).Infof("Invoked workflow: %s", invocationID)
 	span.SetTag("invocation", invocationID)
 
-	// If no deadline was set by the user, use the default deadline.
-	var maxRuntime time.Duration
-	if spec.Deadline == nil {
-		if rt.timeout > 0 {
-			maxRuntime = rt.timeout
-		} else {
-			maxRuntime = DefaultMaxRuntime
-		}
-		ts, _ := ptypes.TimestampProto(time.Now().Add(maxRuntime))
-		spec.Deadline = ts
-		rt.timeout = maxRuntime
-	}
-
 	// Subscribe and poll for the result
-	awaitInvocationCtx, cancel := context.WithTimeout(ctx, maxRuntime)
+	deadline, err := ptypes.Timestamp(spec.Deadline)
+	if err != nil {
+		return nil, err
+	}
+	awaitInvocationCtx, cancel := context.WithDeadline(ctx, deadline)
 	invocation, err := rt.awaitInvocationResult(awaitInvocationCtx, invocationID)
 	cancel()
 	if err != nil {
@@ -305,9 +293,12 @@ func (rt *Runtime) pollUntilWorkflowResult(ctx context.Context, workflowID strin
 }
 
 func toWorkflowSpec(spec *types.TaskInvocationSpec) (*types.WorkflowInvocationSpec, error) {
-
-	// Prepare inputs
-	wfSpec := spec.ToWorkflowSpec()
+	wfSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: spec.FnRef.ID,
+		Inputs:     spec.Inputs,
+		Deadline:   spec.Deadline,
+	}
+	// Check for the parent input
 	if parentTv, ok := spec.Inputs[types.InputParent]; ok {
 		parentID, err := typedvalues.UnwrapString(parentTv)
 		if err != nil {

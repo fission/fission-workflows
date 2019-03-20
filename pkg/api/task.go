@@ -71,7 +71,7 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 
 	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx),
-		fnenv.AwaitWorklow(cfg.awaitWorkflow))
+		fnenv.AwaitWorkflow(cfg.awaitWorkflow))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
 	}
