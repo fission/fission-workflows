@@ -59,8 +59,12 @@ func (m *mockWorkflowClient) Events(ctx context.Context, in *types.ObjectMetadat
 
 func TestProxy_Specialize(t *testing.T) {
 	workflowServer := &mockWorkflowClient{}
-	workflowServer.On("Create", mock.Anything).Return("mockID", nil)
-	env := NewEnvironmentProxyServer(nil, workflowServer)
+	workflowServer.On("CreateSync", mock.Anything).Return(&types.Workflow{
+		Metadata: types.NewObjectMetadata("mockID"),
+	}, nil)
+	env := NewEnvironmentProxyServer(&apiserver.Client{
+		Workflow: workflowServer,
+	})
 	wf := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",

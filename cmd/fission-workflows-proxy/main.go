@@ -85,10 +85,7 @@ func main() {
 		logrus.Infof("Established gRPC connection to '%s'", target)
 
 		// Setup proxy
-		// TODO we could also reuse the bundle here
-		workflowClient := apiserver.NewWorkflowAPIClient(conn)
-		invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
-		proxy := fission.NewEnvironmentProxyServer(invocationClient, workflowClient)
+		proxy := fission.NewEnvironmentProxyServer(apiserver.NewClient(conn))
 
 		// Test proxy
 		if cliCtx.Bool("test") {

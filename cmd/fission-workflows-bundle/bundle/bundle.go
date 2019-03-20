@@ -524,11 +524,8 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 	}
 }
 
-// TODO: find a shortcut to using a full gRPC client-server approach
 func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) {
-	workflowClient := apiserver.NewWorkflowAPIClient(conn)
-	invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
-	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(invocationClient, workflowClient)
+	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(apiserver.NewClient(conn))
 	fissionProxyServer.RegisterServer(proxyMux)
 }
 
