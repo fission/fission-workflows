@@ -60,12 +60,20 @@ var cmdInvoke = cli.Command{
 			Name:  "poll",
 			Value: 10 * time.Millisecond,
 		},
+		cli.DurationFlag{
+			Name:  "timeout",
+			Value: 10 * time.Minute,
+		},
 	},
 	Description: "Invoke a workflow",
 	Action: commandContext(func(ctx Context) error {
 		listenToEvents := ensureServerVersionAtLeast(ctx, semver.MustParse("0.7.0"), false)
 		if !listenToEvents {
 			logrus.Warn("Event streaming is not supported < 0.7.0")
+		}
+		timeout := ctx.Duration("timeout")
+		if timeout <= 0 {
+			logrus.Fatal("Timeout should be larger than 0")
 		}
 		if !ctx.Args().Present() {
 			logrus.Fatal("Workflow ID is required.")
@@ -88,6 +96,7 @@ var cmdInvoke = cli.Command{
 			WorkflowId: workflowID,
 			Inputs:     inputs,
 		}
+		types.NewWorkflowInvocationSpec(workflowID, time.Now().Add(timeout))
 		md, err := client.Invocation.Invoke(ctx, spec)
 		if err != nil {
 			logrus.Fatalf("Error occurred while invoking workflow: %v", err)
