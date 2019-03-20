@@ -125,7 +125,7 @@ func (w *worker) Run() {
 		}
 		task := item.(*Task)
 
-		w.executeTask(task)
+		executeTask(task)
 
 		w.queue.Done(task)
 		if task.GroupID != nil {
@@ -136,7 +136,7 @@ func (w *worker) Run() {
 	}
 }
 
-func (w *worker) executeTask(task *Task) {
+func executeTask(task *Task) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Errorf("Task %s/%s crashed: %v", task.GroupID, task.TaskID, r)

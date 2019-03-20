@@ -140,6 +140,10 @@ type Cache struct {
 	lock     *sync.RWMutex
 }
 
+func (rc *Cache) Refresh(key fes.Aggregate) {
+	// nop
+}
+
 func NewCache() *Cache {
 	c := &Cache{
 		contents: map[string]map[string]fes.Entity{},

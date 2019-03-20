@@ -4,6 +4,7 @@ package bundle
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -50,7 +51,6 @@ func TestMain(m *testing.M) {
 
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
-	log.SetLevel(log.DebugLevel)
 	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancelFn()
 	client := setup(ctx)
@@ -677,6 +677,43 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 
 	output := typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, float64(5), output)
+}
+
+func TestMassivelyParallelInvocation(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	defer cancelFn()
+	client := setup(ctx)
+
+	tasks := make(map[string]*types.TaskSpec)
+	for i := 0; i < 100; i++ {
+		tasks[fmt.Sprintf("t%d", i)] = &types.TaskSpec{
+			FunctionRef: builtin.Noop,
+			Inputs: map[string]*typedvalues.TypedValue{
+				"main": typedvalues.MustWrap(i),
+			},
+		}
+	}
+
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "t0",
+		Tasks:      tasks,
+	}
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
+
+	wiSpec := &types.WorkflowInvocationSpec{
+		WorkflowId: wf.ID(),
+	}
+	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
 }
 
 func setup(ctx context.Context) *apiserver.Client {

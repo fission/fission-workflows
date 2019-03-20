@@ -67,6 +67,10 @@ func (c *LRUCache) List() []fes.Aggregate {
 	return results
 }
 
+func (c *LRUCache) Refresh(key fes.Aggregate) {
+	// nop
+}
+
 func (c *LRUCache) Invalidate(a fes.Aggregate) {
 	if err := fes.ValidateAggregate(&a); err != nil {
 		logrus.Warnf("Failed to invalidate entry in cache: %v", err)
@@ -128,6 +132,7 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 		fes.PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
+	// TODO check sequence and replay model if the sequence number is incorrect
 	if err := fes.ValidateEvent(event); err != nil {
 		return err
 	}
@@ -200,16 +205,16 @@ func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *fes.Event) (fes.E
 
 // LoadingCache looks into a backing data store in case there is a cache miss
 type LoadingCache struct {
-	cache     fes.CacheReaderWriter
+	fes.CacheReaderWriter
 	client    fes.Backend
 	projector fes.Projector
 }
 
 func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, projector fes.Projector) *LoadingCache {
 	return &LoadingCache{
-		cache:     cache,
-		client:    client,
-		projector: projector,
+		CacheReaderWriter: cache,
+		client:            client,
+		projector:         projector,
 	}
 }
 
@@ -218,7 +223,7 @@ func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, projector 
 // TODO provide option to force fallback or only do quick cache lookup.
 // TODO sync cache with store while you are at it.
 func (c *LoadingCache) List() []fes.Aggregate {
-	return c.cache.List()
+	return c.CacheReaderWriter.List()
 }
 
 func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
@@ -227,7 +232,7 @@ func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
 	}
 
 	// Check cache first
-	cached, err := c.cache.GetAggregate(key)
+	cached, err := c.CacheReaderWriter.GetAggregate(key)
 	// Ensure that the error was regarding the entity not being available
 	if err != nil && !fes.ErrEntityNotFound.Is(err) {
 		return nil, err
@@ -242,14 +247,6 @@ func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
 		return nil, err
 	}
 	return entity, nil
-}
-
-func (c *LoadingCache) Put(entity fes.Entity) error {
-	return c.cache.Put(entity)
-}
-
-func (c *LoadingCache) Invalidate(key fes.Aggregate) {
-	c.cache.Invalidate(key)
 }
 
 func (c *LoadingCache) Load(key fes.Aggregate) error {
@@ -284,6 +281,20 @@ func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate) (fes.Entity, e
 		return nil, err
 	}
 	return entity, nil
+}
+
+func (c *LoadingCache) Refresh(key fes.Aggregate) {
+	logrus.Debug("refreshing key: ", key)
+	entity, err := c.getFromEventStore(key)
+	if err != nil {
+		logrus.Debugf("failed to refresh key %v", key.Format())
+		return
+	}
+	err = c.Put(entity)
+	if err != nil {
+		logrus.Debugf("failed to add refreshed entity %v", key.Format())
+		return
+	}
 }
 
 // To ensure that tasks end up in invocation entities: if an event has a parent aggregate,

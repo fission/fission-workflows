@@ -50,16 +50,18 @@ import (
 )
 
 const (
-	gRPCAddress                 = ":5555"
-	apiGatewayAddress           = ":8080"
-	fissionProxyAddress         = ":8888"
-	jaegerTracerServiceName     = "fission.workflows"
-	WorkflowsCacheSize          = 10000
-	InvocationsCacheSize        = 100000
-	executorMaxParallelism      = 1000
-	executorMaxTaskQueueSize    = 100000
-	workflowStorePollInterval   = time.Minute
-	invocationStorePollInterval = 10 * time.Second
+	gRPCAddress                  = ":5555"
+	apiGatewayAddress            = ":8080"
+	fissionProxyAddress          = ":8888"
+	jaegerTracerServiceName      = "fission.workflows"
+	WorkflowsCacheSize           = 10000
+	InvocationsCacheSize         = 100000
+	executorMaxParallelism       = 1000
+	executorMaxTaskQueueSize     = 100000
+	workflowStorePollInterval    = time.Minute
+	invocationStorePollInterval  = time.Second
+	workflowSubscriptionBuffer   = 50
+	invocationSubscriptionBuffer = 1000
 )
 
 type App struct {
@@ -429,7 +431,7 @@ func setupNatsEventStoreClient(config nats.Config) *nats.EventStore {
 
 func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
 	sub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buffer: 50,
+		Buffer: invocationSubscriptionBuffer,
 		LabelMatcher: labels.Or(
 			labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
 			labels.In("parent.type", types.TypeInvocation)),
@@ -449,7 +451,7 @@ func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher,
 
 func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
 	sub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buffer:       10,
+		Buffer:       workflowSubscriptionBuffer,
 		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow),
 	})
 	name := types.TypeWorkflow

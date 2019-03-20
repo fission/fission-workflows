@@ -46,12 +46,17 @@ type CacheReader interface {
 	GetAggregate(a Aggregate) (Entity, error)
 }
 
+type CacheRefresher interface {
+	Refresh(key Aggregate)
+}
+
 type CacheWriter interface {
 	Put(entity Entity) error
 	Invalidate(entity Aggregate)
 }
 
 type CacheReaderWriter interface {
+	CacheRefresher
 	CacheReader
 	CacheWriter
 }

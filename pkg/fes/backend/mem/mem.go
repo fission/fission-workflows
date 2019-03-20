@@ -107,6 +107,9 @@ func (b *Backend) Append(event *fes.Event) error {
 		return err
 	}
 	key := *event.Aggregate
+	if event.Parent != nil {
+		key = *event.Parent
+	}
 	var newEntry bool
 
 	b.storeLock.Lock()

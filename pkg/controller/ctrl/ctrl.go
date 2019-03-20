@@ -51,20 +51,6 @@ func (r Err) Apply(s *System, event *Event) {
 	s.LoggerFor(event.Aggregate.Id).Errorf(r.Error())
 }
 
-// BackoffErr logs the controller error (if not nil) and freezes the controller for a duration.
-type BackoffErr struct {
-	Err      error
-	Duration time.Duration
-}
-
-func (r BackoffErr) Apply(s *System, event *Event) {
-	if r.Err != nil {
-		log.Errorf(r.Err.Error())
-	}
-
-	// TODO backoff
-}
-
 // Success is default evaluation result.
 type Success struct {
 	Msg string
@@ -90,25 +76,40 @@ func (r Done) Apply(s *System, event *Event) {
 	s.DeleteController(event.Aggregate.Id)
 }
 
+type ControllerStats struct {
+	LastEvaluatedAt time.Time
+	EvalCount       int64
+}
+
+func (c ControllerStats) RecordEval() ControllerStats {
+	c.LastEvaluatedAt = time.Now()
+	c.EvalCount++
+	return c
+}
+
 // Future: support parallel executions in evaluator
 type System struct {
-	ctrlsMu   *sync.RWMutex
-	ctrls     map[string]Controller
-	factory   ControllerFactory
-	evalQueue workqueue.Interface
-	close     func()
-	runOnce   *sync.Once
-	logger    *log.Logger
+	ctrls       map[string]Controller
+	ctrlsMu     *sync.RWMutex
+	ctrlStats   map[string]ControllerStats
+	ctrlStatsMu *sync.RWMutex
+	factory     ControllerFactory
+	evalQueue   workqueue.Interface
+	close       func()
+	runOnce     *sync.Once
+	logger      *log.Logger
 }
 
 func NewSystem(factory ControllerFactory) *System {
 	return &System{
-		factory:   factory,
-		ctrlsMu:   &sync.RWMutex{},
-		ctrls:     make(map[string]Controller),
-		evalQueue: workqueue.NewWorkQueue(workqueue.DefaultMaxSize, true),
-		runOnce:   &sync.Once{},
-		logger:    log.StandardLogger(),
+		factory:     factory,
+		ctrlsMu:     &sync.RWMutex{},
+		ctrls:       make(map[string]Controller),
+		evalQueue:   workqueue.NewWorkQueue(workqueue.DefaultMaxSize, true),
+		runOnce:     &sync.Once{},
+		logger:      log.StandardLogger(),
+		ctrlStats:   make(map[string]ControllerStats),
+		ctrlStatsMu: &sync.RWMutex{},
 	}
 }
 
@@ -129,6 +130,16 @@ func (s *System) GetController(key string) (ctrl Controller, ok bool) {
 	ctrl, ok = s.ctrls[key]
 	s.ctrlsMu.RUnlock()
 	return ctrl, ok
+}
+
+func (s *System) RangeControllerStats(consumer func(k string, v ControllerStats) bool) {
+	s.ctrlStatsMu.RLock()
+	defer s.ctrlStatsMu.RUnlock()
+	for k, v := range s.ctrlStats {
+		if !consumer(k, v) {
+			break
+		}
+	}
 }
 
 func (s *System) Logger() *log.Logger {
@@ -181,12 +192,12 @@ func (s *System) run() {
 			s.AddController(ctrlKey, ctrl)
 		}
 
-		s.eval(ctx, ctrl, event)
+		s.eval(ctx, ctrlKey, ctrl, event)
 		s.evalQueue.Done(item)
 	}
 }
 
-func (s *System) eval(ctx context.Context, ctrl Controller, event *Event) {
+func (s *System) eval(ctx context.Context, ctrlKey string, ctrl Controller, event *Event) {
 	defer func() {
 		if r := recover(); r != nil {
 			s.logger.Errorf("Recovered from controller crash: %v", r)
@@ -196,6 +207,12 @@ func (s *System) eval(ctx context.Context, ctrl Controller, event *Event) {
 		}
 	}()
 
+	// Record the evaluation
+	s.ctrlStatsMu.Lock()
+	s.ctrlStats[ctrlKey] = s.ctrlStats[ctrlKey].RecordEval()
+	s.ctrlStatsMu.Unlock()
+
+	// Trigger the evaluation
 	result := ctrl.Eval(ctx, event)
 	result.Apply(s, event)
 }

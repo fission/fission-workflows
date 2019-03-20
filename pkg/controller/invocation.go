@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/events"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/controller/ctrl"
 	"github.com/fission/fission-workflows/pkg/controller/executor"
@@ -38,6 +37,7 @@ type InvocationController struct {
 	StateStore    *expr.Store // Future: just grab the initial state of the parent, instead of constantly rebuilding it.
 	span          opentracing.Span
 	logger        *logrus.Entry
+	startedTasks  map[string]struct{}
 
 	errorCount int
 }
@@ -55,6 +55,7 @@ func NewInvocationController(invocationID string, executor *executor.LocalExecut
 		StateStore:    stateStore,
 		span:          span,
 		logger:        logger,
+		startedTasks:  map[string]struct{}{},
 	}
 }
 
@@ -64,13 +65,6 @@ func (c *InvocationController) Eval(ctx context.Context, processValue *ctrl.Even
 	if !ok {
 		return ctrl.Err{Err: fmt.Errorf("entity expected %T, but was %T",
 			&types.WorkflowInvocation{}, processValue.Updated)}
-	}
-
-	// The reason that we skip this event is that it is quickly followed by the TaskSucceeded event, which causes a
-	// duplicate execution due to a race condition between the evaluation of the TaskAdded and the processing of the
-	// TaskSucceeded event. In the future we should eliminate this special case by improving the task status tracking.
-	if processValue.Event.GetType() == events.EventInvocationTaskAdded {
-		return ctrl.Done{}
 	}
 
 	// Ensure that it is the correct invocation
@@ -94,6 +88,14 @@ func (c *InvocationController) Eval(ctx context.Context, processValue *ctrl.Even
 	// Do not evaluate as long as there still tasks to be executed
 	if activeTaskCount := c.executor.GetGroupTasks(invocation.ID()); activeTaskCount > 0 {
 		return ctrl.Err{Err: fmt.Errorf("invocation still has %d open task(s) to be executed", activeTaskCount)}
+	}
+
+	// To avoid scheduling tasks that are being processed, ensure that all tasks that were successfully submitted have
+	// finished before reevaluating.
+	for taskID := range c.startedTasks {
+		if taskRun, ok := invocation.TaskInvocation(taskID); !ok || !taskRun.GetStatus().Finished() {
+			return ctrl.Success{}
+		}
 	}
 
 	// Check if the invocation is not in a terminal state
@@ -205,13 +207,16 @@ func (c *InvocationController) Eval(ctx context.Context, processValue *ctrl.Even
 
 	// Execute the tasks listed in the schedule.
 	for _, action := range schedule.GetRunTasks() {
-		c.executor.Submit(&executor.Task{
-			TaskID:  fmt.Sprintf("%s.run.%s", invocation.ID(), action.TaskID),
+		taskID := action.TaskID
+		if c.executor.Submit(&executor.Task{
+			TaskID:  fmt.Sprintf("%s.run.%s", invocation.ID(), taskID),
 			GroupID: invocation.ID(),
 			Apply: func() error {
-				return c.execTask(invocation, action.GetTaskID())
+				return c.execTask(invocation, taskID)
 			},
-		})
+		}) {
+			c.startedTasks[action.TaskID] = struct{}{}
+		}
 	}
 
 	return ctrl.Success{
@@ -277,7 +282,6 @@ func (c *InvocationController) execTask(invocation *types.WorkflowInvocation, ta
 	// Invoke task
 	taskRunSpec := types.NewTaskInvocationSpec(invocation.ID(), task)
 	taskRunSpec.Inputs = inputs
-	log.Infof("Executing function: %v", taskRunSpec.GetFnRef().Format())
 	if log.Level == logrus.DebugLevel {
 		i, err := typedvalues.UnwrapMapTypedValue(taskRunSpec.GetInputs())
 		if err != nil {
@@ -517,14 +521,11 @@ type InvocationMetaController struct {
 
 func NewInvocationMetaController(executor *executor.LocalExecutor, invocations *store.Invocations,
 	invocationAPI *api.Invocation, taskAPI *api.Task, scheduler *scheduler.InvocationScheduler, stateStore *expr.Store,
-	pollInterval time.Duration) *InvocationMetaController {
-	return &InvocationMetaController{
-		sensors: []ctrl.Sensor{
-			NewInvocationNotificationSensor(invocations),
-			NewInvocationStorePollSensor(invocations, pollInterval),
-		},
-		executor: executor,
-		runOnce:  &sync.Once{},
+	cachePollInterval time.Duration) *InvocationMetaController {
+	c := &InvocationMetaController{
+		executor:    executor,
+		runOnce:     &sync.Once{},
+		invocations: invocations,
 		system: ctrl.NewSystem(func(event *ctrl.Event) (ctrl ctrl.Controller, err error) {
 			spanCtx, err := fes.ExtractTracingFromEventMetadata(event.Event.GetMetadata())
 			if err != nil {
@@ -544,6 +545,22 @@ func NewInvocationMetaController(executor *executor.LocalExecutor, invocations *
 				stateStore, span, logrus.WithField("key", invocationID)), nil
 		}),
 	}
+	c.sensors = []ctrl.Sensor{
+		NewInvocationNotificationSensor(invocations),
+		NewInvocationStorePollSensor(invocations, cachePollInterval),
+		NewStalenessPollSensor(c.system, func(ctrlKey string) (fes.Aggregate, fes.Entity, error) {
+			aggregate := fes.Aggregate{
+				Type: types.TypeInvocation,
+				Id:   ctrlKey,
+			}
+			invocation, err := invocations.GetInvocation(ctrlKey)
+			if err != nil {
+				return aggregate, nil, err
+			}
+			return aggregate, invocation, nil
+		}, 100*time.Millisecond, time.Second),
+	}
+	return c
 }
 
 func (c *InvocationMetaController) Run() {
@@ -634,6 +651,7 @@ func (s *InvocationNotificationSensor) Close() error {
 type InvocationStorePollSensor struct {
 	*ctrl.PollSensor
 	invocations *store.Invocations
+	system      *ctrl.System
 }
 
 func NewInvocationStorePollSensor(invocations *store.Invocations, interval time.Duration) *InvocationStorePollSensor {
@@ -650,6 +668,13 @@ func (s *InvocationStorePollSensor) Poll(evalQueue ctrl.EvalQueue) {
 		if aggregate.Type != types.TypeInvocation {
 			logrus.Warnf("Non-invocation entity in invocations store: %v", aggregate)
 			continue
+		}
+
+		// Try to get the most recent workflow
+		if refresher, ok := s.invocations.CacheReader.(fes.CacheRefresher); ok {
+			refresher.Refresh(aggregate)
+		} else {
+			logrus.Warnf("Cache does not support refreshing (key: %v)", aggregate.Format())
 		}
 
 		// Get actual workflow
@@ -681,4 +706,52 @@ func (s *InvocationStorePollSensor) Poll(evalQueue ctrl.EvalQueue) {
 			Aggregate: aggregate,
 		})
 	}
+}
+
+type StalenessPollSensor struct {
+	*ctrl.PollSensor
+	system       *ctrl.System
+	maxStaleness time.Duration
+	stateFetcher func(ctrlKey string) (fes.Aggregate, fes.Entity, error)
+}
+
+func NewStalenessPollSensor(system *ctrl.System, stateFetcher func(ctrlKey string) (fes.Aggregate, fes.Entity, error),
+	interval time.Duration, maxStaleness time.Duration) *StalenessPollSensor {
+	s := &StalenessPollSensor{
+		system:       system,
+		maxStaleness: maxStaleness,
+		stateFetcher: stateFetcher,
+	}
+	s.PollSensor = ctrl.NewPollSensor(interval, s.Poll)
+	return s
+}
+
+func (s *StalenessPollSensor) Poll(queue ctrl.EvalQueue) {
+	s.system.RangeControllerStats(func(ctrlKey string, ctrlStats ctrl.ControllerStats) bool {
+		minLastEvaluation := time.Now().Add(-s.maxStaleness)
+		if ctrlStats.LastEvaluatedAt.After(minLastEvaluation) {
+			return true
+		}
+		_, ok := s.system.GetController(ctrlKey)
+		if ok {
+			return true
+		}
+
+		aggregate, entity, err := s.stateFetcher(ctrlKey)
+		if err != nil {
+			logrus.Debugf("Failed to fetch state for controller %s: %v", ctrlKey, err)
+			return true
+		}
+		queue.Submit(&ctrl.Event{
+			Old:     entity,
+			Updated: entity,
+			Event: &fes.Event{
+				Type:      EventRefresh,
+				Aggregate: &aggregate,
+				Timestamp: ptypes.TimestampNow(),
+			},
+			Aggregate: aggregate,
+		})
+		return true
+	})
 }
