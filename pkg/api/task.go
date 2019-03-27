@@ -2,9 +2,11 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"time"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -14,12 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO move events here
-
 // Task contains the API functionality for controlling the lifecycle of individual tasks.
 // This includes starting, stopping and completing tasks.
 type Task struct {
-	runtime    map[string]fnenv.Runtime // TODO support AsyncRuntime
+	runtime    map[string]fnenv.Runtime
 	es         fes.Backend
 	dynamicAPI *Dynamic
 }
@@ -35,7 +35,6 @@ func NewTaskAPI(runtime map[string]fnenv.Runtime, esClient fes.Backend, api *Dyn
 
 // Invoke starts the execution of a task, changing the state of the task into RUNNING.
 // Currently it executes the underlying function synchronously and manage the execution until completion.
-// TODO make asynchronous
 func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*types.TaskInvocation, error) {
 	log := logrus.WithField("fn", spec.FnRef).WithField("wi", spec.InvocationId).WithField("task", spec.TaskId)
 	cfg := parseCallOptions(opts)
@@ -44,7 +43,16 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		return nil, err
 	}
 
-	taskID := spec.TaskId // assumption: 1 task == 1 TaskInvocation (How to deal with retries? Same invocation?)
+	// Ensure that the task run has a task in its spec.
+	// This is not part of the default validation, because it is (for now) in most cases fine to pass just the
+	// invocationID, whereas here the task run really needs the task.
+	if spec.GetTask() == nil {
+		return nil, errors.New("task-run does not contain the task to be run")
+	}
+
+	// The assumption that we make for now every task has only one task invocation.
+	// Therefore we use the same (task) ID for the task run.
+	taskID := spec.TaskId
 	task := &types.TaskInvocation{
 		Metadata: &types.ObjectMetadata{
 			Id:        taskID,
@@ -53,17 +61,17 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 		Spec: spec,
 	}
 
-	aggregate := aggregates.NewWorkflowInvocationAggregate(spec.InvocationId)
-	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskStarted{
+	aggregate := projectors.NewInvocationAggregate(spec.InvocationId)
+	event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskStarted{
 		Spec: spec,
 	})
-	event.Parent = aggregate
+	event.Parent = &aggregate
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO propagate context
-	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx))
+	fnResult, err := ap.runtime[spec.FnRef.Runtime].Invoke(spec, fnenv.WithContext(cfg.ctx),
+		fnenv.AwaitWorkflow(cfg.awaitWorkflow))
 	if fnResult == nil && err == nil {
 		err = errors.New("function crashed")
 	}
@@ -99,13 +107,13 @@ func (ap *Task) Invoke(spec *types.TaskInvocationSpec, opts ...CallOption) (*typ
 	}
 
 	if fnResult.Status == types.TaskInvocationStatus_SUCCEEDED {
-		event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskSucceeded{
+		event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskSucceeded{
 			Result: fnResult,
 		})
 		if err != nil {
 			return nil, err
 		}
-		event.Parent = aggregate
+		event.Parent = &aggregate
 		err = ap.es.Append(event)
 	} else {
 		err = ap.Fail(spec.InvocationId, taskID, fnResult.Error.GetMessage())
@@ -126,12 +134,28 @@ func (ap *Task) Fail(invocationID string, taskID string, errMsg string) error {
 		return validate.NewError("taskID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewTaskInvocationAggregate(taskID), &events.TaskFailed{
+	event, err := fes.NewEvent(projectors.NewTaskRunAggregate(taskID), &events.TaskFailed{
 		Error: &types.Error{Message: errMsg},
 	})
 	if err != nil {
 		return err
 	}
-	event.Parent = aggregates.NewWorkflowInvocationAggregate(invocationID)
+	aggregate := projectors.NewInvocationAggregate(invocationID)
+	event.Parent = &aggregate
 	return ap.es.Append(event)
+}
+
+func (ap *Task) Prepare(spec *types.TaskInvocationSpec, expectedAt time.Time, opts ...CallOption) error {
+	runtime, ok := ap.runtime[spec.GetFnRef().GetRuntime()]
+	if !ok {
+		return fmt.Errorf("could not find runtime for %s", spec.GetFnRef().Format())
+	}
+
+	// check if the runtime supports prewarming
+	preparer, ok := runtime.(fnenv.Preparer)
+	if !ok {
+		return fmt.Errorf("runtime does not support prewarming")
+	}
+
+	return preparer.Prepare(*spec.FnRef, expectedAt)
 }

@@ -51,11 +51,12 @@ var cmdWorkflow = cli.Command{
 				spec.Name = ctx.String("name")
 
 				// Create workflow
-				md, err := client.Workflow.Create(ctx, spec)
+				md, err := client.Workflow.CreateSync(ctx, spec)
 				if err != nil {
 					logrus.Fatalf("Failed to create workflow: %v", err)
+				} else {
+					fmt.Println(md.ID())
 				}
-				fmt.Println(md.Id)
 				return nil
 			}),
 		},

@@ -13,18 +13,18 @@ type LinkedNode interface {
 	Links() []int64
 }
 
-type TaskInstanceNode struct {
-	*types.TaskInstance
+type TaskInvocationNode struct {
+	*types.TaskInvocation
 }
 
-func (n *TaskInstanceNode) ID() int64 {
-	return createID(n.Task.ID())
+func (n *TaskInvocationNode) ID() int64 {
+	return createID(n.Task().ID())
 }
 
-func (n *TaskInstanceNode) Links() []int64 {
+func (n *TaskInvocationNode) Links() []int64 {
 	var links []int64
 
-	for k := range n.Task.Spec.Requires {
+	for k := range n.Task().Spec.Requires {
 		links = append(links, createID(k))
 	}
 	return links
@@ -52,11 +52,11 @@ type Iterator interface {
 }
 
 type TaskInstanceIterator struct {
-	contents map[string]*types.TaskInstance
+	contents map[string]*types.TaskInvocation
 	keys     []string
 }
 
-func NewTaskInstanceIterator(contents map[string]*types.TaskInstance) *TaskInstanceIterator {
+func NewTaskInstanceIterator(contents map[string]*types.TaskInvocation) *TaskInstanceIterator {
 	var keys []string
 	for k := range contents {
 		keys = append(keys, k)
@@ -69,8 +69,8 @@ func NewTaskInstanceIterator(contents map[string]*types.TaskInstance) *TaskInsta
 
 func (ti *TaskInstanceIterator) Get(ptr int) LinkedNode {
 	if len(ti.keys) > ptr {
-		return &TaskInstanceNode{
-			TaskInstance: ti.contents[ti.keys[ptr]],
+		return &TaskInvocationNode{
+			TaskInvocation: ti.contents[ti.keys[ptr]],
 		}
 	}
 	return nil
@@ -131,8 +131,8 @@ func Parse(it Iterator) graph.Directed {
 		switch n := v.(type) {
 		case *TaskSpecNode:
 			deps[n.ID()] = n.Requires
-		case *TaskInstanceNode:
-			deps[n.ID()] = n.Task.Spec.Requires
+		case *TaskInvocationNode:
+			deps[n.ID()] = n.Task().Spec.Requires
 		}
 	}
 	for _, v := range depGraph.Nodes() {

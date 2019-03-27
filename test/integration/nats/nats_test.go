@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -23,6 +24,7 @@ var (
 // This test will start and stop a NATS streaming cluster by itself.
 
 func TestMain(m *testing.M) {
+	flag.Parse()
 	if testing.Short() {
 		log.Info("Short test; skipping NATS integration tests.")
 		return
@@ -39,7 +41,7 @@ func TestMain(m *testing.M) {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 
 		Repository:   "nats-streaming",
-		Tag:          "0.8.0-beta",
+		Tag:          "0.12.0",
 		Cmd:          []string{"-cid", clusterId, "-p", fmt.Sprintf("%d", 4222)},
 		ExposedPorts: []string{"4222"},
 	})
@@ -115,7 +117,7 @@ func TestNatsBackend_Append(t *testing.T) {
 	assert.Equal(t, event.GetTimestamp().GetNanos(), events[0].GetTimestamp().GetNanos())
 	data, err := fes.ParseEventData(events[0])
 	assert.NoError(t, err)
-	assert.Equal(t, dummyEvent, data)
+	util.AssertProtoEqual(t, dummyEvent, data)
 }
 
 func TestNatsBackend_List(t *testing.T) {

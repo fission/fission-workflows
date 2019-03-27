@@ -34,6 +34,7 @@ func (p *Parser) Parse(r io.Reader) (*types.WorkflowSpec, error) {
 	protoErr := proto.Unmarshal(bs, wf)
 	if protoErr != nil {
 		// Fallback: it might be protobuf serialized into json.
+		wf.Reset()
 		jsonErr := jsonpb.Unmarshal(bytes.NewReader(bs), wf)
 		if jsonErr != nil {
 			return nil, fmt.Errorf("failed to parse protobuf-encoded workflow (proto: %v, jsonpb: %v)", protoErr, jsonErr)

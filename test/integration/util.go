@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/fission/fission-workflows/cmd/fission-workflows-bundle/bundle"
+	"github.com/fission/fission-workflows/pkg/scheduler"
 )
 
 // SetupBundle sets up and runs the workflows-bundle.
@@ -16,6 +17,7 @@ func SetupBundle(ctx context.Context, opts ...bundle.Options) bundle.Options {
 		bundleOpts = opts[0]
 	} else {
 		bundleOpts = bundle.Options{
+			Scheduler:            scheduler.DefaultPolicy,
 			InternalRuntime:      true,
 			InvocationController: true,
 			WorkflowController:   true,

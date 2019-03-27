@@ -143,9 +143,9 @@ func (s *TaskScope) DeepCopy() DeepCopier {
 }
 
 // NewScope creates a new scope given the workflow invocation and its associates workflow definition.
-func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*Scope, error) {
+func NewScope(base *Scope, wfi *types.WorkflowInvocation) (*Scope, error) {
 	updated := &Scope{}
-	if wf != nil {
+	if wf := wfi.Workflow(); wf != nil {
 		updated.Workflow = formatWorkflow(wf)
 	}
 	if wfi != nil {
@@ -159,7 +159,7 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 		}
 	}
 
-	for taskId, task := range types.GetTasks(wf, wfi) {
+	for taskId, task := range wfi.Tasks() {
 		if updated.Tasks == nil {
 			updated.Tasks = map[string]*TaskScope{}
 		}
@@ -176,7 +176,7 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 		if err != nil {
 			panic(err)
 		}
-		inputs, err := typedvalues.UnwrapMapTypedValue(task.Spec.Inputs)
+		inputs, err := typedvalues.UnwrapMapTypedValue(task.GetSpec().GetInputs())
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to format inputs of task %v", taskId)
 		}
@@ -185,10 +185,10 @@ func NewScope(base *Scope, wf *types.Workflow, wfi *types.WorkflowInvocation) (*
 			Status:         task.Status.Status.String(),
 			UpdatedAt:      formatTimestamp(task.Status.UpdatedAt),
 			Inputs:         inputs,
-			Requires:       task.Spec.Requires,
+			Requires:       task.GetSpec().GetRequires(),
 			Output:         output,
 			OutputHeaders:  outputHeaders,
-			Function:       task.Spec.FunctionRef,
+			Function:       task.GetSpec().GetFunctionRef(),
 		}
 	}
 

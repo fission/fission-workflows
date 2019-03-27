@@ -51,6 +51,11 @@ func main() {
 			Name:  "test",
 			Usage: "Ensure that the proxy can reach the workflows before serving the proxy.",
 		},
+		cli.DurationFlag{
+			Name:  "timeout",
+			Usage: "The default timeout assigned to workflow invocations coming from the Fission proxy",
+			Value: 5 * time.Minute,
+		},
 	}
 	app.Action = commandContext(func(cliCtx Context) error {
 		// Print version if asked
@@ -76,7 +81,7 @@ func main() {
 			}
 		}()
 
-		// Establish connection
+		// Establish connection with Fission Workflows apiserver
 		target := cliCtx.String("target")
 		conn, err := grpc.DialContext(ctx, target, grpc.WithInsecure())
 		if err != nil {
@@ -85,10 +90,7 @@ func main() {
 		logrus.Infof("Established gRPC connection to '%s'", target)
 
 		// Setup proxy
-		// TODO we could also reuse the bundle here
-		workflowClient := apiserver.NewWorkflowAPIClient(conn)
-		invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
-		proxy := fission.NewEnvironmentProxyServer(invocationClient, workflowClient)
+		proxy := fission.NewEnvironmentProxyServer(apiserver.NewClient(conn), cliCtx.Duration("timeout"))
 
 		// Test proxy
 		if cliCtx.Bool("test") {

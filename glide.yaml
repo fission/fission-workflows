@@ -35,8 +35,12 @@ import:
   - graph
   - graph/topo
   - graph/simple
+# Keeping protobuf at 1.1.0 for now, because of the introduction of the XXX_ metadata fields in the generated messages.
+# This change breaks compatibility, because it is no longer possible to use messages as map keys and rely on basic
+# operations such as equality checking, and iterating over the fields.
+# Note: to generate the protobufs use the protoc-gen-go v1.0.0
 - package: github.com/golang/protobuf
-  version: ^v1.1.0
+  version: ^v1.0.0
 - package: google.golang.org/grpc
   version: ~1.10.0
 - package: github.com/grpc-ecosystem/go-grpc-prometheus
@@ -86,6 +90,8 @@ import:
   version: v1.7.0
 - package: github.com/blang/semver
   version: ~3.5.1
+- package: go.uber.org/atomic
+  version: v1.3.2
 testImport:
 - package: gopkg.in/ory-am/dockertest.v3
   version: v3.3.1

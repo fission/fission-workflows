@@ -4,6 +4,7 @@ package fission.workflows.types;
 option go_package = "types";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 import "github.com/fission/fission-workflows/pkg/types/typedvalues/typedvalues.proto";
 
 //
@@ -15,9 +16,7 @@ message Workflow {
     WorkflowStatus status = 3;
 }
 
-// Workflow Definition
-//
-// The workflowDefinition contains the definition of a workflow.
+// WorkflowSpec contains the definition of a workflow.
 //
 // Ideally the source code (json, yaml) can be converted directly to this message.
 // Naming, triggers and versioning of the workflow itself is out of the scope of this data structure, which is delegated
@@ -45,14 +44,12 @@ message WorkflowSpec {
     string name = 6;
 
     // Internal indicates whether is a workflow should be visible to a human (default) or not.
-    //
     bool internal = 7;
 }
 
 message WorkflowStatus {
     enum Status {
-        PENDING = 0;
-        //        PARSING = 1; // During validation/parsing
+        QUEUED = 0;
         READY = 2;
         FAILED = 3;
         DELETED = 4;
@@ -61,7 +58,7 @@ message WorkflowStatus {
     google.protobuf.Timestamp updatedAt = 2;
 
     // Tasks contains the status of the tasks, with the key being the task id.
-    map<string, TaskStatus> tasks = 3; // Key = taskId
+    map<string, Task> tasks = 3; // Key = taskId
     Error error = 4;
 }
 
@@ -74,27 +71,42 @@ message WorkflowInvocation {
     WorkflowInvocationStatus status = 3;
 }
 
-// Workflow Invocation Model
+// WorkflowInvocationSpec contains the complete specification of a workflow invocation.
 message WorkflowInvocationSpec {
+    // WorkflowId contains a reference to the workflow that needs to be executed.
+    //
+    // Deprecated: use workflow.metadata.id instead to reference the workflow.
     string workflowId = 1;
+
+
     map<string, TypedValue> inputs = 2;
 
     // ParentId contains the id of the encapsulating workflow invocation.
     //
     // This used within the workflow engine; for user-provided workflow invocations the parentId is ignored.
     string parentId = 3;
-    //int32 depth = 4; // aka size of the stack
+
+    // Workflow contains the workflow that should be invoked.
+    //
+    // The workflow here is a snapshot; it should be considered immutable after added to the spec.
+    Workflow workflow = 4;
+
+    // Deadline is the timestamp before which the workflow invocation needs to be completed.
+    //
+    // The field is a hard deadline; any invocation exceeding the deadline specified here will be canceled.
+    // Each invocation has a deadline. If no deadline is provided Fission Workflows uses a default deadline (typically
+    // 10 minutes).
+    google.protobuf.Timestamp Deadline = 5;
 }
 
 message WorkflowInvocationStatus {
     enum Status {
         UNKNOWN = 0;
-        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        SCHEDULED = 1; // Arrived at engine, but not yet scheduled
         IN_PROGRESS = 2; // Scheduled
         SUCCEEDED = 3;
         FAILED = 4;
         ABORTED = 5;
-        //PAUSED = 6;
     }
     Status status = 1;
     google.protobuf.Timestamp updatedAt = 2;
@@ -131,20 +143,31 @@ message Task {
 // Id is specified outside of TaskSpec
 message TaskSpec {
 
-    // Name/identifier of the function
-    string functionRef = 1; // TODO refactor to fission.FunctionRef struct here
+    // FunctionRef contains an identifier for the function.
+    //
+    // This possibly ambiguous reference will be resolved to a unambiguous function reference during the workflow
+    // parsing. The result of this is found in the TaskStatus.FnRef.
+    string functionRef = 1;
 
     map<string, TypedValue> inputs = 2;
 
-    // Dependencies for this task to execute
+    // Dependencies for this task to execute.
     map<string, TaskDependencyParameters> requires = 3;
 
-    // Number of dependencies to wait for
+    // Await signals the number of dependencies to wait for before this task can be started.
     int32 await = 4;
 
-    // Transform the output, or override the output with a literal
+    // Output transforms or overrides the output of the executed function.
     TypedValue output = 5;
+
+    // OutputHeaders transforms or overrides the output headers of the executed function.
     TypedValue outputHeaders = 6;
+
+    // Timeout specifies the the maximum runtime duration when executing this task.
+    //
+    // It overrides the deadline specified by the workflow invocation, but cannot exceed it. If set, this field will be
+    // used in the task invocation spec to compute the deadline.
+    google.protobuf.Duration timeout = 7;
 }
 
 message TaskStatus {
@@ -179,24 +202,37 @@ message TaskInvocation {
     TaskInvocationStatus status = 3;
 }
 
+// TaskInvocationSpec contains the complete specification of a workflow invocation.
 message TaskInvocationSpec {
-    // Id of the task to be invoked (no ambiguatity at this point
+    // Id of the task to be invoked (no ambiguity at this point)
     FnRef fnRef = 1;
 
     // TaskId is the id of the task within the workflow
+    //
+    // Deprecated: use task.metadata.id instead to reference the workflow.
     string taskId = 2;
 
     // Inputs contain all inputs to the task invocation
     map<string, TypedValue> inputs = 3;
 
-    //
+    // InvocationID contains a reference to the workflow invocation of this task.
     string invocationId = 4;
+
+    // Task contains a snapshot of the task that needs to be run.
+    Task task = 5;
+
+    // Deadline is the timestamp before which the task invocation needs to be completed.
+    //
+    // The field is a hard deadline; any invocation exceeding the deadline specified here will be canceled.
+    // Each task has a deadline. If no deadline is specified the task invocation inherits the deadline of the
+    // invocation.
+    google.protobuf.Timestamp Deadline = 6;
 }
 
 message TaskInvocationStatus {
     enum Status {
         UNKNOWN = 0;
-        SCHEDULED = 1; // Arrived at engine, but not yet schedu
+        SCHEDULED = 1; // Arrived at engine, but not yet scheduled
         IN_PROGRESS = 2; // Scheduled
         SUCCEEDED = 3;
         FAILED = 4;
@@ -237,8 +273,7 @@ message ObjectMetadata {
 }
 
 message Error {
-    //    string code = 1;
-    string message = 2;
+    string message = 1;
 }
 
 // FnRef is an immutable, unique reference to a function on a specific function runtime environment.

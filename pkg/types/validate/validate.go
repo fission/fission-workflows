@@ -241,7 +241,7 @@ func WorkflowInvocationSpec(spec *types.WorkflowInvocationSpec) error {
 		return errs.getOrNil()
 	}
 
-	if len(spec.WorkflowId) == 0 {
+	if len(spec.WorkflowId) == 0 && spec.Workflow != nil {
 		errs.append(ErrNoWorkflow)
 	}
 

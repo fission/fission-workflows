@@ -1,11 +1,9 @@
 package scheduler
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/types"
-	"github.com/fission/fission-workflows/pkg/types/graph"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -28,17 +26,28 @@ var (
 	})
 )
 
+type Policy interface {
+	Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error)
+}
+
 func init() {
 	prometheus.MustRegister(metricEvalCount, metricEvalTime)
 }
 
-type WorkflowScheduler struct {
+type InvocationScheduler struct {
+	policy Policy
 }
 
-func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, error) {
+func NewInvocationScheduler(policy Policy) *InvocationScheduler {
+	return &InvocationScheduler{
+		policy: policy,
+	}
+}
+
+func (ws *InvocationScheduler) Evaluate(invocation *types.WorkflowInvocation) (*Schedule, error) {
 	ctxLog := log.WithFields(logrus.Fields{
-		"invocation": request.Invocation.ID(),
-		"workflow":   request.Workflow.ID(),
+		"invocation": invocation.ID(),
+		"workflow":   invocation.Workflow().ID(),
 	})
 	timeStart := time.Now()
 	defer func() {
@@ -46,64 +55,64 @@ func (ws *WorkflowScheduler) Evaluate(request *ScheduleRequest) (*Schedule, erro
 		metricEvalCount.Inc()
 	}()
 
-	schedule := &Schedule{
-		InvocationId: request.Invocation.Metadata.Id,
-		CreatedAt:    ptypes.TimestampNow(),
-		Actions:      []*Action{},
+	schedule, err := ws.policy.Evaluate(invocation)
+	if err != nil {
+		return nil, err
 	}
 
-	ctxLog.Debug("Scheduler evaluating...")
-	cwf := types.GetTaskContainers(request.Workflow, request.Invocation)
-
-	// Fill open tasks
-	openTasks := map[string]*types.TaskInstance{}
-	for id, t := range cwf {
-		if t.Invocation == nil || t.Invocation.Status.Status == types.TaskInvocationStatus_UNKNOWN {
-			openTasks[id] = t
-			continue
-		}
-		if t.Invocation.Status.Status == types.TaskInvocationStatus_FAILED {
-
-			msg := fmt.Sprintf("Task '%v' failed", t.Invocation.ID())
-			if err := t.Invocation.GetStatus().GetError(); err != nil {
-				msg = err.Message
-			}
-
-			AbortActionAny, _ := ptypes.MarshalAny(&AbortAction{
-				Reason: msg,
-			})
-
-			abortAction := &Action{
-				Type:    ActionType_ABORT,
-				Payload: AbortActionAny,
-			}
-			schedule.Actions = append(schedule.Actions, abortAction)
-		}
-	}
-	if len(schedule.Actions) > 0 {
-		return schedule, nil
-	}
-
-	depGraph := graph.Parse(graph.NewTaskInstanceIterator(openTasks))
-	horizon := graph.Roots(depGraph)
-
-	// Determine schedule nodes
-	for _, node := range horizon {
-		taskDef := node.(*graph.TaskInstanceNode)
-		// Fetch input
-		// TODO might be Status.Inputs instead of Spec.Inputs
-		inputs := taskDef.Task.Spec.Inputs
-		invokeTaskAction, _ := ptypes.MarshalAny(&InvokeTaskAction{
-			Id:     taskDef.Task.ID(),
-			Inputs: inputs,
-		})
-
-		schedule.Actions = append(schedule.Actions, &Action{
-			Type:    ActionType_INVOKE_TASK,
-			Payload: invokeTaskAction,
-		})
-	}
-
-	ctxLog.WithField("schedule", len(schedule.Actions)).Info("Determined schedule")
+	ctxLog.Debugf("Determined schedule: %v", schedule)
 	return schedule, nil
+}
+
+func newRunTaskAction(taskID string) *RunTaskAction {
+	return &RunTaskAction{
+		TaskID: taskID,
+	}
+}
+
+func newAbortAction(msg string) *AbortAction {
+	return &AbortAction{
+		Reason: msg,
+	}
+}
+
+func newPrepareTaskAction(taskID string, expectedAt time.Time) *PrepareTaskAction {
+	ts, _ := ptypes.TimestampProto(expectedAt)
+	return &PrepareTaskAction{
+		TaskID:     taskID,
+		ExpectedAt: ts,
+	}
+}
+
+func (m *Schedule) AddRunTask(action *RunTaskAction) {
+	m.RunTasks = append(m.RunTasks, action)
+}
+
+func (m *Schedule) AddPrepareTask(action *PrepareTaskAction) {
+	m.PrepareTasks = append(m.PrepareTasks, action)
+}
+
+func (m *Schedule) Actions() (actions []interface{}) {
+	if m.Abort != nil {
+		actions = append(actions, m.Abort)
+	}
+	if len(m.PrepareTasks) > 0 {
+		for _, t := range m.PrepareTasks {
+			actions = append(actions, t)
+		}
+	}
+	if len(m.RunTasks) > 0 {
+		for _, t := range m.RunTasks {
+			actions = append(actions, t)
+		}
+	}
+	return actions
+}
+
+func (m *PrepareTaskAction) GetExpectedAtTime() time.Time {
+	ts, err := ptypes.Timestamp(m.ExpectedAt)
+	if err != nil {
+		panic(err)
+	}
+	return ts
 }

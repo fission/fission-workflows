@@ -68,5 +68,7 @@ func TestParseJson(t *testing.T) {
 	assert.NoError(t, err)
 	parsedWfSpec, err := Parse(strings.NewReader(msg))
 	assert.NoError(t, err)
-	assert.Equal(t, originalWfSpec, parsedWfSpec)
+	if !proto.Equal(originalWfSpec, parsedWfSpec) {
+		assert.Fail(t, "not equal")
+	}
 }

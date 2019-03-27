@@ -7,7 +7,6 @@ import (
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/golang-lru"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -39,18 +38,6 @@ func NewLRUCache(size int) *LRUCache {
 	}
 }
 
-func (c *LRUCache) Get(entity fes.Entity) error {
-	if err := fes.ValidateEntity(entity); err != nil {
-		return err
-	}
-	e, err := c.GetAggregate(entity.Aggregate())
-	if err != nil {
-		return err
-	}
-
-	return entity.UpdateState(e)
-}
-
 func (c *LRUCache) GetAggregate(a fes.Aggregate) (fes.Entity, error) {
 	if err := fes.ValidateAggregate(&a); err != nil {
 		return nil, err
@@ -66,7 +53,8 @@ func (c *LRUCache) Put(entity fes.Entity) error {
 	if err := fes.ValidateEntity(entity); err != nil {
 		return err
 	}
-	c.contents.Add(entity.Aggregate(), entity)
+	a := fes.GetAggregate(entity)
+	c.contents.Add(a, entity)
 	return nil
 }
 
@@ -77,6 +65,10 @@ func (c *LRUCache) List() []fes.Aggregate {
 		results[i] = key.(fes.Aggregate)
 	}
 	return results
+}
+
+func (c *LRUCache) Refresh(key fes.Aggregate) {
+	// nop
 }
 
 func (c *LRUCache) Invalidate(a fes.Aggregate) {
@@ -91,17 +83,17 @@ func (c *LRUCache) Invalidate(a fes.Aggregate) {
 type SubscribedCache struct {
 	pubsub.Publisher
 	fes.CacheReaderWriter
-	createdAt     time.Time
-	entityFactory func(fes.Aggregate) fes.Entity
-	closeC        chan struct{}
+	createdAt time.Time
+	projector fes.Projector
+	closeC    chan struct{}
 }
 
-func NewSubscribedCache(cache fes.CacheReaderWriter, factory func(fes.Aggregate) fes.Entity,
+func NewSubscribedCache(cache fes.CacheReaderWriter, projector fes.Projector,
 	sub *pubsub.Subscription) *SubscribedCache {
 	c := &SubscribedCache{
 		Publisher:         pubsub.NewPublisher(),
 		CacheReaderWriter: cache,
-		entityFactory:     factory,
+		projector:         projector,
 		createdAt:         time.Now(),
 	}
 
@@ -140,28 +132,25 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 		fes.PubSubLabelAggregateType: event.Aggregate.Type,
 	}).Debug("Applying event to subscribed cache.")
 
+	// TODO check sequence and replay model if the sequence number is incorrect
 	if err := fes.ValidateEvent(event); err != nil {
 		return err
 	}
 
 	// Attempt to fetch the entity from the cache.
-	entity, err := uc.getOrCreateAggregateForEvent(event)
+	old, err := uc.getOrCreateAggregateForEvent(event)
 	if err != nil {
 		return err
 	}
 
-	// Clone the entity to avoid race conflicts with subscribers of the cache.
-	// TODO maybe safer and more readable to replace implementation by a immutable projection?
-	entityCopy := entity.CopyEntity()
-
 	// Apply the event on to the new copy of the entity
-	err = fes.Project(entityCopy, event)
+	updated, err := uc.projector.Project(old, event)
 	if err != nil {
 		return err
 	}
 
 	// Replace the old entity in the cache with the new (copied) entity
-	err = uc.Put(entityCopy)
+	err = uc.Put(updated)
 	if err != nil {
 		return err
 	}
@@ -171,12 +160,12 @@ func (uc *SubscribedCache) applyEvent(event *fes.Event) error {
 	ets, _ := ptypes.Timestamp(event.Timestamp)
 	if ets.After(uc.createdAt) {
 		// Publish the event (along with the updated entity) to subscribers
-		n := fes.NewNotification(entityCopy, event)
+		n := fes.NewNotification(old, updated, event)
 		logrus.WithFields(logrus.Fields{
-			"event.id":          event.Id,
-			"aggregate.id":      event.Aggregate.Id,
-			"aggregate.type":    event.Aggregate.Type,
-			"notification.type": n.EventType,
+			"event.id":       event.Id,
+			"aggregate.id":   event.Aggregate.Id,
+			"aggregate.type": event.Aggregate.Type,
+			"event.type":     event.Type,
 		}).Debug("SubscribedCache: publishing notification of event.")
 		return uc.Publisher.Publish(n)
 	}
@@ -208,25 +197,24 @@ func (uc *SubscribedCache) getOrCreateAggregateForEvent(event *fes.Event) (fes.E
 		if c != nil {
 			return c, nil
 		}
-		return uc.entityFactory(parentKey), nil
-	} else {
-		// Final alternative: create a new entity
-		return uc.entityFactory(key), nil
+		key = parentKey
 	}
+
+	return uc.projector.NewProjection(key)
 }
 
 // LoadingCache looks into a backing data store in case there is a cache miss
 type LoadingCache struct {
-	cache         fes.CacheReaderWriter
-	client        fes.Backend
-	entityFactory func(fes.Aggregate) fes.Entity
+	fes.CacheReaderWriter
+	client    fes.Backend
+	projector fes.Projector
 }
 
-func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, entityFactory func(fes.Aggregate) fes.Entity) *LoadingCache {
+func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, projector fes.Projector) *LoadingCache {
 	return &LoadingCache{
-		cache:         cache,
-		client:        client,
-		entityFactory: entityFactory,
+		CacheReaderWriter: cache,
+		client:            client,
+		projector:         projector,
 	}
 }
 
@@ -235,7 +223,7 @@ func NewLoadingCache(cache fes.CacheReaderWriter, client fes.Backend, entityFact
 // TODO provide option to force fallback or only do quick cache lookup.
 // TODO sync cache with store while you are at it.
 func (c *LoadingCache) List() []fes.Aggregate {
-	return c.cache.List()
+	return c.CacheReaderWriter.List()
 }
 
 func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
@@ -243,28 +231,22 @@ func (c *LoadingCache) GetAggregate(key fes.Aggregate) (fes.Entity, error) {
 		return nil, err
 	}
 
-	entity := c.entityFactory(key)
-	err := c.getFromEventStore(key, entity)
+	// Check cache first
+	cached, err := c.CacheReaderWriter.GetAggregate(key)
+	// Ensure that the error was regarding the entity not being available
+	if err != nil && !fes.ErrEntityNotFound.Is(err) {
+		return nil, err
+	}
+	if cached != nil {
+		return cached, nil
+	}
+
+	// Otherwise check store
+	entity, err := c.getFromEventStore(key)
 	if err != nil {
 		return nil, err
 	}
 	return entity, nil
-}
-
-func (c *LoadingCache) Get(entity fes.Entity) error {
-	if err := fes.ValidateEntity(entity); err != nil {
-		return err
-	}
-
-	return c.getFromEventStore(entity.Aggregate(), entity)
-}
-
-func (c *LoadingCache) Put(entity fes.Entity) error {
-	return c.cache.Put(entity)
-}
-
-func (c *LoadingCache) Invalidate(key fes.Aggregate) {
-	c.cache.Invalidate(key)
 }
 
 func (c *LoadingCache) Load(key fes.Aggregate) error {
@@ -273,33 +255,46 @@ func (c *LoadingCache) Load(key fes.Aggregate) error {
 }
 
 // getFromEventStore assumes that it can mutate target entity
-func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate, target fes.Entity) error {
-	err := c.cache.Get(target)
+func (c *LoadingCache) getFromEventStore(aggregate fes.Aggregate) (fes.Entity, error) {
+	// Look up relevant events in event store
+	events, err := c.client.Get(aggregate)
 	if err != nil {
-		if !fes.ErrEntityNotFound.Is(err) {
-			return errors.WithStack(err)
-		}
-
-		// Look up relevant events in event store
-		events, err := c.client.Get(aggregate)
-		if err != nil {
-			return err
-		}
-		if len(events) == 0 {
-			return fes.ErrEntityNotFound.WithAggregate(&aggregate)
-		}
-
-		// Reconstruct entity by replaying all events
-		err = fes.Project(target, events...)
-		if err != nil {
-			return err
-		}
-
-		// EvalCache entityFactory
-		return c.Put(target)
+		return nil, err
+	}
+	if len(events) == 0 {
+		return nil, fes.ErrEntityNotFound.WithAggregate(&aggregate)
 	}
 
-	return nil
+	base, err := c.projector.NewProjection(aggregate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reconstruct entity by replaying all events
+	entity, err := c.projector.Project(base, events...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache retrieved entity
+	if err := c.Put(entity); err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+func (c *LoadingCache) Refresh(key fes.Aggregate) {
+	logrus.Debug("refreshing key: ", key)
+	entity, err := c.getFromEventStore(key)
+	if err != nil {
+		logrus.Debugf("failed to refresh key %v", key.Format())
+		return
+	}
+	err = c.Put(entity)
+	if err != nil {
+		logrus.Debugf("failed to add refreshed entity %v", key.Format())
+		return
+	}
 }
 
 // To ensure that tasks end up in invocation entities: if an event has a parent aggregate,

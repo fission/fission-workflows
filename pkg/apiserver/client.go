@@ -36,6 +36,9 @@ func NewClient(conn *grpc.ClientConn) *Client {
 	}
 }
 
+// Connect attempts to connect to the server at addr and returns a Client.
+//
+// addr should be of the format <hostname>:<port>, without a method. (e.g. workflows:5555)
 func Connect(addr string) (*Client, error) {
 	cc, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {

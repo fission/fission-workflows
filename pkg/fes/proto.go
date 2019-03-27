@@ -35,7 +35,7 @@ func (m *Event) Labels() labels.Labels {
 }
 
 func (m *Event) BelongsTo(parent Entity) bool {
-	a := parent.Aggregate()
+	a := GetAggregate(parent)
 	return *m.Aggregate != a && *m.Parent != a
 }
 

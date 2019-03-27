@@ -4,64 +4,35 @@ package fission.workflows.scheduler;
 option go_package = "scheduler";
 
 import "github.com/fission/fission-workflows/pkg/types/types.proto";
-import "github.com/fission/fission-workflows/pkg/types/typedvalues/typedvalues.proto";
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/any.proto";
 
 service Scheduler {
 
-    rpc evaluate (ScheduleRequest) returns (Schedule) {
+    rpc evaluate (fission.workflows.types.WorkflowInvocation) returns (Schedule) {
     }
 }
 
 message Schedule {
     string invocationId = 1;
     google.protobuf.Timestamp createdAt = 2;
-    repeated Action actions = 3;
-    // TODO Future: Expected next evaluation
-}
+    AbortAction abort = 4;
+    repeated RunTaskAction runTasks = 5;
+    repeated PrepareTaskAction prepareTasks = 6;
 
-
-message ScheduleRequest {
-    fission.workflows.types.Workflow workflow = 1;
-    fission.workflows.types.WorkflowInvocation invocation = 2;
-}
-
-// ActionType contains all possible types of actions the scheduler can undertake.
-//
-// Each action can have a seperate datastructure defined here.
-// Note about a RETURN/COMPLETE/FAIL action: The controller decides the final status of the workflow. In order to avoid
-// inconsistencies in the replay.
-enum ActionType {
-    // Invokes a task
-    INVOKE_TASK = 0;
-
-    // Abort cancels the invocation, leading to an ABORTED status.
-    ABORT = 1;
-
-    // Notify a task
-    NOTIFY_TASK = 2;
-}
-
-// Action is the generic container of an action (signalled by ActionType) and
-// the relevant message as a payload.
-message Action {
-    ActionType type = 1;
-    google.protobuf.Any payload = 4;
 }
 
 message AbortAction {
     string reason = 1;
 }
 
-message InvokeTaskAction {
+message RunTaskAction {
     // Id of the task in the workflow
-    string id = 1;
-    map<string, fission.workflows.types.TypedValue> inputs = 2;
+    string taskID = 1;
+    //    map<string, fission.workflows.types.TypedValue> inputs = 2;
     // TODO Future: add here contstraints, preferences, fission scheduler instructions, communication, routing ect.
 }
 
-message NotifyTaskAction {
-    string id = 1;
+message PrepareTaskAction {
+    string taskID = 1;
     google.protobuf.Timestamp expectedAt = 2;
 }

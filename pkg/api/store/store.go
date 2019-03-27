@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/util/labels"
@@ -25,7 +24,7 @@ func NewWorkflowsStore(workflows fes.CacheReader) *Workflows {
 // GetWorkflow returns an event-sourced workflow.
 // If an error occurred the error is returned, if no workflow was found both return values are nil.
 func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
-	key := fes.Aggregate{Type: aggregates.TypeWorkflow, Id: workflowID}
+	key := fes.Aggregate{Type: types.TypeWorkflow, Id: workflowID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err
@@ -34,13 +33,13 @@ func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
 		return nil, nil
 	}
 
-	wf, ok := entity.(*aggregates.Workflow)
+	wf, ok := entity.(*types.Workflow)
 	if !ok {
 		panic(fmt.Sprintf("aggregate type mismatch for key %s (expected: %T, got %T)", key.Format(),
-			&aggregates.Workflow{}, wf))
+			&types.Workflow{}, wf))
 	}
 
-	return wf.Workflow, nil
+	return wf, nil
 }
 
 // GetWorkflowNotifications returns a subscription to the updates of the workflow cache.
@@ -49,7 +48,7 @@ func (s *Workflows) GetWorkflow(workflowID string) (*types.Workflow, error) {
 // Future: Currently this assumes the presence of a pubsub.Publisher interface in the cache.
 // In the future we can fallback to pull-based mechanisms
 func (s *Workflows) GetWorkflowUpdates() *WorkflowSubscription {
-	selector := labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow)
+	selector := labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow)
 	workflowPub, ok := s.CacheReader.(pubsub.Publisher)
 	if !ok {
 		return nil
@@ -81,7 +80,7 @@ func NewInvocationStore(invocations fes.CacheReader) *Invocations {
 // GetInvocation returns an event-sourced invocation.
 // If an error occurred the error is returned, if no invocation was found both return values are nil.
 func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocation, error) {
-	key := fes.Aggregate{Type: aggregates.TypeWorkflowInvocation, Id: invocationID}
+	key := fes.Aggregate{Type: types.TypeInvocation, Id: invocationID}
 	entity, err := s.GetAggregate(key)
 	if err != nil {
 		return nil, err
@@ -90,13 +89,13 @@ func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocat
 		return nil, nil
 	}
 
-	wfi, ok := entity.(*aggregates.WorkflowInvocation)
+	wfi, ok := entity.(*types.WorkflowInvocation)
 	if !ok {
 		panic(fmt.Sprintf("aggregate type mismatch for key %s (expected: %T, got %T - %v)", key.Format(),
-			&aggregates.WorkflowInvocation{}, wfi, wfi))
+			&types.WorkflowInvocation{}, wfi, wfi))
 	}
 
-	return wfi.WorkflowInvocation, nil
+	return wfi, nil
 }
 
 // GetInvocationSubscription returns a subscription to the updates of the invocation cache.
@@ -105,7 +104,7 @@ func (s *Invocations) GetInvocation(invocationID string) (*types.WorkflowInvocat
 // Future: Currently this assumes the presence of a pubsub.Publisher interface in the cache.
 // In the future we can fallback to pull-based mechanisms
 func (s *Invocations) GetInvocationUpdates() *InvocationSubscription {
-	selector := labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation, aggregates.TypeTaskInvocation)
+	selector := labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation, types.TypeTaskRun)
 	invocationPub, ok := s.CacheReader.(pubsub.Publisher)
 	if !ok {
 		return nil
@@ -164,17 +163,17 @@ func (sub *InvocationSubscription) Close() error {
 }
 
 func ParseNotificationToWorkflow(update *fes.Notification) (*types.Workflow, error) {
-	entity, ok := update.Payload.(*aggregates.Workflow)
+	entity, ok := update.Updated.(*types.Workflow)
 	if !ok {
 		return nil, errors.New("received message does not include workflow invocation as payload")
 	}
-	return entity.Workflow, nil
+	return entity, nil
 }
 
 func ParseNotificationToInvocation(update *fes.Notification) (*types.WorkflowInvocation, error) {
-	entity, ok := update.Payload.(*aggregates.WorkflowInvocation)
+	entity, ok := update.Updated.(*types.WorkflowInvocation)
 	if !ok {
 		return nil, errors.New("received message does not include workflow invocation as payload")
 	}
-	return entity.WorkflowInvocation, nil
+	return entity, nil
 }

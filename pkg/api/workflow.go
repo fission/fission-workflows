@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types"
@@ -45,7 +45,7 @@ func (wa *Workflow) Create(workflow *types.WorkflowSpec, opts ...CallOption) (st
 		id = fmt.Sprintf("wf-%s", util.UID())
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(id), &events.WorkflowCreated{
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(id), &events.WorkflowCreated{
 		Spec: workflow,
 	})
 	if err != nil {
@@ -78,7 +78,7 @@ func (wa *Workflow) Delete(workflowID string) error {
 		return validate.NewError("workflowID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflowID), &events.WorkflowDeleted{})
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(workflowID), &events.WorkflowDeleted{})
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (wa *Workflow) Delete(workflowID string) error {
 // Currently, this means that all the function references are resolved to function identifiers. For convenience
 // this function returns the new WorkflowStatus. If the API fails to append the event to the event store,
 // it will return an error.
-func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, error) {
+func (wa *Workflow) Parse(workflow *types.Workflow) (map[string]*types.TaskStatus, error) {
 	if err := validate.WorkflowSpec(workflow.Spec); err != nil {
 		return nil, err
 	}
@@ -100,17 +100,17 @@ func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, erro
 		return nil, fmt.Errorf("failed to resolve tasks in workflow: %v", err)
 	}
 
-	wfStatus := types.NewWorkflowStatus()
+	taskStatuses := map[string]*types.TaskStatus{}
 	for id, t := range workflow.Spec.Tasks {
-		wfStatus.AddTaskStatus(id, &types.TaskStatus{
+		taskStatuses[id] = &types.TaskStatus{
 			UpdatedAt: ptypes.TimestampNow(),
 			FnRef:     resolvedFns[t.FunctionRef],
 			Status:    types.TaskStatus_READY,
-		})
+		}
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowAggregate(workflow.ID()), &events.WorkflowParsed{
-		Tasks: wfStatus.GetTasks(),
+	event, err := fes.NewEvent(projectors.NewWorkflowAggregate(workflow.ID()), &events.WorkflowParsed{
+		Tasks: taskStatuses,
 	})
 	if err != nil {
 		return nil, err
@@ -120,5 +120,5 @@ func (wa *Workflow) Parse(workflow *types.Workflow) (*types.WorkflowStatus, erro
 		return nil, err
 	}
 
-	return wfStatus, nil
+	return taskStatuses, nil
 }

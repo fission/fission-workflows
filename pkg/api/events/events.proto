@@ -35,6 +35,7 @@ message InvocationCreated {
 
 message InvocationCompleted {
     fission.workflows.types.TypedValue output = 1;
+    fission.workflows.types.TypedValue OutputHeaders = 2;
 }
 
 message InvocationCanceled {

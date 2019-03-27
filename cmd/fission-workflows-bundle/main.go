@@ -36,10 +36,20 @@ func main() {
 	cliApp := createCli()
 	cliApp.Action = func(c *cli.Context) error {
 		setupLogging(c)
+		policy, err := bundle.ParseSchedulerConfig(c)
+		if err != nil {
+			logrus.Fatal("Error while initializing workflows: ", err)
+		}
+
+		proxyConfig, err := bundle.ParseFissionProxyConfig(c)
+		if err != nil {
+			logrus.Fatal("Error while parsing Fission Proxy: ", err)
+		}
 
 		return bundle.Run(ctx, &bundle.Options{
-			Nats:                 parseNatsOptions(c),
+			NATS:                 parseNatsOptions(c),
 			Fission:              parseFissionOptions(c),
+			Scheduler:            policy,
 			InternalRuntime:      c.Bool("internal"),
 			InvocationController: c.Bool("controller") || c.Bool("invocation-controller"),
 			WorkflowController:   c.Bool("controller") || c.Bool("workflow-controller"),
@@ -49,7 +59,7 @@ func main() {
 			HTTPGateway:          c.Bool("api") || c.Bool("api-http"),
 			Metrics:              c.Bool("metrics"),
 			Debug:                c.Bool("debug"),
-			FissionProxy:         c.Bool("fission-proxy"),
+			FissionProxy:         proxyConfig,
 		})
 	}
 	cliApp.Run(os.Args)
@@ -86,9 +96,10 @@ func parseNatsOptions(c *cli.Context) *nats.Config {
 	}
 
 	return &nats.Config{
-		URL:     c.String("nats-url"),
-		Cluster: c.String("nats-cluster"),
-		Client:  client,
+		URL:           c.String("nats-url"),
+		Cluster:       c.String("nats-cluster"),
+		Client:        client,
+		AutoReconnect: true,
 	}
 }
 
@@ -96,7 +107,7 @@ func createCli() *cli.App {
 
 	cliApp := cli.NewApp()
 
-	cliApp.Flags = []cli.Flag{
+	cliApp.Flags = append([]cli.Flag{
 		// Generic
 		cli.BoolFlag{
 			Name:   "d, debug",
@@ -126,11 +137,23 @@ func createCli() *cli.App {
 			Usage: "Use NATS as the event store",
 		},
 
-		// Fission
+		// Fission Environment Proxy
 		cli.BoolFlag{
-			Name:  "fission-proxy",
-			Usage: "Serve a Fission environment as a proxy",
+			Name:  "fission.proxy, fission-proxy",
+			Usage: "Enable Fission environment as a proxy",
 		},
+		cli.DurationFlag{
+			Name:  "fission.proxy.timeout",
+			Usage: "The default timeout assigned to workflow invocations coming from the Fission proxy",
+			Value: 5 * time.Minute,
+		},
+		cli.StringFlag{
+			Name:  "fission.proxy.addr",
+			Usage: "The timeout assigned to workflow invocations coming from the Fission proxy",
+			Value: ":8888",
+		},
+
+		// Fission Function Runtime
 		cli.BoolFlag{
 			Name:  "fission",
 			Usage: "Use Fission as a function environment",
@@ -195,7 +218,19 @@ func createCli() *cli.App {
 			Name:  "api",
 			Usage: "Shortcut for serving all APIs over both gRPC and HTTP",
 		},
-	}
+
+		// Scheduler
+		cli.StringFlag{
+			Name:  bundle.FlagSchedulerPolicy,
+			Usage: "Policy to use for the scheduler (prewarm-all, prewarm-horizon, horizon)",
+			Value: "horizon",
+		},
+		cli.DurationFlag{
+			Name:  bundle.FlagSchedulerColdStartDuration,
+			Usage: "The static cold start duration to assume when using prewarm schedulers",
+			Value: 1 * time.Second,
+		},
+	})
 
 	return cliApp
 }

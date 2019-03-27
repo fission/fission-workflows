@@ -18,6 +18,13 @@ service WorkflowAPI {
         };
     }
 
+    rpc CreateSync (fission.workflows.types.WorkflowSpec) returns (fission.workflows.types.Workflow) {
+        option (google.api.http) = {
+           post: "/workflow/sync"
+           body: "*"
+        };
+    }
+
     rpc List (google.protobuf.Empty) returns (WorkflowList) {
         option (google.api.http) = {
             get: "/workflow"

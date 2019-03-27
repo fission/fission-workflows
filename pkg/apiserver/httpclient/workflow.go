@@ -27,6 +27,12 @@ func (api *WorkflowAPI) Create(ctx context.Context, spec *types.WorkflowSpec) (*
 	return result, err
 }
 
+func (api *WorkflowAPI) CreateSync(ctx context.Context, spec *types.WorkflowSpec) (*types.Workflow, error) {
+	wf := &types.Workflow{}
+	err := callWithJSON(ctx, http.MethodPost, api.formatURL("/workflow/sync"), spec, wf)
+	return wf, err
+}
+
 func (api *WorkflowAPI) List(ctx context.Context) (*apiserver.WorkflowList, error) {
 	result := &apiserver.WorkflowList{}
 	err := callWithJSON(ctx, http.MethodGet, api.formatURL("/workflow"), nil, result)

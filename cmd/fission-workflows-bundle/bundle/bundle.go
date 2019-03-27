@@ -11,14 +11,12 @@ import (
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/apiserver"
-	fissionproxy "github.com/fission/fission-workflows/pkg/apiserver/fission"
 	"github.com/fission/fission-workflows/pkg/controller"
+	"github.com/fission/fission-workflows/pkg/controller/executor"
 	"github.com/fission/fission-workflows/pkg/controller/expr"
-	wfictr "github.com/fission/fission-workflows/pkg/controller/invocation"
-	wfctr "github.com/fission/fission-workflows/pkg/controller/workflow"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fes/backend/mem"
 	"github.com/fission/fission-workflows/pkg/fes/backend/nats"
@@ -29,12 +27,11 @@ import (
 	"github.com/fission/fission-workflows/pkg/fnenv/native/builtin"
 	"github.com/fission/fission-workflows/pkg/fnenv/workflows"
 	"github.com/fission/fission-workflows/pkg/scheduler"
+	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/util"
 	"github.com/fission/fission-workflows/pkg/util/labels"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/fission/fission-workflows/pkg/version"
-	controllerc "github.com/fission/fission/controller/client"
-	executor "github.com/fission/fission/executor/client"
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -52,12 +49,17 @@ import (
 )
 
 const (
-	gRPCAddress             = ":5555"
-	apiGatewayAddress       = ":8080"
-	fissionProxyAddress     = ":8888"
-	jaegerTracerServiceName = "fission.workflows"
-	WorkflowsCacheSize      = 10000
-	InvocationsCacheSize    = 1000000
+	gRPCAddress                  = ":5555"
+	apiGatewayAddress            = ":8080"
+	jaegerTracerServiceName      = "fission.workflows"
+	WorkflowsCacheSize           = 10000
+	InvocationsCacheSize         = 100000
+	executorMaxParallelism       = 1000
+	executorMaxTaskQueueSize     = 100000
+	workflowStorePollInterval    = time.Minute
+	invocationStorePollInterval  = time.Second
+	workflowSubscriptionBuffer   = 50
+	invocationSubscriptionBuffer = 1000
 )
 
 type App struct {
@@ -91,8 +93,10 @@ func (app *App) Close() error {
 }
 
 type Options struct {
-	Nats                 *nats.Config
+	NATS                 *nats.Config
+	Scheduler            scheduler.Policy
 	Fission              *FissionOptions
+	FissionProxy         *FissionProxyConfig
 	InternalRuntime      bool
 	InvocationController bool
 	WorkflowController   bool
@@ -102,7 +106,6 @@ type Options struct {
 	InvocationAPI        bool
 	Metrics              bool
 	Debug                bool
-	FissionProxy         bool
 }
 
 type FissionOptions struct {
@@ -121,6 +124,7 @@ func Run(ctx context.Context, opts *Options) error {
 		Options: opts,
 		closers: map[string]io.Closer{},
 	}
+	ps := Processes{}
 
 	// See https://github.com/jaegertracing/jaeger-client-go for the env vars to set; defaults to local Jaeger
 	// instance with default ports.
@@ -180,13 +184,14 @@ func Run(ctx context.Context, opts *Options) error {
 	// Event Store
 	//
 	var eventStore fes.Backend
-	if opts.Nats != nil {
+	if opts.NATS != nil {
 		log.WithFields(log.Fields{
-			"url":     "!redacted!",
-			"cluster": opts.Nats.Cluster,
-			"client":  opts.Nats.Client,
+			"url":           "<redacted>", // Typically includes the password
+			"cluster":       opts.NATS.Cluster,
+			"client":        opts.NATS.Client,
+			"autoReconnect": opts.NATS.AutoReconnect,
 		}).Infof("Using event store: NATS")
-		natsBackend := setupNatsEventStoreClient(opts.Nats.URL, opts.Nats.Cluster, opts.Nats.Client)
+		natsBackend := setupNatsEventStoreClient(*opts.NATS)
 		es = natsBackend
 		esPub = natsBackend
 		eventStore = natsBackend
@@ -210,13 +215,13 @@ func Run(ctx context.Context, opts *Options) error {
 	runtimes := map[string]fnenv.Runtime{}
 	reflectiveRuntime := workflows.NewRuntime(invocationAPI, invocationStore, workflowStore)
 	if opts.InternalRuntime || opts.Fission != nil {
-		log.Infof("Using Task Runtime: Workflow")
+		log.Infof("Using function runtime: Workflow")
 		runtimes[workflows.Name] = reflectiveRuntime
 	} else {
 		log.Info("No function runtimes specified.")
 	}
 	if opts.InternalRuntime {
-		log.Infof("Using Task Runtime: Internal")
+		log.Infof("Using function runtime: Internal")
 		internalRuntime := setupInternalFunctionRuntime()
 		runtimes["internal"] = internalRuntime
 		resolvers["internal"] = internalRuntime
@@ -227,73 +232,49 @@ func Run(ctx context.Context, opts *Options) error {
 			"controller": opts.Fission.ControllerAddr,
 			"router":     opts.Fission.RouterAddr,
 			"executor":   opts.Fission.ExecutorAddress,
-		}).Infof("Using Task Runtime: Fission")
+		}).Infof("Using function runtime: Fission")
 		fissionFnenv := setupFissionFunctionRuntime(opts.Fission)
 		runtimes["fission"] = fissionFnenv
 		resolvers["fission"] = fissionFnenv
 	}
 
 	//
+	// Scheduler
+	//
+	sched := SetupScheduler(opts.Scheduler)
+
+	//
 	// Controllers
 	//
-	if opts.InvocationController || opts.WorkflowController {
-		var ctrls []controller.Controller
-		if opts.WorkflowController {
-			log.Info("Using controller: workflow")
-			ctrls = append(ctrls, setupWorkflowController(workflowStore, es, resolvers))
-		}
-
-		if opts.InvocationController {
-			log.Info("Using controller: invocation")
-			ctrls = append(ctrls, setupInvocationController(invocationStore, workflowStore, es, runtimes, resolvers))
-		}
-
-		ctrl := controller.NewMetaController(ctrls...)
-		go ctrl.Run(ctx)
+	if opts.WorkflowController {
+		log.Info("Running workflow controller")
+		workflowCtrl := setupWorkflowController(workflowStore, es, resolvers)
+		go workflowCtrl.Run()
 		defer func() {
-			err := ctrl.Close()
-			if err != nil {
-				log.Errorf("Failed to stop controllers: %v", err)
+			if err := workflowCtrl.Close(); err != nil {
+				log.Errorf("Failed to stop workflow controller: %v", err)
 			} else {
-				log.Info("Stopped controllers")
+				log.Info("Stopped workflow controller")
 			}
 		}()
-	} else {
-		log.Info("No controllers specified to run.")
+	}
+	if opts.InvocationController {
+		log.Info("Running invocation controller")
+		invocationCtrl := setupInvocationController(invocationStore, es, runtimes, resolvers, sched)
+		go invocationCtrl.Run()
+		defer func() {
+			if err := invocationCtrl.Close(); err != nil {
+				log.Errorf("Failed to stop invocation controller: %v", err)
+			} else {
+				log.Info("Stopped invocation controller")
+			}
+		}()
 	}
 
 	//
 	// Fission integration
 	//
-	if opts.FissionProxy {
-		conn, err := grpc.Dial(fmt.Sprintf(":%s", gRPCAddress), grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-
-		proxyMux := http.NewServeMux()
-		runFissionEnvironmentProxy(proxyMux, conn)
-		fissionProxySrv := &http.Server{Addr: fissionProxyAddress}
-		fissionProxySrv.Handler = handlers.LoggingHandler(os.Stdout, proxyMux)
-
-		if opts.Metrics {
-			setupMetricsEndpoint(proxyMux)
-		}
-
-		go func() {
-			err := fissionProxySrv.ListenAndServe()
-			log.WithField("err", err).Info("Fission Proxy server stopped")
-		}()
-		defer func() {
-			err := fissionProxySrv.Shutdown(ctx)
-			if err != nil {
-				log.Errorf("Failed to stop Fission Proxy server: %v", err)
-			} else {
-				log.Info("Stopped Fission Proxy server")
-			}
-		}()
-		log.Info("Serving HTTP Fission Proxy at: ", fissionProxySrv.Addr)
-	}
+	ps.Register(opts.FissionProxy)
 
 	//
 	// gRPC API
@@ -371,10 +352,11 @@ func Run(ctx context.Context, opts *Options) error {
 		log.Info("Serving HTTP API gateway at: ", httpApiSrv.Addr)
 	}
 
+	logIfErr(ps.Start())
 	log.Info("Setup completed.")
-
 	<-ctx.Done()
 	log.WithField("reason", ctx.Err()).Info("Shutting down...")
+	logIfErr(ps.Close())
 	util.LogIfError(app.Close())
 	time.Sleep(5 * time.Second) // Hack: wait a bit to ensure all goroutines are shutdown.
 	return nil
@@ -395,30 +377,24 @@ func setupInternalFunctionRuntime() *native.FunctionEnv {
 }
 
 func setupFissionFunctionRuntime(fissionOpts *FissionOptions) *fission.FunctionEnv {
-	executorC := executor.MakeClient(fissionOpts.ExecutorAddress)
-	controllerC := controllerc.MakeClient(fissionOpts.ControllerAddr)
-	return fission.New(executorC, controllerC, fissionOpts.RouterAddr)
+	return fission.New(fissionOpts.ExecutorAddress, fissionOpts.ControllerAddr, fissionOpts.RouterAddr)
 }
 
-func setupNatsEventStoreClient(url string, cluster string, clientID string) *nats.EventStore {
-	if clientID == "" {
-		clientID = util.UID()
+func setupNatsEventStoreClient(config nats.Config) *nats.EventStore {
+	if config.Client == "" {
+		config.Client = util.UID()
 	}
 
-	es, err := nats.Connect(nats.Config{
-		Cluster: cluster,
-		URL:     url,
-		Client:  clientID,
-	})
+	es, err := nats.Connect(config)
 	if err != nil {
 		panic(err)
 	}
 
-	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflowInvocation})
+	err = es.Watch(fes.Aggregate{Type: types.TypeInvocation})
 	if err != nil {
 		panic(err)
 	}
-	err = es.Watch(fes.Aggregate{Type: aggregates.TypeWorkflow})
+	err = es.Watch(fes.Aggregate{Type: types.TypeWorkflow})
 	if err != nil {
 		panic(err)
 	}
@@ -427,18 +403,19 @@ func setupNatsEventStoreClient(url string, cluster string, clientID string) *nat
 
 func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
 	sub := invocationEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buffer: 50,
+		Buffer: invocationSubscriptionBuffer,
 		LabelMatcher: labels.Or(
-			labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflowInvocation),
-			labels.In("parent.type", aggregates.TypeWorkflowInvocation)),
+			labels.In(fes.PubSubLabelAggregateType, types.TypeInvocation),
+			labels.In("parent.type", types.TypeInvocation)),
 	})
-	name := aggregates.TypeWorkflowInvocation
+	name := types.TypeInvocation
+	projector := projectors.NewWorkflowInvocation()
 	c := cache.NewSubscribedCache(
 		cache.NewLoadingCache(
 			cache.NewLRUCache(InvocationsCacheSize),
 			backend,
-			aggregates.NewInvocationEntity),
-		aggregates.NewInvocationEntity,
+			projector),
+		projector,
 		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
@@ -446,16 +423,18 @@ func setupWorkflowInvocationCache(app *App, invocationEventPub pubsub.Publisher,
 
 func setupWorkflowCache(app *App, workflowEventPub pubsub.Publisher, backend fes.Backend) *cache.SubscribedCache {
 	sub := workflowEventPub.Subscribe(pubsub.SubscriptionOptions{
-		Buffer:       10,
-		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, aggregates.TypeWorkflow),
+		Buffer:       workflowSubscriptionBuffer,
+		LabelMatcher: labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow),
 	})
-	name := aggregates.TypeWorkflow
+	name := types.TypeWorkflow
+	projector := projectors.NewWorkflow()
 	c := cache.NewSubscribedCache(
 		cache.NewLoadingCache(
 			cache.NewLRUCache(WorkflowsCacheSize),
 			backend,
-			aggregates.NewWorkflowEntity),
-		aggregates.NewWorkflowEntity,
+			projector,
+		),
+		projector,
 		sub)
 	app.RegisterCloser("cache-"+name, c)
 	return c
@@ -513,33 +492,28 @@ func serveHTTPGateway(ctx context.Context, mux *grpcruntime.ServeMux, adminAPIAd
 		if err != nil {
 			panic(err)
 		}
-		log.Info("Registered Workflow Invocation API HTTP Endpoint")
+		log.Info("Registered Workflow WorkflowInvocation API HTTP Endpoint")
 	}
 }
 
-// TODO: find a shortcut to using a full gRPC client-server approach
-func runFissionEnvironmentProxy(proxyMux *http.ServeMux, conn *grpc.ClientConn) {
-	workflowClient := apiserver.NewWorkflowAPIClient(conn)
-	invocationClient := apiserver.NewWorkflowInvocationAPIClient(conn)
-	fissionProxyServer := fissionproxy.NewEnvironmentProxyServer(invocationClient, workflowClient)
-	fissionProxyServer.RegisterServer(proxyMux)
-}
+func setupInvocationController(invocations *store.Invocations, es fes.Backend,
+	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver,
+	s *scheduler.InvocationScheduler) *controller.InvocationMetaController {
 
-func setupInvocationController(invocations *store.Invocations, workflows *store.Workflows, es fes.Backend,
-	fnRuntimes map[string]fnenv.Runtime, fnResolvers map[string]fnenv.RuntimeResolver) *wfictr.Controller {
 	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
 	invocationAPI := api.NewInvocationAPI(es)
 	dynamicAPI := api.NewDynamicApi(workflowAPI, invocationAPI)
 	taskAPI := api.NewTaskAPI(fnRuntimes, es, dynamicAPI)
-	s := &scheduler.WorkflowScheduler{}
 	stateStore := expr.NewStore()
-	return wfictr.NewController(invocations, workflows, s, taskAPI, invocationAPI, stateStore)
+	localExec := executor.NewLocalExecutor(executorMaxParallelism, executorMaxTaskQueueSize)
+	return controller.NewInvocationMetaController(localExec, invocations, invocationAPI, taskAPI, s, stateStore, invocationStorePollInterval)
 }
 
 func setupWorkflowController(store *store.Workflows, es fes.Backend,
-	fnResolvers map[string]fnenv.RuntimeResolver) *wfctr.Controller {
-	workflowAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
-	return wfctr.NewController(store, workflowAPI)
+	fnResolvers map[string]fnenv.RuntimeResolver) *controller.WorkflowMetaController {
+	wfAPI := api.NewWorkflowAPI(es, fnenv.NewMetaResolver(fnResolvers))
+	exec := executor.NewLocalExecutor(10, 1000)
+	return controller.NewWorkflowMetaController(wfAPI, store, exec, workflowStorePollInterval)
 }
 
 func setupMetricsEndpoint(apiMux *http.ServeMux) {
@@ -570,4 +544,53 @@ func tracingWrapper(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func logIfErr(err error) {
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+type Process interface {
+	io.Closer
+	Run() error
+}
+
+type Processes []Process
+
+func (p Processes) Close() error {
+	for _, proc := range p {
+		if err := proc.Close(); err != nil {
+			log.Errorf("Failed to close process: %v", err)
+		}
+	}
+	return nil
+}
+
+func (p Processes) Start() error {
+	errC := make(chan error, len(p))
+	for _, proc := range p {
+		go func(proc Process) {
+			if err := proc.Run(); err != nil {
+				log.Errorf("Failed to close process %T: %v", proc, err)
+				errC <- err
+			} else {
+				log.Debugf("Started process %T", proc)
+			}
+		}(proc)
+	}
+	select {
+	case err := <-errC:
+		close(errC)
+		return err
+	default:
+		return nil
+	}
+}
+
+func (p *Processes) Register(process Process) {
+	if process != nil {
+		*p = append(*p, process)
+	}
 }

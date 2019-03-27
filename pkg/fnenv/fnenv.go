@@ -10,7 +10,7 @@
 // that a fnenv needs to implement, although a resolver and Runtime are considered the basic interfaces.
 //
 // A fnenv could implement additional interfaces which would allow the workflow engine to improve the execution.
-// For example, by implementing the Notifier interface, the workflow engine will notify the fnenv ahead of time of the
+// For example, by implementing the Preparer interface, the workflow engine will notify the fnenv ahead of time of the
 // incoming function request.
 package fnenv
 
@@ -78,18 +78,18 @@ type AsyncRuntime interface {
 	Status(asyncID string) (*types.TaskInvocationStatus, error)
 }
 
-// Notifier allows signalling of an incoming function invocation.
+// Preparer allows signalling of a future function invocation.
 //
 // This allows implementations to prepare for those invocations; performing the necessary
 // resource provisioning or setup.
-type Notifier interface {
-	// Notify signals that a function invocation is expected at a specific point in time.
+type Preparer interface {
+	// Prepare signals that a function invocation is expected at a specific point in time.
 	//
 	// expectedAt time should be in the future. Any time in the past is interpreted as
 	// a signal that the function invocation will come (almost) immediately. fnId is an optional
 	// identifier for the signal, which the implementation can use this to identify signals.
 	// By default, if fnId is empty, it is not possible to later update the notification.
-	Notify(fn types.FnRef, expectedAt time.Time) error
+	Prepare(fn types.FnRef, expectedAt time.Time) error
 }
 
 // Resolver resolves a reference to a function to a deterministic, unique function id.
@@ -103,14 +103,14 @@ type Resolver interface {
 // RuntimeResolver is the runtime environment component that resolves a reference to a function to a deterministic,
 // runtime-specific function UID.
 type RuntimeResolver interface {
-
 	// ResolveTask resolved an ambiguous target function name to a unique identifier of a function within the scope
 	// of a runtime.
 	Resolve(ref types.FnRef) (string, error)
 }
 
 type InvokeConfig struct {
-	Ctx context.Context
+	Ctx           context.Context
+	AwaitWorkflow time.Duration
 }
 
 type InvokeOption func(config *InvokeConfig)
@@ -125,6 +125,12 @@ func ParseInvokeOptions(opts []InvokeOption) *InvokeConfig {
 		opt(cfg)
 	}
 	return cfg
+}
+
+func AwaitWorkflow(timeout time.Duration) InvokeOption {
+	return func(config *InvokeConfig) {
+		config.AwaitWorkflow = timeout
+	}
 }
 
 func WithContext(ctx context.Context) InvokeOption {

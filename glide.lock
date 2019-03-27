@@ -1,5 +1,5 @@
-hash: 732742a334c96e37ca64c0ca151ee3d95cff64aaea0abdbef4c29a3f4ee5cb88
-updated: 2019-01-26T01:02:21.481196+01:00
+hash: 2fc597b7a120ba04c259f03a6f6d6455d77ab196d9ba5e68c9ff72a19d687cf5
+updated: 2019-03-21T13:23:45.149034+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -79,7 +79,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: aa810b61a9c79d51363740d207bb46cf8e620ed5
+  version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
   - jsonpb
   - proto
@@ -175,7 +175,7 @@ imports:
   subpackages:
   - pb
 - name: github.com/nats-io/nats-streaming-server
-  version: 7b758bb93407505bc1d0cf26d091fc281d99ca0c
+  version: 4489c46ab3c1380d2ac44fc4412abcfdd012d6bb
   subpackages:
   - spb
   - util
@@ -273,6 +273,8 @@ imports:
   - lzma
 - name: github.com/urfave/cli
   version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+- name: go.uber.org/atomic
+  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: golang.org/x/crypto
   version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
@@ -539,7 +541,6 @@ imports:
   - util/intstr
   - util/jsonpath
   - util/retry
-  - util/workqueue
 testImports:
 - name: github.com/Azure/go-ansiterm
   version: d6e3b3328b783f23731bc4d058875b0371ff8109

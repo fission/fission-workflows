@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
 	"github.com/fission/fission-workflows/pkg/api/events"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
@@ -46,11 +46,12 @@ func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec, opts ...CallOpt
 		}
 	}
 
-	id := fmt.Sprintf("wi-%s", util.UID())
+	invocationID := fmt.Sprintf("wi-%s", util.UID())
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(id), &events.InvocationCreated{
-		Spec: spec,
-	})
+	event, err := fes.NewEvent(projectors.NewInvocationAggregate(invocationID),
+		&events.InvocationCreated{
+			Spec: spec,
+		})
 	if err != nil {
 		return "", err
 	}
@@ -70,7 +71,7 @@ func (ia *Invocation) Invoke(spec *types.WorkflowInvocationSpec, opts ...CallOpt
 		return "", err
 	}
 
-	return id, nil
+	return invocationID, nil
 }
 
 // Cancel halts an invocation. This does not guarantee that tasks currently running are halted,
@@ -81,11 +82,12 @@ func (ia *Invocation) Cancel(invocationID string) error {
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationCanceled{
-		Error: &types.Error{
-			Message: ErrInvocationCanceled,
-		},
-	})
+	event, err := fes.NewEvent(projectors.NewInvocationAggregate(invocationID),
+		&events.InvocationCanceled{
+			Error: &types.Error{
+				Message: ErrInvocationCanceled,
+			},
+		})
 	if err != nil {
 		return err
 	}
@@ -105,10 +107,11 @@ func (ia *Invocation) Complete(invocationID string, output *typedvalues.TypedVal
 		return validate.NewError("invocationID", errors.New("id should not be empty"))
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationCompleted{
-		Output:        output,
-		OutputHeaders: outputHeaders,
-	})
+	event, err := fes.NewEvent(projectors.NewInvocationAggregate(invocationID),
+		&events.InvocationCompleted{
+			Output:        output,
+			OutputHeaders: outputHeaders,
+		})
 	if err != nil {
 		return err
 	}
@@ -128,11 +131,12 @@ func (ia *Invocation) Fail(invocationID string, errMsg error) error {
 	if errMsg != nil {
 		msg = errMsg.Error()
 	}
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationFailed{
-		Error: &types.Error{
-			Message: msg,
-		},
-	})
+	event, err := fes.NewEvent(projectors.NewInvocationAggregate(invocationID),
+		&events.InvocationFailed{
+			Error: &types.Error{
+				Message: msg,
+			},
+		})
 	if err != nil {
 		return err
 	}
@@ -152,7 +156,7 @@ func (ia *Invocation) AddTask(invocationID string, task *types.Task) error {
 		return err
 	}
 
-	event, err := fes.NewEvent(*aggregates.NewWorkflowInvocationAggregate(invocationID), &events.InvocationTaskAdded{
+	event, err := fes.NewEvent(projectors.NewInvocationAggregate(invocationID), &events.InvocationTaskAdded{
 		Task: task,
 	})
 	if err != nil {

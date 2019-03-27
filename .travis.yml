@@ -2,10 +2,10 @@ sudo: required
 dist: trusty
 language: go
 go:
-- "1.10"
+- "1.12"
 
 python:
-- 3.6
+- "3.6"
 
 cache:
   apt: true
@@ -41,16 +41,16 @@ install:
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
+# Build
+- glide install -v
+- build/build-linux.sh
 # Static code analysis
 - hack/verify-gofmt.sh
 - hack/verify-govet.sh
 - hack/verify-misc.sh
 - helm lint charts/fission-workflows
-# Build
-- glide install -v
-- build/build-linux.sh
+# Setup end-to-end test environment
 - test/e2e/travis-setup.sh
-# Checks using the built artifacts
 
 script:
 # Unit and Integration tests

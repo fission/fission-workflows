@@ -1,6 +1,8 @@
 package fission
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -8,10 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/fnenv"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues/httpconv"
 	"github.com/fission/fission-workflows/pkg/types/validate"
+	"github.com/fission/fission-workflows/pkg/util/backoff"
 	controller "github.com/fission/fission/controller/client"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 
@@ -31,28 +36,26 @@ var log = logrus.WithField("component", "fnenv.fission")
 // FunctionEnv adapts the Fission platform to the function execution runtime. This allows the workflow engine
 // to invoke Fission functions.
 type FunctionEnv struct {
-	executor         *executor.Client
-	controller       *controller.Client
-	routerURL        string
-	timedExecService *timedExecPool
-	client           *http.Client
+	executor    *executor.Client
+	executorURL string
+	controller  *controller.Client
+	routerURL   string
+	client      *http.Client
 }
 
 const (
 	defaultHTTPMethod = http.MethodPost
 	defaultProtocol   = "http"
-	provisionDuration = time.Duration(500) - time.Millisecond
 )
 
-func New(executor *executor.Client, controller *controller.Client, routerURL string) *FunctionEnv {
+func New(executorURL, serverURL, routerURL string) *FunctionEnv {
+
 	return &FunctionEnv{
-		executor:         executor,
-		controller:       controller,
-		routerURL:        routerURL,
-		timedExecService: newTimedExecPool(),
-		client: &http.Client{
-			Timeout: 5 * time.Minute,
-		},
+		executor:    executor.MakeClient(executorURL),
+		controller:  controller.MakeClient(serverURL),
+		routerURL:   routerURL,
+		executorURL: executorURL,
+		client:      &http.Client{},
 	}
 }
 
@@ -110,9 +113,32 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 		span.LogKV("HTTP request", string(bs))
 	}
 	span.LogKV("http", fmt.Sprintf("%s %v", req.Method, req.URL))
-	resp, err := fe.client.Do(req.WithContext(cfg.Ctx))
+	var resp *http.Response
+
+	// Setup  context
+	deadline, err := ptypes.Timestamp(spec.Deadline)
 	if err != nil {
-		return nil, fmt.Errorf("error for reqUrl '%v': %v", fnUrl, err)
+		return nil, err
+	}
+	maxAttempts := 12 // About 6 min
+	ctx, cancel := context.WithDeadline(cfg.Ctx, deadline)
+	for attempt := range (&backoff.Instance{
+		MaxRetries:         maxAttempts,
+		BaseRetryDuration:  100 * time.Millisecond,
+		BackoffPolicy:      backoff.ExponentialBackoff,
+		MaxBackoffDuration: 10 * time.Second,
+	}).C(ctx) {
+		resp, err = fe.client.Do(req.WithContext(cfg.Ctx))
+		if err == nil {
+			break
+		}
+		log.Debugf("Failed to execute Fission function at %s (%d/%d): %v", fnUrl, err, attempt, maxAttempts)
+	}
+	cancel()
+
+	// Check if max try attempts was exceeded
+	if resp == nil {
+		return nil, fmt.Errorf("error executing fission function at %s after %d attempts: %v", fnUrl, maxAttempts, err)
 	}
 	span.LogKV("status code", resp.Status)
 
@@ -158,22 +184,17 @@ func (fe *FunctionEnv) Invoke(spec *types.TaskInvocationSpec, opts ...fnenv.Invo
 	}, nil
 }
 
-// Notify signals the Fission runtime that a function request is expected at a specific time.
-func (fe *FunctionEnv) Notify(fn types.FnRef, expectedAt time.Time) error {
+// Prepare signals the Fission runtime that a function request is expected at a specific time.
+// For now this function will tap immediately regardless of the expected execution time.
+func (fe *FunctionEnv) Prepare(fn types.FnRef, expectedAt time.Time) error {
 	reqURL, err := fe.getFnURL(fn)
 	if err != nil {
 		return err
 	}
 
-	// For this now assume a standard cold start delay; use profiling to provide a better estimate.
-	execAt := expectedAt.Add(-provisionDuration)
-
 	// Tap the Fission function at the right time
-	fe.timedExecService.Submit(func() {
-		log.WithField("fn", fn).Infof("Tapping Fission function: %v", reqURL)
-		fe.executor.TapService(reqURL)
-	}, execAt)
-	return nil
+	log.WithField("fn", fn).Infof("Prewarming Fission function: %v", reqURL)
+	return fe.tapService(reqURL.String())
 }
 
 func (fe *FunctionEnv) Resolve(ref types.FnRef) (string, error) {
@@ -231,4 +252,18 @@ func (fe *FunctionEnv) createRouterURL(fn types.FnRef) string {
 		ns = strings.Trim(fn.Namespace, "/") + "/"
 	}
 	return fmt.Sprintf("%s/fission-function/%s%s", baseUrl, ns, id)
+}
+
+func (fe *FunctionEnv) tapService(serviceUrlStr string) error {
+	executorUrl := fe.executorURL + "/v2/tapService"
+
+	resp, err := http.Post(executorUrl, "application/octet-stream", bytes.NewReader([]byte(serviceUrlStr)))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fission.MakeErrorFromHTTP(resp)
+	}
+	return nil
 }

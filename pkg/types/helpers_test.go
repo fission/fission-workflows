@@ -2,6 +2,7 @@ package types
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -25,7 +26,7 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 			},
 		},
 	}
-	invocation := NewWorkflowInvocation("wf-1", "wfi-45")
+	invocation := NewWorkflowInvocation("wf-1", "wfi-45", time.Now().Add(time.Second))
 	invocation.Status.DynamicTasks = map[string]*Task{
 		"some_dynamic_task": {
 			Metadata: NewObjectMetadata("some_dynamic_task"),
@@ -55,7 +56,8 @@ func TestCalculateWorkflowWithDynamicTasks(t *testing.T) {
 			},
 		},
 	}
-	cwf := GetTasks(workflow, invocation)
+	invocation.Spec.Workflow = workflow
+	cwf := invocation.Tasks()
 
 	assert.Equal(t, 4, len(cwf))
 	assert.Equal(t, 2, len(cwf["bar"].Spec.Requires))

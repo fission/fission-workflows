@@ -3,7 +3,7 @@ package bundle
 
 import (
 	"context"
-	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -25,18 +25,23 @@ import (
 )
 
 const (
-	TestSuiteTimeout = 10 * time.Minute
-	TestTimeout      = time.Minute
+	testSuiteTimeout = 10 * time.Minute
+	testTimeout      = time.Minute
 	gRPCAddress      = ":5555"
 )
 
+func defaultDeadline() time.Time {
+	return time.Now().Add(testTimeout)
+}
+
 func TestMain(m *testing.M) {
+	flag.Parse()
 	if testing.Short() {
 		log.Info("Short test; skipping bundle integration tests.")
 		return
 	}
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestSuiteTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testSuiteTimeout)
 	integration.SetupBundle(ctx)
 
 	time.Sleep(time.Duration(4) * time.Second)
@@ -50,7 +55,7 @@ func TestMain(m *testing.M) {
 
 // Tests the submission of a workflow
 func TestWorkflowCreate(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -64,29 +69,24 @@ func TestWorkflowCreate(t *testing.T) {
 			},
 		},
 	}
-	wfId, err := client.Workflow.Create(ctx, spec)
-	defer client.Workflow.Delete(ctx, wfId)
+	wf, err := client.Workflow.CreateSync(ctx, spec)
+	defer client.Workflow.Delete(ctx, wf.Metadata)
 	assert.NoError(t, err)
-	assert.NotNil(t, wfId)
-	assert.NotEmpty(t, wfId.GetId())
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
+	util.AssertProtoEqual(t, wf.Spec, spec)
+	assert.Equal(t, wf.Status.Status, types.WorkflowStatus_READY)
 
-	time.Sleep(time.Duration(2) * time.Second)
 	// Test workflow list
 	l, err := client.Workflow.List(ctx, &empty.Empty{})
 	assert.NoError(t, err)
-	if len(l.Workflows) != 1 || l.Workflows[0] != wfId.Id {
-		t.Errorf("Listed workflows '%v' did not match expected workflow '%s'", l.Workflows, wfId.Id)
+	if len(l.Workflows) != 1 || l.Workflows[0] != wf.ID() {
+		t.Errorf("Listed workflows '%v' did not match expected workflow '%s'", l.Workflows, wf.ID())
 	}
-
-	// Test workflow get
-	wf, err := client.Workflow.Get(ctx, wfId)
-	assert.NoError(t, err)
-	assert.Equal(t, wf.Spec, spec)
-	assert.Equal(t, wf.Status.Status, types.WorkflowStatus_READY)
 }
 
 func TestWorkflowInvocation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -112,12 +112,12 @@ func TestWorkflowInvocation(t *testing.T) {
 			},
 		},
 	}
-	wfm, err := client.Workflow.Create(ctx, wfSpec)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
 	assert.NoError(t, err)
-	if wfm == nil || len(wfm.GetId()) == 0 {
-		t.Errorf("Invalid id returned '%v'", wfm)
+	if wf == nil || len(wf.ID()) == 0 {
+		t.Errorf("Invalid id returned '%v'", wf)
 	}
-	defer client.Workflow.Delete(ctx, wfm)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 
 	// Create invocation
 	expectedOutput := "Hello world!"
@@ -125,11 +125,9 @@ func TestWorkflowInvocation(t *testing.T) {
 	etv, err := typedvalues.Wrap(strings.ToUpper(expectedOutput))
 	assert.NoError(t, err)
 
-	wiSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: wfm.Id,
-		Inputs: map[string]*typedvalues.TypedValue{
-			types.InputMain: tv,
-		},
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wiSpec.Inputs = map[string]*typedvalues.TypedValue{
+		types.InputMain: tv,
 	}
 	result, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
@@ -155,13 +153,14 @@ func TestWorkflowInvocation(t *testing.T) {
 			break
 		}
 	}
+	wiSpec.Workflow = invocation.Workflow()
 	util.AssertProtoEqual(t, wiSpec, invocation.Spec)
 	assert.Equal(t, etv.Value, invocation.Status.Output.Value)
 	assert.True(t, invocation.Status.Successful())
 }
 
 func TestDynamicWorkflowInvocation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -208,18 +207,16 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 			},
 		},
 	}
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
 	// Test with main input
-	wiSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: wfResp.Id,
-		Inputs: map[string]*typedvalues.TypedValue{
-			types.InputMain: typedvalues.MustWrap("foo"),
-		},
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wiSpec.Inputs = map[string]*typedvalues.TypedValue{
+		types.InputMain: typedvalues.MustWrap("foo"),
 	}
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
@@ -231,13 +228,11 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 	assert.Equal(t, "alternative: FOO", output)
 
 	// Test with body input
-	wiSpec = &types.WorkflowInvocationSpec{
-		WorkflowId: wfResp.Id,
-		Inputs: map[string]*typedvalues.TypedValue{
-			types.InputBody: typedvalues.MustWrap("foo"),
-		},
+	wiSpec2 := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wiSpec2.Inputs = map[string]*typedvalues.TypedValue{
+		types.InputBody: typedvalues.MustWrap("foo"),
 	}
-	wfi, err = client.Invocation.InvokeSync(ctx, wiSpec)
+	wfi, err = client.Invocation.InvokeSync(ctx, wiSpec2)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, wfi.Status.DynamicTasks)
 	assert.True(t, wfi.Status.Finished())
@@ -248,7 +243,7 @@ func TestDynamicWorkflowInvocation(t *testing.T) {
 }
 
 func TestInlineWorkflowInvocation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -292,15 +287,13 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 			},
 		},
 	}
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: wfResp.Id,
-	}
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, wfi.Status.DynamicTasks)
@@ -314,12 +307,7 @@ func TestInlineWorkflowInvocation(t *testing.T) {
 
 func TestParallelInvocation(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.Dial(gRPCAddress, grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	cl := apiserver.NewWorkflowAPIClient(conn)
-	wi := apiserver.NewWorkflowInvocationAPIClient(conn)
+	client := setup(ctx)
 
 	wfSpec := types.NewWorkflowSpec()
 
@@ -340,14 +328,14 @@ func TestParallelInvocation(t *testing.T) {
 	})
 	wfSpec.SetOutput("await")
 
-	wfResp, err := cl.Create(ctx, wfSpec)
-	defer cl.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
-	wfi, err := wi.InvokeSync(ctx, wiSpec)
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.Empty(t, wfi.Status.DynamicTasks)
 	assert.True(t, wfi.Status.Finished())
@@ -358,7 +346,7 @@ func TestParallelInvocation(t *testing.T) {
 	var minStartTime, maxStartTime time.Time
 	for _, task := range wfi.Status.Tasks {
 		if strings.HasPrefix(task.Spec.TaskId, "p") {
-			tt, err := ptypes.Timestamp(task.Metadata.CreatedAt)
+			tt, err := ptypes.Timestamp(task.GetMetadata().GetCreatedAt())
 			assert.NoError(t, err)
 			if minStartTime == (time.Time{}) || tt.Before(minStartTime) {
 				minStartTime = tt
@@ -372,7 +360,7 @@ func TestParallelInvocation(t *testing.T) {
 }
 
 func TestLongRunningWorkflowInvocation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -416,13 +404,13 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 			},
 		},
 	}
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.Empty(t, wfi.Status.DynamicTasks)
@@ -435,7 +423,7 @@ func TestLongRunningWorkflowInvocation(t *testing.T) {
 }
 
 func TestWorkflowCancellation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 	wfSpec := &types.WorkflowSpec{
@@ -454,13 +442,13 @@ func TestWorkflowCancellation(t *testing.T) {
 		},
 	}
 
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
 
 	// Invoke and cancel the invocation
 	cancelCtx, cancelFn := context.WithCancel(ctx)
@@ -473,11 +461,11 @@ func TestWorkflowCancellation(t *testing.T) {
 	assert.Empty(t, resp)
 	time.Sleep(500 * time.Millisecond)
 
-	wfis, err := client.Invocation.List(ctx, &apiserver.InvocationListQuery{
-		Workflows: []string{wfResp.GetId()},
+	invocationListResponse, err := client.Invocation.List(ctx, &apiserver.InvocationListQuery{
+		Workflows: []string{wf.ID()},
 	})
 	assert.NoError(t, err)
-	wfiID := wfis.Invocations[0]
+	wfiID := invocationListResponse.Invocations[0]
 	wfi, err := client.Invocation.Get(ctx, &types.ObjectMetadata{Id: wfiID})
 	assert.NoError(t, err)
 	assert.False(t, wfi.GetStatus().Successful())
@@ -486,7 +474,7 @@ func TestWorkflowCancellation(t *testing.T) {
 }
 
 func TestInvocationInvalid(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -499,12 +487,12 @@ func TestInvocationInvalid(t *testing.T) {
 			},
 		},
 	}
-	_, err := client.Workflow.Create(ctx, wfSpec)
+	_, err := client.Workflow.CreateSync(ctx, wfSpec)
 	assert.Error(t, err)
 }
 
 func TestInvocationFailed(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -519,25 +507,23 @@ func TestInvocationFailed(t *testing.T) {
 			},
 		},
 	}
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 	assert.NoError(t, err, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := types.NewWorkflowInvocationSpec(wfResp.Id)
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.Empty(t, wfi.Status.DynamicTasks)
 	assert.True(t, wfi.Status.Finished())
 	assert.False(t, wfi.Status.Successful())
 	assert.Equal(t, len(wfSpec.Tasks), len(wfi.Status.Tasks))
-	// assert.Equal(t, msg, wfi.GetStatus().GetError().GetMessage())
-	// TODO generate consistent error report!
 }
 
 func TestInvocationWithForcedOutputs(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -576,11 +562,9 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 			},
 		},
 	}
-	wfID, err := client.Workflow.Create(ctx, wfSpec)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
 	assert.NoError(t, err)
-	wfi, err := client.Invocation.InvokeSync(ctx, &types.WorkflowInvocationSpec{
-		WorkflowId: wfID.GetId(),
-	})
+	wfi, err := client.Invocation.InvokeSync(ctx, types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline()))
 	assert.NoError(t, err)
 	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t1"].GetStatus().GetOutput().GetValue())
 	util.AssertProtoEqual(t, output.GetValue(), wfi.GetStatus().GetTasks()["t2"].GetStatus().GetOutput().GetValue())
@@ -588,7 +572,7 @@ func TestInvocationWithForcedOutputs(t *testing.T) {
 }
 
 func TestDeepRecursion(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -621,19 +605,17 @@ func TestDeepRecursion(t *testing.T) {
 		},
 	}
 
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 
 	assert.NoError(t, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: wfResp.Id,
-		Inputs: typedvalues.MustWrapMapTypedValue(map[string]interface{}{
-			types.InputMain: "foo",
-		}),
-	}
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wiSpec.Inputs = typedvalues.MustWrapMapTypedValue(map[string]interface{}{
+		types.InputMain: "foo",
+	})
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, wfi.Status.DynamicTasks)
@@ -641,13 +623,11 @@ func TestDeepRecursion(t *testing.T) {
 	assert.True(t, wfi.Status.Successful())
 
 	output := typedvalues.MustUnwrap(wfi.Status.Output)
-	d, _ := json.Marshal(output)
-	fmt.Println(string(d))
 	assert.Equal(t, typedvalues.MustUnwrap(wiSpec.Inputs[types.InputMain]), output)
 }
 
 func TestDeeplyNestedInvocation(t *testing.T) {
-	ctx, cancelFn := context.WithTimeout(context.Background(), TestTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
 	defer cancelFn()
 	client := setup(ctx)
 
@@ -671,16 +651,14 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 			},
 		},
 	}
-	wfResp, err := client.Workflow.Create(ctx, wfSpec)
-	defer client.Workflow.Delete(ctx, wfResp)
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
 
 	assert.NoError(t, err)
-	assert.NotNil(t, wfResp)
-	assert.NotEmpty(t, wfResp.Id)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
 
-	wiSpec := &types.WorkflowInvocationSpec{
-		WorkflowId: wfResp.Id,
-	}
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
 	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, wfi.Status.DynamicTasks)
@@ -689,6 +667,41 @@ func TestDeeplyNestedInvocation(t *testing.T) {
 
 	output := typedvalues.MustUnwrap(wfi.Status.Output)
 	assert.Equal(t, float64(5), output)
+}
+
+func TestMassivelyParallelInvocation(t *testing.T) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), testTimeout)
+	defer cancelFn()
+	client := setup(ctx)
+
+	tasks := make(map[string]*types.TaskSpec)
+	for i := 0; i < 100; i++ {
+		tasks[fmt.Sprintf("t%d", i)] = &types.TaskSpec{
+			FunctionRef: builtin.Noop,
+			Inputs: map[string]*typedvalues.TypedValue{
+				"main": typedvalues.MustWrap(i),
+			},
+		}
+	}
+
+	wfSpec := &types.WorkflowSpec{
+		ApiVersion: types.WorkflowAPIVersion,
+		OutputTask: "t0",
+		Tasks:      tasks,
+	}
+	wf, err := client.Workflow.CreateSync(ctx, wfSpec)
+	defer client.Workflow.Delete(ctx, wf.GetMetadata())
+
+	assert.NoError(t, err)
+	assert.NotNil(t, wf)
+	assert.NotEmpty(t, wf.ID())
+
+	wiSpec := types.NewWorkflowInvocationSpec(wf.ID(), defaultDeadline())
+	wfi, err := client.Invocation.InvokeSync(ctx, wiSpec)
+	assert.NoError(t, err)
+	assert.Empty(t, wfi.Status.DynamicTasks)
+	assert.True(t, wfi.Status.Finished())
+	assert.True(t, wfi.Status.Successful())
 }
 
 func setup(ctx context.Context) *apiserver.Client {

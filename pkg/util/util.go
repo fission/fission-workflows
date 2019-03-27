@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -162,4 +163,20 @@ func CmpProtoTimestamps(l, r *timestamp.Timestamp) bool {
 		return false
 	}
 	return l.GetNanos() <= r.GetNanos()
+}
+
+func MustTimestampProto(ts time.Time) *timestamp.Timestamp {
+	protoTs, err := ptypes.TimestampProto(ts)
+	if err != nil {
+		panic(err)
+	}
+	return protoTs
+}
+
+func MustTimestamp(protoTs *timestamp.Timestamp) time.Time {
+	ts, err := ptypes.Timestamp(protoTs)
+	if err != nil {
+		panic(err)
+	}
+	return ts
 }

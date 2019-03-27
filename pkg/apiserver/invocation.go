@@ -5,7 +5,7 @@ import (
 	"sort"
 
 	"github.com/fission/fission-workflows/pkg/api"
-	"github.com/fission/fission-workflows/pkg/api/aggregates"
+	"github.com/fission/fission-workflows/pkg/api/projectors"
 	"github.com/fission/fission-workflows/pkg/api/store"
 	"github.com/fission/fission-workflows/pkg/fes"
 	"github.com/fission/fission-workflows/pkg/fnenv"
@@ -48,12 +48,11 @@ func (gi *Invocation) Validate(ctx context.Context, spec *types.WorkflowInvocati
 func (gi *Invocation) Invoke(ctx context.Context, spec *types.WorkflowInvocationSpec) (*types.ObjectMetadata, error) {
 	// TODO go through same runtime as InvokeSync
 	// Check if the workflow required by the invocation exists
-	if gi.workflows != nil {
-		_, err := gi.workflows.GetWorkflow(spec.GetWorkflowId())
-		if err != nil {
-			return nil, err
-		}
+	wf, err := gi.workflows.GetWorkflow(spec.GetWorkflowId())
+	if err != nil {
+		return nil, err
 	}
+	spec.Workflow = wf
 
 	eventID, err := gi.api.Invoke(spec, api.WithContext(ctx))
 	if err != nil {
@@ -92,7 +91,7 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 	var invocations []string
 	as := gi.invocations.List()
 	for _, aggregate := range as {
-		if aggregate.Type != aggregates.TypeWorkflowInvocation {
+		if aggregate.Type != types.TypeInvocation {
 			logrus.Errorf("Invalid type in invocation invocations: %v", aggregate.Format())
 			continue
 		}
@@ -104,7 +103,7 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 				logrus.Errorf("List: failed to fetch %v from invocations: %v", aggregate, err)
 				continue
 			}
-			wfi := entity.(*aggregates.WorkflowInvocation)
+			wfi := entity.(*types.WorkflowInvocation)
 			if !contains(query.Workflows, wfi.GetSpec().GetWorkflowId()) {
 				continue
 			}
@@ -112,7 +111,7 @@ func (gi *Invocation) List(ctx context.Context, query *InvocationListQuery) (*Wo
 
 		invocations = append(invocations, aggregate.Id)
 	}
-	return &WorkflowInvocationList{invocations}, nil
+	return &WorkflowInvocationList{Invocations: invocations}, nil
 }
 
 func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.Empty, error) {
@@ -127,10 +126,7 @@ func (gi *Invocation) AddTask(ctx context.Context, req *AddTaskRequest) (*empty.
 }
 
 func (gi *Invocation) Events(ctx context.Context, md *types.ObjectMetadata) (*ObjectEvents, error) {
-	events, err := gi.backend.Get(fes.Aggregate{
-		Id:   md.Id,
-		Type: aggregates.TypeWorkflowInvocation,
-	})
+	events, err := gi.backend.Get(projectors.NewWorkflowAggregate(md.Id))
 	if err != nil {
 		return nil, toErrorStatus(err)
 	}
@@ -161,10 +157,7 @@ func (gi *Invocation) Events(ctx context.Context, md *types.ObjectMetadata) (*Ob
 }
 
 func (gi *Invocation) taskEvents(taskRunID string) ([]*fes.Event, error) {
-	return gi.backend.Get(fes.Aggregate{
-		Id:   taskRunID,
-		Type: aggregates.TypeTaskInvocation,
-	})
+	return gi.backend.Get(projectors.NewTaskRunAggregate(taskRunID))
 }
 
 func contains(haystack []string, needle string) bool {

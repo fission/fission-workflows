@@ -1,12 +1,13 @@
 package nats
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fission/fission-workflows/pkg/fes"
+	"github.com/fission/fission-workflows/pkg/fes/backend"
 	"github.com/fission/fission-workflows/pkg/util/pubsub"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -17,60 +18,104 @@ import (
 )
 
 const (
-	defaultClient  = "fes"
-	defaultCluster = "fes-cluster"
+	defaultClient     = "fes"
+	defaultCluster    = "fes-cluster"
+	reconnectInterval = 10 * time.Second
 )
 
 var (
-	ErrInvalidAggregate = errors.New("invalid aggregate")
-
 	subsActive = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "fes",
 		Subsystem: "nats",
 		Name:      "subs_active",
 		Help:      "Number of active subscriptions to NATS subjects.",
 	}, []string{"subType"})
-
-	eventsAppended = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "fes",
-		Subsystem: "nats",
-		Name:      "events_appended_total",
-		Help:      "Count of appended events (including any internal events).",
-	}, []string{"eventType"})
-
-	eventDelay = prometheus.NewSummary(prometheus.SummaryOpts{
-		Namespace: "fes",
-		Subsystem: "nats",
-		Name:      "event_propagation_delay",
-		Help:      "Delay between event publish and receive by the subscribers.",
-	})
 )
 
 func init() {
-	prometheus.MustRegister(subsActive, eventsAppended, eventDelay)
+	prometheus.MustRegister(subsActive)
 }
 
 // EventStore is a NATS-based implementation of the EventStore interface.
 type EventStore struct {
 	pubsub.Publisher
-	conn   *WildcardConn
-	sub    map[fes.Aggregate]stan.Subscription
-	Config Config
+	conn            *WildcardConn
+	subs            map[fes.Aggregate]stan.Subscription
+	Config          Config
+	closeFn         func()
+	initConnChecker sync.Once
 }
 
 type Config struct {
-	Cluster string
-	Client  string
-	URL     string // e.g. nats://localhost:9300
+	Cluster       string
+	Client        string
+	URL           string // e.g. nats://localhost:9300
+	AutoReconnect bool
 }
 
 func NewEventStore(conn *WildcardConn, cfg Config) *EventStore {
 	return &EventStore{
 		Publisher: pubsub.NewPublisher(),
 		conn:      conn,
-		sub:       map[fes.Aggregate]stan.Subscription{},
+		subs:      map[fes.Aggregate]stan.Subscription{},
 		Config:    cfg,
 	}
+}
+
+func (es *EventStore) RunConnectionChecker() {
+	es.initConnChecker.Do(func() {
+		logrus.Infof("Running connection re-connector. Checking every %v", reconnectInterval)
+		controlC := make(chan struct{})
+		go func() {
+			for {
+				select {
+				case <-controlC:
+					return
+				case <-time.After(reconnectInterval):
+					logrus.Info("Connection status:", es.conn.NatsConn().Status())
+					if es.conn.NatsConn().Status() == nats.CLOSED {
+						if err := es.reconnect(); err != nil {
+							logrus.Errorf("Failed to reconnect to NATS: %v", err)
+						} else {
+							logrus.Infof("Reconnected to NATS: %v", err)
+						}
+					}
+				}
+			}
+		}()
+		es.closeFn = func() {
+			select {
+			case controlC <- struct{}{}:
+			default:
+			}
+		}
+	})
+}
+
+func (es *EventStore) reconnect() error {
+	cfg := es.Config
+	cfg.AutoReconnect = false
+	nes, err := Connect(cfg)
+	if err != nil {
+		return err
+	}
+	oldConn := es.conn
+	es.conn = nes.conn
+	// close the old connection
+	if oldConn.NatsConn().Status() != nats.CLOSED {
+		if err = oldConn.Close(); err != nil {
+			logrus.Errorf("Failed to close old NATS connection: %v", err)
+		}
+	}
+
+	// Re-watch all the keys that we were watching in the c
+	for key := range es.subs {
+		err = es.Watch(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Connect to a NATS cluster using the config.
@@ -84,8 +129,24 @@ func Connect(cfg Config) (*EventStore, error) {
 	if cfg.Cluster == "" {
 		cfg.Cluster = defaultCluster
 	}
-	url := stan.NatsURL(cfg.URL)
-	conn, err := stan.Connect(cfg.Cluster, cfg.Client, url)
+	ns, err := nats.Connect(cfg.URL,
+		nats.MaxReconnects(-1), // Never stop trying to reconnect
+		nats.ReconnectWait(reconnectInterval),
+		nats.DisconnectHandler(func(conn *nats.Conn) {
+			logrus.Infof("Lost connection to NATS cluster; attempting to reconnect every %v (%v)",
+				reconnectInterval, cfg)
+		}),
+		nats.ClosedHandler(func(conn *nats.Conn) {
+			logrus.Info("Connection to NATS cluster was closed: ", cfg)
+		}),
+		nats.ReconnectHandler(func(conn *nats.Conn) {
+			logrus.Info("Reconnected to NATS cluster: ", cfg)
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := stan.Connect(cfg.Cluster, cfg.Client, stan.NatsConn(ns))
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +156,13 @@ func Connect(cfg Config) (*EventStore, error) {
 		WithField("client", cfg.Client).
 		Info("connected to NATS")
 
-	return NewEventStore(wconn, cfg), nil
+	es := NewEventStore(wconn, cfg)
+	//
+	//if cfg.AutoReconnect {
+	//	es.RunConnectionChecker()
+	//}
+
+	return es, nil
 }
 
 // Watch a aggregate type for new events. The events are emitted over the publisher interface.
@@ -131,7 +198,7 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 
 		// Record the time it took for the event to be propagated from publisher to subscriber.
 		ts, _ := ptypes.Timestamp(event.Timestamp)
-		eventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
+		backend.EventDelay.Observe(float64(time.Now().Sub(ts).Nanoseconds()))
 
 	}, stan.DeliverAllAvailable())
 	if err != nil {
@@ -139,11 +206,14 @@ func (es *EventStore) Watch(aggregate fes.Aggregate) error {
 	}
 
 	logrus.Infof("Backend client watches:' %s'", subject)
-	es.sub[aggregate] = sub
+	es.subs[aggregate] = sub
 	return nil
 }
 
 func (es *EventStore) Close() error {
+	if es.closeFn != nil {
+		es.closeFn()
+	}
 	err := es.conn.Close()
 	if err != nil {
 		return err
@@ -167,18 +237,18 @@ func (es *EventStore) Append(event *fes.Event) error {
 		return err
 	}
 
+	err = es.conn.Publish(subject, data)
+	if err != nil {
+		return err
+	}
+
 	logrus.WithFields(logrus.Fields{
 		"aggregate":    event.Aggregate.Format(),
 		"parent":       event.Parent.Format(),
 		"nats.subject": subject,
 	}).Infof("Event added: %v", event.Type)
-
-	err = es.conn.Publish(subject, data)
-	if err != nil {
-		return err
-	}
-	eventsAppended.WithLabelValues(event.Type).Inc()
-	eventsAppended.WithLabelValues("control").Inc()
+	backend.EventsAppended.WithLabelValues(event.Type).Inc()
+	backend.EventsAppended.WithLabelValues("control").Inc()
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/fission/fission"
 	"github.com/fission/fission-workflows/pkg/apiserver"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	context2 "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -20,6 +22,11 @@ import (
 
 type mockWorkflowClient struct {
 	mock.Mock
+}
+
+func (m *mockWorkflowClient) CreateSync(ctx context2.Context, in *types.WorkflowSpec, opts ...grpc.CallOption) (*types.Workflow, error) {
+	args := m.Called(in)
+	return args.Get(0).(*types.Workflow), args.Error(1)
 }
 
 func (m *mockWorkflowClient) Create(ctx context.Context, in *types.WorkflowSpec, opts ...grpc.CallOption) (*types.ObjectMetadata, error) {
@@ -53,8 +60,12 @@ func (m *mockWorkflowClient) Events(ctx context.Context, in *types.ObjectMetadat
 
 func TestProxy_Specialize(t *testing.T) {
 	workflowServer := &mockWorkflowClient{}
-	workflowServer.On("Create", mock.Anything).Return("mockID", nil)
-	env := NewEnvironmentProxyServer(nil, workflowServer)
+	workflowServer.On("CreateSync", mock.Anything).Return(&types.Workflow{
+		Metadata: types.NewObjectMetadata("mockID"),
+	}, nil)
+	env := NewEnvironmentProxyServer(&apiserver.Client{
+		Workflow: workflowServer,
+	}, time.Second)
 	wf := &types.WorkflowSpec{
 		ApiVersion: types.WorkflowAPIVersion,
 		OutputTask: "fakeFinalTask",
