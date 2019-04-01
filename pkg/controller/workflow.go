@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	EventRefresh = "refresh"
-	parseTask    = "task"
+	parseTask = "task"
 )
 
 // WorkflowController is the controller for ensuring the processing of a single workflow.
@@ -56,17 +55,20 @@ func (c *WorkflowController) Eval(ctx context.Context, processValue *ctrl.Event)
 		return ctrl.Done{}
 	case types.WorkflowStatus_FAILED:
 		// The previous parsing has failed. We retry the parsing but with a increasing backoff.
-		backoff := time.Duration(c.errorCount) * time.Second
-		log.Infof("Backing off for %v before trying to parse workflow again", backoff)
-		c.executor.SubmitAfter(&executor.Task{
-			TaskID:  workflow.ID() + "." + parseTask,
-			GroupID: workflow.ID(),
-			Apply: func() error {
-				_, err := c.api.Parse(workflow)
-				return err
-			},
-		}, backoff)
-		return ctrl.Success{Msg: "retrying parsing of the workflow"}
+
+		// TODO revert back to retrying once Fission can deal with specialization timeouts
+		//backoff := time.Duration(c.errorCount) * time.Second
+		//log.Infof("Backing off for %v before trying to parse workflow again", backoff)
+		//c.executor.SubmitAfter(&executor.Task{
+		//	TaskID:  workflow.ID() + "." + parseTask,
+		//	GroupID: workflow.ID(),
+		//	Apply: func() error {
+		//		_, err := c.api.Parse(workflow)
+		//		return err
+		//	},
+		//}, backoff)
+		//return ctrl.Success{Msg: "retrying parsing of the workflow"}
+		return ctrl.Done{}
 	case types.WorkflowStatus_QUEUED:
 		// The workflow has not yet been processed, so we try to parse it.
 		c.errorCount = 0
@@ -232,6 +234,8 @@ func (s *WorkflowStorePollSensor) Poll(evalQueue ctrl.EvalQueue) {
 		default:
 			// nop
 		}
+		log.Debugf("WorkflowStorePoll: Found missing workflow %v (state: %v)", aggregate.GetId(),
+			wf.GetStatus().GetStatus().String())
 
 		// Submit evaluation for the workflow
 		// The workqueue within in the control system ensures that workflows that are already queued for execution
@@ -240,7 +244,7 @@ func (s *WorkflowStorePollSensor) Poll(evalQueue ctrl.EvalQueue) {
 			Old:     wf,
 			Updated: wf,
 			Event: &fes.Event{
-				Type:      EventRefresh,
+				Type:      "recover-workflow",
 				Aggregate: &aggregate,
 				Timestamp: ptypes.TimestampNow(),
 			},

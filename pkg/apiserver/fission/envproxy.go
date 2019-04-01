@@ -92,7 +92,7 @@ func (fp *Proxy) handleRequest(w http.ResponseWriter, r *http.Request) {
 	_, ok := fp.fissionIds.Get(fnID)
 	if !ok {
 		// Fallback 1 : check if it is in the event store somewhere
-		if fp.hasWorkflow(ctx, fnID) {
+		if !fp.hasValidWorkflow(ctx, fnID) {
 			logrus.WithField("fnID", fnID).Error("Unknown fission function name")
 			http.Error(w, "Unknown fission function name; not specialized", 400)
 			return
@@ -307,12 +307,12 @@ func (fp *Proxy) createWorkflowFromFile(ctx context.Context, flr *fission.Functi
 	return wfID, nil
 }
 
-func (fp *Proxy) hasWorkflow(ctx context.Context, fnID string) bool {
+func (fp *Proxy) hasValidWorkflow(ctx context.Context, fnID string) bool {
 	wf, err := fp.client.Workflow.Get(ctx, &types.ObjectMetadata{Id: fnID})
 	if err != nil {
 		logrus.Errorf("Failed to get workflow: %v; assuming it is non-existent", err)
 	}
-	return wf != nil
+	return wf != nil && wf.GetStatus().Ready()
 }
 
 func (fp *Proxy) determineDeadline(r *http.Request) time.Time {

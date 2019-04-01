@@ -691,28 +691,30 @@ func (s *InvocationStorePollSensor) Poll(evalQueue ctrl.EvalQueue) {
 		}
 
 		// Get actual workflow
-		wf, err := s.invocations.GetInvocation(aggregate.GetId())
+		invocation, err := s.invocations.GetInvocation(aggregate.GetId())
 		if err != nil {
 			logrus.Warnf("Could not retrieve entity from invocations store: %v", aggregate)
 			continue
 		}
 
 		// Check if the status is not in a terminal state
-		switch wf.GetStatus().GetStatus() {
+		switch invocation.GetStatus().GetStatus() {
 		case types.WorkflowInvocationStatus_ABORTED, types.WorkflowInvocationStatus_FAILED, types.WorkflowInvocationStatus_SUCCEEDED:
 			continue
 		default:
 			// nop
 		}
+		logrus.Debugf("InvocationStorePoll: Found missing invocation %v (state: %v)", aggregate.GetId(),
+			invocation.GetStatus().GetStatus().String())
 
 		// Submit evaluation for the workflow invocation
 		// The workqueue within in the control system ensures that invocations that are already queued for execution
 		// will be ignored.
 		evalQueue.Submit(&ctrl.Event{
-			Old:     wf,
-			Updated: wf,
+			Old:     invocation,
+			Updated: invocation,
 			Event: &fes.Event{
-				Type:      EventRefresh,
+				Type:      "recover-invocation",
 				Aggregate: &aggregate,
 				Timestamp: ptypes.TimestampNow(),
 			},
@@ -755,11 +757,13 @@ func (s *StalenessPollSensor) Poll(queue ctrl.EvalQueue) {
 			logrus.Debugf("Failed to fetch state for controller %s: %v", ctrlKey, err)
 			return true
 		}
+		logrus.Debugf("Refresh stale invocation %s", ctrlKey)
+
 		queue.Submit(&ctrl.Event{
 			Old:     entity,
 			Updated: entity,
 			Event: &fes.Event{
-				Type:      EventRefresh,
+				Type:      "refresh-invocation",
 				Aggregate: &aggregate,
 				Timestamp: ptypes.TimestampNow(),
 			},

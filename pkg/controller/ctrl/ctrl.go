@@ -114,9 +114,12 @@ func NewSystem(factory ControllerFactory) *System {
 }
 
 func (s *System) DeleteController(key string) {
+	s.ctrlStatsMu.Lock()
 	s.ctrlsMu.Lock()
 	delete(s.ctrls, key)
+	delete(s.ctrlStats, key)
 	s.ctrlsMu.Unlock()
+	s.ctrlStatsMu.Unlock()
 }
 
 func (s *System) AddController(key string, ctrl Controller) {

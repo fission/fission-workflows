@@ -92,6 +92,7 @@ func (rt *Runtime) InvokeWorkflow(spec *types.WorkflowInvocationSpec, opts ...fn
 			span.LogKV("error", err)
 			return nil, err
 		}
+		logrus.Debugf("Attached workflow %v to invocation", wf.ID())
 		spec.Workflow = wf
 	} else {
 		if !spec.Workflow.GetStatus().Ready() {
@@ -182,7 +183,7 @@ func (rt *Runtime) awaitReadyWorkflow(ctx context.Context, workflowID string) (w
 				labels.In(fes.PubSubLabelAggregateType, types.TypeWorkflow),
 				labels.In(fes.PubSubLabelAggregateID, workflowID),
 				labels.In(fes.PubSubLabelEventType,
-					append(events.WorkflowTerminalEvents, events.EventWorkflowParsed)...)),
+					append(events.WorkflowTerminalEvents, events.EventWorkflowParsed, events.EventWorkflowParsingFailed)...)),
 		})
 		defer pub.Unsubscribe(sub)
 
