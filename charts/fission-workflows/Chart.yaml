@@ -1,7 +1,7 @@
 apiVersion: v1
 name: fission-workflows
-version: 0.6.0
-appVersion: 0.6.0
+version: 0.7.0
+appVersion: 0.7.0
 description: Fission Workflows is a fast workflow engine for serverless functions on Kubernetes
 keywords:
 - fission

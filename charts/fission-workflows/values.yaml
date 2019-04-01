@@ -5,7 +5,7 @@
 # Basic settings
 name: workflows
 bundleImage: fission/fission-workflows-bundle
-tag: 0.6.0
+tag: 0.7.0
 pullPolicy: IfNotPresent
 debug: false
 

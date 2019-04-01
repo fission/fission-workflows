@@ -11,7 +11,7 @@ const (
 
 	// Version contains a (potentially) human-readable version
 	// For example 1.1.0 or 1b4716ab84903b2e477135a3dc5afdb07f685cb7
-	Version string = "0.6.0"
+	Version string = "0.7.0"
 
 	// gitDate is a date in RFC1123Z format
 	gitDate string = "Mon, 15 Oct 2018 18:47:17 +0200"

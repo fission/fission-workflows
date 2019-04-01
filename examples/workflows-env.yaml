@@ -7,7 +7,7 @@ metadata:
   name: workflows
   namespace: fission
   labels:
-    chart: "fission-workflows-0.6.0"
+    chart: "fission-workflows-0.7.0"
 spec:
   replicas: 1
   selector:
@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: workflows
-        image: "fission/fission-workflows-bundle:0.6.0"
+        image: "fission/fission-workflows-bundle:0.7.0"
         command: ["/fission-workflows-bundle"]
         args: [
           "--fission",
@@ -65,7 +65,7 @@ metadata:
   namespace: fission
   labels:
     svc: workflows
-    chart: "fission-workflows-0.6.0"
+    chart: "fission-workflows-0.7.0"
 spec:
   type: ClusterIP
   selector:
@@ -89,7 +89,7 @@ metadata:
   namespace: fission
   labels:
     svc: workflows
-    chart: "fission-workflows-0.6.0"
+    chart: "fission-workflows-0.7.0"
 spec:
   type: ClusterIP
   selector:
@@ -111,13 +111,13 @@ metadata:
   name: workflows
   namespace: default
   labels:
-    chart: "fission-workflows-0.6.0"
+    chart: "fission-workflows-0.7.0"
 spec:
   version: 2
   TerminationGracePeriod: 5
   allowedFunctionsPerContainer: infinite
   runtime:
-    image: "fission/workflows-proxy:0.6.0"
+    image: "fission/workflows-proxy:0.7.0"
     container:
       command: ["/fission-workflows-proxy"]
       imagePullPolicy: IfNotPresent
@@ -127,7 +127,7 @@ spec:
         "--port", "8888",
       ]
   builder:
-    image: "fission/workflow-build-env:0.6.0"
+    image: "fission/workflow-build-env:0.7.0"
     command: "defaultBuild"
     container:
       imagePullPolicy: IfNotPresent
