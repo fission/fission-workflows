@@ -23,9 +23,9 @@ Fission Workflows requires the following to be installed on your host machine:
 
 Additionally, Fission Workflows requires a [Fission](https://github.com/fission/fission) 
 deployment on your Kubernetes cluster. If you do not have a Fission deployment, follow
-[Fission's installation guide](http://fission.io/docs/0.7.2/install/).
+[Fission's installation guide](https://docs.fission.io/installation/).
 
-**(Note that Fission Workflows requires Fission 0.4.1 or higher, with the NATS component installed!)**
+**(Note that Fission Workflows requires Fission 0.4.1 or higher!)**
 
 ### Installing Fission Workflows
 

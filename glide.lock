@@ -1,5 +1,5 @@
-hash: 2fc597b7a120ba04c259f03a6f6d6455d77ab196d9ba5e68c9ff72a19d687cf5
-updated: 2019-03-21T13:23:45.149034+01:00
+hash: a1d7370d5a2fe2d0c36756487f4dc8d32f71af98c5a66ab516ae352db08e73e9
+updated: 2019-04-01T10:47:49.533537+02:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -44,7 +44,7 @@ imports:
 - name: github.com/fatih/structs
   version: a720dfa8df582c51dee1b36feabb906bde1588bd
 - name: github.com/fission/fission
-  version: 9bd18bdacd269c63f23af2286d09295f61e3c948
+  version: 9a6f9b75ff569bf92fea394256e1f04b298d2f57
   subpackages:
   - cache
   - controller/client
@@ -55,6 +55,7 @@ imports:
   - redis
   - redis/build/gen
   - router
+  - throttler
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-openapi/analysis
@@ -115,12 +116,10 @@ imports:
   - openstack/identity/v3/tokens
   - openstack/utils
   - pagination
-- name: github.com/gorilla/context
-  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/handlers
-  version: 90663712d74cb411cbef281bc1e08c19d1a76145
+  version: 7e0847f9db758cdebd26c149d0ae9d5d0b9c98ce
 - name: github.com/gorilla/mux
-  version: e3702bed27f0d39777b0b37b664b6280e8ef8fbf
+  version: a7962380ca08b5a188038c69871b8d3fbdf31e89
 - name: github.com/grpc-ecosystem/go-grpc-middleware
   version: c250d6563d4d4c20252cd865923440e829844f4e
 - name: github.com/grpc-ecosystem/go-grpc-prometheus
@@ -273,8 +272,34 @@ imports:
   - lzma
 - name: github.com/urfave/cli
   version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+- name: go.opencensus.io
+  version: 3b8e2721f2c3c01fa1bf4a2e455874e7b8319cd7
+  subpackages:
+  - exemplar
+  - internal
+  - internal/tagencoding
+  - plugin/ochttp
+  - plugin/ochttp/propagation/b3
+  - stats
+  - stats/internal
+  - stats/view
+  - tag
+  - trace
+  - trace/internal
+  - trace/propagation
+  - trace/tracestate
 - name: go.uber.org/atomic
   version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
 - name: golang.org/x/crypto
   version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:

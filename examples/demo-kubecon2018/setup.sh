@@ -14,11 +14,10 @@ helm list || helm init --wait
 for i in {1..5}; do helm list && break || sleep 5; done
 
 # Install Fission
-fission fn list || helm install --name fission --debug --namespace fission --set "analytics=false,serviceType=NodePort" https://github.com/fission/fission/releases/download/0.11.0/fission-all-0.11.0.tgz
+fission fn list || helm install --name fission --debug --namespace fission --set "analytics=false,serviceType=NodePort" https://github.com/fission/fission/releases/download/1.1.0/fission-all-1.1.0.tgz
 for i in {1..5}; do fission fn list && break || sleep 5; done
 
 # Install newest version of fission workflows
-
 helm install ${FISSION_WORKFLOWS_DIR}/charts/fission-workflows --namespace fission --set "pullPolicy=Always,tag=${BUILD_TAG},bundleImage=${BUILD_NS}/fission-workflows-bundle,envImage=${BUILD_NS}/workflow-env,buildEnvImage=${BUILD_NS}/workflow-build-env" --debug --wait -n fission-workflows
 for i in {1..5}; do fission-workflows status && break || sleep 5; done
 

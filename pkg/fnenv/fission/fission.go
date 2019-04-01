@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/fission/fission-workflows/pkg/types"
 	"github.com/fission/fission-workflows/pkg/types/typedvalues"
@@ -49,9 +50,9 @@ const (
 )
 
 func New(executorURL, serverURL, routerURL string) *FunctionEnv {
-
+	logger, _ := zap.NewProduction()
 	return &FunctionEnv{
-		executor:    executor.MakeClient(executorURL),
+		executor:    executor.MakeClient(logger, executorURL),
 		controller:  controller.MakeClient(serverURL),
 		routerURL:   routerURL,
 		executorURL: executorURL,
@@ -218,8 +219,10 @@ func (fe *FunctionEnv) Resolve(ref types.FnRef) (string, error) {
 }
 
 func (fe *FunctionEnv) getFnURL(fn types.FnRef) (*url.URL, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 	meta := createFunctionMeta(fn)
-	serviceURL, err := fe.executor.GetServiceForFunction(meta)
+	serviceURL, err := fe.executor.GetServiceForFunction(ctx, meta)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"err":  err,

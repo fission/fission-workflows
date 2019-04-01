@@ -6,7 +6,7 @@ set -euo pipefail
 
 BIN_DIR=${BIN_DIR:-/tmp/fission-workflow-ci/bin}
 HELM_VERSION=${HELM_VERSION:-2.11.0}
-FISSION_VERSION=${FISSION_VERSION:-0.11.0}
+FISSION_VERSION=${FISSION_VERSION:-1.1.0}
 
 # Install kubectl
 if ! kubectl version ; then
