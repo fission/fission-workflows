@@ -755,6 +755,16 @@ func (s *StalenessPollSensor) Poll(queue ctrl.EvalQueue) {
 			logrus.Debugf("Failed to fetch state for controller %s: %v", ctrlKey, err)
 			return true
 		}
+
+		// if the entity is an invocation and it is in a terminal state
+		// do not refresh
+		invocation, ok := entity.(*types.WorkflowInvocation)
+		if ok {
+			if invocation.GetStatus().Finished() {
+				return true
+			}
+		}
+
 		queue.Submit(&ctrl.Event{
 			Old:     entity,
 			Updated: entity,
