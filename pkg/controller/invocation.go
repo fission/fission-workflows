@@ -760,11 +760,8 @@ func (s *StalenessPollSensor) Poll(queue ctrl.EvalQueue) {
 		// do not refresh
 		invocation, ok := entity.(*types.WorkflowInvocation)
 		if ok {
-			switch invocation.GetStatus().GetStatus() {
-			case types.WorkflowInvocationStatus_ABORTED, types.WorkflowInvocationStatus_FAILED, types.WorkflowInvocationStatus_SUCCEEDED:
+			if invocation.GetStatus().Finished() {
 				return true
-			default:
-				// nop
 			}
 		}
 
