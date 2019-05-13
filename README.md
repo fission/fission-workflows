@@ -93,7 +93,7 @@ tasks:
 ```
 **Task** (also called a function here) is an atomic task, the 'building block' of a workflows. 
 
-Currently there are two options of executing tasks.  First, Fission is
+Currently there are two options for executing tasks.  First, Fission is
 used as the main function execution runtime, using _fission functions_
 as tasks.  Second, for very small tasks, such as flow control
 constructs, _internal functions_ execute within the workflow
