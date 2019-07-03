@@ -13,12 +13,8 @@ environment meets all prerequisite requirements, and checkout the repo from gith
 #### Requirements
 - go >1.8
 - docker
-- [glide](http://glide.sh/) package manager
 
 ```bash
-# Install dependencies
-glide install -v
-
 # Build the artifacts: client (fission-workflows) and server (fission-workflows-bundle)
 build/build-linux.sh
 
