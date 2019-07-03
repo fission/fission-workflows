@@ -1,15 +1,26 @@
-
+DOCKER_REPO=fission
+DOCKER_TAG=latest
 PROTO_TARGETS=$(shell find pkg -type f -name "*.pb.go")
 PROTO_TARGETS+=$(shell find pkg -type f -name "*.pb.gw.go")
 SRC_TARGETS=$(shell find pkg -type f -name "*.go" | grep -v version.gen.go )
 CHART_FILES=$(shell find charts/fission-workflows -type f)
 VERSION=head
 
-.PHONY: build generate prepush verify test changelog
+.PHONY: build generate prepush verify test changelog build-linux build-osx build-windows
 
-build fission-workflows fission-workflows-bundle fission-workflows-proxy:
-	# TODO toggle between container and local build, support parameters, seperate cli and bundle
+build build-linux fission-workflows fission-workflows-bundle fission-workflows-proxy:
 	build/build.sh
+
+build-osx:
+	build/build-osx.sh
+
+build-windows:
+	build/build-windows.sh
+
+docker-build:
+	# DOCKER_REPO=${DOCKER_REPO}
+	# DOCKER_TAG=${DOCKER_TAG}
+	build/docker.sh ${DOCKER_REPO} ${DOCKER_TAG} 
 
 generate: ${PROTO_TARGETS} examples/workflows-env.yaml pkg/api/events/events.gen.go
 
@@ -46,5 +57,3 @@ examples/workflows-env.yaml: ${CHART_FILES}
 
 pkg/api/events/events.gen.go: pkg/api/events/events.proto
 	python3 hack/codegen-events.py
-
-# TODO add: release, docker builds, (quick) deploy, test-e2e

@@ -36,7 +36,7 @@ should be used for building the official/final images.
 ```bash
 # Build the docker images (the absence of the NOBUILD parameter indicates that Docker should first build the artifacts 
 # in a Docker container)
-build/docker.sh
+build/docker.sh $DOCKER_REPO $DOCKER_TAG
 ```
 
 ## Deployment
