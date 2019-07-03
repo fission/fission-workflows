@@ -7,8 +7,10 @@ WORKDIR /go/src/github.com/fission/fission-workflows
 
 COPY . .
 
+ENV GO111MODULE=on
+
 RUN if ! $NOBUILD ; then \
-        GO111MODULE=on go mod download \
+        go mod download \
         build/build-linux.sh; \
     else \
         echo "NOBUILD provided; assuming binaries exist in context."; \

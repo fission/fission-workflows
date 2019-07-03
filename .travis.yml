@@ -22,6 +22,7 @@ env:
     - BIN_DIR=/tmp/fission-workflow-ci/bin
     - FISSION_VERSION=0.11.0
     - HELM_VERSION=2.11.0
+    - GO111MODULE=on
 
 services:
   - docker
@@ -38,7 +39,7 @@ install:
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
-- GO111MODULE=on go mod download
+- go mod download
 # Build
 - build/build-linux.sh
 # Static code analysis
