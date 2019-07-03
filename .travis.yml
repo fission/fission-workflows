@@ -11,7 +11,6 @@ cache:
   apt: true
   directories:
     - ${HOME}/.helm/
-    - ${HOME}/.glide/
     - /tmp/fission-workflow-ci/bin
     - ${GOPATH}/bin/
     - ${GOPATH}/pkg/
@@ -36,13 +35,11 @@ install:
 - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 - sudo apt-get -y install coreutils google-cloud-sdk
 - test/e2e/install-clients.sh
-# Needed for some integration tests
-- glide -h >/dev/null 2>&1 || go get github.com/Masterminds/glide
 
 before_script:
 - cd ${TRAVIS_BUILD_DIR}
+- GO111MODULE=on go mod download
 # Build
-- glide install -v
 - build/build-linux.sh
 # Static code analysis
 - hack/verify-gofmt.sh

@@ -8,8 +8,7 @@ WORKDIR /go/src/github.com/fission/fission-workflows
 COPY . .
 
 RUN if ! $NOBUILD ; then \
-        go get github.com/Masterminds/glide; \
-        glide install -v; \
+        GO111MODULE=on go mod download \
         build/build-linux.sh; \
     else \
         echo "NOBUILD provided; assuming binaries exist in context."; \

@@ -13,7 +13,7 @@ find_files() {
 }
 
 TOOL="fission-workflows validate"
-bad_files=$(find_files | grep -v '.glide/cache' | xargs ${TOOL})
+bad_files=$(find_files | xargs ${TOOL})
 if [[ -n "${bad_files}" ]]; then
   echo "The following workflows are invalid: "
   echo "${bad_files}"
