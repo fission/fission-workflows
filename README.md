@@ -10,6 +10,8 @@
 
 Fission Workflows is a workflow-based serverless function composition framework built on top of the [Fission](https://github.com/fission/fission) Function-as-a-Service (FaaS) platform.
 
+:warning: Fission Workflows is currently in maintenance mode due to a time constraints of the core Fission team. If you are interested in contributing or helping maintain this project, contact the Fission team on the Fission Slack. :warning:
+
 ### Highlights
 - **Fault-Tolerant**: Fission Workflows engine keeps track of state, re-tries, handling of errors, etc. By internally utilizing event sourcing, it allows the engine to recover from failures and continue exactly were it left off.   
 - **Scalable**: Other than a backing data store, the workflow system is stateless and can easily be scaled. The independent nature of workflows allows for relatively straightforward sharding of workloads over multiple workflow engines.
