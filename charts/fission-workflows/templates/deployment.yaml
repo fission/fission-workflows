@@ -53,7 +53,7 @@ spec:
         - name: FNENV_FISSION_EXECUTOR
           value: "{{ .Values.fission.executor }}.{{ .Values.fission.ns }}"
       - name: jaeger-agent
-        image: jaegertracing/jaeger-agent
+        image: "{{.Values.jaeger.image.repository}}:{{.Values.jaeger.image.tag}}"
         ports:
         - containerPort: 5775
           protocol: UDP
