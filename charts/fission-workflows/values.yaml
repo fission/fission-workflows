@@ -38,4 +38,7 @@ fission:
 
 # Tracing-related configuration
 jaeger:
+  image:
+    repository: jaegertracing/jaeger-agent
+    tag: 1.16
   collector: jaeger-collector:14267
