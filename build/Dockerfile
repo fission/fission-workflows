@@ -1,5 +1,5 @@
 # To run (from repo root): docker build -t fission -f ./build/Dockerfile .
-ARG GOLANG_VERSION=1.15.3
+ARG GOLANG_VERSION=1.15
 FROM golang:$GOLANG_VERSION AS builder
 ARG NOBUILD
 
