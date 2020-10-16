@@ -2,7 +2,7 @@ sudo: required
 dist: trusty
 language: go
 go:
-- "1.12"
+- "1.15"
 
 python:
 - "3.6"

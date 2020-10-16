@@ -1,6 +1,6 @@
 module github.com/fission/fission-workflows
 
-go 1.12
+go 1.15
 
 require (
 	cloud.google.com/go v0.0.0-20160913182117-3b1ae45394a2 // indirect
