@@ -129,6 +129,7 @@ spec:
   runtime:
     image: "{{ .Values.fission.env.runtimeImage }}:{{.Values.tag}}"
     container:
+      name: {{ .Values.fission.env.containerName }}
       command: ["/fission-workflows-proxy"]
       imagePullPolicy: {{ .Values.pullPolicy }}
       args: [
