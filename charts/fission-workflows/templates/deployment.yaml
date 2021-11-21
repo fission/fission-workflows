@@ -144,4 +144,5 @@ spec:
     image: "{{ .Values.fission.env.builderImage }}:{{.Values.tag}}"
     command: "defaultBuild"
     container:
+      name: {{ .Values.fission.env.containerName }}
       imagePullPolicy: {{ .Values.pullPolicy }}
