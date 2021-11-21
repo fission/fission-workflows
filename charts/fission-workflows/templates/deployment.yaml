@@ -124,7 +124,6 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 spec:
   version: 2
-  TerminationGracePeriod: 5
   allowedFunctionsPerContainer: infinite
   runtime:
     image: "{{ .Values.fission.env.runtimeImage }}:{{.Values.tag}}"
