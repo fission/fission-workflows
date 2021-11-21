@@ -124,11 +124,11 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
 spec:
   version: 2
-  TerminationGracePeriod: 5
   allowedFunctionsPerContainer: infinite
   runtime:
     image: "{{ .Values.fission.env.runtimeImage }}:{{.Values.tag}}"
     container:
+      name: {{ .Values.fission.env.containerName }}
       command: ["/fission-workflows-proxy"]
       imagePullPolicy: {{ .Values.pullPolicy }}
       args: [
@@ -143,4 +143,5 @@ spec:
     image: "{{ .Values.fission.env.builderImage }}:{{.Values.tag}}"
     command: "defaultBuild"
     container:
+      name: {{ .Values.fission.env.containerName }}
       imagePullPolicy: {{ .Values.pullPolicy }}

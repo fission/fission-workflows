@@ -33,6 +33,7 @@ fission:
   env:
     name: workflow
     ns: default
+    containerName: workflow
     runtimeImage: fission/workflows-proxy
     builderImage: fission/workflow-build-env
 
