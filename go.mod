@@ -3,7 +3,6 @@ module github.com/fission/fission-workflows
 go 1.12
 
 require (
-	cloud.google.com/go v0.0.0-20160913182117-3b1ae45394a2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v9.9.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.4.12 // indirect
@@ -24,14 +23,11 @@ require (
 	github.com/fission/fission v0.0.0-20181101225549-9bd18bdacd26
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680 // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
-	github.com/gogo/protobuf v0.0.0-20170330071051-c0656edd0d9e // indirect
 	github.com/golang/glog v0.0.0-20141105023935-44145f04b68c // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
-	github.com/golang/protobuf v1.3.1
+	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/gomodule/redigo v0.0.0-20180627144507-2cd21d9966bf // indirect
-	github.com/google/go-cmp v0.3.0 // indirect
-	github.com/google/gofuzz v0.0.0-20161122191042-44d81051d367 // indirect
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20180210024343-6da026c32e2d // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -48,15 +44,10 @@ require (
 	github.com/hashicorp/raft v1.1.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/imdario/mergo v0.3.6
-	github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.0-20180830101745-3fb116b82035 // indirect
 	github.com/mholt/archiver v0.0.0-20180417220235-e4ef56d48eb0 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v0.0.0-20180320133207-05fbef0ca5da // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.4.0
 	github.com/nats-io/go-nats-streaming v0.3.4
@@ -70,14 +61,14 @@ require (
 	github.com/ory/dockertest v3.3.4+incompatible // indirect
 	github.com/pierrec/lz4 v2.0.2+incompatible // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect
-	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.2
+	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.11.1
 	github.com/robertkrimen/otto v0.0.0-20180305042045-6c383dd335ef
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/sirupsen/logrus v1.1.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/pflag v1.0.1 // indirect
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/uber-go/atomic v1.4.0 // indirect
 	github.com/uber/jaeger-client-go v2.14.0+incompatible
 	github.com/uber/jaeger-lib v1.5.0
@@ -86,19 +77,16 @@ require (
 	go.etcd.io/bbolt v1.3.3 // indirect
 	go.uber.org/atomic v1.3.2
 	golang.org/x/exp v0.0.0-20190627132806-fd42eb6b336f // indirect
-	golang.org/x/net v0.0.0-20190311183353-d8887717615a
-	golang.org/x/oauth2 v0.0.0-20170412232759-a6bd8cefa181 // indirect
-	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 	golang.org/x/time v0.0.0-20161028155119-f51c12702a4d // indirect
 	gonum.org/v1/gonum v0.0.0-20180205154402-996b88e8f894
-	google.golang.org/appengine v0.0.0-20171031194329-9d8544a6b2c7 // indirect
 	google.golang.org/genproto v0.0.0-20180316064809-f8c870359523
 	google.golang.org/grpc v1.10.1
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
-	gopkg.in/yaml.v2 v2.0.0-20170721113624-670d4cfef054
+	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20190116205037-c89978d5f86d // indirect
 	k8s.io/apiextensions-apiserver v0.0.0-20190116211702-f0729a5940c5 // indirect
