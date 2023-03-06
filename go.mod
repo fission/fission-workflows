@@ -24,7 +24,7 @@ require (
 	github.com/fission/fission v0.0.0-20181101225549-9bd18bdacd26
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680 // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
-	github.com/gogo/protobuf v0.0.0-20170330071051-c0656edd0d9e // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v0.0.0-20141105023935-44145f04b68c // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/protobuf v1.3.1
@@ -86,9 +86,9 @@ require (
 	go.etcd.io/bbolt v1.3.3 // indirect
 	go.uber.org/atomic v1.3.2
 	golang.org/x/exp v0.0.0-20190627132806-fd42eb6b336f // indirect
-	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/oauth2 v0.0.0-20170412232759-a6bd8cefa181 // indirect
-	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/time v0.0.0-20161028155119-f51c12702a4d // indirect
 	gonum.org/v1/gonum v0.0.0-20180205154402-996b88e8f894
 	google.golang.org/appengine v0.0.0-20171031194329-9d8544a6b2c7 // indirect
